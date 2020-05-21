@@ -74,11 +74,7 @@ SIZE	:= $(TARGET)-size
 #
 # Binaries supplied with LPCXpresso used for downloading.
 #
-LPCINSTALL	:= /usr/local/lpcxpresso_4.2.3_255/lpcxpresso/bin/
-CHECKSUM	:= $(LPCINSTALL)checksum
-LPCLINK		:= $(LPCINSTALL)$(DEBUG)
-DFUUTIL		:= $(LPCINSTALL)dfu-util
-DFUFIRMWARE	:= $(LPCINSTALL)LPCXpressoWIN.enc
+OPENOCD         = openocd
 
 # Compilation Flags
 #
@@ -167,17 +163,14 @@ sources:
 	@$(SED) -i '1s/^/SOURCES += /' sources.mk
 	@$(SED) -i 's/$$/ \\/' sources.mk
 
-# Downloads the firmware over lpclink
+# Downloads the firmware over J-Link with openocd
 #
 # The 'symbol-file' command in the .gdbscript has the correct symbol file
 # written to it.
 #
 .PHONY: download
 download: all
-	$(CHECKSUM) -p $(CHIP) -d $(OUTPUT_DIR)/$(PROJECT_NAME).bin
-	@$(ECHO)
-	@$(ECHO)
-	$(LPCLINK) -wire=winusb -p$(CHIP) -vendor=NXP -flash-load-exec=$(OUTPUT_DIR)/$(PROJECT_NAME).bin -g
+	$(OPENOCD) -f prog_support/ocd/lpc1776.cfg -c "program $(OUTPUT_DIR)/$(PROJECT_NAME).elf reset exit"
 
 # Creates a gdb script if required
 #
@@ -195,16 +188,6 @@ gdbscript:
 	@$(ECHO) "# Enable semihosting" >> gdbscript
 	@$(ECHO) "monitor semihosting enable" >> gdbscript
 
-# Flashes the firmware to the lpc-link and starts the debug server
-#
-# Blocking. A random port is used and substituted into the .gdbscript
-#
-.PHONY: lpc-link
-lpc-link: gdbscript
-	$(eval PORT := $(shell $(SHUF) -i 2000-65000 -n 1))
-	@$(SED) -i 's/^target extended-remote.*$$/target extended-remote :$(PORT)/' gdbscript
-	$(DFUUTIL) -d 0x471:0xdf55 -c 0 -t 2048 -R -D $(DFUFIRMWARE)
-	$(LPCLINK) -wire=winusb -p$(CHIP) -vendor=NXP -server=:$(PORT)
 
 # Removes everything in the output directory
 #

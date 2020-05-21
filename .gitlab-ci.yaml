@@ -1,0 +1,14 @@
+stages:
+  - build
+
+variables:
+  GIT_SUBMODULE_STRATEGY: normal
+  CI_REGISTRY: mohs.dhcp.lbl.gov
+  CONTAINER_IMAGE: $CI_REGISTRY/testing_base:master
+
+image: $CONTAINER_IMAGE
+
+lpc1776_build:
+  stage: build
+  script:
+    - make && make clean
