@@ -14,11 +14,11 @@ void marble_init(bool use_xtal);
 /****
 * UART
 ****/
-void marble_UART_putch(char ch);
+void marble_UART_init(void);
 
-int marble_UART_getch(char ch);
+int marble_UART_send(char *str);
 
-void marble_UART_putstr(char *str);
+int marble_UART_recv(char *str, int size);
 
 /****
 * LED

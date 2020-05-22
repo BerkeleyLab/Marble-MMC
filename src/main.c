@@ -39,10 +39,21 @@ int main (void) {
    // Power FMCs
    marble_FMC_pwr(true);
 
+   // Initialize UART
+   marble_UART_init();
+
    /* Configure the SysTick for 1 s interrupts */
    SysTick_Config(SystemCoreClock * 1);
 
+   // TODO: Refactor ssp_init() into marble_board.c
    ssp_init();
+
+   // Send demo string over UART at 115200 BAUD
+   const char demo_str[] = "Marble Mini v1 UART DEMO\n";
+   // Wait for button press
+   while (!marble_SW_get())
+   marble_UART_send(demo_str);
+
    unsigned char mac_ip_data[10] = {
       18, 85, 85, 0, 1, 46,  // MAC (locally managed)
       192, 168, 19, 31   // IP
