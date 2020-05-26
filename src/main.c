@@ -26,6 +26,12 @@
 #include "marble_api.h"
 #include "marble1.h"
 
+// Setup UART strings
+const char demo_str[] = "Marble Mini v1 UART DEMO\r\n";
+const char lb_str[] = "Loopback... ESC to exit\r\n";
+const char menu_str[] = "\r\nMenu:\r\n0) Loopback\r\n1) FPGA IP/MAC update\r\n2) I2C monitor\r\n3) MDIO status\r\n";
+const char unk_str[] = "> Unknown option\r\n";
+
 int main (void) {
 
    // Initialize Marble(mini) board with IRC
@@ -49,10 +55,30 @@ int main (void) {
    ssp_init();
 
    // Send demo string over UART at 115200 BAUD
-   const char demo_str[] = "Marble Mini v1 UART DEMO\n";
-   // Wait for button press
-   while (!marble_SW_get())
-   marble_UART_send(demo_str);
+   marble_UART_send(demo_str, strlen(demo_str));
+   char rx_ch;
+   while (true) {
+      marble_UART_send(menu_str, strlen(menu_str));
+      // Wait for user selection
+      while(marble_UART_recv(&rx_ch, 1) == 0);
+      switch (rx_ch) {
+         case '0':
+            marble_UART_send(lb_str, strlen(lb_str));
+            do {
+               if (marble_UART_recv(&rx_ch, 1) != 0) {
+                  marble_UART_send(&rx_ch, 1);
+               }
+            } while (rx_ch != 27);
+            marble_UART_send("\r\n", 2);
+            break;
+         case '1':
+         case '2':
+         case '3':
+         default:
+            marble_UART_send(unk_str, strlen(unk_str));
+            break;
+      }
+   }
 
    unsigned char mac_ip_data[10] = {
       18, 85, 85, 0, 1, 46,  // MAC (locally managed)

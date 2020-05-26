@@ -83,15 +83,15 @@ void marble_UART_init(void)
 }
 
 /* Send \0 terminated string over UART. Returns number of bytes sent */
-int marble_UART_send(char *str)
+int marble_UART_send(char *str, int size)
 {
-   return Chip_UART_SendRB(LPC_UART0, &txring, str, strlen(str));
+   return Chip_UART_SendRB(LPC_UART0, &txring, str, size);
 }
 
 /* Read at most size-1 bytes (due to \0) from UART. Returns bytes read */
 int marble_UART_recv(char *str, int size)
 {
-   return Chip_UART_ReadRB(LPC_UART0, &rxring, &str, size);
+   return Chip_UART_ReadRB(LPC_UART0, &rxring, str, size);
 }
 
 #define MAXLEDS 3
