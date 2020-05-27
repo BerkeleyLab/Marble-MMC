@@ -31,6 +31,8 @@ const char demo_str[] = "Marble Mini v1 UART DEMO\r\n";
 const char lb_str[] = "Loopback... ESC to exit\r\n";
 const char menu_str[] = "\r\nMenu:\r\n0) Loopback\r\n1) FPGA IP/MAC update\r\n2) I2C monitor\r\n3) MDIO status\r\n";
 const char unk_str[] = "> Unknown option\r\n";
+const char i2c_ok[] = "> Found I2C slave\r\n";
+const char i2c_nok[] = "> I2C slave not found\r\n";
 
 int main (void) {
 
@@ -45,9 +47,6 @@ int main (void) {
    // Power FMCs
    marble_FMC_pwr(true);
 
-   // Initialize UART
-   marble_UART_init();
-
    /* Configure the SysTick for 1 s interrupts */
    SysTick_Config(SystemCoreClock * 1);
 
@@ -57,6 +56,10 @@ int main (void) {
    // Send demo string over UART at 115200 BAUD
    marble_UART_send(demo_str, strlen(demo_str));
    char rx_ch;
+
+   int i2c_cnt;
+   uint8_t i2c_dat[2];
+
    while (true) {
       marble_UART_send(menu_str, strlen(menu_str));
       // Wait for user selection
@@ -73,6 +76,13 @@ int main (void) {
             break;
          case '1':
          case '2':
+            i2c_cnt = marble_I2CFPGA_recv(0x70, i2c_dat, 1);
+            if (i2c_cnt > 0) {
+               marble_UART_send(i2c_ok, strlen(i2c_ok));
+            } else {
+               marble_UART_send(i2c_nok, strlen(i2c_nok));
+            }
+            break;
          case '3':
          default:
             marble_UART_send(unk_str, strlen(unk_str));

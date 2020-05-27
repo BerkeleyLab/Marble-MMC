@@ -52,6 +52,12 @@ void marble_FMC_pwr(bool on);
 /****
 * I2C
 ****/
+int marble_I2CPM_send(uint8_t addr, uint8_t *data, int size);
+int marble_I2CFPGA_send(uint8_t addr, uint8_t *data, int size);
+int marble_I2CIPMB_send(uint8_t addr, uint8_t *data, int size);
 
+int marble_I2CPM_recv(uint8_t addr, uint8_t *data, int size);
+int marble_I2CFPGA_recv(uint8_t addr, uint8_t *data, int size);
+int marble_I2CIPMB_recv(uint8_t addr, uint8_t *data, int size);
 
 #endif /* _MARBLE_API_H_ */

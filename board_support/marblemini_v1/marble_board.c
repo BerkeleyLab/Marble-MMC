@@ -34,11 +34,19 @@
 #include "string.h"
 #include <stdio.h>
 
+/************
+* Clocking
+************/
+
 /* System oscillator rate and RTC oscillator rate */
 const uint32_t OscRateIn = 25000000;
 const uint32_t RTCOscRateIn = 32768;
 
-/* UART ring buffer and othersetup */
+/************
+* UART
+************/
+
+/* UART ring buffer and baud rate */
 #define UART_BAUD_RATE 115200
 STATIC RINGBUFF_T txring, rxring;
 
@@ -46,6 +54,7 @@ STATIC RINGBUFF_T txring, rxring;
 #define UART_RECV_RB_SZ 32
 static uint8_t rxbuff[UART_RECV_RB_SZ], txbuff[UART_SEND_RB_SZ];
 
+// Override default (weak) IRQHandler
 void UART0_IRQHandler(void)
 {
    Chip_UART_IRQRBHandler(LPC_UART0, &rxring, &txring);
@@ -94,6 +103,10 @@ int marble_UART_recv(char *str, int size)
    return Chip_UART_ReadRB(LPC_UART0, &rxring, str, size);
 }
 
+/************
+* LEDs
+************/
+
 #define MAXLEDS 3
 static const uint8_t ledports[MAXLEDS] = {2, 2, 2};
 static const uint8_t ledpins[MAXLEDS] = {21, 25, 24};
@@ -140,6 +153,10 @@ void marble_LED_toggle(uint8_t led_num)
    }
 }
 
+/************
+* FMC
+************/
+
 /* Set FMC power */
 void marble_FMC_pwr(bool on)
 {
@@ -154,6 +171,10 @@ void marble_FMC_pwr(bool on)
    Chip_GPIO_WriteDirBit(LPC_GPIO, fmc_port, fmc2_pin, true);
    Chip_GPIO_WritePortBit(LPC_GPIO, fmc_port, fmc2_pin, on);
 }
+
+/************
+* Switches and FPGA interrupt
+************/
 
 static void marble_SW_init(void)
 {
@@ -178,6 +199,100 @@ bool marble_FPGAint_get(void)
    return true;
 }
 
+/************
+* I2C
+************/
+#define I2C_PM I2C1
+#define I2C_IPMB I2C0
+#define I2C_FPGA I2C2
+#define SPEED_100KHZ 100000
+#define I2C_POLL 1
+
+static void i2c_state_handling(I2C_ID_T id)
+{
+   if (Chip_I2C_IsMasterActive(id)) {
+      Chip_I2C_MasterStateHandler(id);
+   } else {
+      Chip_I2C_SlaveStateHandler(id);
+   }
+}
+
+// Override default (weak) IRQHandlers
+void I2C0_IRQHandler(void)
+{
+   i2c_state_handling(I2C0);
+}
+void I2C1_IRQHandler(void)
+{
+   i2c_state_handling(I2C1);
+}
+void I2C2_IRQHandler(void)
+{
+   i2c_state_handling(I2C2);
+}
+
+static void marble_I2C_pins(I2C_ID_T id)
+{
+   switch (id) {
+      case I2C0:
+         Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 27, (IOCON_MODE_INACT | IOCON_FUNC1));
+         Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 28, (IOCON_MODE_INACT | IOCON_FUNC1));
+         // Primary I2C pins that are always open-drain
+         break;
+      case I2C1:
+         Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 0, (IOCON_MODE_INACT | IOCON_OPENDRAIN_EN | IOCON_FUNC3));
+         Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 1, (IOCON_MODE_INACT | IOCON_OPENDRAIN_EN | IOCON_FUNC3));
+         break;
+      case I2C2:
+         Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 10, (IOCON_MODE_INACT | IOCON_OPENDRAIN_EN | IOCON_FUNC2));
+         Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 11, (IOCON_MODE_INACT | IOCON_OPENDRAIN_EN | IOCON_FUNC2));
+         break;
+   }
+}
+
+/* Initialize the I2C bus */
+static void marble_I2C_init(I2C_ID_T id, int poll)
+{
+   // Configure pins
+   marble_I2C_pins(id);
+
+   /* Initialize I2C */
+   Chip_I2C_Init(id);
+   Chip_I2C_SetClockRate(id, SPEED_100KHZ);
+
+   if (!poll) {
+      Chip_I2C_SetMasterEventHandler(id, Chip_I2C_EventHandler);
+      NVIC_EnableIRQ(id == I2C0 ? I2C0_IRQn : id == I2C1 ? I2C1_IRQn : I2C2_IRQn);
+   } else {
+      NVIC_DisableIRQ(id == I2C0 ? I2C0_IRQn : id == I2C1 ? I2C1_IRQn : I2C2_IRQn);
+      Chip_I2C_SetMasterEventHandler(id, Chip_I2C_EventHandlerPolling);
+   }
+}
+
+int marble_I2CPM_send(uint8_t addr, uint8_t *data, int size) {
+   return Chip_I2C_MasterSend(I2C_PM, addr, data, size);
+}
+int marble_I2CFPGA_send(uint8_t addr, uint8_t *data, int size) {
+   return Chip_I2C_MasterSend(I2C_FPGA, addr, data, size);
+}
+int marble_I2CIPMB_send(uint8_t addr, uint8_t *data, int size) {
+   return Chip_I2C_MasterSend(I2C_IPMB, addr, data, size);
+}
+
+int marble_I2CPM_recv(uint8_t addr, uint8_t *data, int size) {
+   return Chip_I2C_MasterRead(I2C_PM, addr, data, size);
+}
+int marble_I2CFPGA_recv(uint8_t addr, uint8_t *data, int size) {
+   return Chip_I2C_MasterRead(I2C_FPGA, addr, data, size);
+}
+int marble_I2CIPMB_recv(uint8_t addr, uint8_t *data, int size) {
+   return Chip_I2C_MasterRead(I2C_IPMB, addr, data, size);
+}
+
+/************
+* Board Init
+************/
+
 void marble_init(bool use_xtal)
 {
    // Must happen before any other clock manipulations:
@@ -191,5 +306,7 @@ void marble_init(bool use_xtal)
 
    marble_LED_init();
    marble_SW_init();
+   marble_UART_init();
+   marble_I2C_init(I2C_FPGA, !I2C_POLL); // Init PM bus in interrupt mode
 }
 
