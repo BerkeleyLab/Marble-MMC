@@ -307,6 +307,9 @@ void marble_init(bool use_xtal)
    marble_LED_init();
    marble_SW_init();
    marble_UART_init();
-   marble_I2C_init(I2C_FPGA, !I2C_POLL); // Init PM bus in interrupt mode
+   // Init I2C busses in interrupt mode
+   marble_I2C_init(I2C_PM, !I2C_POLL);
+   marble_I2C_init(I2C_IPMB, !I2C_POLL);
+   marble_I2C_init(I2C_FPGA, !I2C_POLL);
 }
 
