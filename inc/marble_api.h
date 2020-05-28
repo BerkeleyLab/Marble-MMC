@@ -8,6 +8,9 @@
 #ifndef _MARBLE_API_H_
 #define _MARBLE_API_H_
 
+#include <stdbool.h>
+#include <stdint.h>
+
 /* Initialize uC and peripherals before main code can run. */
 void marble_init(bool use_xtal);
 
@@ -52,12 +55,14 @@ void marble_FMC_pwr(bool on);
 /****
 * I2C
 ****/
-int marble_I2CPM_send(uint8_t addr, uint8_t *data, int size);
-int marble_I2CFPGA_send(uint8_t addr, uint8_t *data, int size);
-int marble_I2CIPMB_send(uint8_t addr, uint8_t *data, int size);
+typedef enum {
+   I2C_PM,
+   I2C_IPMB,
+   I2C_FPGA,
+} I2C_BUS;
 
-int marble_I2CPM_recv(uint8_t addr, uint8_t *data, int size);
-int marble_I2CFPGA_recv(uint8_t addr, uint8_t *data, int size);
-int marble_I2CIPMB_recv(uint8_t addr, uint8_t *data, int size);
+int marble_I2C_send(I2C_BUS I2C_bus, uint8_t addr, uint8_t *data, int size);
+
+int marble_I2C_recv(I2C_BUS I2C_bus, uint8_t addr, uint8_t *data, int size);
 
 #endif /* _MARBLE_API_H_ */

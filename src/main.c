@@ -1,38 +1,13 @@
-/* 
- * Demo C Application: Toggles an output at 20Hz.
- * Copyright (C) 2013  Richard Meadows
- * 
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files (the
- * "Software"), to deal in the Software without restriction, including
- * without limitation the rights to use, copy, modify, merge, publish,
- * distribute, sublicense, and/or sell copies of the Software, and to
- * permit persons to whom the Software is furnished to do so, subject to
- * the following conditions:
- * 
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- * 
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
- * LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
- * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
- * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
-
 #include "chip.h" // TODO: Remove after wrapping SSP
-#include "marble_api.h"
 #include "marble1.h"
+#include "marble_api.h"
+#include "i2c_pm.h"
 
 // Setup UART strings
 const char demo_str[] = "Marble Mini v1 UART DEMO\r\n";
 const char lb_str[] = "Loopback... ESC to exit\r\n";
 const char menu_str[] = "\r\nMenu:\r\n0) Loopback\r\n1) FPGA IP/MAC update\r\n2) I2C monitor\r\n3) MDIO status\r\n";
 const char unk_str[] = "> Unknown option\r\n";
-const char i2c_ok[] = "> Found I2C slave\r\n";
-const char i2c_nok[] = "> I2C slave not found\r\n";
 
 int main (void) {
 
@@ -57,9 +32,6 @@ int main (void) {
    marble_UART_send(demo_str, strlen(demo_str));
    char rx_ch;
 
-   int i2c_cnt;
-   uint8_t i2c_dat[2];
-
    while (true) {
       marble_UART_send(menu_str, strlen(menu_str));
       // Wait for user selection
@@ -75,15 +47,12 @@ int main (void) {
             marble_UART_send("\r\n", 2);
             break;
          case '1':
+            break;
          case '2':
-            i2c_cnt = marble_I2CFPGA_recv(0x70, i2c_dat, 1);
-            if (i2c_cnt > 0) {
-               marble_UART_send(i2c_ok, strlen(i2c_ok));
-            } else {
-               marble_UART_send(i2c_nok, strlen(i2c_nok));
-            }
+            I2C_PM_probe();
             break;
          case '3':
+            break;
          default:
             marble_UART_send(unk_str, strlen(unk_str));
             break;

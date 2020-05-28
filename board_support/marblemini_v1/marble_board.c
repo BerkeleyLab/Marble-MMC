@@ -31,6 +31,7 @@
  */
 
 #include "chip.h"
+#include "marble_api.h"
 #include "string.h"
 #include <stdio.h>
 
@@ -91,10 +92,19 @@ void marble_UART_init(void)
    NVIC_EnableIRQ(UART0_IRQn);
 }
 
+#define UART_WAIT 100000
+
 /* Send \0 terminated string over UART. Returns number of bytes sent */
 int marble_UART_send(char *str, int size)
 {
-   return Chip_UART_SendRB(LPC_UART0, &txring, str, size);
+   int sent;
+   int wait_cnt;
+   sent = Chip_UART_SendRB(LPC_UART0, &txring, str, size);
+   if (sent < size) {
+      for (wait_cnt = UART_WAIT; wait_cnt > 0; wait_cnt--) {} // Busy-wait
+      sent += Chip_UART_SendRB(LPC_UART0, &txring, str+sent, size-sent);
+   }
+   return sent;
 }
 
 /* Read at most size-1 bytes (due to \0) from UART. Returns bytes read */
@@ -202,9 +212,6 @@ bool marble_FPGAint_get(void)
 /************
 * I2C
 ************/
-#define I2C_PM I2C1
-#define I2C_IPMB I2C0
-#define I2C_FPGA I2C2
 #define SPEED_100KHZ 100000
 #define I2C_POLL 1
 
@@ -269,24 +276,29 @@ static void marble_I2C_init(I2C_ID_T id, int poll)
    }
 }
 
-int marble_I2CPM_send(uint8_t addr, uint8_t *data, int size) {
-   return Chip_I2C_MasterSend(I2C_PM, addr, data, size);
-}
-int marble_I2CFPGA_send(uint8_t addr, uint8_t *data, int size) {
-   return Chip_I2C_MasterSend(I2C_FPGA, addr, data, size);
-}
-int marble_I2CIPMB_send(uint8_t addr, uint8_t *data, int size) {
-   return Chip_I2C_MasterSend(I2C_IPMB, addr, data, size);
+/* Generic I2C send function with selectable I2C bus and 8-bit I2C addresses (R/W bit = 0) */
+int marble_I2C_send(I2C_BUS I2C_bus, uint8_t addr, uint8_t *data, int size) {
+   addr = addr >> 1;
+   switch (I2C_bus) {
+      case I2C_IPMB:
+         return Chip_I2C_MasterSend(I2C0, addr, data, size);
+      case I2C_PM:
+         return Chip_I2C_MasterSend(I2C1, addr, data, size);
+      case I2C_FPGA:
+         return Chip_I2C_MasterSend(I2C2, addr, data, size);
+   }
 }
 
-int marble_I2CPM_recv(uint8_t addr, uint8_t *data, int size) {
-   return Chip_I2C_MasterRead(I2C_PM, addr, data, size);
-}
-int marble_I2CFPGA_recv(uint8_t addr, uint8_t *data, int size) {
-   return Chip_I2C_MasterRead(I2C_FPGA, addr, data, size);
-}
-int marble_I2CIPMB_recv(uint8_t addr, uint8_t *data, int size) {
-   return Chip_I2C_MasterRead(I2C_IPMB, addr, data, size);
+int marble_I2C_recv(I2C_BUS I2C_bus, uint8_t addr, uint8_t *data, int size) {
+   addr = addr >> 1;
+   switch (I2C_bus) {
+      case I2C_IPMB:
+         return Chip_I2C_MasterRead(I2C0, addr, data, size);
+      case I2C_PM:
+         return Chip_I2C_MasterRead(I2C1, addr, data, size);
+      case I2C_FPGA:
+         return Chip_I2C_MasterRead(I2C2, addr, data, size);
+   }
 }
 
 /************
@@ -308,8 +320,8 @@ void marble_init(bool use_xtal)
    marble_SW_init();
    marble_UART_init();
    // Init I2C busses in interrupt mode
-   marble_I2C_init(I2C_PM, !I2C_POLL);
-   marble_I2C_init(I2C_IPMB, !I2C_POLL);
-   marble_I2C_init(I2C_FPGA, !I2C_POLL);
+   marble_I2C_init(I2C0, !I2C_POLL);
+   marble_I2C_init(I2C1, !I2C_POLL);
+   marble_I2C_init(I2C2, !I2C_POLL);
 }
 
