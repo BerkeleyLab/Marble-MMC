@@ -49,6 +49,12 @@ void marble_FMC_pwr(bool on);
 
 
 /****
+* FPGA reset/init control
+* Central to this whole job, may need refinement
+****/
+void reset_fpga(void);
+
+/****
 * SPI/SSP
 ****/
 

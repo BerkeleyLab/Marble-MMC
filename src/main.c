@@ -13,7 +13,8 @@ const char menu_str[] = "\r\n"
 	"1) FPGA IP/MAC update\r\n"
 	"2) I2C monitor\r\n"
 	"3) MDIO status\r\n"
-	"4) GPIO control\r\n";
+	"4) GPIO control\r\n"
+	"5) Reset FPGA\r\n";
 const char unk_str[] = "> Unknown option\r\n";
 const char gpio_str[] = "GPIO pins, caps for on, lower case for off\r\n"
 	"a) FMC power\r\n"
@@ -90,6 +91,9 @@ int main (void) {
             break;
          case '4':
             gpio_cmd();
+            break;
+         case '5':
+            reset_fpga();
             break;
          default:
             marble_UART_send(unk_str, strlen(unk_str));

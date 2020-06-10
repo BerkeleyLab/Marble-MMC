@@ -209,6 +209,23 @@ bool marble_FPGAint_get(void)
    return true;
 }
 
+void reset_fpga(void)
+{
+   /* Pulse the PROGRAM_B pin low; it's spelled PROG_B on schematic */
+   const uint8_t rst_port = 0;
+   const uint8_t rst_pin = 4;
+   Chip_GPIO_WriteDirBit(LPC_GPIO, rst_port, rst_pin, true);
+   for (int wait_cnt = 20; wait_cnt > 0; wait_cnt--) {
+      /* Only the first call does anything, but the compiler
+       * doesn't know that.  That keeps its optimizer from
+       * eliminating the associated time delay.
+       */
+      Chip_GPIO_WritePortBit(LPC_GPIO, rst_port, rst_pin, false);
+   }
+   Chip_GPIO_WritePortBit(LPC_GPIO, rst_port, rst_pin, true);
+   Chip_GPIO_WriteDirBit(LPC_GPIO, rst_port, rst_pin, false);
+}
+
 /************
 * I2C
 ************/
