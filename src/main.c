@@ -14,13 +14,13 @@ const char menu_str[] = "\r\n"
 	"2) I2C monitor\r\n"
 	"3) MDIO status\r\n"
 	"4) GPIO control\r\n"
-	"5) Reset FPGA\r\n";
+	"5) Reset FPGA\r\n"
+	"6) Push IP&MAC to FPGA\r\n";
 const char unk_str[] = "> Unknown option\r\n";
 const char gpio_str[] = "GPIO pins, caps for on, lower case for off\r\n"
 	"a) FMC power\r\n"
 	"b) EN_PSU_CH\r\n";
 
-// All of these are P1
 static void gpio_cmd(void)
 {
    char rx_ch;
@@ -45,7 +45,35 @@ static void gpio_cmd(void)
       }
 }
 
+// At some point we will give up and install a libc.
+// Consider picolibc.
+static void print_uint(unsigned int x)
+{
+   char obuf[16];
+   char *p = obuf+15;
+   *p-- = '\0';
+   do {
+      *p-- = '0' + (x % 10);
+      x = x/10;
+   } while (x>0);
+   marble_UART_send(p+1, obuf+14-p);
+}
+
+static void print_mac_ip(unsigned char mac_ip_data[10])
+{
+   for (unsigned ix=0; ix<10; ix++) {
+      marble_UART_send(" ", 1);
+      print_uint(mac_ip_data[ix]);
+   }
+   marble_UART_send("\r\n", 2);
+}
+
 int main (void) {
+   // Static for now; eventually needs to be read from EEPROM
+   unsigned char mac_ip_data[10] = {
+      18, 85, 85, 0, 1, 46,  // MAC (locally managed)
+      192, 168, 19, 31   // IP
+   };
 
    // Initialize Marble(mini) board with IRC
    marble_init(false);
@@ -95,16 +123,18 @@ int main (void) {
          case '5':
             reset_fpga();
             break;
+         case '6':
+            print_mac_ip(mac_ip_data);
+            push_fpga_mac_ip(mac_ip_data);
+            marble_UART_send("DONE\r\n", 6);
+            break;
          default:
             marble_UART_send(unk_str, strlen(unk_str));
             break;
       }
    }
 
-   unsigned char mac_ip_data[10] = {
-      18, 85, 85, 0, 1, 46,  // MAC (locally managed)
-      192, 168, 19, 31   // IP
-   };
+   // Dead code
    int push_button=1;
    while (1) {
       int push_button_new = marble_SW_get();  // SW2 or SW3
