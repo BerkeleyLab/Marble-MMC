@@ -95,7 +95,7 @@ void marble_UART_init(void)
 #define UART_WAIT 100000
 
 /* Send \0 terminated string over UART. Returns number of bytes sent */
-int marble_UART_send(char *str, int size)
+int marble_UART_send(const char *str, int size)
 {
    int sent;
    int wait_cnt;

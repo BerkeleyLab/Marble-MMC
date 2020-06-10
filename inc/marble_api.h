@@ -19,7 +19,7 @@ void marble_init(bool use_xtal);
 ****/
 void marble_UART_init(void);
 
-int marble_UART_send(char *str, int size);
+int marble_UART_send(const char *str, int size);
 
 int marble_UART_recv(char *str, int size);
 

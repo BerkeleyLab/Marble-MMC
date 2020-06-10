@@ -1,3 +1,4 @@
+#include <string.h>
 #include "chip.h" // TODO: Remove after wrapping SSP
 #include "marble1.h"
 #include "marble_api.h"
