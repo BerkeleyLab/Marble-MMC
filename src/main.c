@@ -15,7 +15,8 @@ const char menu_str[] = "\r\n"
 	"3) MDIO status\r\n"
 	"4) GPIO control\r\n"
 	"5) Reset FPGA\r\n"
-	"6) Push IP&MAC to FPGA\r\n";
+	"6) Push IP&MAC\r\n"
+	"7) MAX6639\r\n";
 const char unk_str[] = "> Unknown option\r\n";
 const char gpio_str[] = "GPIO pins, caps for on, lower case for off\r\n"
 	"a) FMC power\r\n"
@@ -132,6 +133,10 @@ int main (void) {
             print_mac_ip(mac_ip_data);
             push_fpga_mac_ip(mac_ip_data);
             marble_UART_send("DONE\r\n", 6);
+            break;
+         case '7':
+            marble_UART_send("Start\r\n", 7);
+            print_max6639();
             break;
          default:
             marble_UART_send(unk_str, strlen(unk_str));

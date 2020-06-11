@@ -67,8 +67,8 @@ typedef enum {
    I2C_FPGA,
 } I2C_BUS;
 
-int marble_I2C_send(I2C_BUS I2C_bus, uint8_t addr, uint8_t *data, int size);
-
+int marble_I2C_send(I2C_BUS I2C_bus, uint8_t addr, const uint8_t *data, int size);
 int marble_I2C_recv(I2C_BUS I2C_bus, uint8_t addr, uint8_t *data, int size);
+int marble_I2C_cmdrecv(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size);
 
 #endif /* _MARBLE_API_H_ */

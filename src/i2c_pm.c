@@ -1,7 +1,59 @@
 #include "marble_api.h"
-#include "stdio.h"
-#include "string.h"
+#include <stdio.h>
+#include <string.h>
 #include "i2c_pm.h"
+
+
+int set_max6639_reg(int regno, int value)
+{
+   uint8_t addr = MAX6639;
+   uint8_t i2c_dat[4];
+   i2c_dat[0] = regno;
+   i2c_dat[1] = value;
+   int rc = marble_I2C_send(I2C_PM, addr, i2c_dat, 2);
+   return rc == 2;
+}
+
+int get_max6639_reg(int regno, int *value)
+{
+   uint8_t i2c_dat[4];
+   uint8_t addr = MAX6639;
+   int rc = marble_I2C_cmdrecv(I2C_PM, addr, regno, i2c_dat, 1) == 1;
+   if (rc && value) *value = i2c_dat[0];
+   return rc;
+}
+
+void set_fans(int speed[2])
+{
+    set_max6639_reg(0x11, 2);  // Fan 1 PWM sign = 1
+    set_max6639_reg(0x15, 2);  // Fan 2 PWM sign = 1
+    set_max6639_reg(0x26, speed[0]);
+    set_max6639_reg(0x27, speed[1]);
+}
+
+void print_max6639(void)
+{
+   char p_buf[40];
+   int value;
+   uint8_t addr = MAX6639;
+   // ix is the MAX6639 register address
+   for (unsigned ix=0; ix<64; ix++) {
+      if (!get_max6639_reg(ix, &value)) {
+          marble_UART_send("I2C fault!\r\n", 11);
+          break;
+      }
+      snprintf(p_buf, 40, "  reg[%2.2x] = %2.2x", ix, value);
+      marble_UART_send(p_buf, strlen(p_buf));
+      if ((ix&0x3) == 0x3) marble_UART_send("\r\n", 2);
+   }
+   if (0) {
+      int fan_speed[2];
+      fan_speed[0] = 200;
+      fan_speed[1] = 150;
+      set_fans(fan_speed);
+   }
+}
+
 
 /************
 * LM75 Register interface
@@ -108,5 +160,3 @@ void I2C_PM_probe(void) {
       marble_UART_send(p_buf, strlen(p_buf));
    }
 }
-
-

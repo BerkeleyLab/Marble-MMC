@@ -11,6 +11,7 @@ typedef enum {
 #define I2C_NUM 4
 
 void I2C_PM_probe(void);
+void print_max6639(void);
 
 typedef enum {
    LM75_TEMP = 0,
