@@ -1,15 +1,70 @@
 #include "marble_api.h"
 #include "stdio.h"
 #include "string.h"
+#include "i2c_pm.h"
 
-typedef enum {
-   LM75_0 = 0x92,
-   LM75_1 = 0x96,
-   MAX6639 = 0x58,
-   XRP7724 = 0x50,
-} I2C_SLAVE;
+/************
+* LM75 Register interface
+************/
 
-#define I2C_NUM 4
+int LM75_readwrite(uint8_t dev, LM75_REG reg, int *data, bool rnw) {
+   uint8_t i2c_buf[2];
+   int i2c_cnt=0;
+   int i2c_expect=1;
+   short temp;
+
+   // Select register
+   i2c_buf[0] = reg;
+   i2c_cnt += marble_I2C_send(I2C_PM, dev, i2c_buf, 1);
+   switch (reg) {
+      case LM75_TEMP:
+      case LM75_HYST:
+      case LM75_OS:
+         i2c_expect += 2;
+
+         if (rnw) {
+            i2c_cnt += marble_I2C_recv(I2C_PM, dev, i2c_buf, 2);
+            // Signed Q7.1, i.e. resolution of 0.5 deg
+            temp = ((i2c_buf[0]<<8) | (i2c_buf[1])) >> 7;
+            *data = temp;
+         } else {
+            i2c_buf[0] = (*data >> 1) & 0xff; // MSB first
+            i2c_buf[1] = (*data & 0x1) << 7;
+            i2c_cnt += marble_I2C_send(I2C_PM, dev, i2c_buf, 2);
+         }
+         break;
+      case LM75_CFG:
+         i2c_expect += 1;
+
+         if (rnw) {
+            i2c_cnt += marble_I2C_recv(I2C_PM, dev, i2c_buf, 1);
+            *data = (i2c_buf[0]) & 0xff;
+         } else {
+            i2c_buf[0] = (*data) & 0xff;
+            i2c_cnt += marble_I2C_send(I2C_PM, dev, i2c_buf, 1);
+         }
+         break;
+   }
+   return (i2c_expect == i2c_cnt);
+}
+
+void LM75_print(uint8_t dev) {
+   static const  uint8_t rlist[LM75_MAX] = {LM75_TEMP, LM75_CFG, LM75_HYST, LM75_OS};
+   int i;
+   int recv;
+   const char ok_str[] = "> LM75 %x: [%d]: %d\r\n";
+   const char fail_str[] = "> LM75 %x: [%d]: FAIL\r\n";
+   char p_buf[40];
+
+   for (i = 0; i < LM75_MAX; i++) {
+      if (LM75_readwrite(dev, rlist[i], &recv, true)) {
+         snprintf(p_buf, 40, ok_str, dev, rlist[i], recv);
+      } else {
+         snprintf(p_buf, 40, fail_str, dev, rlist[i]);
+      }
+      marble_UART_send(p_buf, strlen(p_buf));
+   }
+}
 
 static const uint8_t i2c_list[I2C_NUM] = {LM75_0, LM75_1, MAX6639, XRP7724};
 

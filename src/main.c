@@ -114,6 +114,11 @@ int main (void) {
             break;
          case '2':
             I2C_PM_probe();
+            // Demonstrate setting over-temperature register
+            int os_temp = 100*2;
+            LM75_readwrite(LM75_0, LM75_OS, &os_temp, false);
+            LM75_print(LM75_0);
+            LM75_print(LM75_1);
             break;
          case '3':
             break;
