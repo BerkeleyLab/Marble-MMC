@@ -59,8 +59,8 @@ void print_max6639(void)
 * LM75 Register interface
 ************/
 
-int LM75_readwrite(uint8_t dev, LM75_REG reg, int *data, bool rnw) {
-   uint8_t i2c_buf[2];
+static int LM75_readwrite(uint8_t dev, LM75_REG reg, int *data, bool rnw) {
+   uint8_t i2c_buf[3];
    int i2c_cnt=0;
    int i2c_expect=1;
    short temp;
@@ -72,32 +72,43 @@ int LM75_readwrite(uint8_t dev, LM75_REG reg, int *data, bool rnw) {
       case LM75_TEMP:
       case LM75_HYST:
       case LM75_OS:
-         i2c_expect += 2;
 
          if (rnw) {
+            i2c_expect += 2;
             i2c_cnt += marble_I2C_recv(I2C_PM, dev, i2c_buf, 2);
             // Signed Q7.1, i.e. resolution of 0.5 deg
             temp = ((i2c_buf[0]<<8) | (i2c_buf[1])) >> 7;
             *data = temp;
          } else {
-            i2c_buf[0] = (*data >> 1) & 0xff; // MSB first
-            i2c_buf[1] = (*data & 0x1) << 7;
-            i2c_cnt += marble_I2C_send(I2C_PM, dev, i2c_buf, 2);
+            i2c_expect += 3;
+            i2c_buf[0] = reg;
+            i2c_buf[1] = (*data >> 1) & 0xff; // MSB first
+            i2c_buf[2] = (*data & 0x1) << 7;
+            i2c_cnt += marble_I2C_send(I2C_PM, dev, i2c_buf, 3);
          }
          break;
       case LM75_CFG:
-         i2c_expect += 1;
-
          if (rnw) {
+            i2c_expect += 1;
             i2c_cnt += marble_I2C_recv(I2C_PM, dev, i2c_buf, 1);
             *data = (i2c_buf[0]) & 0xff;
          } else {
-            i2c_buf[0] = (*data) & 0xff;
-            i2c_cnt += marble_I2C_send(I2C_PM, dev, i2c_buf, 1);
+            i2c_expect += 2;
+            i2c_buf[0] = reg;
+            i2c_buf[1] = (*data) & 0xff;
+            i2c_cnt += marble_I2C_send(I2C_PM, dev, i2c_buf, 2);
          }
          break;
    }
    return (i2c_expect == i2c_cnt);
+}
+
+int LM75_read(uint8_t dev, LM75_REG reg, int *data) {
+   return LM75_readwrite(dev, reg, data, true);
+}
+
+int LM75_write(uint8_t dev, LM75_REG reg, int data) {
+   return LM75_readwrite(dev, reg, &data, false);
 }
 
 void LM75_print(uint8_t dev) {
@@ -109,7 +120,7 @@ void LM75_print(uint8_t dev) {
    char p_buf[40];
 
    for (i = 0; i < LM75_MAX; i++) {
-      if (LM75_readwrite(dev, rlist[i], &recv, true)) {
+      if (LM75_read(dev, rlist[i], &recv)) {
          snprintf(p_buf, 40, ok_str, dev, rlist[i], recv);
       } else {
          snprintf(p_buf, 40, fail_str, dev, rlist[i]);

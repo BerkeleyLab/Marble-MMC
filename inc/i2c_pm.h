@@ -30,7 +30,8 @@ typedef enum {
 
 void LM75_print(uint8_t dev);
 
-int LM75_readwrite(uint8_t dev, LM75_REG reg, int *data, bool rnw);
+int LM75_read(uint8_t dev, LM75_REG reg, int *data);
+int LM75_write(uint8_t dev, LM75_REG reg, int data);
 
 #endif /* _I2C_PM_H_ */
 

@@ -16,7 +16,10 @@ const char menu_str[] = "\r\n"
 	"4) GPIO control\r\n"
 	"5) Reset FPGA\r\n"
 	"6) Push IP&MAC\r\n"
-	"7) MAX6639\r\n";
+	"7) MAX6639\r\n"
+	"8) LM75_0\r\n"
+	"9) LM75_1\r\n";
+
 const char unk_str[] = "> Unknown option\r\n";
 const char gpio_str[] = "GPIO pins, caps for on, lower case for off\r\n"
 	"a) FMC power\r\n"
@@ -115,11 +118,6 @@ int main (void) {
             break;
          case '2':
             I2C_PM_probe();
-            // Demonstrate setting over-temperature register
-            int os_temp = 100*2;
-            LM75_readwrite(LM75_0, LM75_OS, &os_temp, false);
-            LM75_print(LM75_0);
-            LM75_print(LM75_1);
             break;
          case '3':
             break;
@@ -137,6 +135,17 @@ int main (void) {
          case '7':
             marble_UART_send("Start\r\n", 7);
             print_max6639();
+            break;
+         case '8':
+            // Demonstrate setting over-temperature register and Interrupt mode
+            LM75_write(LM75_0, LM75_OS, 100*2);
+            LM75_write(LM75_0, LM75_CFG, LM75_CFG_COMP_INT);
+            LM75_print(LM75_0);
+            break;
+         case '9':
+            // Demonstrate setting over-temperature register
+            LM75_write(LM75_1, LM75_OS, 100*2);
+            LM75_print(LM75_1);
             break;
          default:
             marble_UART_send(unk_str, strlen(unk_str));
