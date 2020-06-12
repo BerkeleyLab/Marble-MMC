@@ -164,7 +164,7 @@ void marble_LED_toggle(uint8_t led_num)
 }
 
 /************
-* FMC
+* FMC & PSU
 ************/
 
 /* Set FMC power */
@@ -180,6 +180,12 @@ void marble_FMC_pwr(bool on)
    const uint8_t fmc2_pin = 19;
    Chip_GPIO_WriteDirBit(LPC_GPIO, fmc_port, fmc2_pin, true);
    Chip_GPIO_WritePortBit(LPC_GPIO, fmc_port, fmc2_pin, on);
+}
+
+void marble_PSU_pwr(bool on)
+{
+   Chip_GPIO_WriteDirBit(LPC_GPIO, 1, 31, true);
+   Chip_GPIO_WritePortBit(LPC_GPIO, 1, 31, on);
 }
 
 /************
@@ -331,6 +337,67 @@ int marble_I2C_cmdrecv(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data
 }
 
 /************
+* SSP/SPI
+************/
+static void marble_SSP_pins(LPC_SSP_T *ssp)
+{
+   if (ssp == LPC_SSP1) {
+      Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 7, (IOCON_FUNC2 | IOCON_MODE_INACT | IOCON_DIGMODE_EN)); // SCK
+      Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 6, (IOCON_FUNC2 | IOCON_MODE_INACT | IOCON_DIGMODE_EN)); // SSEL
+      Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 8, (IOCON_FUNC2 | IOCON_MODE_INACT | IOCON_DIGMODE_EN)); // MISO
+      Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 9, (IOCON_FUNC2 | IOCON_MODE_INACT | IOCON_DIGMODE_EN)); // MOSI
+   } else if (ssp == LPC_SSP0) {
+      Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 15, (IOCON_FUNC2 | IOCON_MODE_INACT)); // SCK
+      Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 16, (IOCON_FUNC2 | IOCON_MODE_INACT)); // SSEL
+      Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 17, (IOCON_FUNC2 | IOCON_MODE_INACT)); // MISO
+      Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 18, (IOCON_FUNC2 | IOCON_MODE_INACT)); // MOSI
+   }
+}
+
+static void marble_SSP_init(LPC_SSP_T *ssp)
+{
+   marble_SSP_pins(ssp);
+
+   CHIP_SYSCTL_CLOCK_T clkSSP;
+   if (ssp == LPC_SSP1) {
+      clkSSP = SYSCTL_CLOCK_SSP1;
+   }
+   else {
+      clkSSP = SYSCTL_CLOCK_SSP0;
+   }
+   Chip_Clock_EnablePeriphClock(clkSSP);
+   Chip_SSP_Set_Mode(ssp, SSP_MODE_MASTER);
+
+   // 16-bit Frame, SPI, Clock Polarity High
+   Chip_SSP_SetFormat(ssp, SSP_BITS_16, SSP_FRAMEFORMAT_SPI, SSP_CLOCK_CPHA0_CPOL1);
+   Chip_SSP_SetBitRate(ssp, 100000);
+   Chip_SSP_Enable(ssp);
+
+   // No interrupt mode for now
+   //NVIC_EnableIRQ(SSP_IRQ);
+}
+
+int marble_SSP_write(SSP_PORT ssp, uint8_t *buffer, int size)
+{
+   if (ssp == SSP_FPGA) {
+      return Chip_SSP_WriteFrames_Blocking(LPC_SSP0, buffer, size);
+   } else if (ssp == SSP_PMOD) {
+      return Chip_SSP_WriteFrames_Blocking(LPC_SSP1, buffer, size);
+   }
+   return 0;
+}
+
+int marble_SSP_read(SSP_PORT ssp, uint8_t *buffer, int size)
+{
+   if (ssp == SSP_FPGA) {
+      return Chip_SSP_ReadFrames_Blocking(LPC_SSP0, buffer, size);
+   } else if (ssp == SSP_PMOD) {
+      return Chip_SSP_ReadFrames_Blocking(LPC_SSP1, buffer, size);
+   }
+   return 0;
+}
+
+/************
 * Board Init
 ************/
 
@@ -348,9 +415,17 @@ void marble_init(bool use_xtal)
    marble_LED_init();
    marble_SW_init();
    marble_UART_init();
+
    // Init I2C busses in interrupt mode
    marble_I2C_init(I2C0, !I2C_POLL);
    marble_I2C_init(I2C1, !I2C_POLL);
    marble_I2C_init(I2C2, !I2C_POLL);
+
+   // Init SSP busses
+   marble_SSP_init(LPC_SSP0);
+   //marble_SSP_init(LPC_SSP1);
+
+   /* Configure the SysTick for 1 s interrupts */
+   SysTick_Config(SystemCoreClock * 1);
 }
 

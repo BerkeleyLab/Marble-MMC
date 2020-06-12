@@ -1,8 +1,7 @@
 #include <string.h>
-#include "chip.h" // TODO: Remove after wrapping SSP
-#include "marble1.h"
 #include "marble_api.h"
 #include "i2c_pm.h"
+#include "ssp.h"
 
 // Setup UART strings
 const char demo_str[] = "Marble Mini v1 UART DEMO\r\n";
@@ -40,8 +39,7 @@ static void gpio_cmd(void)
          break;
       case 'b':
       case 'B':
-         Chip_GPIO_WriteDirBit(LPC_GPIO, 1, 31, true);
-         Chip_GPIO_WritePortBit(LPC_GPIO, 1, 31, on);
+         marble_PSU_pwr(on);
          break;
       default:
          marble_UART_send(unk_str, strlen(unk_str));
@@ -89,12 +87,6 @@ int main (void) {
 
    // Power FMCs
    marble_FMC_pwr(true);
-
-   /* Configure the SysTick for 1 s interrupts */
-   SysTick_Config(SystemCoreClock * 1);
-
-   // TODO: Refactor ssp_init() into marble_board.c
-   ssp_init();
 
    // Send demo string over UART at 115200 BAUD
    marble_UART_send(demo_str, strlen(demo_str));
@@ -152,19 +144,6 @@ int main (void) {
             break;
       }
    }
-
-   // Dead code
-   int push_button=1;
-   while (1) {
-      int push_button_new = marble_SW_get();  // SW2 or SW3
-      int fpga_int = marble_FPGAint_get();  // debug hook
-      if (fpga_int || (!push_button_new && push_button)) {  // falling edge detect
-         push_fpga_mac_ip(mac_ip_data);
-         for (unsigned ix=0; ix<6000; ix++) { (void) LPC_SSP0->SR; }  // doze
-      }
-      push_button = push_button_new;
-      // No debounce, might trigger on button release as well
-  }
 }
 
 extern void SysTick_Handler(void) {

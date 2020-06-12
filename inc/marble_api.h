@@ -43,10 +43,11 @@ bool marble_SW_get(void);
 bool marble_FPGAint_get(void);
 
 /****
-* FMC
+* FMC & PSU
 ****/
 void marble_FMC_pwr(bool on);
 
+void marble_PSU_pwr(bool on);
 
 /****
 * FPGA reset/init control
@@ -57,6 +58,13 @@ void reset_fpga(void);
 /****
 * SPI/SSP
 ****/
+typedef enum {
+   SSP_FPGA,
+   SSP_PMOD
+} SSP_PORT;
+
+int marble_SSP_write(SSP_PORT ssp, uint8_t *buffer, int size);
+int marble_SSP_read(SSP_PORT ssp, uint8_t *buffer, int size);
 
 /****
 * I2C
