@@ -398,6 +398,30 @@ int marble_SSP_read(SSP_PORT ssp, uint8_t *buffer, int size)
 }
 
 /************
+* MDIO to PHY
+************/
+void marble_MDIO_init()
+{
+   Chip_Clock_EnablePeriphClock(SYSCTL_CLOCK_ENET);
+
+   /* Setup MII clock rate and PHY address */
+   Chip_ENET_SetupMII(LPC_ETHERNET, Chip_ENET_FindMIIDiv(LPC_ETHERNET, 2500000), 0);
+}
+
+void marble_MDIO_write(uint8_t reg, uint16_t data)
+{
+   Chip_ENET_StartMIIWrite(LPC_ETHERNET, reg, data);
+   while (Chip_ENET_IsMIIBusy(LPC_ETHERNET));
+}
+
+uint16_t marble_MDIO_read(uint8_t reg)
+{
+   Chip_ENET_StartMIIRead(LPC_ETHERNET, reg);
+   while (Chip_ENET_IsMIIBusy(LPC_ETHERNET));
+   return Chip_ENET_ReadMIIData(LPC_ETHERNET);
+}
+
+/************
 * Board Init
 ************/
 
@@ -424,6 +448,8 @@ void marble_init(bool use_xtal)
    // Init SSP busses
    marble_SSP_init(LPC_SSP0);
    //marble_SSP_init(LPC_SSP1);
+
+   marble_MDIO_init();
 
    /* Configure the SysTick for 1 s interrupts */
    SysTick_Config(SystemCoreClock * 1);

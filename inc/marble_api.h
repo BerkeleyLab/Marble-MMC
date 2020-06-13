@@ -79,4 +79,10 @@ int marble_I2C_send(I2C_BUS I2C_bus, uint8_t addr, const uint8_t *data, int size
 int marble_I2C_recv(I2C_BUS I2C_bus, uint8_t addr, uint8_t *data, int size);
 int marble_I2C_cmdrecv(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size);
 
+/************
+* MDIO to PHY
+************/
+void marble_MDIO_write(uint8_t reg, uint16_t data);
+uint16_t marble_MDIO_read(uint8_t reg);
+
 #endif /* _MARBLE_API_H_ */

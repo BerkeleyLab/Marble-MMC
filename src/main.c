@@ -2,6 +2,7 @@
 #include "marble_api.h"
 #include "i2c_pm.h"
 #include "ssp.h"
+#include "phy_mdio.h"
 
 // Setup UART strings
 const char demo_str[] = "Marble Mini v1 UART DEMO\r\n";
@@ -9,7 +10,7 @@ const char lb_str[] = "Loopback... ESC to exit\r\n";
 const char menu_str[] = "\r\n"
 	"Menu:\r\n"
 	"0) Loopback\r\n"
-	"1) FPGA IP/MAC update\r\n"
+	"1) MDIO/PHY\r\n"
 	"2) I2C monitor\r\n"
 	"3) MDIO status\r\n"
 	"4) GPIO control\r\n"
@@ -107,6 +108,7 @@ int main (void) {
             marble_UART_send("\r\n", 2);
             break;
          case '1':
+            phy_print();
             break;
          case '2':
             I2C_PM_probe();
