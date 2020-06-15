@@ -12,7 +12,7 @@ const char menu_str[] = "\r\n"
 	"0) Loopback\r\n"
 	"1) MDIO/PHY\r\n"
 	"2) I2C monitor\r\n"
-	"3) MDIO status\r\n"
+	"3) Live counter\r\n"
 	"4) GPIO control\r\n"
 	"5) Reset FPGA\r\n"
 	"6) Push IP&MAC\r\n"
@@ -71,6 +71,8 @@ static void print_mac_ip(unsigned char mac_ip_data[10])
    marble_UART_send("\r\n", 2);
 }
 
+unsigned int live_cnt=0;
+
 int main (void) {
    // Static for now; eventually needs to be read from EEPROM
    unsigned char mac_ip_data[10] = {
@@ -114,6 +116,9 @@ int main (void) {
             I2C_PM_probe();
             break;
          case '3':
+            marble_UART_send("Live counter: \r\n", 16);
+            print_uint(live_cnt);
+            marble_UART_send("\r\n", 2);
             break;
          case '4':
             gpio_cmd();
@@ -152,4 +157,5 @@ extern void SysTick_Handler(void) {
    marble_LED_toggle(0);
    marble_LED_toggle(1);
    marble_LED_toggle(2);
+   live_cnt++;
 }
