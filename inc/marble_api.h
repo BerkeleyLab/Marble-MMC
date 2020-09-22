@@ -66,6 +66,11 @@ typedef enum {
 int marble_SSP_write(SSP_PORT ssp, uint8_t *buffer, int size);
 int marble_SSP_read(SSP_PORT ssp, uint8_t *buffer, int size);
 
+/************
+* GPIO user-defined handlers
+************/
+void marble_INT_handlers(void *FPGA_DONE_handler);
+
 /****
 * I2C
 ****/

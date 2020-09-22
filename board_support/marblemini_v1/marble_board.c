@@ -233,6 +233,44 @@ void reset_fpga(void)
 }
 
 /************
+* GPIO interrupt setup and user-defined handlers
+************/
+const uint8_t FPGA_DONE_INT_PIN = 5;
+void FPGA_DONE_dummy(void) {};
+void (*volatile marble_FPGA_DONE_handler)(void) = FPGA_DONE_dummy;
+
+// Override default (weak) IRQHandler
+void GPIO_IRQHandler(void)
+{
+   uint32_t gpioint_rs = Chip_GPIOINT_GetStatusRising(LPC_GPIOINT, GPIOINT_PORT0);
+   /* FPGA_DONE P0[5] */
+   Chip_GPIOINT_ClearIntStatus(LPC_GPIOINT, GPIOINT_PORT0, 1 << FPGA_DONE_INT_PIN);
+
+   if ((gpioint_rs & (1 << FPGA_DONE_INT_PIN)) != 0) {
+      if (marble_FPGA_DONE_handler) {
+         marble_FPGA_DONE_handler();
+      }
+   }
+}
+
+void marble_GPIOint_init(void)
+{
+   /* FPGA_DONE P0[5] */
+   /* Configure GPIO interrupt pin as input and rising-edge */
+   Chip_GPIO_WriteDirBit(LPC_GPIO, GPIOINT_PORT0, FPGA_DONE_INT_PIN, false);
+   Chip_GPIOINT_SetIntRising(LPC_GPIOINT, GPIOINT_PORT0, 1 << FPGA_DONE_INT_PIN);
+
+   /* Enable interrupt in the NVIC */
+   NVIC_ClearPendingIRQ(GPIO_IRQn);
+   NVIC_EnableIRQ(GPIO_IRQn);
+}
+
+/* Register user-defined interrupt handlers */
+void marble_INT_handlers(void *FPGA_DONE_handler) {
+   marble_FPGA_DONE_handler = FPGA_DONE_handler;
+}
+
+/************
 * I2C
 ************/
 #define SPEED_100KHZ 100000
@@ -439,6 +477,9 @@ void marble_init(bool use_xtal)
    marble_LED_init();
    marble_SW_init();
    marble_UART_init();
+
+   // Init GPIO interrupts
+   marble_GPIOint_init();
 
    // Init I2C busses in interrupt mode
    marble_I2C_init(I2C0, !I2C_POLL);

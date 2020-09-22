@@ -77,6 +77,12 @@ weak void QEI_IRQHandler(void) alias (Default_Handler);
 weak void PLL1_IRQHandler(void) alias (Default_Handler);
 weak void USBActivity_IRQHandler(void) alias (Default_Handler);
 weak void CANActivity_IRQHandler(void) alias (Default_Handler);
+weak void UART4_IRQHandler(void) alias (Default_Handler);
+weak void SSP2_IRQHandler(void) alias (Default_Handler);
+weak void LCD_IRQHandler(void) alias (Default_Handler);
+weak void GPIO_IRQHandler(void) alias (Default_Handler);
+weak void PWM0_IRQHandler(void) alias (Default_Handler);
+weak void EEPROM_IRQHandler(void) alias (Default_Handler);
 
 /* This is defined in the linker script */
 extern void __StackLimit(void);
@@ -106,8 +112,8 @@ const void *isr_vectors[] = {
   SysTick_Handler,	  // The SysTick Handler
 
   /* LPC17xx Chip Interrupts */
-  WDT_IRQHandler,	  // WDT
-  TIMER0_IRQHandler,	  // Timer 0
+  WDT_IRQHandler,	  // WDT, 16, 0x40
+  TIMER0_IRQHandler,	  // Timer 0, 17, 0x44
   TIMER1_IRQHandler,	  // Timer 1
   TIMER2_IRQHandler,	  // Timer 2
   TIMER3_IRQHandler,	  // Timer 3
@@ -141,6 +147,12 @@ const void *isr_vectors[] = {
   PLL1_IRQHandler,	  // PLL1 (USB PLL)
   USBActivity_IRQHandler, // USB Activity Interrupt
   CANActivity_IRQHandler, // CAN Activity Interrupt
+  UART4_IRQHandler,	  // 51, 0xcc - UART4
+  SSP2_IRQHandler,	  // 52, 0xd0 - SSP2
+  LCD_IRQHandler,	  // 53, 0xd4 - LCD
+  GPIO_IRQHandler,	  // 54, 0xd8 - GPIO
+  PWM0_IRQHandler,	  // 55, 0xdc - PWM0
+  EEPROM_IRQHandler,	  // 56, 0xe0 - EEPROM
 };
 
 /* These are defined in the linker script */

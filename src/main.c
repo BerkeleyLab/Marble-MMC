@@ -12,7 +12,7 @@ const char menu_str[] = "\r\n"
 	"0) Loopback\r\n"
 	"1) MDIO/PHY\r\n"
 	"2) I2C monitor\r\n"
-	"3) Live counter\r\n"
+	"3) Status counters\r\n"
 	"4) GPIO control\r\n"
 	"5) Reset FPGA\r\n"
 	"6) Push IP&MAC\r\n"
@@ -73,6 +73,12 @@ static void print_mac_ip(unsigned char mac_ip_data[10])
 
 unsigned int live_cnt=0;
 
+unsigned int fpga_prog_cnt=0;
+
+void fpga_done_handler(void) {
+   fpga_prog_cnt++;
+}
+
 int main (void) {
    // Static for now; eventually needs to be read from EEPROM
    unsigned char mac_ip_data[10] = {
@@ -90,6 +96,9 @@ int main (void) {
 
    // Power FMCs
    marble_FMC_pwr(true);
+
+   // Register GPIO interrupt handlers
+   marble_INT_handlers(fpga_done_handler);
 
    // Send demo string over UART at 115200 BAUD
    marble_UART_send(demo_str, strlen(demo_str));
@@ -118,6 +127,9 @@ int main (void) {
          case '3':
             marble_UART_send("Live counter: \r\n", 16);
             print_uint(live_cnt);
+            marble_UART_send("\r\n", 2);
+            marble_UART_send("FPGA prog counter: \r\n", 21);
+            print_uint(fpga_prog_cnt);
             marble_UART_send("\r\n", 2);
             break;
          case '4':
