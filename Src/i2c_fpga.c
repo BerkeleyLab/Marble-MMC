@@ -14,6 +14,7 @@
 /************
 * INA219 interface
 ************/
+void setCalibration_16V_2A(void);
 
 //uint16_t calValue;
 uint32_t currentDivider_mA;
@@ -68,7 +69,7 @@ bool wireReadRegister(uint8_t addr, uint8_t reg, uint16_t *value)
 }
 
 
-void setCalibration_16V_2A(){
+void setCalibration_16V_2A(void){
 	// VBUS_MAX = 16V             (Assumes 16V, can also be set to 32V)
 	// VSHUNT_MAX = 0.08          (Assumes Gain 8, 320mV, can also be 0.16, 0.08, 0.04)
 	// RSHUNT = 0.0227               (Resistor value in ohms)

@@ -10,6 +10,8 @@
 #include "string.h"
 #include <stdio.h>
 
+void SystemClock_Config_HSI(void);
+
 ETH_HandleTypeDef heth;
 
 I2C_HandleTypeDef hi2c1;
