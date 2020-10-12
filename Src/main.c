@@ -20,11 +20,14 @@
 
 /* Includes ------------------------------------------------------------------*/
 
+#include <string.h>
 #include "main.h"
 #include "i2c_pm.h"
 #include "i2c_fpga.h"
 #include "marble_api.h"
 #include <stm32f2xx_hal_flash_ex.h>
+
+void phy_print(void);
 
 #ifdef __GNUC__
 /* With GCC Compiler, small printf (option LD Linker->Libraries->Small printf
@@ -222,7 +225,7 @@ PUTCHAR_PROTOTYPE
   return ch;
 }
 
-void phy_print()
+void phy_print(void)
 {
 	uint32_t value;
 	//char p_buf[40];

@@ -76,7 +76,7 @@ typedef enum {
 } I2C_BUS;
 
 int marble_I2C_send(I2C_BUS I2C_bus, uint8_t addr, const uint8_t *data, int size);
-marble_I2C_cmdsend(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size);
+int marble_I2C_cmdsend(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size);
 int marble_I2C_recv(I2C_BUS I2C_bus, uint8_t addr, uint8_t *data, int size);
 int marble_I2C_cmdrecv(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size);
 
@@ -85,5 +85,16 @@ int marble_I2C_cmdrecv(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data
 ************/
 void marble_MDIO_write(uint16_t reg, uint32_t data);
 uint32_t marble_MDIO_read(uint8_t reg);
+
+/************
+* Other (to-be-categorized)
+************/
+void i2c_scan();
+void switch_i2c_bus(uint8_t);
+void adn4600_init(void);
+void adn4600_printStatus(void);
+void ina219_init(void);
+float getBusVoltage_V(uint8_t);
+float getCurrentAmps(uint8_t);
 
 #endif /* _MARBLE_API_H_ */
