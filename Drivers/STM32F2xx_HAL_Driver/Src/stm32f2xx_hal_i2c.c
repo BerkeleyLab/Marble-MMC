@@ -606,7 +606,7 @@ HAL_StatusTypeDef HAL_I2C_Master_Transmit(I2C_HandleTypeDef *hi2c, uint16_t DevA
     hi2c->ErrorCode = HAL_I2C_ERROR_NONE;
 
     /* Prepare transfer parameters */
-    hi2c->pBuffPtr    = pData;
+    hi2c->pBuffPtr    = (uint8_t *) pData;  // OK to de-const pointer, because we know (?) the write logic will never modify the data
     hi2c->XferCount   = Size;
     hi2c->XferOptions = I2C_NO_OPTION_FRAME;
     hi2c->XferSize    = hi2c->XferCount;
