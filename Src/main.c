@@ -154,7 +154,7 @@ int main(void)
 	  	              I2C_PM_probe();
 	  	              break;
 	  	           case '3':
-	  	              printf("Live counter: %d\r\n",HAL_GetTick());
+	  	              printf("Live counter: %ld\r\n", HAL_GetTick());
 	  	              break;
 	  	           case '4':
 	  	              gpio_cmd();
@@ -237,7 +237,7 @@ void phy_print(void)
 	   value = marble_MDIO_read(i);
 	   //snprintf(p_buf, 40, "  reg[%2.2x] = %4.4x\r\n", i, value);
 	   //marble_UART_send(p_buf, strlen(p_buf));
-	   printf( "  reg[%2.2x] = %4.4x\r\n", i, value);
+	   printf( "  reg[%2.2x] = %4.4lx\r\n", i, value);
 	}
 
 }

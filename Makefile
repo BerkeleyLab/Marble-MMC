@@ -82,8 +82,9 @@ OPENOCD         = openocd
 # they can be discarded if unused.  The linker performs garbage collection of
 # unused input sections.
 #
-CFLAGS	= $(FLAGS) -Wall -Wextra -Wno-unused -std=gnu99 -ffunction-sections -fdata-sections $(ARCH_FLAGS)
-ASFLAGS	= $(FLAGS) -Wall $(ARCH_FLAGS)
+CFLAGS	= $(FLAGS) -Os -std=c99 -ffunction-sections -fdata-sections $(ARCH_FLAGS)
+CFLAGS += -Wall -Wextra -Wno-unused -Wno-pointer-sign -Wno-switch -Wstrict-prototypes
+ASFLAGS	= $(FLAGS) $(ARCH_FLAGS)
 LDFLAGS = $(FLAGS) $(LINKER_FLAGS) -Wextra $(ARCH_FLAGS)
 
 # Default target

@@ -34,7 +34,7 @@ void ina219_init(){
 
 int wireWriteRegister (uint8_t addr, uint8_t reg, uint16_t value)
 {
-	uint8_t data[2];
+	uint8_t data[3];
 	data[0] = reg;
 	//data[0] = value & 0xff;
 	//data[1] = (value >> 8);

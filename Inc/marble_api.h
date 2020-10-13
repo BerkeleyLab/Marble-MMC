@@ -89,7 +89,7 @@ uint32_t marble_MDIO_read(uint8_t reg);
 /************
 * Other (to-be-categorized)
 ************/
-void i2c_scan();
+void i2c_scan(void);
 void switch_i2c_bus(uint8_t);
 void adn4600_init(void);
 void adn4600_printStatus(void);
