@@ -121,79 +121,79 @@ int main(void)
   {
 
 	  unsigned char mac_ip_data[10] = {
-	  	        18, 85, 85, 0, 1, 46,  // MAC (locally managed)
-	  	        192, 168, 19, 31   // IP
-	  	     };
+		        18, 85, 85, 0, 1, 46,  // MAC (locally managed)
+		        192, 168, 19, 31   // IP
+		     };
 	  marble_UART_send(demo_str, strlen(demo_str));
 
 	  uint8_t rx_ch;
 
-	  	     while (true) {
+		     while (true) {
 
-	  	        //marble_UART_send(menu_str, strlen(menu_str));
-	  	    	 printf(menu_str);
-	  	        // Wait for user selection
+		        //marble_UART_send(menu_str, strlen(menu_str));
+			 printf(menu_str);
+		        // Wait for user selection
 
-	  	    	while(marble_UART_recv(&rx_ch, 1) == 0);
+			while(marble_UART_recv(&rx_ch, 1) == 0);
 
-	  	        switch (rx_ch) {
-	  	           case '0':
-	  	              printf(lb_str);
-	  	              do {
-	  	                 if (marble_UART_recv(&rx_ch, 1) != 0){
-	  	                	 marble_UART_send(&rx_ch, 1);
+		        switch (rx_ch) {
+		           case '0':
+		              printf(lb_str);
+		              do {
+		                 if (marble_UART_recv(&rx_ch, 1) != 0){
+					 marble_UART_send(&rx_ch, 1);
 
-	  	                 }
-	  	              } while (rx_ch != 27);
-	  	              printf("\r\n");
-	  	              break;
-	  	           case '1':
-	  	              phy_print();
-	  	              break;
-	  	           case '2':
-	  	              I2C_PM_probe();
-	  	              break;
-	  	           case '3':
-	  	              printf("Live counter: %ld\r\n", HAL_GetTick());
-	  	              break;
-	  	           case '4':
-	  	              gpio_cmd();
-	  	              break;
-	  	           case '5':
-	  	              reset_fpga();
-	  	              break;
-	  	           case '6':
-	  	              print_mac_ip(mac_ip_data);
-	  	              //push_fpga_mac_ip(mac_ip_data);
-	  	              printf("DONE\r\n");
-	  	              break;
-	  	           case '7':
-	  	              printf("Start\r\n");
-	  	              print_max6639();
-	  	              break;
-	  	           case '8':
-	  	              // Demonstrate setting over-temperature register and Interrupt mode
-	  	              LM75_write(LM75_0, LM75_OS, 100*2);
-	  	              LM75_write(LM75_0, LM75_CFG, LM75_CFG_COMP_INT);
-	  	              LM75_print(LM75_0);
-	  	              break;
-	  	           case '9':
-	  	              // Demonstrate setting over-temperature register
-	  	              LM75_write(LM75_1, LM75_OS, 100*2);
-	  	              LM75_print(LM75_1);
-	  	              break;
-	  	           case 'a':
-	  	        	   printf("I2C scanner\r\n");
-	  	        	   i2c_scan();
-	  	        	   break;
-	  	           case 'b':
+		                 }
+		              } while (rx_ch != 27);
+		              printf("\r\n");
+		              break;
+		           case '1':
+		              phy_print();
+		              break;
+		           case '2':
+		              I2C_PM_probe();
+		              break;
+		           case '3':
+		              printf("Live counter: %ld\r\n", HAL_GetTick());
+		              break;
+		           case '4':
+		              gpio_cmd();
+		              break;
+		           case '5':
+		              reset_fpga();
+		              break;
+		           case '6':
+		              print_mac_ip(mac_ip_data);
+		              //push_fpga_mac_ip(mac_ip_data);
+		              printf("DONE\r\n");
+		              break;
+		           case '7':
+		              printf("Start\r\n");
+		              print_max6639();
+		              break;
+		           case '8':
+		              // Demonstrate setting over-temperature register and Interrupt mode
+		              LM75_write(LM75_0, LM75_OS, 100*2);
+		              LM75_write(LM75_0, LM75_CFG, LM75_CFG_COMP_INT);
+		              LM75_print(LM75_0);
+		              break;
+		           case '9':
+		              // Demonstrate setting over-temperature register
+		              LM75_write(LM75_1, LM75_OS, 100*2);
+		              LM75_print(LM75_1);
+		              break;
+		           case 'a':
+				   printf("I2C scanner\r\n");
+				   i2c_scan();
+				   break;
+		           case 'b':
 					   printf("ADN4600\r\n");
 					   switch_i2c_bus(2);
 					   adn4600_init();
 					   adn4600_printStatus();
 					   //i2c_scan();
 					   break;
-	  	           case 'c':
+		           case 'c':
 					   printf("INA test\r\n");
 
 					   switch_i2c_bus(6);
@@ -202,15 +202,15 @@ int main(void)
 					   getBusVoltage_V(INA219_0);
 					   getCurrentAmps(INA219_0);
 					   break;
-	  	           case 'd':
-	  	        	   printf("Switch MGT to QSFP 2\r\n");
-	  	        	   HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, true);
-	  	        	   break;
-	  	           default:
-	  	              printf(unk_str);
-	  	              break;
-	  	        }
-	  	     }
+		           case 'd':
+				   printf("Switch MGT to QSFP 2\r\n");
+				   HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, true);
+				   break;
+		           default:
+		              printf(unk_str);
+		              break;
+		        }
+		     }
 
   }
   /* USER CODE END 3 */
@@ -259,7 +259,7 @@ void Error_Handler(void)
   * @retval None
   */
 void assert_failed(uint8_t *file, uint32_t line)
-{ 
+{
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
      tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */

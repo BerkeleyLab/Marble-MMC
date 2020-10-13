@@ -53,19 +53,19 @@ bool wireReadRegister(uint8_t addr, uint8_t reg, uint16_t *value)
 	uint8_t buffer[2];
 	bool success = 0;
 
-	//if (marble_I2C_cmdrecv(I2C_FPGA, addr, reg, buffer, 2) == HAL_OK){
-	//	*value = (((uint16_t)buffer[0] << 8) | buffer[1]);
-	//	success = true;
-	//}
-    //return success;
+	if (0 && marble_I2C_cmdrecv(I2C_FPGA, addr, reg, buffer, 2) == HAL_OK){
+		*value = (((uint16_t)buffer[0] << 8) | buffer[1]);
+		success = true;
+	}
+	// return success;
 
-    buffer[0] = reg;
-    marble_I2C_send(I2C_FPGA, addr, buffer, 1);
+	buffer[0] = reg;
+	marble_I2C_send(I2C_FPGA, addr, buffer, 1);
 
-    marble_I2C_recv(I2C_FPGA, addr, buffer, 2);
+	marble_I2C_recv(I2C_FPGA, addr, buffer, 2);
 
-    *value = (((uint16_t)buffer[0] << 8) | buffer[1]);
-    return success;
+	*value = (((uint16_t)buffer[0] << 8) | buffer[1]);
+	return success;
 }
 
 

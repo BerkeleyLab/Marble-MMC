@@ -231,9 +231,9 @@ int marble_I2C_send(I2C_BUS I2C_bus, uint8_t addr, const uint8_t *data, int size
       case I2C_IPMB:
          return 0; //Chip_I2C_MasterSend(I2C0, addr, data, size);
       case I2C_PM:
-    	  return HAL_I2C_Master_Transmit(&hi2c3,(uint16_t)addr, data, size, HAL_MAX_DELAY);
+         return HAL_I2C_Master_Transmit(&hi2c3,(uint16_t)addr, data, size, HAL_MAX_DELAY);
       case I2C_FPGA:
-    	  return HAL_I2C_Master_Transmit(&hi2c1, (uint16_t)addr, data, size, HAL_MAX_DELAY);
+         return HAL_I2C_Master_Transmit(&hi2c1, (uint16_t)addr, data, size, HAL_MAX_DELAY);
    }
    return 0;  // shouldn't happen
 }
@@ -246,7 +246,7 @@ int marble_I2C_cmdsend(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data
       case I2C_PM:
          return HAL_I2C_Mem_Write(&hi2c3, (uint16_t)addr, cmd, 1, data, size, HAL_MAX_DELAY);
       case I2C_FPGA:
-    	  return HAL_I2C_Mem_Write(&hi2c1, (uint16_t)addr, cmd, 1, data, size, HAL_MAX_DELAY);
+         return HAL_I2C_Mem_Write(&hi2c1, (uint16_t)addr, cmd, 1, data, size, HAL_MAX_DELAY);
    }
    return 0;  // shouldn't happen
 }
@@ -256,11 +256,11 @@ int marble_I2C_recv(I2C_BUS I2C_bus, uint8_t addr, uint8_t *data, int size) {
    switch (I2C_bus) {
       case I2C_IPMB:
          //return HAL_I2C_Master_Transmit(&hi2c1, addr, data, size, HAL_MAX_DELAY);
-    	 return 0;
+         return 0;
       case I2C_PM:
          return HAL_I2C_Master_Receive(&hi2c3, (uint16_t)addr, data, size, HAL_MAX_DELAY);
       case I2C_FPGA:
-    	  return HAL_I2C_Master_Receive(&hi2c1, (uint16_t)addr, data, size, HAL_MAX_DELAY);
+         return HAL_I2C_Master_Receive(&hi2c1, (uint16_t)addr, data, size, HAL_MAX_DELAY);
    }
    return 0;  // shouldn't happen
 }
@@ -273,7 +273,7 @@ int marble_I2C_cmdrecv(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data
       case I2C_PM:
          return HAL_I2C_Mem_Read(&hi2c3, (uint16_t)addr, cmd, 1, data, size, HAL_MAX_DELAY);
       case I2C_FPGA:
-    	  return HAL_I2C_Mem_Read(&hi2c1, (uint16_t)addr, cmd, 1, data, size, HAL_MAX_DELAY);
+         return HAL_I2C_Mem_Read(&hi2c1, (uint16_t)addr, cmd, 1, data, size, HAL_MAX_DELAY);
    }
    return 0;  // shouldn't happen
 }
@@ -317,7 +317,7 @@ void marble_MDIO_init(void)
 void marble_MDIO_write(uint16_t reg, uint32_t data)
 {
    //Chip_ENET_StartMIIWrite(LPC_ETHERNET, reg, data);
-	HAL_ETH_WritePHYRegister(&heth, reg, data);
+   HAL_ETH_WritePHYRegister(&heth, reg, data);
    //while (Chip_ENET_IsMIIBusy(LPC_ETHERNET));
 }
 

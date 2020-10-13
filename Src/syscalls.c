@@ -5,13 +5,13 @@
 **
 **  Abstract    : System Workbench Minimal System calls file
 **
-** 		          For more information about which c-functions
+**                For more information about which c-functions
 **                need which of these lowlevel functions
 **                please consult the Newlib libc-manual
 **
 **  Environment : System Workbench for MCU
 **
-**  Distribution: The file is distributed “as is,” without any warranty
+**  Distribution: The file is distributed "as is," without any warranty
 **                of any kind.
 **
 *****************************************************************************
@@ -85,7 +85,7 @@ int _kill(int pid, int sig)
 void _exit (int status)
 {
 	_kill(status, -1);
-	while (1) {}		/* Make sure we hang here */
+	while (1) {}  /* Make sure we hang here */
 }
 
 __attribute__((weak)) int _read(int file, char *ptr, int len)
@@ -123,8 +123,10 @@ caddr_t _sbrk(int incr)
 	prev_heap_end = heap_end;
 	if (heap_end + incr > stack_ptr)
 	{
-//		write(1, "Heap and stack collision\n", 25);
-//		abort();
+		if (0) {
+			write(1, "Heap and stack collision\n", 25);
+			abort();
+		}
 		errno = ENOMEM;
 		return (caddr_t) -1;
 	}
