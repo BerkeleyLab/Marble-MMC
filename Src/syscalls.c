@@ -55,7 +55,7 @@
 
 
 /* Variables */
-//#undef errno
+#undef errno
 extern int errno;
 extern int __io_putchar(int ch) __attribute__((weak));
 extern int __io_getchar(void) __attribute__((weak));
@@ -67,7 +67,7 @@ char **environ = __env;
 
 
 /* Functions */
-void initialise_monitor_handles()
+void initialise_monitor_handles(void)
 {
 }
 
@@ -82,11 +82,13 @@ int _kill(int pid, int sig)
 	return -1;
 }
 
+#if 0
 void _exit (int status)
 {
 	_kill(status, -1);
 	while (1) {}  /* Make sure we hang here */
 }
+#endif
 
 __attribute__((weak)) int _read(int file, char *ptr, int len)
 {
@@ -124,7 +126,7 @@ caddr_t _sbrk(int incr)
 	if (heap_end + incr > stack_ptr)
 	{
 		if (0) {
-			write(1, "Heap and stack collision\n", 25);
+			_write(1, "Heap and stack collision\n", 25);
 			abort();
 		}
 		errno = ENOMEM;

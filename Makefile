@@ -54,7 +54,7 @@ ECHO	:= echo
 FIND	:= find
 GREP	:= grep
 MKDIR	:= mkdir -p
-RM	:= rm -r
+RM	:= rm -rf
 SED	:= sed
 SHUF	:= shuf
 

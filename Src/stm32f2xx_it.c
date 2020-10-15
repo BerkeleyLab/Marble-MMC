@@ -187,7 +187,7 @@ void SysTick_Handler(void)
 
   /* USER CODE END SysTick_IRQn 0 */
   HAL_IncTick();
-  
+
   static uint16_t i = 0;
   if(i == 0)
 	  HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_0);
