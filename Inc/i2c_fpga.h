@@ -11,20 +11,20 @@
 #define TCA9548 (0xe0)
 
 typedef enum {
-   I2C_FMC1		= 0,
-   I2C_FMC2		= 1,
-   I2C_CLK		= 2,
-   I2C_QSFP1	= 4,
-   I2C_QSFP2	= 5,
-   I2C_APP		= 6
+   I2C_FMC1     = 0,
+   I2C_FMC2     = 1,
+   I2C_CLK      = 2,
+   I2C_QSFP1    = 4,
+   I2C_QSFP2    = 5,
+   I2C_APP      = 6
 } I2C_FPGA_BUS;
 
 typedef enum {
-   INA219_0	 	= 0x84,
-   INA219_FMC1	= 0x80,
-   INA219_FMC2	= 0x82,
-   PCA9555_0 	= 0x40,
-   PCA9555_1 	= 0x42
+   INA219_0     = 0x84,
+   INA219_FMC1  = 0x80,
+   INA219_FMC2  = 0x82,
+   PCA9555_0    = 0x40,
+   PCA9555_1    = 0x42
 } I2C_APP_BUS;
 
 #define I2C_APP_NUM 5

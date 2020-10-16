@@ -183,3 +183,34 @@ void I2C_PM_probe(void) {
    }
 }
 
+void xrp_dump(uint8_t dev) {
+   // https://www.maxlinear.com/appnote/anp-38.pdf
+   printf("XRP7724 dump [%2.2x]\n", dev);
+   struct {int a; char *n;} r_table[] = {
+      {0x02, "GET_HOST_STS"},
+      {0x05, "FAULT_STATUS"},
+      {0x09, "STATUS"},
+      {0x0e, "CHIP_READY"},
+      {0x10, "VOLTAGE_CH1"},
+      {0x11, "VOLTAGE_CH2"},
+      {0x12, "VOLTAGE_CH3"},
+      {0x13, "VOLTAGE_CH4"},
+      {0x14, "VOLTAGE_VIN"},
+      {0x15, "TEMP_VTJ"},
+      {0x16, "CURRENT_CH1"},
+      {0x17, "CURRENT_CH2"},
+      {0x18, "CURRENT_CH3"},
+      {0x19, "CURRENT_CH4"}};
+   const unsigned tlen = sizeof(r_table)/sizeof(r_table[0]);
+   for (unsigned ix=0; ix<tlen; ix++) {
+      uint8_t i2c_dat[4];
+      int regno = r_table[ix].a;
+      int rc = marble_I2C_cmdrecv(I2C_PM, dev, regno, i2c_dat, 2) == 1;
+      if (rc == HAL_OK) {
+          unsigned value = (((unsigned) i2c_dat[0]) << 8) | i2c_dat[1];
+          printf("r[%2.2x] = 0x%4.4x = %5d   (%s)\n", regno, value, value, r_table[ix].n);
+      } else {
+          printf("r[%2.2x]    unread          (%s)\n", regno, r_table[ix].n);
+      }
+   }
+}

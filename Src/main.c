@@ -55,7 +55,8 @@ const char menu_str[] = "\r\n"
 	"a) I2C scan all ports\r\n"
 	"b) Config ADN4600\r\n"
 	"c) INA219 Main power supply\r\n"
-	"d) MGT MUX - switch to QSFP 2\r\n";
+	"d) MGT MUX - switch to QSFP 2\r\n"
+	"e) PM bus display\r\n";
 
 const char unk_str[] = "> Unknown option\r\n";
 const char gpio_str[] = "GPIO pins, caps for on, lower case for off\r\n"
@@ -111,6 +112,28 @@ static void print_mac_ip(unsigned char mac_ip_data[10])
       print_uint(mac_ip_data[ix]);
    }
    marble_UART_send("\r\n", 2);
+}
+
+static void ina219_test(void)
+{
+	switch_i2c_bus(6);
+	if (1) {
+		ina219_debug(INA219_0);
+		ina219_debug(INA219_FMC1);
+		ina219_debug(INA219_FMC2);
+	} else {
+		ina219_init();
+		//printf("Main bus: %dV, %dmA", getBusVoltage_V(INA219_0), getCurrentAmps(INA219_0));
+		getBusVoltage_V(INA219_0);
+		getCurrentAmps(INA219_0);
+	}
+}
+
+static void pm_bus_display(void)
+{
+	LM75_print(LM75_0);
+	LM75_print(LM75_1);
+	xrp_dump(XRP7724);
 }
 
 int main(void)
@@ -187,24 +210,23 @@ int main(void)
 				   i2c_scan();
 				   break;
 		           case 'b':
-					   printf("ADN4600\r\n");
-					   switch_i2c_bus(2);
-					   adn4600_init();
-					   adn4600_printStatus();
-					   //i2c_scan();
-					   break;
+				   printf("ADN4600\r\n");
+				   switch_i2c_bus(2);
+				   adn4600_init();
+				   adn4600_printStatus();
+				   //i2c_scan();
+				   break;
 		           case 'c':
-					   printf("INA test\r\n");
-
-					   switch_i2c_bus(6);
-					   ina219_init();
-					   //printf("Main bus: %dV, %dmA", getBusVoltage_V(INA219_0), getCurrentAmps(INA219_0));
-					   getBusVoltage_V(INA219_0);
-					   getCurrentAmps(INA219_0);
-					   break;
+				   printf("INA test\r\n");
+				   ina219_test();
+				   break;
 		           case 'd':
 				   printf("Switch MGT to QSFP 2\r\n");
 				   HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, true);
+				   break;
+		           case 'e':
+				   printf("PM bus display\r\n");
+				   pm_bus_display();
 				   break;
 		           default:
 		              printf(unk_str);

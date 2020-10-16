@@ -231,7 +231,7 @@ int marble_I2C_send(I2C_BUS I2C_bus, uint8_t addr, const uint8_t *data, int size
       case I2C_IPMB:
          return 0; //Chip_I2C_MasterSend(I2C0, addr, data, size);
       case I2C_PM:
-         return HAL_I2C_Master_Transmit(&hi2c3,(uint16_t)addr, data, size, HAL_MAX_DELAY);
+         return HAL_I2C_Master_Transmit(&hi2c3, (uint16_t)addr, data, size, HAL_MAX_DELAY);
       case I2C_FPGA:
          return HAL_I2C_Master_Transmit(&hi2c1, (uint16_t)addr, data, size, HAL_MAX_DELAY);
    }

@@ -62,12 +62,25 @@ bool wireReadRegister(uint8_t addr, uint8_t reg, uint16_t *value)
 	buffer[0] = reg;
 	marble_I2C_send(I2C_FPGA, addr, buffer, 1);
 
+	buffer[0] = 0xde;
+	buffer[1] = 0xad;
 	marble_I2C_recv(I2C_FPGA, addr, buffer, 2);
 
 	*value = (((uint16_t)buffer[0] << 8) | buffer[1]);
 	return success;
 }
 
+void ina219_debug(uint8_t addr)
+{
+	uint16_t value = 0;
+	printf("> INA219 debug at address %2.2xh\n", (unsigned) addr);
+	wireReadRegister(addr, INA_REG_CONFIG, &value);
+	printf("Register %d value 0x%4.4x\n", INA_REG_CONFIG, value);
+	wireReadRegister(addr, INA_REG_SHUNTVOLTAGE, &value);
+	printf("Register %d value 0x%4.4x\n", INA_REG_SHUNTVOLTAGE, value);
+	wireReadRegister(addr, INA_REG_BUSVOLTAGE, &value);
+	printf("Register %d value 0x%4.4x\n", INA_REG_BUSVOLTAGE, value);
+}
 
 void setCalibration_16V_2A(void){
 	// VBUS_MAX = 16V             (Assumes 16V, can also be set to 32V)
