@@ -411,8 +411,8 @@ void marble_init(bool use_xtal)
    ina219_init();
    adn4600_init();
 
-   printf("** Marble Test ** \n");
-   printf("** Init done ** \n");
+   printf("** Marble Test **\n");
+   printf("** Init done **\n");
 
    // Init I2C busses in interrupt mode
    //marble_I2C_init(I2C0, !I2C_POLL);

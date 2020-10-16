@@ -56,7 +56,8 @@ const char menu_str[] = "\r\n"
 	"b) Config ADN4600\r\n"
 	"c) INA219 Main power supply\r\n"
 	"d) MGT MUX - switch to QSFP 2\r\n"
-	"e) PM bus display\r\n";
+	"e) PM bus display\r\n"
+	"f) XRP7724 test1\r\n";
 
 const char unk_str[] = "> Unknown option\r\n";
 const char gpio_str[] = "GPIO pins, caps for on, lower case for off\r\n"
@@ -227,6 +228,10 @@ int main(void)
 		           case 'e':
 				   printf("PM bus display\r\n");
 				   pm_bus_display();
+				   break;
+		           case 'f':
+				   printf("XRP test1\r\n");
+				   xrp_test1(XRP7724);
 				   break;
 		           default:
 		              printf(unk_str);

@@ -40,5 +40,6 @@ int LM75_read(uint8_t dev, LM75_REG reg, int *data);
 int LM75_write(uint8_t dev, LM75_REG reg, int data);
 
 void xrp_dump(uint8_t dev);
+void xrp_test1(uint8_t dev);
 
 #endif /* I2C_PM_H_ */

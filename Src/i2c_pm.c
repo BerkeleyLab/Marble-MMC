@@ -187,7 +187,7 @@ void xrp_dump(uint8_t dev) {
    // https://www.maxlinear.com/appnote/anp-38.pdf
    printf("XRP7724 dump [%2.2x]\n", dev);
    struct {int a; char *n;} r_table[] = {
-      {0x02, "GET_HOST_STS"},
+      {0x02, "HOST_STS"},
       {0x05, "FAULT_STATUS"},
       {0x09, "STATUS"},
       {0x0e, "CHIP_READY"},
@@ -200,12 +200,17 @@ void xrp_dump(uint8_t dev) {
       {0x16, "CURRENT_CH1"},
       {0x17, "CURRENT_CH2"},
       {0x18, "CURRENT_CH3"},
-      {0x19, "CURRENT_CH4"}};
+      {0x19, "CURRENT_CH4"},
+      {0x30, "READ_GPIO"},
+      {0x40, "FLASH_PROGRAM_ADDRESS"},
+      {0x4E, "FLASH_PAGE_CLEAR"},
+      {0x4F, "FLASH_PAGE_ERASE"}};
+
    const unsigned tlen = sizeof(r_table)/sizeof(r_table[0]);
    for (unsigned ix=0; ix<tlen; ix++) {
       uint8_t i2c_dat[4];
       int regno = r_table[ix].a;
-      int rc = marble_I2C_cmdrecv(I2C_PM, dev, regno, i2c_dat, 2) == 1;
+      int rc = marble_I2C_cmdrecv(I2C_PM, dev, regno, i2c_dat, 2);
       if (rc == HAL_OK) {
           unsigned value = (((unsigned) i2c_dat[0]) << 8) | i2c_dat[1];
           printf("r[%2.2x] = 0x%4.4x = %5d   (%s)\n", regno, value, value, r_table[ix].n);
@@ -213,4 +218,34 @@ void xrp_dump(uint8_t dev) {
           printf("r[%2.2x]    unread          (%s)\n", regno, r_table[ix].n);
       }
    }
+}
+
+static void xrp_reg_write_check(uint8_t dev, uint8_t regno, uint16_t d)
+{
+   int rc;
+   uint8_t i2c_dat[4];
+   i2c_dat[0] = (d>>8) & 0xff;
+   i2c_dat[1] = d & 0xff;
+   rc = marble_I2C_cmdsend(I2C_PM, dev, regno, i2c_dat, 2);
+   if (rc != HAL_OK) {
+      printf("r[%2.2x] wrote 0x%4.4x,  rc = %d (want %d)\n", regno, d, rc, HAL_OK);
+   }
+   HAL_Delay(10);
+   i2c_dat[0] = 0xde;
+   i2c_dat[1] = 0xad;
+   rc = marble_I2C_cmdrecv(I2C_PM, dev, regno, i2c_dat, 2);
+   if (rc == HAL_OK) {
+      unsigned value = (((unsigned) i2c_dat[0]) << 8) | i2c_dat[1];
+      printf("r[%2.2x] = 0x%4.4x = %5d  (hope for 0x%4.4x)\n", regno, value, value, d);
+   } else {
+      printf("r[%2.2x]    unread\n", regno);
+   }
+}
+
+void xrp_test1(uint8_t dev) {
+   printf("XRP7724 test1 [%2.2x]\n", dev);
+   xrp_reg_write_check(dev, 0x40, 0x8072);
+   xrp_reg_write_check(dev, 0x40, 0xC010);
+   xrp_reg_write_check(dev, 0x40, 0x8068);  // YFLASHPGMDELAY
+   xrp_reg_write_check(dev, 0x41, 0xFF00);
 }
