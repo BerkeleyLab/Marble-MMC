@@ -220,7 +220,7 @@ void xrp_dump(uint8_t dev) {
    }
 }
 
-static void xrp_reg_write_check(uint8_t dev, uint8_t regno, uint16_t d)
+static int xrp_reg_write_check(uint8_t dev, uint8_t regno, uint16_t d)
 {
    int rc;
    uint8_t i2c_dat[4];
@@ -237,14 +237,74 @@ static void xrp_reg_write_check(uint8_t dev, uint8_t regno, uint16_t d)
    if (rc == HAL_OK) {
       unsigned value = (((unsigned) i2c_dat[0]) << 8) | i2c_dat[1];
       printf("r[%2.2x] = 0x%4.4x = %5d  (hope for 0x%4.4x)\n", regno, value, value, d);
+      return value == d;
+   } else {
+      printf("r[%2.2x]    unread\n", regno);
+   }
+   return 0;
+}
+
+static void xrp_print_reg(uint8_t dev, uint8_t regno)
+{
+   uint8_t i2c_dat[4];
+   i2c_dat[0] = 0xde;
+   i2c_dat[1] = 0xad;
+   int rc = marble_I2C_cmdrecv(I2C_PM, dev, regno, i2c_dat, 2);
+   if (rc == HAL_OK) {
+      unsigned value = (((unsigned) i2c_dat[0]) << 8) | i2c_dat[1];
+      printf("r[%2.2x] = 0x%4.4x\n", regno, value);
    } else {
       printf("r[%2.2x]    unread\n", regno);
    }
 }
 
+static int xrp_push(uint8_t dev, uint16_t d[], unsigned len)
+{
+   for (unsigned jx = 0; jx < len; jx++) {
+      uint8_t i2c_dat[4];
+      i2c_dat[0] = (d[jx]>>8) & 0xff;
+      i2c_dat[1] = d[jx] & 0xff;
+      // FLASH_PROGRAM_DATA_INC_ADDRESS (0x42)
+      int rc = marble_I2C_cmdsend(I2C_PM, dev, 0x42, i2c_dat, 2);
+      if (rc != HAL_OK) {
+         printf(" Write Fault\n");
+         return 0;
+      }
+      printf(".");
+      HAL_Delay(50);
+   }
+   printf("\n");
+   xrp_print_reg(dev, 0x40);
+   return 1;
+}
+
+static int xrp_pull(uint8_t dev, unsigned len)
+{
+   for (unsigned jx = 0; jx < len; jx++) {
+      uint8_t i2c_dat[4];
+      int rc = marble_I2C_cmdrecv(I2C_PM, dev, 0x42, i2c_dat, 2);
+      if (rc != HAL_OK) {
+         printf(" Read Fault\n");
+         return 0;
+      }
+      unsigned value = (((unsigned) i2c_dat[0]) << 8) | i2c_dat[1];
+      printf(" %4.4x", value);
+      HAL_Delay(10);
+   }
+   printf("\n");
+   xrp_print_reg(dev, 0x40);
+   return 1;
+}
+
 void xrp_test1(uint8_t dev) {
    printf("XRP7724 test1 [%2.2x]\n", dev);
-   xrp_reg_write_check(dev, 0x40, 0x8072);
+   if (xrp_reg_write_check(dev, 0x40, 0x8072)) {
+       printf("OK, trying to write\n");
+       uint16_t d[] = {0x0002, 0x5000, 0x00FF, 0xFF32, 0x0432, 0x0632, 0x0000, 0x0300};
+       xrp_push(dev, d, 8);
+       xrp_reg_write_check(dev, 0x40, 0x8072);
+       xrp_pull(dev, 8);
+   }
    xrp_reg_write_check(dev, 0x40, 0xC010);
    xrp_reg_write_check(dev, 0x40, 0x8068);  // YFLASHPGMDELAY
    xrp_reg_write_check(dev, 0x41, 0xFF00);
