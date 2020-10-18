@@ -227,55 +227,22 @@ void I2C2_IRQHandler(void)
 /* Generic I2C send function with selectable I2C bus and 8-bit I2C addresses (R/W bit = 0) */
 int marble_I2C_send(I2C_BUS I2C_bus, uint8_t addr, const uint8_t *data, int size) {
    //addr = addr >> 1;
-   switch (I2C_bus) {
-      case I2C_IPMB:
-         return 0; //Chip_I2C_MasterSend(I2C0, addr, data, size);
-      case I2C_PM:
-         return HAL_I2C_Master_Transmit(&hi2c3, (uint16_t)addr, data, size, HAL_MAX_DELAY);
-      case I2C_FPGA:
-         return HAL_I2C_Master_Transmit(&hi2c1, (uint16_t)addr, data, size, HAL_MAX_DELAY);
-   }
-   return 0;  // shouldn't happen
+   return HAL_I2C_Master_Transmit(I2C_bus, (uint16_t)addr, data, size, HAL_MAX_DELAY);
 }
 
 int marble_I2C_cmdsend(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size) {
    //addr = addr >> 1;
-   switch (I2C_bus) {
-      case I2C_IPMB:
-         return 0; //Chip_I2C_MasterCmdRead(I2C0, addr, cmd, data, size);
-      case I2C_PM:
-         return HAL_I2C_Mem_Write(&hi2c3, (uint16_t)addr, cmd, 1, data, size, HAL_MAX_DELAY);
-      case I2C_FPGA:
-         return HAL_I2C_Mem_Write(&hi2c1, (uint16_t)addr, cmd, 1, data, size, HAL_MAX_DELAY);
-   }
-   return 0;  // shouldn't happen
+   return HAL_I2C_Mem_Write(I2C_bus, (uint16_t)addr, cmd, 1, data, size, HAL_MAX_DELAY);
 }
 
 int marble_I2C_recv(I2C_BUS I2C_bus, uint8_t addr, uint8_t *data, int size) {
    //addr = addr >> 1;
-   switch (I2C_bus) {
-      case I2C_IPMB:
-         //return HAL_I2C_Master_Transmit(&hi2c1, addr, data, size, HAL_MAX_DELAY);
-         return 0;
-      case I2C_PM:
-         return HAL_I2C_Master_Receive(&hi2c3, (uint16_t)addr, data, size, HAL_MAX_DELAY);
-      case I2C_FPGA:
-         return HAL_I2C_Master_Receive(&hi2c1, (uint16_t)addr, data, size, HAL_MAX_DELAY);
-   }
-   return 0;  // shouldn't happen
+   return HAL_I2C_Master_Receive(I2C_bus, (uint16_t)addr, data, size, HAL_MAX_DELAY);
 }
 
 int marble_I2C_cmdrecv(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size) {
    //addr = addr >> 1;
-   switch (I2C_bus) {
-      case I2C_IPMB:
-         return 0; //Chip_I2C_MasterCmdRead(I2C0, addr, cmd, data, size);
-      case I2C_PM:
-         return HAL_I2C_Mem_Read(&hi2c3, (uint16_t)addr, cmd, 1, data, size, HAL_MAX_DELAY);
-      case I2C_FPGA:
-         return HAL_I2C_Mem_Read(&hi2c1, (uint16_t)addr, cmd, 1, data, size, HAL_MAX_DELAY);
-   }
-   return 0;  // shouldn't happen
+   return HAL_I2C_Mem_Read(I2C_bus, (uint16_t)addr, cmd, 1, data, size, HAL_MAX_DELAY);
 }
 
 /************
@@ -572,7 +539,7 @@ static void MX_I2C1_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN I2C1_Init 2 */
-
+  I2C_FPGA = &hi2c1;  // set global
   /* USER CODE END I2C1_Init 2 */
 
 }
@@ -606,7 +573,7 @@ static void MX_I2C3_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN I2C3_Init 2 */
-
+  I2C_PM = &hi2c3;  // set global
   /* USER CODE END I2C3_Init 2 */
 
 }

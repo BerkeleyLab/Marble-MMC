@@ -69,11 +69,11 @@ int marble_SSP_read(SSP_PORT ssp, uint8_t *buffer, int size);
 /****
 * I2C
 ****/
-typedef enum {
-   I2C_PM,
-   I2C_IPMB,
-   I2C_FPGA,
-} I2C_BUS;
+// Really I2C_HandleTypeDef *
+void *I2C_PM;
+// void *I2C_IPMB;
+void *I2C_FPGA;
+typedef void *I2C_BUS;
 
 int marble_I2C_send(I2C_BUS I2C_bus, uint8_t addr, const uint8_t *data, int size);
 int marble_I2C_cmdsend(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size);
