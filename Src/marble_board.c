@@ -225,13 +225,13 @@ void I2C2_IRQHandler(void)
 
 
 /* Generic I2C send function with selectable I2C bus and 8-bit I2C addresses (R/W bit = 0) */
+/* 1-byte register addresses */
 int marble_I2C_send(I2C_BUS I2C_bus, uint8_t addr, const uint8_t *data, int size) {
    //addr = addr >> 1;
    return HAL_I2C_Master_Transmit(I2C_bus, (uint16_t)addr, data, size, HAL_MAX_DELAY);
 }
 
 int marble_I2C_cmdsend(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size) {
-   //addr = addr >> 1;
    return HAL_I2C_Mem_Write(I2C_bus, (uint16_t)addr, cmd, 1, data, size, HAL_MAX_DELAY);
 }
 
@@ -241,8 +241,15 @@ int marble_I2C_recv(I2C_BUS I2C_bus, uint8_t addr, uint8_t *data, int size) {
 }
 
 int marble_I2C_cmdrecv(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size) {
-   //addr = addr >> 1;
    return HAL_I2C_Mem_Read(I2C_bus, (uint16_t)addr, cmd, 1, data, size, HAL_MAX_DELAY);
+}
+
+/* Same but 2-byte register addresses */
+int marble_I2C_cmdsend_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *data, int size) {
+   return HAL_I2C_Mem_Write(I2C_bus, (uint16_t)addr, cmd, 2, data, size, HAL_MAX_DELAY);
+}
+int marble_I2C_cmdrecv_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *data, int size) {
+   return HAL_I2C_Mem_Read(I2C_bus, (uint16_t)addr, cmd, 2, data, size, HAL_MAX_DELAY);
 }
 
 /************

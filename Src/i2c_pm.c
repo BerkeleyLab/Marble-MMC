@@ -183,6 +183,31 @@ void I2C_PM_probe(void) {
    }
 }
 
+/* XPR7724 is special
+ * Seems that one-byte Std Commands documented in ANP-38 apply to commands < 0x4F,
+ * but there are also two-byte commands (called addresses) starting with 0x8000,
+ * discussed in ANP-39, and captured in hex files used for runtime programming.
+ * Even ANP-38 mentions one of these in passing, YFLASHPGMDELAY (address = 0x8068).
+ * Thus there are two types of I2C transactions:
+ *  1-byte address  2-byte data, use marble_I2C_cmd{send,recv}().
+ *  2-byte address  1-byte data, use marble_I2C_cmd{send,recv}_a2().
+ * One special case not documented elsewhere: Exar's UnivPMIC project
+ * instructs us not to write to register 0xD022.
+ */
+static int xrp_set2(uint8_t dev, uint16_t addr, uint8_t data)
+{
+   int rc = marble_I2C_cmdsend_a2(I2C_PM, dev, addr, &data, 1);
+   if (rc != HAL_OK) {
+      printf("xrp_set2: failure writing r[%4.4x] <= %2.2x\n", addr, data);
+      return rc;
+   }
+   HAL_Delay(10);
+   uint8_t chk = 0x55;
+   rc = marble_I2C_cmdrecv_a2(I2C_PM, dev, addr, &chk, 1);
+   printf("xrp_set2: r[%4.4x] <= %2.2x   readback %2.2x rc %d\n", addr, data, chk, rc);
+   return rc;
+}
+
 void xrp_dump(uint8_t dev) {
    // https://www.maxlinear.com/appnote/anp-38.pdf
    printf("XRP7724 dump [%2.2x]\n", dev);
@@ -298,14 +323,14 @@ static int xrp_pull(uint8_t dev, unsigned len)
 
 void xrp_test1(uint8_t dev) {
    printf("XRP7724 test1 [%2.2x]\n", dev);
-   if (xrp_reg_write_check(dev, 0x40, 0x8072)) {
-       printf("OK, trying to write\n");
-       uint16_t d[] = {0x0002, 0x5000, 0x00FF, 0xFF32, 0x0432, 0x0632, 0x0000, 0x0300};
-       xrp_push(dev, d, 8);
-       xrp_reg_write_check(dev, 0x40, 0x8072);
-       xrp_pull(dev, 8);
+   // if (xrp_reg_write_check(dev, 0x40, 0x8072)) {
+   // printf("OK, trying to write\n");
+   uint8_t d[] = {
+      0x00, 0x02, 0x50, 0x00, 0x00, 0xFF, 0xFF, 0x32,
+      0x04, 0x32, 0x06, 0x32, 0x00, 0x00, 0x03, 0x00};
+   for (unsigned jx=0; jx<16; jx++) {
+       xrp_set2(dev, 0x8072 + jx, d[jx]);
    }
    xrp_reg_write_check(dev, 0x40, 0xC010);
-   xrp_reg_write_check(dev, 0x40, 0x8068);  // YFLASHPGMDELAY
-   xrp_reg_write_check(dev, 0x41, 0xFF00);
+   xrp_set2(dev, 0x8068, 0xff);  // YFLASHPGMDELAY
 }
