@@ -184,13 +184,16 @@ void I2C_PM_probe(void) {
 }
 
 /* XPR7724 is special
- * Seems that one-byte Std Commands documented in ANP-38 apply to commands < 0x4F,
- * but there are also two-byte commands (called addresses) starting with 0x8000,
- * discussed in ANP-39, and captured in hex files used for runtime programming.
- * Even ANP-38 mentions one of these in passing, YFLASHPGMDELAY (address = 0x8068).
+ * Seems that one-byte Std Commands documented in ANP-38 apply to
+ * commands < 0x4F, but there are also two-byte commands (called addresses)
+ * starting with 0x8000, discussed in ANP-39, and captured in hex files
+ * used for runtime programming.  Even ANP-38 mentions one of these
+ * in passing, YFLASHPGMDELAY (address = 0x8068).
  * Thus there are two types of I2C transactions:
  *  1-byte address  2-byte data, use marble_I2C_cmd{send,recv}().
  *  2-byte address  1-byte data, use marble_I2C_cmd{send,recv}_a2().
+ * The former are (mostly) used in Flash programming, the latter are
+ * (mostly) used in runtime (RAM) programming.
  * One special case not documented elsewhere: Exar's UnivPMIC project
  * instructs us not to write to register 0xD022.
  */
@@ -206,6 +209,17 @@ static int xrp_set2(uint8_t dev, uint16_t addr, uint8_t data)
    rc = marble_I2C_cmdrecv_a2(I2C_PM, dev, addr, &chk, 1);
    printf("xrp_set2: r[%4.4x] <= %2.2x   readback %2.2x rc %d\n", addr, data, chk, rc);
    return rc;
+}
+
+static int xrp_read2(uint8_t dev, uint16_t addr)
+{
+   uint8_t chk = 0x55;
+   int rc = marble_I2C_cmdrecv_a2(I2C_PM, dev, addr, &chk, 1);
+   if (rc != HAL_OK) {
+      printf("xrp_set2: failure reading r[%4.4x]\n", addr);
+      return 0;  // No good way to signal fault to caller
+   }
+   return chk;
 }
 
 void xrp_dump(uint8_t dev) {
@@ -321,16 +335,50 @@ static int xrp_pull(uint8_t dev, unsigned len)
    return 1;
 }
 
+static int xrp_srecord(uint8_t dev, uint8_t data[])
+{
+   unsigned len = data[0];
+   uint16_t addr = (((unsigned) data[1]) << 8) | data[2];
+   if (addr < 0x8000) {
+      printf("Flash programming not yet handled.\n");
+      return 1;
+   }
+   unsigned rtype = data[3];  // ignored?
+   unsigned sum = 0;
+   for (unsigned jx=0; jx<(len+5); jx++) sum = sum + data[jx];
+   sum = sum & 0xff;
+   if (sum != 0) {
+      printf("Hex format checksum fault %2.2x\n", sum);
+      return 1;
+   }
+   for (unsigned jx=4; jx<(len+4); jx++) {
+      xrp_set2(dev, addr + jx - 4, data[jx]);
+   }
+   // Double-check
+   for (unsigned jx=4; jx<(len+4); jx++) {
+      printf(".");
+      int v = xrp_read2(dev, addr + jx - 4);
+      if (v != data[jx]) {
+          printf("fault %2.2x != %2.2x\n", v, data[jx]);
+      }
+   }
+   printf(" OK\n");
+   return 0;
+}
+
 void xrp_test1(uint8_t dev) {
    printf("XRP7724 test1 [%2.2x]\n", dev);
    // if (xrp_reg_write_check(dev, 0x40, 0x8072)) {
    // printf("OK, trying to write\n");
+   // d represents a hex record, https://en.wikipedia.org/wiki/Intel_HEX
+   // including length, address, record type, data, and checksum,
+   // but without start code.
    uint8_t d[] = {
+      0x10, 0x80, 0x72, 0x00,
       0x00, 0x02, 0x50, 0x00, 0x00, 0xFF, 0xFF, 0x32,
-      0x04, 0x32, 0x06, 0x32, 0x00, 0x00, 0x03, 0x00};
-   for (unsigned jx=0; jx<16; jx++) {
-       xrp_set2(dev, 0x8072 + jx, d[jx]);
-   }
+      0x04, 0x32, 0x06, 0x32, 0x00, 0x00, 0x03, 0x00,
+      0x0b};
+   xrp_srecord(dev, d);
    xrp_reg_write_check(dev, 0x40, 0xC010);
    xrp_set2(dev, 0x8068, 0xff);  // YFLASHPGMDELAY
 }
