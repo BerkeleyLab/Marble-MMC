@@ -207,7 +207,9 @@ static int xrp_set2(uint8_t dev, uint16_t addr, uint8_t data)
    HAL_Delay(10);
    uint8_t chk = 0x55;
    rc = marble_I2C_cmdrecv_a2(I2C_PM, dev, addr, &chk, 1);
-   printf("xrp_set2: r[%4.4x] <= %2.2x   readback %2.2x rc %d\n", addr, data, chk, rc);
+   if (rc != HAL_OK || data != chk) {
+      printf("xrp_set2: r[%4.4x] <= %2.2x   readback %2.2x rc %d\n", addr, data, chk, rc);
+   }
    return rc;
 }
 
@@ -345,11 +347,15 @@ static int xrp_srecord(uint8_t dev, uint8_t data[])
 {
    unsigned len = data[0];
    uint16_t addr = (((unsigned) data[1]) << 8) | data[2];
+   unsigned rtype = data[3];  // record type
+   if (rtype != 0) {
+      printf("rtype %d\n", rtype);
+      return 1;
+   }
    if (addr < 0x8000) {
       printf("Flash programming not yet handled.\n");
       return 1;
    }
-   unsigned rtype = data[3];  // ignored?
    unsigned sum = 0;
    for (unsigned jx=0; jx<(len+5); jx++) sum = sum + data[jx];
    sum = sum & 0xff;
@@ -358,7 +364,9 @@ static int xrp_srecord(uint8_t dev, uint8_t data[])
       return 1;
    }
    for (unsigned jx=4; jx<(len+4); jx++) {
-      xrp_set2(dev, addr + jx - 4, data[jx]);
+      unsigned addr1 = addr + jx - 4;
+      if (addr1 == 0xD022) continue;
+      xrp_set2(dev, addr1, data[jx]);
    }
    // Double-check
    for (unsigned jx=4; jx<(len+4); jx++) {
@@ -372,32 +380,93 @@ static int xrp_srecord(uint8_t dev, uint8_t data[])
    return 0;
 }
 
+// Data from python hex2c.py < Marble_runtime_1A.hex
+// Temporary only (?); it would be much better to read hex records from UART
+static int xrp_program_1A(uint8_t dev) {
+   // each element of dd represents a hex record,
+   // https://en.wikipedia.org/wiki/Intel_HEX
+   // including length, address, record type, data, and checksum,
+   // but without start code.
+   uint8_t *dd[] = {
+      "\x10\x80\x72\x00\x00\x02\x50\x00\x00\xFF\xFF\x32\x04\x32\x06\x32\x00\x00\x03\x00\x0B",
+      "\x10\x80\x82\x00\x00\x00\x00\x00\x00\x00\x02\x00\x04\x00\x07\x00\x00\x00\x00\x64\x7D",
+      "\x10\x80\x92\x00\x21\x64\x64\x64\x20\x64\x64\x64\x21\x64\x64\x64\x22\x64\x64\x0A\x04",
+      "\x0B\x80\xA2\x00\x20\x0A\x05\x19\xFF\x00\x00\x00\x00\xFF\xFF\x8E",
+      "\x10\x80\xAE\x00\x04\xFF\xFF\x64\x42\x50\x48\x18\x0C\x30\x18\x00\x00\x00\x00\x00\x16",
+      "\x10\x80\xBE\x00\x00\x00\x00\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x0F\xAF",
+      "\x04\x80\xCE\x00\x00\x00\x00\x1E\x90",
+      "\x10\xC0\x00\x00\xFF\xC5\x00\x0A\x03\x41\x00\xFA\x02\xDA\x20\x13\xE1\x14\x33\x0D\xE0",
+      "\x10\xC0\x10\x00\x00\x00\x03\x00\x50\x00\x11\x02\x15\xEB\x4E\x20\x22\x3C\x14\x01\xD9",
+      "\x10\xC0\x20\x00\x01\x01\x01\x01\x01\x1D\x1E\xCE\x04\xB0\x0D\x00\x40\x00\x40\xCB\xF6",
+      "\x0F\xC0\x30\x00\x00\x58\x64\x3D\x3D\x14\x72\x59\x5F\x12\x3D\x21\x7F\x12\x28\x64",
+      "\x10\xC1\x00\x00\xFF\xC5\x00\x0A\x03\x41\x00\xFA\x02\xDA\x20\x1D\xE1\x14\x33\x0D\xD5",
+      "\x10\xC1\x10\x00\x00\x00\x04\x00\x6A\x00\x16\x02\x0D\xF3\x5F\x20\x22\x3C\x0D\x04\xAB",
+      "\x10\xC1\x20\x00\x04\x04\x04\x04\x04\x1C\x1E\xCE\x04\xB0\x0D\x00\x40\x00\x40\xCB\xE7",
+      "\x0F\xC1\x30\x00\x00\x90\x42\x7B\x7B\x1F\xCF\x44\x68\x1B\xE6\x20\x00\x22\x28\x33",
+      "\x10\xC2\x00\x00\xFF\xC5\x00\x0A\x03\x41\x00\xFA\x02\xDA\x20\x27\xE1\x28\x33\x0D\xB6",
+      "\x10\xC2\x10\x00\x00\x00\x03\x00\x40\x00\x0D\x02\x11\xEF\x58\x21\x22\x3C\x10\x80\x65",
+      "\x10\xC2\x20\x00\x80\x80\x80\x80\x80\x1D\x1E\xCE\x04\xB0\x0D\x00\x40\x00\x40\xCB\x79",
+      "\x0F\xC2\x30\x00\x00\x44\x50\x1E\x1E\x17\xC3\x52\x7A\x15\xCC\x2A\x76\x01\x18\xEF",
+      "\x10\xC3\x00\x00\xFF\xC5\x00\x0A\x03\x41\x00\xFA\x02\xDA\x20\x13\xE1\x28\x33\x0D\xC9",
+      "\x10\xC3\x10\x00\x00\x00\x05\x00\x73\x00\x18\x02\x91\x6F\x5C\x21\x22\x3C\x16\x40\x5A",
+      "\x10\xC3\x20\x00\x40\x40\x40\x40\x40\x1D\x1E\xCE\x04\xB0\x0D\x00\x40\x00\x40\xCB\xB8",
+      "\x0F\xC3\x30\x00\x00\x29\x48\x3D\x3D\x15\x04\x59\x2C\x11\xEC\x20\x00\x11\x18\x2F",
+      "\x10\xC4\x00\x00\x05\x00\x00\x4C\x4F\x4C\x1E\x1C\x00\x30\x01\x9F\x55\x02\x02\x00\xDD",
+      "\x0F\xC4\x10\x00\x08\x16\x04\x0A\x10\x00\x00\x00\x00\x10\x0F\x17\x10\x17\x0F\x75",
+      "\x07\xD0\x01\x00\x00\x00\x02\x00\x00\x37\x00\xEF",
+      "\x10\xD0\x09\x00\x0F\x02\x02\x02\x03\x09\x09\x09\x0A\x00\x00\x00\x00\x0F\x00\x02\xC9",
+      "\x0F\xD0\x19\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x04\x04\x00\x00\x00\xFF",
+      "\x05\xD3\x02\x00\x62\x61\x61\x61\x61\x40",
+      "\x01\xD3\x08\x00\x00\x24",
+      "\x04\xD9\x00\x00\x62\x01\x62\xFA\x64",
+      "\x01\xFF\xA4\x00\x80\xDC",
+      "\x01\xFF\xA6\x00\x00\x5A",
+      "\x01\xFF\xA9\x00\x00\x57",
+      "\x01\xFF\xAB\x00\xFF\x56",
+      "\x01\xFF\xAD\x00\x12\x41",
+      "\x01\xFF\xAF\x00\x02\x4F",
+      "\x01\xFF\xB2\x00\xE1\x6D",
+      "\x01\xFF\xDC\x00\x00\x24",
+      "\x00\x00\x00\x01\xFF"
+   };
+   const unsigned dd_size = sizeof(dd) / sizeof(dd[0]);
+   int rc;
+   for (unsigned jx=0; jx<dd_size; jx++) {
+      rc = xrp_srecord(dev, dd[jx]);
+      if (rc) break;
+   }
+   return rc;
+}
+
 void xrp_flash(uint8_t dev) {
-   printf("XRP7724 flash (not written yet)\n");
+   printf("XRP7724 flash (software not yet written)\n");
    // if (xrp_reg_write_check(dev, 0x40, 0x8072)) {
    // printf("OK, trying to write\n");
    xrp_set2(dev, 0x8068, 0xff);  // YFLASHPGMDELAY
+   xrp_reg_write_check(dev, 0x40, 0xC010);
 }
 
 void xrp_go(uint8_t dev) {
    printf("XRP7724 go (WIP) [%2.2x]\n", dev);
-   // d represents a hex record, https://en.wikipedia.org/wiki/Intel_HEX
-   // including length, address, record type, data, and checksum,
-   // but without start code.
-   uint8_t d[] = {
-      0x10, 0x80, 0x72, 0x00,
-      0x00, 0x02, 0x50, 0x00, 0x00, 0xFF, 0xFF, 0x32,
-      0x04, 0x32, 0x06, 0x32, 0x00, 0x00, 0x03, 0x00,
-      0x0b};
-   xrp_srecord(dev, d);
-   xrp_reg_write_check(dev, 0x40, 0xC010);
+   // check that PWR_CHIP_READY (0E) reads back 0
+   xrp_reg_write_check(dev, 0x0E, 0x0000);
+   xrp_set2(dev, 0x8000, 0x93);  // write random byte to 0x8000
+   int rc = xrp_program_1A(dev);
+   // read random byte from 0x8000, should match
+   int v = xrp_read2(dev, 0x8000);
+   if (v != 0x93) {
+      printf("write corrupted (0x93 != 0x%2.2x)\n", v);
+      return;
+   }
+   printf("almost done\n");
+   xrp_reg_write_check(dev, 0x0E, 0x0001);  // Set the XRP7724 to operate mode
 }
 
 void xrp_halt(uint8_t dev) {
    printf("XRP7724 halt [%2.2x]\n", dev);
-   xrp_reg_write(dev, 0x1e, 0x0000);  // turn off Ch1
-   xrp_reg_write(dev, 0x1e, 0x0100);  // turn off Ch2
-   xrp_reg_write(dev, 0x1e, 0x0200);  // turn off Ch3
-   xrp_reg_write(dev, 0x1e, 0x0300);  // turn off Ch4
+   xrp_reg_write(dev, 0x1E, 0x0000);  // turn off Ch1
+   xrp_reg_write(dev, 0x1E, 0x0100);  // turn off Ch2
+   xrp_reg_write(dev, 0x1E, 0x0200);  // turn off Ch3
+   xrp_reg_write(dev, 0x1E, 0x0300);  // turn off Ch4
    printf("DONE\n");
 }
