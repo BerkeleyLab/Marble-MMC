@@ -57,7 +57,9 @@ const char menu_str[] = "\r\n"
 	"c) INA219 Main power supply\r\n"
 	"d) MGT MUX - switch to QSFP 2\r\n"
 	"e) PM bus display\r\n"
-	"f) XRP7724 test1\r\n";
+	"f) XRP7724 flash\r\n"
+	"g) XRP7724 go\r\n"
+	"h) XRP7724 halt\r\n";
 
 const char unk_str[] = "> Unknown option\r\n";
 const char gpio_str[] = "GPIO pins, caps for on, lower case for off\r\n"
@@ -155,12 +157,16 @@ int main(void)
 		     while (true) {
 
 		        //marble_UART_send(menu_str, strlen(menu_str));
-			 printf(menu_str);
+			//printf(menu_str);
+			printf("Single-character actions, ? for menu\n");
 		        // Wait for user selection
 
 			while(marble_UART_recv(&rx_ch, 1) == 0);
 
 		        switch (rx_ch) {
+		           case '?':
+		              printf(menu_str);
+		              break;
 		           case '0':
 		              printf(lb_str);
 		              do {
@@ -230,8 +236,16 @@ int main(void)
 				   pm_bus_display();
 				   break;
 		           case 'f':
-				   printf("XRP test1\r\n");
-				   xrp_test1(XRP7724);
+				   printf("XRP flash\r\n");
+				   xrp_flash(XRP7724);
+				   break;
+		           case 'g':
+				   printf("XRP go\r\n");
+				   xrp_go(XRP7724);
+				   break;
+		           case 'h':
+				   printf("XRP halt\r\n");
+				   xrp_halt(XRP7724);
 				   break;
 		           default:
 		              printf(unk_str);

@@ -259,20 +259,26 @@ void xrp_dump(uint8_t dev) {
    }
 }
 
-static int xrp_reg_write_check(uint8_t dev, uint8_t regno, uint16_t d)
+static int xrp_reg_write(uint8_t dev, uint8_t regno, uint16_t d)
 {
-   int rc;
    uint8_t i2c_dat[4];
    i2c_dat[0] = (d>>8) & 0xff;
    i2c_dat[1] = d & 0xff;
-   rc = marble_I2C_cmdsend(I2C_PM, dev, regno, i2c_dat, 2);
+   int rc = marble_I2C_cmdsend(I2C_PM, dev, regno, i2c_dat, 2);
    if (rc != HAL_OK) {
       printf("r[%2.2x] wrote 0x%4.4x,  rc = %d (want %d)\n", regno, d, rc, HAL_OK);
    }
+   return rc;
+}
+
+static int xrp_reg_write_check(uint8_t dev, uint8_t regno, uint16_t d)
+{
+   xrp_reg_write(dev, regno, d);
    HAL_Delay(10);
+   uint8_t i2c_dat[4];
    i2c_dat[0] = 0xde;
    i2c_dat[1] = 0xad;
-   rc = marble_I2C_cmdrecv(I2C_PM, dev, regno, i2c_dat, 2);
+   int rc = marble_I2C_cmdrecv(I2C_PM, dev, regno, i2c_dat, 2);
    if (rc == HAL_OK) {
       unsigned value = (((unsigned) i2c_dat[0]) << 8) | i2c_dat[1];
       printf("r[%2.2x] = 0x%4.4x = %5d  (hope for 0x%4.4x)\n", regno, value, value, d);
@@ -366,10 +372,15 @@ static int xrp_srecord(uint8_t dev, uint8_t data[])
    return 0;
 }
 
-void xrp_test1(uint8_t dev) {
-   printf("XRP7724 test1 [%2.2x]\n", dev);
+void xrp_flash(uint8_t dev) {
+   printf("XRP7724 flash (not written yet)\n");
    // if (xrp_reg_write_check(dev, 0x40, 0x8072)) {
    // printf("OK, trying to write\n");
+   xrp_set2(dev, 0x8068, 0xff);  // YFLASHPGMDELAY
+}
+
+void xrp_go(uint8_t dev) {
+   printf("XRP7724 go (WIP) [%2.2x]\n", dev);
    // d represents a hex record, https://en.wikipedia.org/wiki/Intel_HEX
    // including length, address, record type, data, and checksum,
    // but without start code.
@@ -380,5 +391,13 @@ void xrp_test1(uint8_t dev) {
       0x0b};
    xrp_srecord(dev, d);
    xrp_reg_write_check(dev, 0x40, 0xC010);
-   xrp_set2(dev, 0x8068, 0xff);  // YFLASHPGMDELAY
+}
+
+void xrp_halt(uint8_t dev) {
+   printf("XRP7724 halt [%2.2x]\n", dev);
+   xrp_reg_write(dev, 0x1e, 0x0000);  // turn off Ch1
+   xrp_reg_write(dev, 0x1e, 0x0100);  // turn off Ch2
+   xrp_reg_write(dev, 0x1e, 0x0200);  // turn off Ch3
+   xrp_reg_write(dev, 0x1e, 0x0300);  // turn off Ch4
+   printf("DONE\n");
 }
