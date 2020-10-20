@@ -36,15 +36,8 @@ int wireWriteRegister (uint8_t addr, uint8_t reg, uint16_t value)
 {
 	uint8_t data[3];
 	data[0] = reg;
-	//data[0] = value & 0xff;
-	//data[1] = (value >> 8);
-	printf("> INA219 config val  [%d]\r\n",  value);
-
-	//return marble_I2C_cmdsend(I2C_FPGA, addr, reg, data, 2);
-
-	//marble_I2C_send(I2C_FPGA, addr, data, 1);
-	data[1] = value & 0xff;
-	data[2] = (value >> 8);
+	data[2] = value & 0xff;
+	data[1] = (value >> 8);
 	return marble_I2C_send(I2C_FPGA, addr, data, 3);
 }
 
