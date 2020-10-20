@@ -184,19 +184,8 @@ bool marble_FPGAint_get(void)
 
 void reset_fpga(void)
 {
-   /* Pulse the PROGRAM_B pin low; it's spelled PROG_B on schematic */
-   const uint8_t rst_port = 0;
-   const uint8_t rst_pin = 4;
-   //Chip_GPIO_WriteDirBit(LPC_GPIO, rst_port, rst_pin, true);
-   for (int wait_cnt = 20; wait_cnt > 0; wait_cnt--) {
-      /* Only the first call does anything, but the compiler
-       * doesn't know that.  That keeps its optimizer from
-       * eliminating the associated time delay.
-       */
-      //Chip_GPIO_WritePortBit(LPC_GPIO, rst_port, rst_pin, false);
-   }
-   //Chip_GPIO_WritePortBit(LPC_GPIO, rst_port, rst_pin, true);
-   //Chip_GPIO_WriteDirBit(LPC_GPIO, rst_port, rst_pin, false);
+	/* Pulse the PROGRAM_B pin low; it's spelled PROG_B on schematic */
+	HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_0);
 }
 
 /************
@@ -795,7 +784,7 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pins : PE2 PE5 PE8 PE9
                            PE10 PE11 PE12 PE13
                            PE14 PE15 PE0 PE1 */
-  GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_5|GPIO_PIN_8|GPIO_PIN_9
+  GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_8|GPIO_PIN_9
                           |GPIO_PIN_10|GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_13
                           |GPIO_PIN_14|GPIO_PIN_15|GPIO_PIN_0|GPIO_PIN_1;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -803,10 +792,24 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PC0 PC7 PC8 */
-  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_7|GPIO_PIN_8;
+  /*Configure GPIO pins : PE5 */
+  GPIO_InitStruct.Pin = GPIO_PIN_5;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PC7 PC8 */
+  GPIO_InitStruct.Pin = GPIO_PIN_7|GPIO_PIN_8;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PC0 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PA0 */
