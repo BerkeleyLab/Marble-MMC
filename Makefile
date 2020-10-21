@@ -171,7 +171,7 @@ sources:
 #
 .PHONY: download
 download: all
-	$(OPENOCD) -f prog_support/ocd/lpc1776.cfg -c "program $(OUTPUT_DIR)/$(PROJECT_NAME).elf reset exit"
+	$(OPENOCD) -f prog_support/ocd/$(OCD_CONF) -c "program $(OUTPUT_DIR)/$(PROJECT_NAME).elf reset exit"
 
 # Creates a gdb script if required
 #
