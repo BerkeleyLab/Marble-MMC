@@ -100,4 +100,10 @@ void ina219_debug(uint8_t addr);
 float getBusVoltage_V(uint8_t);
 float getCurrentAmps(uint8_t);
 
+/* communication between i2c_pm and hexrec */
+int xrp_set2(uint8_t dev, uint16_t addr, uint8_t data);
+int xrp_read2(uint8_t dev, uint16_t addr);
+int xrp_srecord(uint8_t dev, uint8_t data[]);
+int xrp_program_static(uint8_t dev);
+
 #endif /* _MARBLE_API_H_ */
