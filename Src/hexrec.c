@@ -7,6 +7,7 @@ int xrp_set2(uint8_t dev, uint16_t addr, uint8_t data);
 int xrp_read2(uint8_t dev, uint16_t addr);
 int xrp_srecord(uint8_t dev, uint8_t data[]);
 int xrp_program_static(uint8_t dev);
+int xrp_file(uint8_t dev);
 int marble_UART_recv(char *str, int size);
 #else
 #include "marble_api.h"
@@ -125,6 +126,9 @@ static int hexdig_fun(unsigned char c)
    else return 0;
 }
 
+// Return codes:
+//   0  OK, normal end of file reached
+//   1  Fault, abort
 int xrp_file(uint8_t dev) {
    printf("XRP7724 hex record file input [%2.2x]\n", dev);
    char rx_ch;
@@ -135,7 +139,7 @@ int xrp_file(uint8_t dev) {
    do {
       if (marble_UART_recv(&rx_ch, 1) != 0) {
          // printf("%d %u %d\n", mode, rx_ch, jx);
-         if (rx_ch == '\027') return 1;
+         if (rx_ch == 27) return 1;
          int a = hexdig_fun(rx_ch);
          switch (mode) {
             case 0:

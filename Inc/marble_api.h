@@ -105,5 +105,6 @@ int xrp_set2(uint8_t dev, uint16_t addr, uint8_t data);
 int xrp_read2(uint8_t dev, uint16_t addr);
 int xrp_srecord(uint8_t dev, uint8_t data[]);
 int xrp_program_static(uint8_t dev);
+int xrp_file(uint8_t dev);
 
 #endif /* _MARBLE_API_H_ */

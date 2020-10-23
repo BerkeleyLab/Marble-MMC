@@ -352,11 +352,13 @@ void xrp_flash(uint8_t dev) {
 }
 
 void xrp_go(uint8_t dev) {
-   printf("XRP7724 go (WIP) [%2.2x]\n", dev);
+   printf("XRP7724 go [%2.2x]\n", dev);
    // check that PWR_CHIP_READY (0E) reads back 0
    xrp_reg_write_check(dev, 0x0E, 0x0000);
    xrp_set2(dev, 0x8000, 0x93);  // write random byte to 0x8000
    int rc = xrp_program_static(dev);
+   printf("xrp_program_static rc = %d\n", rc);
+   if (rc) return;
    // read random byte from 0x8000, should match
    int v = xrp_read2(dev, 0x8000);
    if (v != 0x93) {
@@ -364,9 +366,33 @@ void xrp_go(uint8_t dev) {
       return;
    }
    printf("almost done\n");
-   xrp_reg_write_check(dev, 0x0E, 0x0001);  // Set the XRP7724 to operate mode
+   if (1) {
+      xrp_reg_write_check(dev, 0x0E, 0x0001);  // Set the XRP7724 to operate mode
+   }
 }
 
+void xrp_hex_in(uint8_t dev) {
+   printf("XRP7724 hex in (WIP) [%2.2x]\n", dev);
+   printf("Do not use for flash programming! (yet)\n");
+   // check that PWR_CHIP_READY (0E) reads back 0
+   xrp_reg_write_check(dev, 0x0E, 0x0000);
+   xrp_set2(dev, 0x8000, 0x95);  // write random byte to 0x8000
+   int rc = xrp_file(dev);  // XXX test result
+   printf("xrp_file rc = %d\n", rc);
+   if (rc) return;
+   // read random byte from 0x8000, should match
+   int v = xrp_read2(dev, 0x8000);
+   if (v != 0x95) {
+      printf("write corrupted (0x95 != 0x%2.2x)\n", v);
+      return;
+   }
+   printf("almost done\n");
+   if (1) {
+      xrp_reg_write_check(dev, 0x0E, 0x0001);  // Set the XRP7724 to operate mode
+   }
+}
+
+// Didn't work when tested; why?
 void xrp_halt(uint8_t dev) {
    printf("XRP7724 halt [%2.2x]\n", dev);
    xrp_reg_write(dev, 0x1E, 0x0000);  // turn off Ch1

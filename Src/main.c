@@ -59,7 +59,7 @@ const char menu_str[] = "\r\n"
 	"e) PM bus display\r\n"
 	"f) XRP7724 flash\r\n"
 	"g) XRP7724 go\r\n"
-	"h) XRP7724 halt\r\n";
+	"h) XRP7724 hex input\r\n";
 
 const char unk_str[] = "> Unknown option\r\n";
 const char gpio_str[] = "GPIO pins, caps for on, lower case for off\r\n"
@@ -244,8 +244,8 @@ int main(void)
 				   xrp_go(XRP7724);
 				   break;
 		           case 'h':
-				   printf("XRP halt\r\n");
-				   xrp_halt(XRP7724);
+				   printf("XRP hex input\r\n");
+				   xrp_hex_in(XRP7724);
 				   break;
 		           default:
 		              printf(unk_str);

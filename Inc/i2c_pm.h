@@ -42,6 +42,6 @@ int LM75_write(uint8_t dev, LM75_REG reg, int data);
 void xrp_dump(uint8_t dev);
 void xrp_flash(uint8_t dev);
 void xrp_go(uint8_t dev);
-void xrp_halt(uint8_t dev);
+void xrp_hex_in(uint8_t dev);
 
 #endif /* I2C_PM_H_ */
