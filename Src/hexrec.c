@@ -13,6 +13,42 @@ int marble_UART_recv(char *str, int size);
 #include "marble_api.h"
 #endif
 
+// Sending data to flash, see ANP-38
+static int xrp_push_low(uint8_t dev, uint16_t addr, uint8_t data[], unsigned len)
+{
+   printf("xrp_push_low not written yet, sorry.\n");
+   (void) dev;
+   (void) addr;
+   (void) data;
+   (void) len;
+   return 1;
+}
+
+// Sending data to runtime memory, see ANP-39
+static int xrp_push_high(uint8_t dev, uint16_t addr, uint8_t data[], unsigned len)
+{
+   int rc = 0;
+   for (unsigned jx=0; jx<len; jx++) {
+      unsigned addr1 = addr + jx;
+      if (addr1 == 0xD022) continue;  // Mentioned in Exar's UnivPMIC github code base
+      xrp_set2(dev, addr1, data[jx]);
+   }
+   // Double-check
+   for (unsigned jx=0; jx<len; jx++) {
+      printf(".");
+      unsigned addr1 = addr + jx;
+      if (addr1 == 0xD022) continue;
+      if (addr1 == 0xFFAD) continue;  // Undocumented, ask MaxLinear about this
+      int v = xrp_read2(dev, addr1);
+      if (v != data[jx]) {
+          printf(" fault %2.2x != %2.2x\n", v, data[jx]);
+          rc = 1;
+      }
+   }
+   if (rc == 0) printf(" OK\n");
+   return rc;
+}
+
 // Return codes:
 //   0  OK, continue
 //   1  Fault, abort?
@@ -37,24 +73,13 @@ int xrp_srecord(uint8_t dev, uint8_t data[])
       printf("Hex format checksum fault %2.2x\n", sum);
       return 1;
    }
-   for (unsigned jx=4; jx<(len+4); jx++) {
-      unsigned addr1 = addr + jx - 4;
-      if (addr1 == 0xD022) continue;
-      xrp_set2(dev, addr1, data[jx]);
+   int rc;
+   if (addr & 0x8000) {
+      rc = xrp_push_high(dev, addr, data+4, len);
+   } else {
+      rc = xrp_push_low(dev, addr, data+4, len);
    }
-   // Double-check
-   for (unsigned jx=4; jx<(len+4); jx++) {
-      printf(".");
-      unsigned addr1 = addr + jx - 4;
-      if (addr1 == 0xD022) continue;
-      if (addr1 == 0xFFAD) continue;  // Undocumented, ask MaxLinear about this
-      int v = xrp_read2(dev, addr1);
-      if (v != data[jx]) {
-          printf(" fault %2.2x != %2.2x\n", v, data[jx]);
-      }
-   }
-   printf(" OK\n");
-   return 0;
+   return rc;
 }
 
 // Data from python hex2c.py < Marble_runtime_3A.hex
@@ -112,7 +137,7 @@ int xrp_program_static(uint8_t dev) {
       rc = xrp_srecord(dev, (uint8_t *) dd[jx]);
       if (rc) break;
    }
-   return rc;
+   return rc&1;  // Turn 2 (End of file detected) into 0
 }
 
 // hexdig_fun() is borrowed from newlib gdtoa-gethex.c.
@@ -191,6 +216,8 @@ int marble_UART_recv(char *str, int size)
    return 1;
 }
 
+// vmem size is excessive, it could be much sparser.
+// But nobody cares on a Real Workstation.
 uint8_t vmem[32768];  // global
 int actual;  // global
 
