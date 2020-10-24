@@ -3,6 +3,7 @@
 #include <stdlib.h>
 
 #ifdef SELFTEST
+int xrp_push_low(uint8_t dev, uint16_t addr, uint8_t data[], unsigned len);
 int xrp_set2(uint8_t dev, uint16_t addr, uint8_t data);
 int xrp_read2(uint8_t dev, uint16_t addr);
 int xrp_srecord(uint8_t dev, uint8_t data[]);
@@ -12,17 +13,6 @@ int marble_UART_recv(char *str, int size);
 #else
 #include "marble_api.h"
 #endif
-
-// Sending data to flash, see ANP-38
-static int xrp_push_low(uint8_t dev, uint16_t addr, uint8_t data[], unsigned len)
-{
-   printf("xrp_push_low not written yet, sorry.\n");
-   (void) dev;
-   (void) addr;
-   (void) data;
-   (void) len;
-   return 1;
-}
 
 // Sending data to runtime memory, see ANP-39
 static int xrp_push_high(uint8_t dev, uint16_t addr, uint8_t data[], unsigned len)
@@ -205,6 +195,17 @@ int xrp_file(uint8_t dev) {
 }
 
 #ifdef SELFTEST
+// Sending data to flash, see ANP-38
+int xrp_push_low(uint8_t dev, uint16_t addr, uint8_t data[], unsigned len)
+{
+   printf("xrp_push_low not part of test framework.\n");
+   (void) dev;
+   (void) addr;
+   (void) data;
+   (void) len;
+   return 1;
+}
+
 int marble_UART_recv(char *str, int size)
 {
    int ch;

@@ -305,24 +305,33 @@ static void xrp_print_reg(uint8_t dev, uint8_t regno)
    }
 }
 
-static int xrp_push(uint8_t dev, uint16_t d[], unsigned len)
+// Sending data to flash, see ANP-38
+int xrp_push_low(uint8_t dev, uint16_t addr, uint8_t data[], unsigned len)
 {
+   printf("xrp_push_low WIP\n");
+   if (len & 1) return 1;  // Odd length not allowed
+   // FLASH_PROGRAM_ADDRESS (0x40)
+   int rc;
+   rc = xrp_reg_write_check(dev, 0x40, addr);
+   if (rc != HAL_OK) {
+      printf("can't set flash program address\n");
+      return 1;
+   }
    for (unsigned jx = 0; jx < len; jx++) {
       uint8_t i2c_dat[4];
-      i2c_dat[0] = (d[jx]>>8) & 0xff;
-      i2c_dat[1] = d[jx] & 0xff;
+      i2c_dat[0] = (data[jx]>>8) & 0xff;
+      i2c_dat[1] = data[jx] & 0xff;
       // FLASH_PROGRAM_DATA_INC_ADDRESS (0x42)
-      int rc = marble_I2C_cmdsend(I2C_PM, dev, 0x42, i2c_dat, 2);
+      rc = marble_I2C_cmdsend(I2C_PM, dev, 0x42, i2c_dat, 2);
       if (rc != HAL_OK) {
          printf(" Write Fault\n");
-         return 0;
+         return 1;
       }
       printf(".");
       HAL_Delay(50);
    }
-   printf("\n");
-   xrp_print_reg(dev, 0x40);
-   return 1;
+   printf(" OK\n");
+   return 0;
 }
 
 static int xrp_pull(uint8_t dev, unsigned len)
@@ -343,12 +352,54 @@ static int xrp_pull(uint8_t dev, unsigned len)
    return 1;
 }
 
+// See Figures 3 and 4 of ANP-38
+// Figure 3:  cmd is FLASH_PAGE_CLEAR (0x4E),  mode is 1,  dwell is 10
+// Figure 4:  cmd is FLASH_PAGE_ERASE (0x4F),  mode is 5,  dwell is 50
+int xrp_process_flash(uint8_t dev, int cmd, int mode, int dwell)
+{
+   int rc;
+   uint8_t i2c_dat[4];
+   for (unsigned page_no=0; page_no < 7; page_no++) {
+      xrp_set2(dev, 0x8068, 0xff);  // YFLASHPGMDELAY
+      // FLASH_INIT (0x4D)
+      i2c_dat[0] = 0;  i2c_dat[1] = mode;
+      rc = marble_I2C_cmdsend(I2C_PM, dev, 0x4D, i2c_dat, 2);
+      if (rc != HAL_OK) return 1;
+      HAL_Delay(50);
+      int outer, status, busy;
+      for (outer=0; outer < 15; outer++) {
+         i2c_dat[0] = 0;  i2c_dat[1] = page_no;
+         rc = marble_I2C_cmdsend(I2C_PM, dev, cmd, i2c_dat, 2);
+         if (rc != HAL_OK) return 1;
+         HAL_Delay(500);
+         int retry;
+         for (retry=0; retry < 20; retry++) {
+            rc = marble_I2C_cmdrecv(I2C_PM, dev, cmd, i2c_dat, 2);
+            if (rc != HAL_OK) return 1;
+            status = i2c_dat[0];
+            busy = i2c_dat[1];
+            if (busy == 0) break;
+            HAL_Delay(dwell);
+         }
+         printf("page_no %d: %d retries, status 0x%2.2x\n", page_no, retry, status);
+         if (busy == 0 && status != 0xff) break;
+      }
+      if (busy == 1 || status == 0xff) {
+         printf("failed!\n");
+         return 1;
+      }
+   }
+   printf("OK\n");
+   return 0;
+}
+
 void xrp_flash(uint8_t dev) {
-   printf("XRP7724 flash (software not yet written)\n");
-   // if (xrp_reg_write_check(dev, 0x40, 0x8072)) {
-   // printf("OK, trying to write\n");
-   xrp_set2(dev, 0x8068, 0xff);  // YFLASHPGMDELAY
-   xrp_reg_write_check(dev, 0x40, 0xC010);
+   printf("XRP7724 flash (incomplete)\n");
+   printf("FLASH_PAGE_CLEAR\n");
+   if (xrp_process_flash(dev, 0x4E, 1, 10)) return;
+   printf("FLASH_PAGE_ERASE\n");
+   if (xrp_process_flash(dev, 0x4F, 5, 50)) return;
+   // xrp_reg_write_check(dev, 0x40, 0xC010);
 }
 
 void xrp_go(uint8_t dev) {
