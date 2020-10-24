@@ -1,15 +1,17 @@
 #!/usr/bin/env python
 
-import time
-
 import serial
+
 
 def read_and_print_till_empty(ser):
     while True:
         x = ser.readline().decode('utf-8')
-        if x: print(x, end='')
-        else: break
+        if x:
+            print(x, end='')
+        else:
+            break
     print()
+
 
 def program(hex_file, serial_port):
     '''
@@ -27,9 +29,8 @@ def program(hex_file, serial_port):
         for line in open(hex_file, 'r').readlines():
             line = line.strip()
             if line.startswith(':') and len(line) > 3:
-                ser.write(bytes(line, 'ascii'))
+                ser.write(bytes(line + "\n", 'ascii'))
                 read_and_print_till_empty(ser)
-
 
 
 if __name__ == "__main__":
