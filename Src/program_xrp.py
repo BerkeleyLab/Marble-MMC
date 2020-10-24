@@ -8,11 +8,8 @@ def program(hex_file, serial_port):
     '''
     Goal here is to open the serial port to MMC on Marble
     And exectute a sequence of steps to program the XR chip
-
-    dtr is here to force a reboot of the MMC
     '''
     with serial.Serial(serial_port, 115200, timeout=1) as ser:
-        ser.rts, ser.dtr = False, False
         ser.write(b'?')
         while True:
             x = ser.readline().decode('utf-8')
