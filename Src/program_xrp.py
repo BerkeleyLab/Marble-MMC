@@ -4,13 +4,14 @@ import serial
 
 
 def read_and_print_till_empty(ser):
-    while True:
-        x = ser.readline().decode('utf-8')
-        if x:
-            print(x, end='')
-        else:
-            break
-    print()
+    for x in iter(ser.readline, b''):
+        print(x.decode('ascii'), end='')
+
+def print_write_get(ser, write_val, print_input=True):
+    if print_input:
+        print(write_val)
+    ser.write(bytes(write_val, 'ascii'))
+    read_and_print_till_empty(ser)
 
 
 def program(hex_file, serial_port):
@@ -18,19 +19,16 @@ def program(hex_file, serial_port):
     Goal here is to open the serial port to MMC on Marble
     And exectute a sequence of steps to program the XR chip
     '''
-    with serial.Serial(serial_port, 115200, timeout=1) as ser:
-        print('?'), ser.write(b'?')
-        read_and_print_till_empty(ser)
-        print('3'), ser.write(b'3')
-        read_and_print_till_empty(ser)
-        print('h'), ser.write(b'h')
-        read_and_print_till_empty(ser)
+    # Note the timeout here set for readback is important
+    # And needs to be atleast 0.2sec during the XRP programming phase
+    with serial.Serial(serial_port, 115200, timeout=0.2) as ser:
+        print_write_get(ser, '?')
+        print_write_get(ser, '3')
+        print_write_get(ser, 'h')
 
         for line in open(hex_file, 'r').readlines():
-            line = line.strip()
             if line.startswith(':') and len(line) > 3:
-                ser.write(bytes(line + "\n", 'ascii'))
-                read_and_print_till_empty(ser)
+                print_write_get(ser, line, False)
 
 
 if __name__ == "__main__":
