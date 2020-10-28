@@ -143,6 +143,10 @@ int main(void)
 {
 	marble_init(0);
 
+#ifdef XRP_AUTOBOOT
+	xrp_go(XRP7724);
+#endif
+
   while (1)
   {
 
@@ -241,7 +245,11 @@ int main(void)
 				   break;
 		           case 'g':
 				   printf("XRP go\r\n");
+#ifdef XRP_AUTOBOOT
+				   printf("XRP already programmed at boot.\r\n");
+#else
 				   xrp_go(XRP7724);
+#endif
 				   break;
 		           case 'h':
 				   printf("XRP hex input\r\n");
