@@ -145,6 +145,10 @@ int main(void)
 
 #ifdef XRP_AUTOBOOT
 	xrp_go(XRP7724);
+	// TODO: This delay is in here to allow the power supplies come up.
+	HAL_Delay(1000);
+	switch_i2c_bus(2);
+	adn4600_init();
 #endif
 
   while (1)
