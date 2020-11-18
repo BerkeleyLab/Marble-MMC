@@ -1,30 +1,8 @@
-/* USER CODE BEGIN Header */
-/**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * <h2><center>&copy; Copyright (c) 2020 STMicroelectronics.
-  * All rights reserved.</center></h2>
-  *
-  * This software component is licensed by ST under BSD 3-Clause license,
-  * the "License"; You may not use this file except in compliance with the
-  * License. You may obtain a copy of the License at:
-  *                        opensource.org/licenses/BSD-3-Clause
-  *
-  ******************************************************************************
-  */
-/* USER CODE END Header */
-
-/* Includes ------------------------------------------------------------------*/
-
 #include <string.h>
 #include "main.h"
+#include "marble_api.h"
 #include "i2c_pm.h"
 #include "i2c_fpga.h"
-#include "marble_api.h"
 #include <stm32f2xx_hal_flash_ex.h>
 
 void phy_print(void);
@@ -45,7 +23,7 @@ const char menu_str[] = "\r\n"
 	"0) Loopback\r\n"
 	"1) MDIO/PHY\r\n"
 	"2) I2C monitor\r\n"
-	"3) Live counter\r\n"
+	"3) Status counters\r\n"
 	"4) GPIO control\r\n"
 	"5) Reset FPGA\r\n"
 	"6) Push IP&MAC\r\n"
@@ -65,11 +43,6 @@ const char unk_str[] = "> Unknown option\r\n";
 const char gpio_str[] = "GPIO pins, caps for on, lower case for off\r\n"
 	"a) FMC power\r\n"
 	"b) EN_PSU_CH\r\n";
-
-
-/* USER CODE END PV */
-
-/* Private function prototypes -----------------------------------------------*/
 
 /* USER CODE BEGIN PFP */
 static void gpio_cmd(void)
@@ -95,6 +68,8 @@ static void gpio_cmd(void)
       }
 }
 
+// We actually do have a libc installed,
+// so this is useless.
 static void print_uint(unsigned int x)
 {
    char obuf[16];
@@ -106,7 +81,6 @@ static void print_uint(unsigned int x)
    } while (x>0);
    marble_UART_send(p+1, obuf+14-p);
 }
-
 
 static void print_mac_ip(unsigned char mac_ip_data[10])
 {
@@ -151,8 +125,7 @@ int main(void)
 	adn4600_init();
 #endif
 
-  while (1)
-  {
+  while (1) {
 
 	  unsigned char mac_ip_data[10] = {
 		        18, 85, 85, 0, 1, 46,  // MAC (locally managed)
@@ -162,7 +135,7 @@ int main(void)
 
 	  uint8_t rx_ch;
 
-		     while (true) {
+		     while (1) {
 
 		        //marble_UART_send(menu_str, strlen(menu_str));
 			//printf(menu_str);
@@ -295,29 +268,7 @@ void phy_print(void)
 
 }
 
-void Error_Handler(void)
-{
-  /* USER CODE BEGIN Error_Handler_Debug */
-  /* User can add his own implementation to report the HAL error return state */
-
-  /* USER CODE END Error_Handler_Debug */
-}
-
+void Error_Handler(void) {}
 #ifdef  USE_FULL_ASSERT
-/**
-  * @brief  Reports the name of the source file and the source line number
-  *         where the assert_param error has occurred.
-  * @param  file: pointer to the source file name
-  * @param  line: assert_param error line source number
-  * @retval None
-  */
-void assert_failed(uint8_t *file, uint32_t line)
-{
-  /* USER CODE BEGIN 6 */
-  /* User can add his own implementation to report the file name and line number,
-     tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
-  /* USER CODE END 6 */
-}
+void assert_failed(uint8_t *file, uint32_t line) {}
 #endif /* USE_FULL_ASSERT */
-
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
