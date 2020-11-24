@@ -138,8 +138,8 @@ const char i2c_ret[] = "> %x\r\n";
 /* Perform basic sanity check and print result to UART */
 void I2C_PM_probe(void) {
    int i;
-   int i2c_expect;
-   int i2c_cnt;
+   int i2c_expect=-1;
+   int i2c_cnt=0;
    uint8_t i2c_dat[4];
    char p_buf[40];
 

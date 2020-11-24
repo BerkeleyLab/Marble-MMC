@@ -347,6 +347,8 @@ int marble_I2C_send(I2C_BUS I2C_bus, uint8_t addr, const uint8_t *data, int size
          return Chip_I2C_MasterSend(I2C1, addr, data, size);
       case I2C_FPGA:
          return Chip_I2C_MasterSend(I2C2, addr, data, size);
+      default:
+         return 0;
    }
 }
 
@@ -359,6 +361,8 @@ int marble_I2C_recv(I2C_BUS I2C_bus, uint8_t addr, uint8_t *data, int size) {
          return Chip_I2C_MasterRead(I2C1, addr, data, size);
       case I2C_FPGA:
          return Chip_I2C_MasterRead(I2C2, addr, data, size);
+      default:
+         return 0;
    }
 }
 
@@ -371,6 +375,8 @@ int marble_I2C_cmdrecv(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data
          return Chip_I2C_MasterCmdRead(I2C1, addr, cmd, data, size);
       case I2C_FPGA:
          return Chip_I2C_MasterCmdRead(I2C2, addr, cmd, data, size);
+      default:
+         return 0;
    }
 }
 

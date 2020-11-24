@@ -79,7 +79,8 @@ void fpga_done_handler(void) {
    fpga_prog_cnt++;
 }
 
-int main (void) {
+int main(void)
+{
    // Static for now; eventually needs to be read from EEPROM
    unsigned char mac_ip_data[10] = {
       18, 85, 85, 0, 1, 46,  // MAC (locally managed)
@@ -104,7 +105,7 @@ int main (void) {
    marble_UART_send(demo_str, strlen(demo_str));
    char rx_ch;
 
-   while (true) {
+   while (1) {
       marble_UART_send(menu_str, strlen(menu_str));
       // Wait for user selection
       while(marble_UART_recv(&rx_ch, 1) == 0);
