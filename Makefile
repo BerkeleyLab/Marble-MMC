@@ -1,6 +1,6 @@
 # Compiles firmware written in C and assembler for NXP's LPC chips
 # Copyright (C) 2013  Richard Meadows
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
 # "Software"), to deal in the Software without restriction, including
@@ -8,10 +8,10 @@
 # distribute, sublicense, and/or sell copies of the Software, and to
 # permit persons to whom the Software is furnished to do so, subject to
 # the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be
 # included in all copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -54,7 +54,7 @@ ECHO	:= echo
 FIND	:= find
 GREP	:= grep
 MKDIR	:= mkdir -p
-RM	:= rm -r
+RM	:= rm -rf
 SED	:= sed
 SHUF	:= shuf
 
@@ -156,7 +156,7 @@ $(OUTPUT_DIR)/$(PROJECT_NAME).elf: $(OBJECTS) $(LINKERS) gdbscript
 #
 .PHONY: sources
 sources:
-	@$(ECHO) 'Building sources.mk...' 
+	@$(ECHO) 'Building sources.mk...'
 	@$(ECHO)
 	@$(FIND) $(SOURCE_DIR)/ | $(GREP) \\.[cS]$ > sources.mk
 	@$(CAT) sources.mk
@@ -170,7 +170,7 @@ sources:
 #
 .PHONY: download
 download: all
-	$(OPENOCD) -f prog_support/ocd/lpc1776.cfg -c "program $(OUTPUT_DIR)/$(PROJECT_NAME).elf reset exit"
+	$(OPENOCD) -f prog_support/ocd/$(OCD_CONF) -c "program $(OUTPUT_DIR)/$(PROJECT_NAME).elf reset exit"
 
 # Creates a gdb script if required
 #

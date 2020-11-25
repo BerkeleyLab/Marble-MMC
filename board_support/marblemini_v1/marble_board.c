@@ -348,7 +348,7 @@ int marble_I2C_send(I2C_BUS I2C_bus, uint8_t addr, const uint8_t *data, int size
       case I2C_FPGA:
          return Chip_I2C_MasterSend(I2C2, addr, data, size);
       default:
-         return 0;
+         return 1;
    }
 }
 
@@ -362,7 +362,7 @@ int marble_I2C_recv(I2C_BUS I2C_bus, uint8_t addr, uint8_t *data, int size) {
       case I2C_FPGA:
          return Chip_I2C_MasterRead(I2C2, addr, data, size);
       default:
-         return 0;
+         return 1;
    }
 }
 
@@ -376,8 +376,31 @@ int marble_I2C_cmdrecv(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data
       case I2C_FPGA:
          return Chip_I2C_MasterCmdRead(I2C2, addr, cmd, data, size);
       default:
-         return 0;
+         return 1;
    }
+}
+
+int marble_I2C_cmdsend(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size) {
+   // Crude hack, prepending 8-bit cmd to the data array
+   uint8_t ldata[8];
+   if (size > 7) return 1;  // failure
+   ldata[0] = cmd;
+   memcpy(ldata+1, data, size);
+   return marble_I2C_send(I2C_bus, addr, ldata, size+1);
+}
+
+int marble_I2C_cmdsend_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *data, int size) {
+   // Crude hack, prepending 16-bit cmd to the data array
+   uint8_t ldata[8];
+   if (size > 6) return 1;  // failure
+   ldata[0] = cmd >> 8;
+   ldata[1] = cmd & 0xff;
+   memcpy(ldata+2, data, size);
+   return marble_I2C_send(I2C_bus, addr, ldata, size+2);
+}
+
+int marble_I2C_cmdrecv_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *data, int size) {
+   return 1;  // XXX
 }
 
 /************

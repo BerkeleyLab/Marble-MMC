@@ -1,5 +1,5 @@
-#ifndef _I2C_PM_H_
-#define _I2C_PM_H_
+#ifndef I2C_PM_H_
+#define I2C_PM_H_
 
 typedef enum {
    LM75_0 = 0x92,
@@ -33,5 +33,9 @@ void LM75_print(uint8_t dev);
 int LM75_read(uint8_t dev, LM75_REG reg, int *data);
 int LM75_write(uint8_t dev, LM75_REG reg, int data);
 
-#endif /* _I2C_PM_H_ */
+void xrp_dump(uint8_t dev);
+void xrp_flash(uint8_t dev);
+void xrp_go(uint8_t dev);
+void xrp_hex_in(uint8_t dev);
 
+#endif /* I2C_PM_H_ */

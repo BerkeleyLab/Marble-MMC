@@ -1,6 +1,8 @@
 #include <string.h>
+#include <stdio.h>
 #include "marble_api.h"
 #include "i2c_pm.h"
+#include "i2c_fpga.h"
 #include "ssp.h"
 #include "phy_mdio.h"
 
@@ -18,7 +20,15 @@ const char menu_str[] = "\r\n"
 	"6) Push IP&MAC\r\n"
 	"7) MAX6639\r\n"
 	"8) LM75_0\r\n"
-	"9) LM75_1\r\n";
+	"9) LM75_1\r\n"
+	"a) I2C scan all ports\r\n"
+	"b) Config ADN4600\r\n"
+	"c) INA219 Main power supply\r\n"
+	"d) MGT MUX - switch to QSFP 2\r\n"
+	"e) PM bus display\r\n"
+	"f) XRP7724 flash\r\n"
+	"g) XRP7724 go\r\n"
+	"h) XRP7724 hex input\r\n";
 
 const char unk_str[] = "> Unknown option\r\n";
 const char gpio_str[] = "GPIO pins, caps for on, lower case for off\r\n"
@@ -48,8 +58,8 @@ static void gpio_cmd(void)
       }
 }
 
-// At some point we will give up and install a libc.
-// Consider picolibc.
+// We actually do have a libc installed,
+// so this is useless.
 static void print_uint(unsigned int x)
 {
    char obuf[16];
@@ -69,6 +79,28 @@ static void print_mac_ip(unsigned char mac_ip_data[10])
       print_uint(mac_ip_data[ix]);
    }
    marble_UART_send("\r\n", 2);
+}
+
+static void ina219_test(void)
+{
+	switch_i2c_bus(6);
+	if (1) {
+		ina219_debug(INA219_0);
+		ina219_debug(INA219_FMC1);
+		ina219_debug(INA219_FMC2);
+	} else {
+		ina219_init();
+		//printf("Main bus: %dV, %dmA", getBusVoltage_V(INA219_0), getCurrentAmps(INA219_0));
+		getBusVoltage_V(INA219_0);
+		getCurrentAmps(INA219_0);
+	}
+}
+
+static void pm_bus_display(void)
+{
+	LM75_print(LM75_0);
+	LM75_print(LM75_1);
+	xrp_dump(XRP7724);
 }
 
 unsigned int live_cnt=0;
@@ -106,18 +138,21 @@ int main(void)
    char rx_ch;
 
    while (1) {
-      marble_UART_send(menu_str, strlen(menu_str));
+      printf("Single-character actions, ? for menu\n");
       // Wait for user selection
       while(marble_UART_recv(&rx_ch, 1) == 0);
       switch (rx_ch) {
+         case '?':
+            printf(menu_str);
+            break;
          case '0':
-            marble_UART_send(lb_str, strlen(lb_str));
+            printf(lb_str);
             do {
                if (marble_UART_recv(&rx_ch, 1) != 0) {
                   marble_UART_send(&rx_ch, 1);
                }
             } while (rx_ch != 27);
-            marble_UART_send("\r\n", 2);
+            printf("\r\n");
             break;
          case '1':
             phy_print();
@@ -126,12 +161,8 @@ int main(void)
             I2C_PM_probe();
             break;
          case '3':
-            marble_UART_send("Live counter: \r\n", 16);
-            print_uint(live_cnt);
-            marble_UART_send("\r\n", 2);
-            marble_UART_send("FPGA prog counter: \r\n", 21);
-            print_uint(fpga_prog_cnt);
-            marble_UART_send("\r\n", 2);
+            printf("Live counter: %u\r\n", live_cnt);
+            printf("FPGA prog counter: %d\r\n", fpga_prog_cnt);
             break;
          case '4':
             gpio_cmd();
@@ -142,10 +173,10 @@ int main(void)
          case '6':
             print_mac_ip(mac_ip_data);
             push_fpga_mac_ip(mac_ip_data);
-            marble_UART_send("DONE\r\n", 6);
+            printf("DONE\r\n");
             break;
          case '7':
-            marble_UART_send("Start\r\n", 7);
+            printf("Start\r\n");
             print_max6639();
             break;
          case '8':
@@ -159,8 +190,47 @@ int main(void)
             LM75_write(LM75_1, LM75_OS, 100*2);
             LM75_print(LM75_1);
             break;
+         case 'a':
+            printf("I2C scanner\r\n");
+            // i2c_scan();
+            break;
+         case 'b':
+            printf("ADN4600\r\n");
+            switch_i2c_bus(2);
+            adn4600_init();
+            adn4600_printStatus();
+            //i2c_scan();
+            break;
+         case 'c':
+            printf("INA test\r\n");
+            ina219_test();
+            break;
+         case 'd':
+            printf("Switch MGT to QSFP 2\r\n");
+            // HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, true);
+            break;
+         case 'e':
+            printf("PM bus display\r\n");
+            pm_bus_display();
+            break;
+         case 'f':
+            printf("XRP flash\r\n");
+            xrp_flash(XRP7724);
+            break;
+         case 'g':
+            printf("XRP go\r\n");
+#ifdef XRP_AUTOBOOT
+            printf("XRP already programmed at boot.\r\n");
+#else
+            xrp_go(XRP7724);
+#endif
+            break;
+         case 'h':
+            printf("XRP hex input\r\n");
+            xrp_hex_in(XRP7724);
+            break;
          default:
-            marble_UART_send(unk_str, strlen(unk_str));
+            printf(unk_str);
             break;
       }
    }

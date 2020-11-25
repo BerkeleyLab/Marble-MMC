@@ -81,13 +81,36 @@ typedef enum {
 } I2C_BUS;
 
 int marble_I2C_send(I2C_BUS I2C_bus, uint8_t addr, const uint8_t *data, int size);
+int marble_I2C_cmdsend(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size);
 int marble_I2C_recv(I2C_BUS I2C_bus, uint8_t addr, uint8_t *data, int size);
 int marble_I2C_cmdrecv(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size);
+int marble_I2C_cmdsend_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *data, int size);
+int marble_I2C_cmdrecv_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *data, int size);
 
 /************
 * MDIO to PHY
 ************/
 void marble_MDIO_write(uint8_t reg, uint16_t data);
 uint16_t marble_MDIO_read(uint8_t reg);
+
+/************
+* Other (to-be-categorized)
+************/
+void i2c_scan(void);
+void switch_i2c_bus(uint8_t);
+void adn4600_init(void);
+void adn4600_printStatus(void);
+void ina219_init(void);
+void ina219_debug(uint8_t addr);
+float getBusVoltage_V(uint8_t);
+float getCurrentAmps(uint8_t);
+
+/* communication between i2c_pm and hexrec */
+int xrp_push_low(uint8_t dev, uint16_t addr, uint8_t data[], unsigned len);
+int xrp_set2(uint8_t dev, uint16_t addr, uint8_t data);
+int xrp_read2(uint8_t dev, uint16_t addr);
+int xrp_srecord(uint8_t dev, uint8_t data[]);
+int xrp_program_static(uint8_t dev);
+int xrp_file(uint8_t dev);
 
 #endif /* _MARBLE_API_H_ */
