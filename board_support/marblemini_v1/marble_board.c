@@ -31,6 +31,7 @@
  */
 
 #include "chip.h"
+#include "stopwatch.h"
 #include "marble_api.h"
 #include "string.h"
 #include <stdio.h>
@@ -489,6 +490,19 @@ uint16_t marble_MDIO_read(uint8_t reg)
 }
 
 /************
+* System Stopwatch
+************/
+void marble_MS_delay(uint32_t delay)
+{
+   StopWatch_DelayMs(delay);
+}
+
+void marble_US_delay(uint32_t delay)
+{
+   StopWatch_DelayUs(delay);
+}
+
+/************
 * Board Init
 ************/
 
@@ -502,6 +516,9 @@ void marble_init(bool use_xtal)
    } else {
       Chip_SetupIrcClocking(); // 120 MHz based on 12 MHz internal clock
    }
+
+   // Initialize system stopwatch
+   StopWatch_Init();
 
    marble_LED_init();
    marble_SW_init();

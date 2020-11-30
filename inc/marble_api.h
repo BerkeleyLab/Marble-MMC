@@ -94,6 +94,12 @@ void marble_MDIO_write(uint8_t reg, uint16_t data);
 uint16_t marble_MDIO_read(uint8_t reg);
 
 /************
+* System Stopwatch
+************/
+void marble_MS_delay(uint32_t delay);
+void marble_US_delay(uint32_t delay);
+
+/************
 * Other (to-be-categorized)
 ************/
 void i2c_scan(void);
