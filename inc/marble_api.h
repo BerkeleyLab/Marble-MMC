@@ -12,7 +12,7 @@
 #include <stdint.h>
 
 /* Initialize uC and peripherals before main code can run. */
-void marble_init(bool use_xtal);
+uint32_t marble_init(bool use_xtal);
 
 /****
 * UART

@@ -505,7 +505,7 @@ void marble_US_delay(uint32_t delay)
 * Board Init
 ************/
 
-void marble_init(bool use_xtal)
+uint32_t marble_init(bool use_xtal)
 {
    // Must happen before any other clock manipulations:
    SystemCoreClockUpdate(); /* Update the value of SystemCoreClock */
@@ -539,5 +539,5 @@ void marble_init(bool use_xtal)
 
    /* Configure the SysTick for 1 s interrupts */
    SysTick_Config(SystemCoreClock * 1);
+   return Chip_Clock_GetSystemClockRate();
 }
-

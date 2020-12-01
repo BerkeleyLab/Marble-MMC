@@ -31,7 +31,8 @@ const char menu_str[] = "\r\n"
 	"e) PM bus display\r\n"
 	"f) XRP7724 flash\r\n"
 	"g) XRP7724 go\r\n"
-	"h) XRP7724 hex input\r\n";
+	"h) XRP7724 hex input\r\n"
+	"i) timer check/cal\r\n";
 
 const char unk_str[] = "> Unknown option\r\n";
 const char gpio_str[] = "GPIO pins, caps for on, lower case for off\r\n"
@@ -122,8 +123,10 @@ int main(void)
       192, 168, 19, 31   // IP
    };
 
-   // Initialize Marble(mini) board with IRC
-   marble_init(false);
+   // Initialize Marble(mini) board with IRC, so it works even when
+   // the XRP7724 isn't running, keeping the final 25 MHz source away.
+   const bool use_xtal = false;
+   uint32_t sysclk_freq = marble_init(use_xtal);
 
    /* Turn on LEDs */
    marble_LED_set(0, true);
@@ -138,6 +141,8 @@ int main(void)
 
    // Send demo string over UART at 115200 BAUD
    marble_UART_send(demo_str, strlen(demo_str));
+   printf("marble_init with use_xtal = %d\n", use_xtal);
+   printf("system clock = %lu Hz\n", sysclk_freq);
    char rx_ch;
 
    while (1) {
@@ -231,6 +236,12 @@ int main(void)
          case 'h':
             printf("XRP hex input\r\n");
             xrp_hex_in(XRP7724);
+            break;
+         case 'i':
+            for (unsigned ix=0; ix<10; ix++) {
+               printf("%d\n", ix);
+               marble_MS_delay(1000);
+            }
             break;
          default:
             printf(unk_str);
