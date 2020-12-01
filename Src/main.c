@@ -16,7 +16,7 @@ void phy_print(void);
 #endif /* __GNUC__ */
 
 // Setup UART strings
-const char demo_str[] = "Marble Mini v1 UART DEMO\r\n";
+const char demo_str[] = "Marble v2 UART DEMO\r\n";
 const char lb_str[] = "Loopback... ESC to exit\r\n";
 const char menu_str[] = "\r\n"
 	"Menu:\r\n"
@@ -37,14 +37,14 @@ const char menu_str[] = "\r\n"
 	"e) PM bus display\r\n"
 	"f) XRP7724 flash\r\n"
 	"g) XRP7724 go\r\n"
-	"h) XRP7724 hex input\r\n";
+	"h) XRP7724 hex input\r\n"
+	"i) timer check/cal\r\n";
 
 const char unk_str[] = "> Unknown option\r\n";
 const char gpio_str[] = "GPIO pins, caps for on, lower case for off\r\n"
 	"a) FMC power\r\n"
 	"b) EN_PSU_CH\r\n";
 
-/* USER CODE BEGIN PFP */
 static void gpio_cmd(void)
 {
    char rx_ch;
@@ -116,7 +116,6 @@ static void pm_bus_display(void)
 int main(void)
 {
 	marble_init(0);
-
 #ifdef XRP_AUTOBOOT
 	xrp_go(XRP7724);
 	// TODO: This delay is in here to allow the power supplies come up.
@@ -124,26 +123,19 @@ int main(void)
 	switch_i2c_bus(2);
 	adn4600_init();
 #endif
-
-  while (1) {
-
+	  // Static for now; eventually needs to be read from EEPROM
 	  unsigned char mac_ip_data[10] = {
 		        18, 85, 85, 0, 1, 46,  // MAC (locally managed)
 		        192, 168, 19, 31   // IP
 		     };
+	  // Send demo string over UART at 115200 BAUD
 	  marble_UART_send(demo_str, strlen(demo_str));
-
-	  uint8_t rx_ch;
+	  char rx_ch;
 
 		     while (1) {
-
-		        //marble_UART_send(menu_str, strlen(menu_str));
-			//printf(menu_str);
 			printf("Single-character actions, ? for menu\n");
 		        // Wait for user selection
-
 			while(marble_UART_recv(&rx_ch, 1) == 0);
-
 		        switch (rx_ch) {
 		           case '?':
 		              printf(menu_str);
@@ -151,9 +143,8 @@ int main(void)
 		           case '0':
 		              printf(lb_str);
 		              do {
-		                 if (marble_UART_recv(&rx_ch, 1) != 0){
+		                 if (marble_UART_recv(&rx_ch, 1) != 0) {
 					 marble_UART_send(&rx_ch, 1);
-
 		                 }
 		              } while (rx_ch != 27);
 		              printf("\r\n");
@@ -232,22 +223,22 @@ int main(void)
 				   printf("XRP hex input\r\n");
 				   xrp_hex_in(XRP7724);
 				   break;
+		           case 'i':
+				   for (unsigned ix=0; ix<10; ix++) {
+				      printf("%d\n", ix);
+				      HAL_Delay(1000);
+				   }
+				   break;
 		           default:
 		              printf(unk_str);
 		              break;
 		        }
 		     }
-
-  }
-  /* USER CODE END 3 */
 }
 
 PUTCHAR_PROTOTYPE
 {
-  /* Place your implementation of fputc here */
-  /* e.g. write a character to the USART3 and Loop until the end of transmission */
   marble_UART_send((uint8_t *)&ch, 1);
-
   return ch;
 }
 

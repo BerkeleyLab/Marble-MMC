@@ -10,8 +10,6 @@
 #include <stdio.h>
 #include <string.h>
 #include "i2c_pm.h"
-//#include "stm32f2xx_hal_def.h"
-
 
 
 int set_max6639_reg(int regno, int value)
@@ -20,7 +18,6 @@ int set_max6639_reg(int regno, int value)
    uint8_t i2c_dat[4];
    i2c_dat[0] = regno;
    i2c_dat[1] = value;
-   //int rc = HAL_I2C_Master_Transmit(&hi2c1, addr, i2c_dat, 2, HAL_MAX_DELAY);
    int rc = marble_I2C_send(I2C_PM, addr, i2c_dat, 2);
    return rc ;
 }

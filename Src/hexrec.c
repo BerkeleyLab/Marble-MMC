@@ -123,7 +123,7 @@ int xrp_program_static(uint8_t dev) {
       "\x00\x00\x00\x01\xFF"
    };
    const unsigned dd_size = sizeof(dd) / sizeof(dd[0]);
-   int rc;
+   int rc=1;
    for (unsigned jx=0; jx<dd_size; jx++) {
       rc = xrp_srecord(dev, (uint8_t *) dd[jx]);
       if (rc) break;
