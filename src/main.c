@@ -200,7 +200,7 @@ int main(void)
             break;
          case 'a':
             printf("I2C scanner\r\n");
-            // i2c_scan();
+            i2c_scan();
             break;
          case 'b':
             printf("ADN4600\r\n");

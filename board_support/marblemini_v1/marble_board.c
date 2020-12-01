@@ -488,6 +488,30 @@ uint16_t marble_MDIO_read(uint8_t reg)
    return Chip_ENET_ReadMIIData(LPC_ETHERNET);
 }
 
+void i2c_scan(void)
+{
+	printf("Scanning I2C_PM bus:\r\n");
+	int result;
+	uint8_t data[4];
+	for (unsigned i = 1; i < 128; i++)
+	{
+			/*
+			 * the HAL wants a left aligned i2c address
+			 * (uint16_t)(i<<1) is the i2c address left aligned
+			 */
+		result = marble_I2C_send(I2C_PM, (uint8_t) (i<<1), 0, 1);
+		if (result == 0) // HAL_ERROR or HAL_BUSY or HAL_TIMEOUT
+		{
+			printf("."); // No ACK received at that address
+		} else {
+			printf("0x%02X", i << 1); // Received an ACK at that address
+		}
+	}
+	printf("\r\n");
+
+	// printf("Scanning I2C_APP bus:\r\n");
+}
+
 /************
 * System Stopwatch
 ************/
