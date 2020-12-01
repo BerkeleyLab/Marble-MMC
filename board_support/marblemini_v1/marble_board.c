@@ -98,13 +98,12 @@ void marble_UART_init(void)
 /* Send \0 terminated string over UART. Returns number of bytes sent */
 int marble_UART_send(const char *str, int size)
 {
-   int sent;
-   int wait_cnt;
-   sent = Chip_UART_SendRB(LPC_UART0, &txring, str, size);
-   if (sent < size) {
-      for (wait_cnt = UART_WAIT; wait_cnt > 0; wait_cnt--) {} // Busy-wait
+   int sent=0;
+   do {
       sent += Chip_UART_SendRB(LPC_UART0, &txring, str+sent, size-sent);
-   }
+      for (int wait_cnt = UART_WAIT; wait_cnt > 0; wait_cnt--) {} // Busy-wait
+   } while (sent < size);
+
    return sent;
 }
 
