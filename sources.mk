@@ -3,4 +3,5 @@ src/i2c_pm.c \
 src/i2c_fpga.c \
 src/phy_mdio.c \
 src/hexrec.c \
+src/syscalls.c \
 src/main.c \

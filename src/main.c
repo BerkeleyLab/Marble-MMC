@@ -6,6 +6,9 @@
 #include "ssp.h"
 #include "phy_mdio.h"
 
+// Toolchain dependent?
+#define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
+
 // Setup UART strings
 const char demo_str[] = "Marble Mini v1 UART DEMO\r\n";
 const char lb_str[] = "Loopback... ESC to exit\r\n";
@@ -236,7 +239,15 @@ int main(void)
    }
 }
 
-extern void SysTick_Handler(void) {
+PUTCHAR_PROTOTYPE
+{
+  marble_UART_send((uint8_t *)&ch, 1);
+  return ch;
+}
+
+
+extern void SysTick_Handler(void)
+{
    marble_LED_toggle(0);
    marble_LED_toggle(1);
    marble_LED_toggle(2);
