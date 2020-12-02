@@ -65,8 +65,8 @@ void StopWatch_Init(void)
 	Chip_TIMER_Enable(LPC_TIMER1);
 
 	/* Pre-compute tick rate. Note that peripheral clock supplied to the
-	   timer includes a fixed divide by 4. */
-	ticksPerSecond = Chip_Clock_GetSystemClockRate() / prescaleDivisor / 4;
+	   timer includes programmable divide (defaults to 4). */
+	ticksPerSecond = Chip_Clock_GetSystemClockRate() / prescaleDivisor / Chip_Clock_GetPCLKDiv();
 	ticksPerMs = ticksPerSecond / 1000;
 	ticksPerUs = ticksPerSecond / 1000000;
 }

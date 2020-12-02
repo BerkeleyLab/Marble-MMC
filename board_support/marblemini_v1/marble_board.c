@@ -266,7 +266,7 @@ void marble_GPIOint_init(void)
 }
 
 /* Register user-defined interrupt handlers */
-void marble_INT_handlers(void *FPGA_DONE_handler) {
+void marble_GPIOint_handlers(void *FPGA_DONE_handler) {
    marble_FPGA_DONE_handler = FPGA_DONE_handler;
 }
 
@@ -513,14 +513,42 @@ void i2c_scan(void)
 }
 
 /************
-* System Stopwatch
+* System Timer and Stopwatch
 ************/
-void marble_MS_delay(uint32_t delay)
+void SysTick_Handler_dummy(void) {};
+void (*volatile marble_SysTick_Handler)(void) = SysTick_Handler_dummy;
+
+// Override default (weak) SysTick_Handler
+void SysTick_Handler(void)
+{
+   if (marble_SysTick_Handler)
+      marble_SysTick_Handler();
+}
+
+/* Register user-defined interrupt handlers */
+void marble_SYSTIMER_handler(void *handler) {
+   marble_SysTick_Handler = handler;
+}
+
+/* Configures 24-bit count-down timer and enables systimer interrupt */
+int marble_SYSTIMER_ms(uint32_t delay)
+{
+   const uint32_t MAX_TICKS = (1<<24)-1;
+   uint32_t ticks = (SystemCoreClock / 1000) * delay;
+   if (ticks > MAX_TICKS) {
+      SysTick_Config(MAX_TICKS);
+      return -1;
+   }
+   SysTick_Config(ticks);
+   return 0;
+}
+
+void marble_SLEEP_ms(uint32_t delay)
 {
    StopWatch_DelayMs(delay);
 }
 
-void marble_US_delay(uint32_t delay)
+void marble_SLEEP_us(uint32_t delay)
 {
    StopWatch_DelayUs(delay);
 }
@@ -539,6 +567,8 @@ uint32_t marble_init(bool use_xtal)
    } else {
       Chip_SetupIrcClocking(); // 120 MHz based on 12 MHz internal clock
    }
+
+   SystemCoreClockUpdate(); /* Update the value of SystemCoreClock (120 MHz) */
 
    // Initialize system stopwatch
    StopWatch_Init();
@@ -561,7 +591,5 @@ uint32_t marble_init(bool use_xtal)
 
    marble_MDIO_init();
 
-   /* Configure the SysTick for 1 s interrupts */
-   SysTick_Config(SystemCoreClock * 1);
-   return Chip_Clock_GetSystemClockRate();
+   return SystemCoreClock;
 }

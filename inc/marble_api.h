@@ -69,7 +69,7 @@ int marble_SSP_read(SSP_PORT ssp, uint8_t *buffer, int size);
 /************
 * GPIO user-defined handlers
 ************/
-void marble_INT_handlers(void *FPGA_DONE_handler);
+void marble_GPIOint_handlers(void *FPGA_DONE_handler);
 
 /****
 * I2C
@@ -94,10 +94,13 @@ void marble_MDIO_write(uint8_t reg, uint16_t data);
 uint16_t marble_MDIO_read(uint8_t reg);
 
 /************
-* System Stopwatch
+* System Timer and Stopwatch
 ************/
-void marble_MS_delay(uint32_t delay);
-void marble_US_delay(uint32_t delay);
+int marble_SYSTIMER_ms(uint32_t delay);
+void marble_SYSTIMER_handler(void *handler);
+
+void marble_SLEEP_ms(uint32_t delay);
+void marble_SLEEP_us(uint32_t delay);
 
 /************
 * Other (to-be-categorized)

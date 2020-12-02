@@ -195,7 +195,7 @@ int xrp_set2(uint8_t dev, uint16_t addr, uint8_t data)
       printf("xrp_set2: failure writing r[%4.4x] <= %2.2x\n", addr, data);
       return rc;
    }
-   marble_MS_delay(10);
+   marble_SLEEP_ms(10);
    uint8_t chk = 0x55;
    rc = marble_I2C_cmdrecv_a2(I2C_PM, dev, addr, &chk, 1);
    if (rc != HAL_OK || data != chk) {
@@ -267,7 +267,7 @@ static int xrp_reg_write(uint8_t dev, uint8_t regno, uint16_t d)
 static int xrp_reg_write_check(uint8_t dev, uint8_t regno, uint16_t d)
 {
    xrp_reg_write(dev, regno, d);
-   marble_MS_delay(10);
+   marble_SLEEP_ms(10);
    uint8_t i2c_dat[4];
    i2c_dat[0] = 0xde;
    i2c_dat[1] = 0xad;
@@ -319,7 +319,7 @@ int xrp_push_low(uint8_t dev, uint16_t addr, uint8_t data[], unsigned len)
          return 1;
       }
       printf(".");
-      marble_MS_delay(50);
+      marble_SLEEP_ms(50);
    }
    printf(" OK\n");
    return 0;
@@ -336,7 +336,7 @@ static int xrp_pull(uint8_t dev, unsigned len)
       }
       unsigned value = (((unsigned) i2c_dat[0]) << 8) | i2c_dat[1];
       printf(" %4.4x", value);
-      marble_MS_delay(10);
+      marble_SLEEP_ms(10);
    }
    printf("\n");
    xrp_print_reg(dev, 0x40);
@@ -355,13 +355,13 @@ int xrp_process_flash(uint8_t dev, int page_no, int cmd, int mode, int dwell)
    i2c_dat[0] = 0;  i2c_dat[1] = mode;
    rc = marble_I2C_cmdsend(I2C_PM, dev, 0x4D, i2c_dat, 2);
    if (rc != HAL_OK) return 1;
-   marble_MS_delay(50);
+   marble_SLEEP_ms(50);
    int outer, status, busy;
    for (outer=0; outer < 15; outer++) {
       i2c_dat[0] = 0;  i2c_dat[1] = page_no;
       rc = marble_I2C_cmdsend(I2C_PM, dev, cmd, i2c_dat, 2);
       if (rc != HAL_OK) return 1;
-      marble_MS_delay(500);
+      marble_SLEEP_ms(500);
       int retry;
       for (retry=0; retry < 20; retry++) {
          rc = marble_I2C_cmdrecv(I2C_PM, dev, cmd, i2c_dat, 2);
@@ -369,7 +369,7 @@ int xrp_process_flash(uint8_t dev, int page_no, int cmd, int mode, int dwell)
          status = i2c_dat[0];
          busy = i2c_dat[1];
          if (busy == 0) break;
-         marble_MS_delay(dwell);
+         marble_SLEEP_ms(dwell);
       }
       printf("page_no %d: %d retries, status 0x%2.2x\n", page_no, retry, status);
       if (busy == 0 && status != 0xff) break;

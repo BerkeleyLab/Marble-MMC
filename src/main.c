@@ -115,6 +115,14 @@ void fpga_done_handler(void) {
    fpga_prog_cnt++;
 }
 
+void timer_int_handler(void)
+{
+   marble_LED_toggle(0);
+   marble_LED_toggle(1);
+   marble_LED_toggle(2);
+   live_cnt++;
+}
+
 int main(void)
 {
    // Static for now; eventually needs to be read from EEPROM
@@ -137,7 +145,13 @@ int main(void)
    marble_FMC_pwr(true);
 
    // Register GPIO interrupt handlers
-   marble_INT_handlers(fpga_done_handler);
+   marble_GPIOint_handlers(fpga_done_handler);
+
+   // Register System Timer interrupt handler
+   marble_SYSTIMER_handler(timer_int_handler);
+
+   /* Configure the System Timer for 20 Hz interrupts */
+   marble_SYSTIMER_ms(50);
 
    // Send demo string over UART at 115200 BAUD
    marble_UART_send(demo_str, strlen(demo_str));
@@ -240,7 +254,7 @@ int main(void)
          case 'i':
             for (unsigned ix=0; ix<10; ix++) {
                printf("%d\n", ix);
-               marble_MS_delay(1000);
+               marble_SLEEP_ms(1000);
             }
             break;
          default:
@@ -254,13 +268,4 @@ PUTCHAR_PROTOTYPE
 {
   marble_UART_send((uint8_t *)&ch, 1);
   return ch;
-}
-
-
-extern void SysTick_Handler(void)
-{
-   marble_LED_toggle(0);
-   marble_LED_toggle(1);
-   marble_LED_toggle(2);
-   live_cnt++;
 }
