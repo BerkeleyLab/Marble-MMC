@@ -12,15 +12,15 @@ int set_max6639_reg(int regno, int value)
    i2c_dat[0] = regno;
    i2c_dat[1] = value;
    int rc = marble_I2C_send(I2C_PM, addr, i2c_dat, 2);
-   return rc == 2;
+   return rc;
 }
 
 int get_max6639_reg(int regno, int *value)
 {
    uint8_t i2c_dat[4];
    uint8_t addr = MAX6639;
-   int rc = marble_I2C_cmdrecv(I2C_PM, addr, regno, i2c_dat, 1) == 1;
-   if (rc && value) *value = i2c_dat[0];
+   int rc = marble_I2C_cmdrecv(I2C_PM, addr, regno, i2c_dat, 1);
+   if ((rc==0) && value) *value = i2c_dat[0];
    return rc;
 }
 
@@ -39,7 +39,7 @@ void print_max6639(void)
    uint8_t addr = MAX6639;
    // ix is the MAX6639 register address
    for (unsigned ix=0; ix<64; ix++) {
-      if (!get_max6639_reg(ix, &value)) {
+      if (get_max6639_reg(ix, &value) != 0) {
           marble_UART_send("I2C fault!\r\n", 11);
           break;
       }
@@ -62,46 +62,41 @@ void print_max6639(void)
 
 static int LM75_readwrite(uint8_t dev, LM75_REG reg, int *data, bool rnw) {
    uint8_t i2c_buf[3];
-   int i2c_cnt=0;
-   int i2c_expect=1;
+   int i2c_stat;
    short temp;
 
    // Select register
    i2c_buf[0] = reg;
-   i2c_cnt += marble_I2C_send(I2C_PM, dev, i2c_buf, 1);
+   i2c_stat = marble_I2C_send(I2C_PM, dev, i2c_buf, 1);
    switch (reg) {
       case LM75_TEMP:
       case LM75_HYST:
       case LM75_OS:
 
          if (rnw) {
-            i2c_expect += 2;
-            i2c_cnt += marble_I2C_recv(I2C_PM, dev, i2c_buf, 2);
+            i2c_stat = marble_I2C_recv(I2C_PM, dev, i2c_buf, 2);
             // Signed Q7.1, i.e. resolution of 0.5 deg
             temp = ((i2c_buf[0]<<8) | (i2c_buf[1])) >> 7;
             *data = temp;
          } else {
-            i2c_expect += 3;
             i2c_buf[0] = reg;
             i2c_buf[1] = (*data >> 1) & 0xff; // MSB first
             i2c_buf[2] = (*data & 0x1) << 7;
-            i2c_cnt += marble_I2C_send(I2C_PM, dev, i2c_buf, 3);
+            i2c_stat = marble_I2C_send(I2C_PM, dev, i2c_buf, 3);
          }
          break;
       case LM75_CFG:
          if (rnw) {
-            i2c_expect += 1;
-            i2c_cnt += marble_I2C_recv(I2C_PM, dev, i2c_buf, 1);
+            i2c_stat = marble_I2C_recv(I2C_PM, dev, i2c_buf, 1);
             *data = (i2c_buf[0]) & 0xff;
          } else {
-            i2c_expect += 2;
             i2c_buf[0] = reg;
             i2c_buf[1] = (*data) & 0xff;
-            i2c_cnt += marble_I2C_send(I2C_PM, dev, i2c_buf, 2);
+            i2c_stat = marble_I2C_send(I2C_PM, dev, i2c_buf, 2);
          }
          break;
    }
-   return (i2c_expect == i2c_cnt);
+   return i2c_stat;
 }
 
 int LM75_read(uint8_t dev, LM75_REG reg, int *data) {
@@ -121,7 +116,7 @@ void LM75_print(uint8_t dev) {
    char p_buf[40];
 
    for (i = 0; i < LM75_MAX; i++) {
-      if (LM75_read(dev, rlist[i], &recv)) {
+      if (LM75_read(dev, rlist[i], &recv) == 0) {
          snprintf(p_buf, 40, ok_str, dev, rlist[i], recv);
       } else {
          snprintf(p_buf, 40, fail_str, dev, rlist[i]);
@@ -139,8 +134,7 @@ const char i2c_ret[] = "> %x\r\n";
 /* Perform basic sanity check and print result to UART */
 void I2C_PM_probe(void) {
    int i;
-   int i2c_expect=-1;
-   int i2c_cnt=0;
+   int i2c_stat=0;
    uint8_t i2c_dat[4];
    char p_buf[40];
 
@@ -148,21 +142,19 @@ void I2C_PM_probe(void) {
       switch (i2c_list[i]) {
          case LM75_0:
          case LM75_1:
-            i2c_expect = 2;
-            i2c_cnt = marble_I2C_recv(I2C_PM, i2c_list[i], i2c_dat, i2c_expect);
+            i2c_stat = marble_I2C_recv(I2C_PM, i2c_list[i], i2c_dat, 2);
             break;
          case MAX6639:
-            i2c_expect = 1;
-            i2c_cnt = marble_I2C_recv(I2C_PM, i2c_list[i], i2c_dat, i2c_expect);
+            i2c_stat = marble_I2C_recv(I2C_PM, i2c_list[i], i2c_dat, 1);
             break;
          case XRP7724:
-            i2c_expect = 3;
+            // Needs work
             i2c_dat[0] = 0x9;
-            i2c_cnt = marble_I2C_send(I2C_PM, i2c_list[i], i2c_dat, 1); // PWR_GET_STATUS
-            i2c_cnt += marble_I2C_recv(I2C_PM, i2c_list[i], i2c_dat, 2);
+            i2c_stat = marble_I2C_send(I2C_PM, i2c_list[i], i2c_dat, 1); // PWR_GET_STATUS
+            i2c_stat = marble_I2C_recv(I2C_PM, i2c_list[i], i2c_dat, 2);
             break;
       }
-      if (i2c_cnt == i2c_expect) {
+      if (i2c_stat == 0) {
          snprintf(p_buf, 40, i2c_ok, i2c_list[i]);
       } else {
          snprintf(p_buf, 40, i2c_nok, i2c_list[i]);
@@ -407,7 +399,7 @@ void xrp_go(uint8_t dev) {
       return;
    }
    printf("almost done\n");
-   if (1) {
+   if (0) {
       xrp_reg_write_check(dev, 0x0E, 0x0001);  // Set the XRP7724 to operate mode
    }
 }
