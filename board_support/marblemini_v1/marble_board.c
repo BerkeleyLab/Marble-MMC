@@ -407,15 +407,24 @@ int marble_I2C_cmdrecv_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *
    uint8_t cmd_be[2];
    cmd_be[0] = cmd >> 8;
    cmd_be[1] = cmd & 0xff;
+   I2C_ID_T i2cx;  // enum
+   switch (I2C_bus) {
+      case I2C_IPMB:  i2cx = I2C0;  break;
+      case I2C_PM:    i2cx = I2C1;  break;
+      case I2C_FPGA:  i2cx = I2C2;  break;
+      default: return 1;  // Error
+   }
 
    // Setup low-level transfer
+   // Based on Chip_I2C_MasterCmdRead in i2c_17xx_40xx.c
    I2C_XFER_T xfer = {0};
-   xfer.slaveAddr = addr;
+   xfer.slaveAddr = addr >> 1;
    xfer.txBuff = cmd_be;
    xfer.txSz = 2;
    xfer.rxBuff = data;
    xfer.rxSz = size;
-   while (Chip_I2C_MasterTransfer(I2C_bus, &xfer) == I2C_STATUS_ARBLOST) {}
+   while (Chip_I2C_MasterTransfer(i2cx, &xfer) == I2C_STATUS_ARBLOST) {}
+   // printf("marble_I2C_cmdrecv_a2: %u %u\n", i2cx, xfer.rxSz);
    return xfer.rxSz != 0;
 }
 
