@@ -1,6 +1,5 @@
 #include "marble_api.h"
 #define HAL_OK (0U)
-// XXX write me!
 #include <stdio.h>
 #include <string.h>
 #include "i2c_pm.h"

@@ -399,8 +399,22 @@ int marble_I2C_cmdsend_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *
    return marble_I2C_send(I2C_bus, addr, ldata, size+2);
 }
 
+/* Transmit two bytes and receive an array of bytes after a repeated start condition is generated */
 int marble_I2C_cmdrecv_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *data, int size) {
-   return 1;  // XXX
+   // Swap cmd endianness
+   uint8_t cmd_be[2];
+   cmd_be[0] = cmd >> 8;
+   cmd_be[1] = cmd & 0xff;
+
+   // Setup low-level transfer
+   I2C_XFER_T xfer = {0};
+   xfer.slaveAddr = addr;
+   xfer.txBuff = cmd_be;
+   xfer.txSz = 2;
+   xfer.rxBuff = data;
+   xfer.rxSz = size;
+   while (Chip_I2C_MasterTransfer(I2C_bus, &xfer) == I2C_STATUS_ARBLOST) {}
+   return size - xfer.rxSz;
 }
 
 /************
