@@ -399,7 +399,7 @@ void xrp_go(uint8_t dev) {
       return;
    }
    printf("almost done\n");
-   if (0) {
+   if (1) {
       xrp_reg_write_check(dev, 0x0E, 0x0001);  // Set the XRP7724 to operate mode
    }
 }
