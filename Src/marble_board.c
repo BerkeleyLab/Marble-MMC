@@ -184,8 +184,10 @@ bool marble_FPGAint_get(void)
 
 void reset_fpga(void)
 {
-	/* Pulse the PROGRAM_B pin low; it's spelled PROG_B on schematic */
-	HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_0);
+   /* Pull the PROGRAM_B pin low; it's spelled PROG_B on schematic */
+   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, false);
+   HAL_Delay(50);
+   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, true);
 }
 
 /************
