@@ -15,6 +15,7 @@ involves the following steps:
   * Connect Lab-psu to J17
       - 12 V @ 0.5 A current limit
       - GND pin is the one closer to the barrel connector
+  * Connect Segger j-link mini to J14
   * Download MMC firmware: `make download`
   * Connect to Marble-Mini USB port and enter serial terminal:
     `miniterm /dev/ttyUSB3 115200`
