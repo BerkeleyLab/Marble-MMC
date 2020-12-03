@@ -1,8 +1,11 @@
 Based on lpc-toolchain. See [README here](README-lpc-toolchain.md)
 
 ## UART connectivity ##
-Due to some not-yet fully-understood board-level connections, communicating with Marble over the UART port
-involves the following steps:
+Due to an odd interaction of the Linux kernel with the FTDI UART,
+as discussed in Marble-Mini
+[Issue #60](https://github.com/BerkeleyLab/Marble-Mini/issues/60),
+establishing communication to the MMC on the prototype (v1.0) Marble-Mini
+over the UART port involves the following steps:
 - Connect USB cable to micro-USB port.
 - Open serial port terminal emulator (e.g. gtkterm) on `/dev/ttyUSB3` with 115200 baud rate.
 - The MMC will most likely be put in reset after the previous step. To restart it:
@@ -10,6 +13,12 @@ involves the following steps:
   - Disable DTR (F7 on gtkterm)
 - At this point the MMC should restart and print out a menu to the terminal emulator.
 - Make selections based on the options provided.
+
+On newer boards, the MMC reset lines are connected to another FTDI channel,
+so the concerns above can be ignored: just attach to `/dev/ttyUSB3` at
+115200 baud to get the MMC console.
+If you actually do want to reset the MMC, start a terminal emulator
+on `/dev/ttyUSB1`.
 
 # Marble-Mini bringup
   * Connect Lab-psu to J17
