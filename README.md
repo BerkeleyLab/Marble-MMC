@@ -10,3 +10,39 @@ involves the following steps:
   - Disable DTR (F7 on gtkterm)
 - At this point the MMC should restart and print out a menu to the terminal emulator.
 - Make selections based on the options provided.
+
+# Marble-Mini bringup
+  * Connect Lab-psu to J17
+      - 12 V @ 0.5 A current limit
+      - GND pin is the one closer to the barrel connector
+  * Download MMC firmware: `make download`
+  * Connect to Marble-Mini USB port and enter serial terminal:
+    `miniterm /dev/ttyUSB3 115200`
+  * The menu should be printed on key press
+  * Push `f` for `f) XRP7724 flash`
+  * Push `g` for `g) XRP7724 go`
+  * All power LEDs (close to J12) should be on
+  * Current consumption should be around 200 mA
+
+## Program FTDI
+The FTDI works fine in its default configuration. This step just programs serial number and product name into its USB descriptors.
+
+You need ftdi_eeprom from libfdti:
+
+```bash
+# building fdti_eeprom 2020-11-12
+# from libftdi commit 45ebed37
+# cloned from git://developer.intra2net.com/libftdi
+# works when running out-of-tree, and different user
+# Debian Buster: apt-get install libconfuse2 libconfuse-dev
+cd ~/src
+mkdir libftdi-git-bin
+cd libftdi-git-bin
+cmake ~larry/git/libftdi
+make ftdi_eeprom
+ls -l ftdi_eeprom/ftdi_eeprom
+```
+
+  * Enter the unique serial number in `ftdi/marble_mini.conf`
+  * Make sure `lsusb -d 0403:6011` shows exactly 0 devices, then plug in the Marble-Mini, and see exactly 1 device
+  * Run `ftdi/program_ftdi.sh`
