@@ -178,29 +178,6 @@ void PendSV_Handler(void)
   /* USER CODE END PendSV_IRQn 1 */
 }
 
-/**
-  * @brief This function handles System tick timer.
-  */
-void SysTick_Handler(void)
-{
-  /* USER CODE BEGIN SysTick_IRQn 0 */
-
-  /* USER CODE END SysTick_IRQn 0 */
-  HAL_IncTick();
-
-  static uint16_t i = 0;
-  if(i == 0)
-	  HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_0);
-  else if(i == 330)
-	  HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_1);
-  else if(i == 660)
-	  HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_2);
-  i = (i + 1) % 1000;
-  /* USER CODE BEGIN SysTick_IRQn 1 */
-
-  /* USER CODE END SysTick_IRQn 1 */
-}
-
 /******************************************************************************/
 /* STM32F2xx Peripheral Interrupt Handlers                                    */
 /* Add here the Interrupt Handlers for the used peripherals.                  */

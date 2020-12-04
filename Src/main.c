@@ -37,7 +37,8 @@ const char menu_str[] = "\r\n"
 	"e) PM bus display\r\n"
 	"f) XRP7724 flash\r\n"
 	"g) XRP7724 go\r\n"
-	"h) XRP7724 hex input\r\n";
+	"h) XRP7724 hex input\r\n"
+	"i) timer check/cal\r\n";
 
 const char unk_str[] = "> Unknown option\r\n";
 const char gpio_str[] = "GPIO pins, caps for on, lower case for off\r\n"
@@ -113,15 +114,42 @@ static void pm_bus_display(void)
 	xrp_dump(XRP7724);
 }
 
+unsigned int live_cnt=0;
 unsigned int fpga_prog_cnt=0;
 
 void fpga_done_handler(void) {
    fpga_prog_cnt++;
 }
 
+void timer_int_handler(void)
+{
+   live_cnt++;
+   static uint16_t i = 0;
+   // Snake-pattern LEDs
+   if(i == 0)
+      marble_LED_toggle(0);
+   else if(i == 330)
+      marble_LED_toggle(1);
+   else if(i == 660)
+      marble_LED_toggle(2);
+
+   i = (i + 1) % 1000;
+}
+
 int main(void)
 {
+	// Static for now; eventually needs to be read from EEPROM
+	unsigned char mac_ip_data[10] = {
+		        18, 85, 85, 0, 1, 46,  // MAC (locally managed)
+		        192, 168, 19, 31   // IP
+		     };
+
 	marble_init(0);
+
+	/* Turn on LEDs */
+	marble_LED_set(0, true);
+	marble_LED_set(1, true);
+	marble_LED_set(2, true);
 
 #ifdef XRP_AUTOBOOT
 	xrp_go(XRP7724);
@@ -132,27 +160,21 @@ int main(void)
 #endif
 
 	// Register GPIO interrupt handlers
-	marble_INT_handlers(fpga_done_handler);
+	marble_GPIOint_handlers(fpga_done_handler);
 
-  while (1) {
+	// Register System Timer interrupt handler
+	marble_SYSTIMER_handler(timer_int_handler);
 
-	  unsigned char mac_ip_data[10] = {
-		        18, 85, 85, 0, 1, 46,  // MAC (locally managed)
-		        192, 168, 19, 31   // IP
-		     };
-	  marble_UART_send(demo_str, strlen(demo_str));
+	/* Configure the System Timer for 20 Hz interrupts */
+	marble_SYSTIMER_ms(50);
 
-	  uint8_t rx_ch;
+	marble_UART_send(demo_str, strlen(demo_str));
+        uint8_t rx_ch;
 
-		     while (1) {
-
-		        //marble_UART_send(menu_str, strlen(menu_str));
-			//printf(menu_str);
+	while (1) {
 			printf("Single-character actions, ? for menu\n");
 		        // Wait for user selection
-
 			while(marble_UART_recv(&rx_ch, 1) == 0);
-
 		        switch (rx_ch) {
 		           case '?':
 		              printf(menu_str);
@@ -162,7 +184,6 @@ int main(void)
 		              do {
 		                 if (marble_UART_recv(&rx_ch, 1) != 0){
 					 marble_UART_send(&rx_ch, 1);
-
 		                 }
 		              } while (rx_ch != 27);
 		              printf("\r\n");
@@ -242,15 +263,18 @@ int main(void)
 				   printf("XRP hex input\r\n");
 				   xrp_hex_in(XRP7724);
 				   break;
+		         case 'i':
+		            for (unsigned ix=0; ix<10; ix++) {
+		               printf("%d\n", ix);
+		               marble_SLEEP_ms(1000);
+		            }
+		            break;
 		           default:
 		              printf(unk_str);
 		              break;
 		        }
 		     }
-
-  }
-  /* USER CODE END 3 */
-}
+	}
 
 PUTCHAR_PROTOTYPE
 {

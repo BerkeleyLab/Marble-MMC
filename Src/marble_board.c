@@ -83,19 +83,13 @@ int marble_UART_recv(char *str, int size)
 ************/
 
 #define MAXLEDS 3
-static const uint8_t ledports[MAXLEDS] = {2, 2, 2};
-static const uint8_t ledpins[MAXLEDS] = {21, 25, 24};
+static const uint8_t ledpins[MAXLEDS] = {GPIO_PIN_0, GPIO_PIN_1, GPIO_PIN_2};
 
 /* Initializes board LED(s) */
 static void marble_LED_init(void)
 {
-   int i;
-
-   /* Setup port direction and initial output state */
-   for (i = 0; i < MAXLEDS; i++) {
-      //Chip_GPIO_WriteDirBit(LPC_GPIO, ledports[i], ledpins[i], true);
-      //Chip_GPIO_WritePortBit(LPC_GPIO, ledports[i], ledpins[i], true);
-   }
+   // Handled in MX_GPIO_Init
+   return;
 }
 
 /* Sets the state of a board LED to on or off */
@@ -103,7 +97,7 @@ void marble_LED_set(uint8_t led_num, bool on)
 {
    if (led_num < MAXLEDS) {
       /* Set state, low is on, high is off */
-      //Chip_GPIO_SetPinState(LPC_GPIO, ledports[led_num], ledpins[led_num], !on);
+      HAL_GPIO_WritePin(GPIOE, ledpins[led_num], !on);
    }
 }
 
@@ -113,7 +107,7 @@ bool marble_LED_get(uint8_t led_num)
    bool state = false;
 
    if (led_num < MAXLEDS) {
-      //state = Chip_GPIO_GetPinState(LPC_GPIO, ledports[led_num], ledpins[led_num]);
+      state = HAL_GPIO_ReadPin(GPIOE, ledpins[led_num]);
    }
 
    /* These LEDs are reverse logic. */
@@ -123,10 +117,9 @@ bool marble_LED_get(uint8_t led_num)
 /* Toggles the current state of a board LED */
 void marble_LED_toggle(uint8_t led_num)
 {
-
-   HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_0);
-   HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_1);
-   HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_2);
+   if (led_num < MAXLEDS) {
+      HAL_GPIO_TogglePin(GPIOE, ledpins[led_num]);
+   }
 }
 
 /************
@@ -223,7 +216,7 @@ void marble_GPIOint_init(void)
 }
 
 /* Register user-defined interrupt handlers */
-void marble_INT_handlers(void *FPGA_DONE_handler) {
+void marble_GPIOint_handlers(void *FPGA_DONE_handler) {
    marble_FPGA_DONE_handler = FPGA_DONE_handler;
 }
 
@@ -382,6 +375,52 @@ void i2c_scan(void)
 
 }
 
+/************
+* System Timer and Stopwatch
+************/
+void SysTick_Handler_dummy(void) {};
+void (*volatile marble_SysTick_Handler)(void) = SysTick_Handler_dummy;
+
+// Override default (weak) SysTick_Handler
+void SysTick_Handler(void)
+{
+   HAL_IncTick(); // Advances HAL timebase used in HAL_Delay
+   if (marble_SysTick_Handler)
+      marble_SysTick_Handler();
+}
+
+/* Register user-defined interrupt handlers */
+void marble_SYSTIMER_handler(void *handler) {
+   marble_SysTick_Handler = handler;
+}
+
+/* Configures 24-bit count-down timer and enables systimer interrupt */
+int marble_SYSTIMER_ms(uint32_t delay)
+{
+   // WARNING: Hardcoded to 1 ms since this is what increments HAL_IncTick() and
+   // enables HAL_Delay
+   delay = 1; // TODO: Consider decoupling stopwatch from system timer
+
+   const uint32_t MAX_TICKS = (1<<24)-1;
+   uint32_t ticks = (SystemCoreClock / 1000U) * delay;
+   if (ticks > MAX_TICKS) {
+      SysTick_Config(MAX_TICKS);
+      return -1;
+   }
+   SysTick_Config(ticks);
+   return 0;
+}
+
+void marble_SLEEP_ms(uint32_t delay)
+{
+   HAL_Delay(delay); // TODO: Consider replacing with stopwatch built from timer peripheral
+}
+
+void marble_SLEEP_us(uint32_t delay)
+{
+   return; // Not available unless HAL weak definitions are overridden
+}
+
 
 /************
 * Board Init
@@ -422,9 +461,6 @@ void marble_init(bool use_xtal)
    //marble_SSP_init(LPC_SSP1);
 
    //marble_MDIO_init();
-
-   /* Configure the SysTick for 1 s interrupts */
-   SysTick_Config(SystemCoreClock * 1);
 }
 
 void SystemClock_Config(void)

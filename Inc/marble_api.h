@@ -58,7 +58,7 @@ void reset_fpga(void);
 /************
 * GPIO interrupt setup and user-defined handlers
 ************/
-void marble_INT_handlers(void *FPGA_DONE_handler);
+void marble_GPIOint_handlers(void *FPGA_DONE_handler);
 
 /****
 * SPI/SSP
@@ -92,6 +92,15 @@ int marble_I2C_cmdrecv_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *
 ************/
 void marble_MDIO_write(uint16_t reg, uint32_t data);
 uint32_t marble_MDIO_read(uint8_t reg);
+
+/************
+* System Timer and Stopwatch
+************/
+int marble_SYSTIMER_ms(uint32_t delay);
+void marble_SYSTIMER_handler(void *handler);
+
+void marble_SLEEP_ms(uint32_t delay);
+void marble_SLEEP_us(uint32_t delay);
 
 /************
 * Other (to-be-categorized)
