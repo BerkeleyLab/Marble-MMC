@@ -1,18 +1,8 @@
-/*
- * i2c_pm.c
- *
- *  Created on: 11.09.2020
- *      Author: micha
- */
-
 #include "marble_api.h"
 #include "main.h"
 #include <stdio.h>
 #include <string.h>
 #include "i2c_pm.h"
-//#include "stm32f2xx_hal_def.h"
-
-
 
 int set_max6639_reg(int regno, int value)
 {

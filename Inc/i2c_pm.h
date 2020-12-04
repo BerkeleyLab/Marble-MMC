@@ -1,10 +1,3 @@
-/*
- * i2c_pm.h
- *
- *  Created on: 11.09.2020
- *      Author: micha
- */
-
 #ifndef I2C_PM_H_
 #define I2C_PM_H_
 typedef enum {
