@@ -52,10 +52,6 @@ int xrp_srecord(uint8_t dev, uint8_t data[])
       printf("rtype %d\n", rtype);
       return 2;
    }
-   if (addr < 0x8000) {
-      printf("Flash programming not yet handled.\n");
-      return 1;
-   }
    unsigned sum = 0;
    for (unsigned jx=0; jx<(len+5); jx++) sum = sum + data[jx];
    sum = sum & 0xff;
