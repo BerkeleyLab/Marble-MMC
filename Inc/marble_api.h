@@ -55,6 +55,11 @@ void marble_PSU_pwr(bool on);
 ****/
 void reset_fpga(void);
 
+/************
+* GPIO interrupt setup and user-defined handlers
+************/
+void marble_INT_handlers(void *FPGA_DONE_handler);
+
 /****
 * SPI/SSP
 ****/

@@ -113,6 +113,12 @@ static void pm_bus_display(void)
 	xrp_dump(XRP7724);
 }
 
+unsigned int fpga_prog_cnt=0;
+
+void fpga_done_handler(void) {
+   fpga_prog_cnt++;
+}
+
 int main(void)
 {
 	marble_init(0);
@@ -124,6 +130,9 @@ int main(void)
 	switch_i2c_bus(2);
 	adn4600_init();
 #endif
+
+	// Register GPIO interrupt handlers
+	marble_INT_handlers(fpga_done_handler);
 
   while (1) {
 
@@ -166,6 +175,7 @@ int main(void)
 		              break;
 		           case '3':
 		              printf("Live counter: %ld\r\n", HAL_GetTick());
+		              printf("FPGA prog counter: %d\r\n", fpga_prog_cnt);
 		              break;
 		           case '4':
 		              gpio_cmd();

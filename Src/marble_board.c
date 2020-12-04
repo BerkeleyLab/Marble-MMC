@@ -150,9 +150,6 @@ void marble_PSU_pwr(bool on)
 		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_11, on);
 		SystemClock_Config(); //switch back to external clock source
 	}
-
-   //Chip_GPIO_WriteDirBit(LPC_GPIO, 1, 31, true);
-   //Chip_GPIO_WritePortBit(LPC_GPIO, 1, 31, on);
 }
 
 /************
@@ -176,9 +173,9 @@ bool marble_SW_get(void)
 
 bool marble_FPGAint_get(void)
 {
-   //if (Chip_GPIO_ReadPortBit(LPC_GPIO, 0, 19) == 0x00) {
-   //   return false;
-   //}
+   if (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3)) {
+      return false;
+   }
    return true;
 }
 
@@ -191,12 +188,49 @@ void reset_fpga(void)
 }
 
 /************
+* GPIO interrupt setup and user-defined handlers
+************/
+void FPGA_DONE_dummy(void) {};
+void (*volatile marble_FPGA_DONE_handler)(void) = FPGA_DONE_dummy;
+
+
+// Override default (weak) IRQHandler and redirect to HAL shim
+void EXTI0_IRQHandler(void)
+{
+   HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_0);
+}
+
+// Override default (weak) callback
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+   if (GPIO_Pin == GPIO_PIN_0) { // Handles any interrupt on line 0 (e.g. PA0, PB0, PC0, PD0)
+      marble_FPGA_DONE_handler();
+   }
+}
+
+void marble_GPIOint_init(void)
+{
+  /*Configure GPIO pin : PD0 - FPGA_DONE rising edge interrupt */
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+  GPIO_InitStruct.Pin = GPIO_PIN_0;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+
+  /* Enable interrupt in the NVIC */
+  HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI0_IRQn);
+}
+
+/* Register user-defined interrupt handlers */
+void marble_INT_handlers(void *FPGA_DONE_handler) {
+   marble_FPGA_DONE_handler = FPGA_DONE_handler;
+}
+
+/************
 * I2C
 ************/
 #define SPEED_100KHZ 100000
-#define I2C_POLL 1
-
-
 
 // Override default (weak) IRQHandlers
 void I2C0_IRQHandler(void)
@@ -360,6 +394,10 @@ void marble_init(bool use_xtal)
    SystemClock_Config_HSI();
 
    MX_GPIO_Init();
+
+   // Configure GPIO interrupts
+   marble_GPIOint_init();
+
    marble_PSU_pwr(true);
    MX_USART1_UART_Init();
    MX_USART2_UART_Init();
@@ -378,11 +416,6 @@ void marble_init(bool use_xtal)
 
    printf("** Marble Test **\n");
    printf("** Init done **\n");
-
-   // Init I2C busses in interrupt mode
-   //marble_I2C_init(I2C0, !I2C_POLL);
-   //marble_I2C_init(I2C1, !I2C_POLL);
-   //marble_I2C_init(I2C2, !I2C_POLL);
 
    // Init SSP busses
    //marble_SSP_init(LPC_SSP0);
@@ -524,7 +557,7 @@ static void MX_I2C1_Init(void)
 
   /* USER CODE END I2C1_Init 1 */
   hi2c1.Instance = I2C1;
-  hi2c1.Init.ClockSpeed = 100000;
+  hi2c1.Init.ClockSpeed = SPEED_100KHZ;
   hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
   hi2c1.Init.OwnAddress1 = 0;
   hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
@@ -558,7 +591,7 @@ static void MX_I2C3_Init(void)
 
   /* USER CODE END I2C3_Init 1 */
   hi2c3.Instance = I2C3;
-  hi2c3.Init.ClockSpeed = 100000;
+  hi2c3.Init.ClockSpeed = SPEED_100KHZ;
   hi2c3.Init.DutyCycle = I2C_DUTYCYCLE_2;
   hi2c3.Init.OwnAddress1 = 0;
   hi2c3.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
@@ -825,9 +858,9 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PA3 */
+  /*Configure GPIO pin : PA3 - FPGA_INT (just an input for now; not an interrupt) */
   GPIO_InitStruct.Pin = GPIO_PIN_3;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
@@ -865,7 +898,7 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pins : PD12 PD13 PD14 PD15
                            PD0 PD3 PD4 */
   GPIO_InitStruct.Pin = GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15
-                          |GPIO_PIN_0|GPIO_PIN_3|GPIO_PIN_4;
+                          |GPIO_PIN_3|GPIO_PIN_4;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
