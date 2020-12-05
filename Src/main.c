@@ -16,7 +16,7 @@ void phy_print(void);
 #endif /* __GNUC__ */
 
 // Setup UART strings
-const char demo_str[] = "Marble Mini v1 UART DEMO\r\n";
+const char demo_str[] = "Marble v2 UART DEMO\r\n";
 const char lb_str[] = "Loopback... ESC to exit\r\n";
 const char menu_str[] = "\r\n"
    "Menu:\r\n"
@@ -45,7 +45,6 @@ const char gpio_str[] = "GPIO pins, caps for on, lower case for off\r\n"
    "a) FMC power\r\n"
    "b) EN_PSU_CH\r\n";
 
-/* USER CODE BEGIN PFP */
 static void gpio_cmd(void)
 {
    char rx_ch;
@@ -168,10 +167,11 @@ int main(void)
    /* Configure the System Timer for 20 Hz interrupts */
    marble_SYSTIMER_ms(50);
 
+   // Send demo string over UART at 115200 baud
    marble_UART_send(demo_str, strlen(demo_str));
-        uint8_t rx_ch;
 
    while (1) {
+      uint8_t rx_ch;
       printf("Single-character actions, ? for menu\n");
       // Wait for user selection
       while(marble_UART_recv(&rx_ch, 1) == 0);
@@ -182,7 +182,7 @@ int main(void)
          case '0':
             printf(lb_str);
             do {
-               if (marble_UART_recv(&rx_ch, 1) != 0){
+               if (marble_UART_recv(&rx_ch, 1) != 0) {
                   marble_UART_send(&rx_ch, 1);
                }
             } while (rx_ch != 27);
@@ -278,8 +278,6 @@ int main(void)
 
 PUTCHAR_PROTOTYPE
 {
-  /* Place your implementation of fputc here */
-  /* e.g. write a character to the USART3 and Loop until the end of transmission */
   marble_UART_send((uint8_t *)&ch, 1);
 
   return ch;
