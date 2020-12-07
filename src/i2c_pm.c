@@ -290,15 +290,16 @@ static void xrp_print_reg(uint8_t dev, uint8_t regno)
 // Sending data to flash, see ANP-38
 int xrp_push_low(uint8_t dev, uint16_t addr, uint8_t data[], unsigned len)
 {
-   printf("xrp_push_low WIP 0x%4.4x ", addr);
+   printf("xrp_push_low WIP 0x%4.4x\n", addr);
    int rc;
    if (len & 1) return 1;  // Odd length not allowed
    // FLASH_PROGRAM_ADDRESS (0x40)
    rc = xrp_reg_write_check(dev, 0x40, addr);
-   if (rc != HAL_OK) {
+   if (rc == 0) {
       printf("can't set flash program address\n");
       return 1;
    }
+   printf("start ");
    for (unsigned jx = 0; jx < len; jx+=2) {
       marble_SLEEP_ms(12);
       // Can argue that copying is stupid -- just pass data+jx to marble_I2C_cmdsend
@@ -314,6 +315,25 @@ int xrp_push_low(uint8_t dev, uint16_t addr, uint8_t data[], unsigned len)
       printf(".");
    }
    printf(" OK\n");
+   marble_SLEEP_ms(12);
+   rc = xrp_reg_write_check(dev, 0x40, addr);
+   if (rc == 0) {
+      printf("can't set flash program address\n");
+      return 1;
+   }
+   printf("check ");
+   for (unsigned jx = 0; jx < len; jx+=2) {
+      marble_SLEEP_ms(10);
+      uint8_t i2c_dat[4];
+      // FLASH_PROGRAM_DATA_INC_ADDRESS (0x42)
+      rc = marble_I2C_cmdrecv(I2C_PM, dev, 0x42, i2c_dat, 2);
+      if (rc != HAL_OK || i2c_dat[0] != data[jx] || i2c_dat[1] != data[jx+1]) {
+         printf("readback fail: rc=%d  0x%2.2x:0x%2.2x  0x%2.2x:0x%2.2x\n",
+            rc, i2c_dat[0], data[jx], i2c_dat[1], data[jx+1]);
+         return 1;
+      }
+      printf(".");
+   }
    return 0;  // Success!
 }
 
@@ -399,6 +419,7 @@ static int xrp_program_page(uint8_t dev, unsigned page_no, uint8_t data[], unsig
    marble_SLEEP_ms(12);
    int rc = xrp_reg_write(dev, 0x4D, 1);  // FLASH_INIT (0x4D), mode=1
    if (rc != HAL_OK) return 1;
+   marble_SLEEP_ms(10);
    if (xrp_push_low(dev, page_no*64, data, len)) return 1;
    int v = xrp_read2(dev, 0x8068);  // YFLASHPGMDELAY
    if (v != 0xff) {
