@@ -342,38 +342,50 @@ int xrp_process_flash(uint8_t dev, int page_no, int cmd, int mode, int dwell)
 {
    int rc;
    uint8_t i2c_dat[4];
-   xrp_set2(dev, 0x8068, 0xff);  // YFLASHPGMDELAY
-   // FLASH_INIT (0x4D)
-   i2c_dat[0] = 0;  i2c_dat[1] = mode;
-   rc = marble_I2C_cmdsend(I2C_PM, dev, 0x4D, i2c_dat, 2);
-   if (rc != HAL_OK) return 1;
-   marble_SLEEP_ms(50);
-   int outer, status, busy;
-   for (outer=0; outer < 15; outer++) {
-      i2c_dat[0] = 0;  i2c_dat[1] = page_no;
-      rc = marble_I2C_cmdsend(I2C_PM, dev, cmd, i2c_dat, 2);
+   for (unsigned retry=0; retry<5; retry++) {
+      xrp_set2(dev, 0x8068, 0xff);  // YFLASHPGMDELAY
+      // FLASH_INIT (0x4D)
+      i2c_dat[0] = 0;  i2c_dat[1] = mode;
+      rc = marble_I2C_cmdsend(I2C_PM, dev, 0x4D, i2c_dat, 2);
       if (rc != HAL_OK) return 1;
-      marble_SLEEP_ms(500);
-      int retry;
-      for (retry=0; retry < 20; retry++) {
-         rc = marble_I2C_cmdrecv(I2C_PM, dev, cmd, i2c_dat, 2);
+      marble_SLEEP_ms(50);
+      int outer, status, busy;
+      for (outer=0; outer < 10; outer++) {
+         i2c_dat[0] = 0;  i2c_dat[1] = page_no;
+         rc = marble_I2C_cmdsend(I2C_PM, dev, cmd, i2c_dat, 2);
          if (rc != HAL_OK) return 1;
-         status = i2c_dat[0];
-         busy = i2c_dat[1];
-         if (busy == 0) break;
-         marble_SLEEP_ms(dwell);
+         marble_SLEEP_ms(500);
+         int poll;
+         for (poll=0; poll < 20; poll++) {
+            rc = marble_I2C_cmdrecv(I2C_PM, dev, cmd, i2c_dat, 2);
+            if (rc != HAL_OK) return 1;
+            status = i2c_dat[0];
+            busy = i2c_dat[1];
+            if (busy == 0) break;
+            marble_SLEEP_ms(dwell);
+         }
+         printf("page_no %d: %d polls, status 0x%2.2x\n", page_no, poll, status);
+         if (busy == 1) {
+            printf("Timeout!\n");
+            return 1;
+         }
+         if (status != 0xff) break;
       }
-      printf("page_no %d: %d retries, status 0x%2.2x\n", page_no, retry, status);
-      if (busy == 0 && status != 0xff) break;
+      if (status == 0xff) {
+         printf("Status stuck at 0xFF!\n");
+         return 1;
+      }
+      printf("Status OK\n");
+      // final check
+      int v = xrp_read2(dev, 0x8068);  // YFLASHPGMDELAY
+      if (v == 0xff) {
+         printf("Page %d complete\n", page_no);
+         return 0;  // Success
+      }
+      printf("YFLASHPGMDELAY = 0x%2.2x after programming; Fault %d!\n", v, retry);
    }
-   if (busy == 1 || status == 0xff) {
-      printf("failed!\n");
-      return 1;
-   }
-   printf("OK\n");
-   return 0;
+   return 1;  // "Abort - Erasing the Flash has failed"
 }
-
 
 static int xrp_program_page(uint8_t dev, unsigned page_no, uint8_t data[], unsigned len)
 {
@@ -433,8 +445,8 @@ void xrp_flash(uint8_t dev)
    };
    const unsigned dd_size = sizeof(dd) / sizeof(dd[0]);
    const unsigned pages = 7;
-   if (dd_size != pages*64) {
-      printf("bad setup\n");
+   if (dd_size != pages*64+1) {  // account for trailing "\0"
+      printf("bad setup, dd_size=%u, pages=%u\n", dd_size, pages);
       return;
    }
    printf("XRP7724 flash (WIP)\n");
