@@ -5,6 +5,7 @@
 #include "i2c_fpga.h"
 #include "ssp.h"
 #include "phy_mdio.h"
+#include "rev.h"
 
 // Toolchain dependent?
 #define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
@@ -13,6 +14,7 @@
 const char demo_str[] = "Marble Mini v1 UART DEMO\r\n";
 const char lb_str[] = "Loopback... ESC to exit\r\n";
 const char menu_str[] = "\r\n"
+	"Build based on git commit " GIT_REV "\r\n"
 	"Menu:\r\n"
 	"0) Loopback\r\n"
 	"1) MDIO/PHY\r\n"
