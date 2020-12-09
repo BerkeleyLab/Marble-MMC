@@ -332,7 +332,7 @@ int xrp_push_low(uint8_t dev, uint16_t addr, uint8_t data[], unsigned len)
       printf("can't set flash program address\n");
       return 1;
    }
-   printf("Double-check\n");
+   printf("Double-check ");
    for (unsigned jx = 0; jx < len; jx+=2) {
       marble_SLEEP_ms(10);
       uint8_t i2c_dat[4];
@@ -345,6 +345,7 @@ int xrp_push_low(uint8_t dev, uint16_t addr, uint8_t data[], unsigned len)
       }
       printf(".");
    }
+   printf(" OK\n");
    return 0;  // Success!
 }
 
