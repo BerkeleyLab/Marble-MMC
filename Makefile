@@ -99,6 +99,12 @@ include sources.mk
 objects = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(patsubst %.s,%.o,$(SOURCES))))
 OBJECTS = $(addprefix $(OUTPUT_DIR)/,$(objects))
 
+# Version
+Src/rev.h: $(SOURCES)
+	(git rev-parse --short=8 HEAD | awk '{print "#define GIT_REV \"" $$1 "\""}'; \
+	git diff | grep -q .; echo "#define GIT_DIRTY $$?")  > $@
+out/Src/main.o: Src/rev.h
+
 # Rule for generating object and dependancy files from source files
 #
 # Creates a directory in the output tree if nessesary. File is only compiled,
@@ -197,4 +203,4 @@ gdbscript:
 .PHONY: clean
 clean:
 	$(RM) $(OUTPUT_DIR)/*
-	$(RM) gdbscript
+	$(RM) gdbscript Src/rev.h

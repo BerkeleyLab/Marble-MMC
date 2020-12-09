@@ -4,6 +4,7 @@
 #include "i2c_pm.h"
 #include "i2c_fpga.h"
 #include <stm32f2xx_hal_flash_ex.h>
+#include "rev.h"
 
 void phy_print(void);
 
@@ -19,6 +20,7 @@ void phy_print(void);
 const char demo_str[] = "Marble v2 UART DEMO\r\n";
 const char lb_str[] = "Loopback... ESC to exit\r\n";
 const char menu_str[] = "\r\n"
+   "Build based on git commit " GIT_REV "\r\n"
    "Menu:\r\n"
    "0) Loopback\r\n"
    "1) MDIO/PHY\r\n"

@@ -1,8 +1,9 @@
 #include "marble_api.h"
-#include "main.h"
+#define HAL_OK (0U)
 #include <stdio.h>
 #include <string.h>
 #include "i2c_pm.h"
+
 
 int set_max6639_reg(int regno, int value)
 {
@@ -10,17 +11,16 @@ int set_max6639_reg(int regno, int value)
    uint8_t i2c_dat[4];
    i2c_dat[0] = regno;
    i2c_dat[1] = value;
-   //int rc = HAL_I2C_Master_Transmit(&hi2c1, addr, i2c_dat, 2, HAL_MAX_DELAY);
    int rc = marble_I2C_send(I2C_PM, addr, i2c_dat, 2);
-   return rc ;
+   return rc;
 }
 
 int get_max6639_reg(int regno, int *value)
 {
    uint8_t i2c_dat[4];
    uint8_t addr = MAX6639;
-   int rc = marble_I2C_cmdrecv(I2C_PM, addr, regno, i2c_dat, 1) == 1;
-   if (rc == HAL_OK) *value = i2c_dat[0];
+   int rc = marble_I2C_cmdrecv(I2C_PM, addr, regno, i2c_dat, 1);
+   if ((rc==0) && value) *value = i2c_dat[0];
    return rc;
 }
 
@@ -39,7 +39,7 @@ void print_max6639(void)
    uint8_t addr = MAX6639;
    // ix is the MAX6639 register address
    for (unsigned ix=0; ix<64; ix++) {
-      if (get_max6639_reg(ix, &value) != HAL_OK) {
+      if (get_max6639_reg(ix, &value) != 0) {
           marble_UART_send("I2C fault!\r\n", 11);
           break;
       }
@@ -62,8 +62,7 @@ void print_max6639(void)
 
 static int LM75_readwrite(uint8_t dev, LM75_REG reg, int *data, bool rnw) {
    uint8_t i2c_buf[3];
-   int i2c_stat=0;
-   int i2c_expect=1;
+   int i2c_stat;
    short temp;
 
    // Select register
@@ -75,13 +74,11 @@ static int LM75_readwrite(uint8_t dev, LM75_REG reg, int *data, bool rnw) {
       case LM75_OS:
 
          if (rnw) {
-            i2c_expect += 2;
             i2c_stat = marble_I2C_recv(I2C_PM, dev, i2c_buf, 2);
             // Signed Q7.1, i.e. resolution of 0.5 deg
             temp = ((i2c_buf[0]<<8) | (i2c_buf[1])) >> 7;
             *data = temp;
          } else {
-            i2c_expect += 3;
             i2c_buf[0] = reg;
             i2c_buf[1] = (*data >> 1) & 0xff; // MSB first
             i2c_buf[2] = (*data & 0x1) << 7;
@@ -90,11 +87,9 @@ static int LM75_readwrite(uint8_t dev, LM75_REG reg, int *data, bool rnw) {
          break;
       case LM75_CFG:
          if (rnw) {
-            i2c_expect += 1;
             i2c_stat = marble_I2C_recv(I2C_PM, dev, i2c_buf, 1);
             *data = (i2c_buf[0]) & 0xff;
          } else {
-            i2c_expect += 2;
             i2c_buf[0] = reg;
             i2c_buf[1] = (*data) & 0xff;
             i2c_stat = marble_I2C_send(I2C_PM, dev, i2c_buf, 2);
@@ -121,7 +116,7 @@ void LM75_print(uint8_t dev) {
    char p_buf[40];
 
    for (i = 0; i < LM75_MAX; i++) {
-      if (LM75_read(dev, rlist[i], &recv) == HAL_OK) {
+      if (LM75_read(dev, rlist[i], &recv) == 0) {
          snprintf(p_buf, 40, ok_str, dev, rlist[i], recv);
       } else {
          snprintf(p_buf, 40, fail_str, dev, rlist[i]);
@@ -139,8 +134,7 @@ const char i2c_ret[] = "> %x\r\n";
 /* Perform basic sanity check and print result to UART */
 void I2C_PM_probe(void) {
    int i;
-   int i2c_expect;
-   int i2c_cnt=0;
+   int i2c_stat=0;
    uint8_t i2c_dat[4];
    char p_buf[40];
 
@@ -148,21 +142,19 @@ void I2C_PM_probe(void) {
       switch (i2c_list[i]) {
          case LM75_0:
          case LM75_1:
-            i2c_expect = 2;
-            i2c_cnt = marble_I2C_recv(I2C_PM, i2c_list[i], i2c_dat, i2c_expect);
+            i2c_stat = marble_I2C_recv(I2C_PM, i2c_list[i], i2c_dat, 2);
             break;
          case MAX6639:
-            i2c_expect = 1;
-            i2c_cnt = marble_I2C_recv(I2C_PM, i2c_list[i], i2c_dat, i2c_expect);
+            i2c_stat = marble_I2C_recv(I2C_PM, i2c_list[i], i2c_dat, 1);
             break;
          case XRP7724:
-            i2c_expect = 3;
+            // Needs work
             i2c_dat[0] = 0x9;
-            i2c_cnt = marble_I2C_send(I2C_PM, i2c_list[i], i2c_dat, 1); // PWR_GET_STATUS
-            i2c_cnt += marble_I2C_recv(I2C_PM, i2c_list[i], i2c_dat, 2);
+            i2c_stat = marble_I2C_send(I2C_PM, i2c_list[i], i2c_dat, 1); // PWR_GET_STATUS
+            i2c_stat = marble_I2C_recv(I2C_PM, i2c_list[i], i2c_dat, 2);
             break;
       }
-      if (i2c_cnt == HAL_OK) {
+      if (i2c_stat == 0) {
          snprintf(p_buf, 40, i2c_ok, i2c_list[i]);
       } else {
          snprintf(p_buf, 40, i2c_nok, i2c_list[i]);
@@ -194,7 +186,7 @@ int xrp_set2(uint8_t dev, uint16_t addr, uint8_t data)
       printf("xrp_set2: failure writing r[%4.4x] <= %2.2x\n", addr, data);
       return rc;
    }
-   HAL_Delay(10);
+   marble_SLEEP_ms(10);
    uint8_t chk = 0x55;
    rc = marble_I2C_cmdrecv_a2(I2C_PM, dev, addr, &chk, 1);
    if (rc != HAL_OK || data != chk) {
@@ -266,7 +258,7 @@ static int xrp_reg_write(uint8_t dev, uint8_t regno, uint16_t d)
 static int xrp_reg_write_check(uint8_t dev, uint8_t regno, uint16_t d)
 {
    xrp_reg_write(dev, regno, d);
-   HAL_Delay(10);
+   marble_SLEEP_ms(10);
    uint8_t i2c_dat[4];
    i2c_dat[0] = 0xde;
    i2c_dat[1] = 0xad;
@@ -298,30 +290,62 @@ static void xrp_print_reg(uint8_t dev, uint8_t regno)
 // Sending data to flash, see ANP-38
 int xrp_push_low(uint8_t dev, uint16_t addr, uint8_t data[], unsigned len)
 {
-   printf("xrp_push_low WIP\n");
+   printf("xrp_push_low WIP 0x%4.4x\n", addr);
+   int rc;
    if (len & 1) return 1;  // Odd length not allowed
    // FLASH_PROGRAM_ADDRESS (0x40)
-   int rc;
    rc = xrp_reg_write_check(dev, 0x40, addr);
-   if (rc != HAL_OK) {
+   if (rc == 0) {
       printf("can't set flash program address\n");
       return 1;
    }
-   for (unsigned jx = 0; jx < len; jx++) {
+   printf("start ");
+   for (unsigned jx = 0; jx < len; jx+=2) {
+      marble_SLEEP_ms(12);
+      // Can argue that copying is stupid -- just pass data+jx to marble_I2C_cmdsend
       uint8_t i2c_dat[4];
-      i2c_dat[0] = (data[jx]>>8) & 0xff;
-      i2c_dat[1] = data[jx] & 0xff;
-      // FLASH_PROGRAM_DATA_INC_ADDRESS (0x42)
-      rc = marble_I2C_cmdsend(I2C_PM, dev, 0x42, i2c_dat, 2);
+      i2c_dat[0] = data[jx];
+      i2c_dat[1] = data[jx+1];
+      // FLASH_PROGRAM_DATA (0x41)
+      rc = marble_I2C_cmdsend(I2C_PM, dev, 0x41, i2c_dat, 2);
       if (rc != HAL_OK) {
          printf(" Write Fault\n");
          return 1;
       }
       printf(".");
-      HAL_Delay(50);
+      marble_SLEEP_ms(12);
+
+      uint8_t i2c_rd[4];
+      // FLASH_PROGRAM_DATA_INC_ADDRESS (0x42); N.B.: Read-Write pointer is incremented here
+      rc = marble_I2C_cmdrecv(I2C_PM, dev, 0x42, i2c_rd, 2);
+      marble_SLEEP_ms(12);
+      if (rc != HAL_OK || i2c_rd[0] != data[jx] || i2c_rd[1] != data[jx+1]) {
+         printf("readback fail: rc=%d  0x%2.2x:0x%2.2x  0x%2.2x:0x%2.2x\n",
+            rc, i2c_rd[0], data[jx], i2c_rd[1], data[jx+1]);
+         return 1;
+      }
    }
-   printf(" OK\n");
-   return 0;
+   printf(" Page Done\n");
+   marble_SLEEP_ms(12);
+   rc = xrp_reg_write_check(dev, 0x40, addr);
+   if (rc == 0) {
+      printf("can't set flash program address\n");
+      return 1;
+   }
+   printf("Double-check\n");
+   for (unsigned jx = 0; jx < len; jx+=2) {
+      marble_SLEEP_ms(10);
+      uint8_t i2c_dat[4];
+      // FLASH_PROGRAM_DATA_INC_ADDRESS (0x42)
+      rc = marble_I2C_cmdrecv(I2C_PM, dev, 0x42, i2c_dat, 2);
+      if (rc != HAL_OK || i2c_dat[0] != data[jx] || i2c_dat[1] != data[jx+1]) {
+         printf("readback fail: rc=%d  0x%2.2x:0x%2.2x  0x%2.2x:0x%2.2x\n",
+            rc, i2c_dat[0], data[jx], i2c_dat[1], data[jx+1]);
+         return 1;
+      }
+      printf(".");
+   }
+   return 0;  // Success!
 }
 
 static int xrp_pull(uint8_t dev, unsigned len)
@@ -335,7 +359,7 @@ static int xrp_pull(uint8_t dev, unsigned len)
       }
       unsigned value = (((unsigned) i2c_dat[0]) << 8) | i2c_dat[1];
       printf(" %4.4x", value);
-      HAL_Delay(10);
+      marble_SLEEP_ms(10);
    }
    printf("\n");
    xrp_print_reg(dev, 0x40);
@@ -349,47 +373,125 @@ int xrp_process_flash(uint8_t dev, int page_no, int cmd, int mode, int dwell)
 {
    int rc;
    uint8_t i2c_dat[4];
-   xrp_set2(dev, 0x8068, 0xff);  // YFLASHPGMDELAY
-   // FLASH_INIT (0x4D)
-   i2c_dat[0] = 0;  i2c_dat[1] = mode;
-   rc = marble_I2C_cmdsend(I2C_PM, dev, 0x4D, i2c_dat, 2);
-   if (rc != HAL_OK) return 1;
-   HAL_Delay(50);
-   int outer, status, busy;
-   for (outer=0; outer < 15; outer++) {
-      i2c_dat[0] = 0;  i2c_dat[1] = page_no;
-      rc = marble_I2C_cmdsend(I2C_PM, dev, cmd, i2c_dat, 2);
+   for (unsigned retry=0; retry<5; retry++) {
+      xrp_set2(dev, 0x8068, 0xff);  // YFLASHPGMDELAY
+      // FLASH_INIT (0x4D)
+      i2c_dat[0] = 0;  i2c_dat[1] = mode;
+      rc = marble_I2C_cmdsend(I2C_PM, dev, 0x4D, i2c_dat, 2);
       if (rc != HAL_OK) return 1;
-      HAL_Delay(500);
-      int retry;
-      for (retry=0; retry < 20; retry++) {
-         rc = marble_I2C_cmdrecv(I2C_PM, dev, cmd, i2c_dat, 2);
+      marble_SLEEP_ms(50);
+      int outer, status, busy;
+      for (outer=0; outer < 10; outer++) {
+         i2c_dat[0] = 0;  i2c_dat[1] = page_no;
+         rc = marble_I2C_cmdsend(I2C_PM, dev, cmd, i2c_dat, 2);
          if (rc != HAL_OK) return 1;
-         status = i2c_dat[0];
-         busy = i2c_dat[1];
-         if (busy == 0) break;
-         HAL_Delay(dwell);
+         marble_SLEEP_ms(500);
+         int poll;
+         for (poll=0; poll < 20; poll++) {
+            rc = marble_I2C_cmdrecv(I2C_PM, dev, cmd, i2c_dat, 2);
+            if (rc != HAL_OK) return 1;
+            status = i2c_dat[0];
+            busy = i2c_dat[1];
+            if (busy == 0) break;
+            marble_SLEEP_ms(dwell);
+         }
+         printf("page_no %d: %d polls, status 0x%2.2x\n", page_no, poll, status);
+         if (busy == 1) {
+            printf("Timeout!\n");
+            return 1;
+         }
+         if (status != 0xff) break;
       }
-      printf("page_no %d: %d retries, status 0x%2.2x\n", page_no, retry, status);
-      if (busy == 0 && status != 0xff) break;
+      if (status == 0xff) {
+         printf("Status stuck at 0xFF!\n");
+         return 1;
+      }
+      printf("Status OK\n");
+      // final check
+      int v = xrp_read2(dev, 0x8068);  // YFLASHPGMDELAY
+      if (v == 0xff) {
+         printf("Page %d complete\n", page_no);
+         return 0;  // Success
+      }
+      printf("YFLASHPGMDELAY = 0x%2.2x after programming; Fault %d!\n", v, retry);
    }
-   if (busy == 1 || status == 0xff) {
-      printf("failed!\n");
-      return 1;
-   }
-   printf("OK\n");
-   return 0;
+   return 1;  // "Abort - Erasing the Flash has failed"
 }
 
-void xrp_flash(uint8_t dev) {
-   printf("XRP7724 flash (incomplete)\n");
-   for (unsigned page_no=0; page_no < 7; page_no++) {
-      printf("FLASH_PAGE_CLEAR %u\n", page_no);
-      if (xrp_process_flash(dev, page_no, 0x4E, 1, 10)) return;
-      printf("FLASH_PAGE_ERASE %u\n", page_no);
-      if (xrp_process_flash(dev, page_no, 0x4F, 5, 50)) return;
+static int xrp_program_page(uint8_t dev, unsigned page_no, uint8_t data[], unsigned len)
+{
+   printf("FLASH_PAGE_CLEAR %u\n", page_no);
+   if (xrp_process_flash(dev, page_no, 0x4E, 1, 10)) return 1;
+   printf("FLASH_PAGE_ERASE %u\n", page_no);
+   if (xrp_process_flash(dev, page_no, 0x4F, 5, 50)) return 1;
+   //
+   // On to Figure 5: Program Flash Image
+   xrp_set2(dev, 0x8068, 0xff);  // YFLASHPGMDELAY
+   marble_SLEEP_ms(12);
+   int v = xrp_read2(dev, 0x8068);  // YFLASHPGMDELAY
+   if (v != 0xff) {
+      printf("YFLASHPGMDELAY = 0x%2.2x before programming; Fault!\n", v);
+      return 1;
    }
-   // xrp_reg_write_check(dev, 0x40, 0xC010);
+   marble_SLEEP_ms(12);
+   int rc = xrp_reg_write(dev, 0x4D, 1);  // FLASH_INIT (0x4D), mode=1
+   if (rc != HAL_OK) return 1;
+   marble_SLEEP_ms(10);
+   if (xrp_push_low(dev, page_no*64, data, len)) return 1;
+   v = xrp_read2(dev, 0x8068);  // YFLASHPGMDELAY
+   if (v != 0xff) {
+      printf("YFLASHPGMDELAY = 0x%2.2x after programming; Fault!\n", v);
+      return 1;
+   }
+   return 0;  // Success?
+}
+
+// Data originally based on python hex2c.py < Marble.hex
+// Temporarily abandon hex record concept
+void xrp_flash(uint8_t dev)
+{
+   // Pure copy of 7 x 64-byte pages, spannning addresses 0x0000 to 0x01bf
+   uint8_t dd[] = {
+      "\xFF\xC5\x00\x0A\x03\x41\x00\xFA\x02\xDA\x20\x13\xE1\x14\x33\x0D"
+      "\x00\x00\x03\x00\x50\x00\x11\x02\x15\xEB\x4E\x2A\x2C\x3C\x14\x01"
+      "\x01\x01\x01\x01\x01\x1D\x1E\xCE\x04\xB0\x0D\x00\x40\x00\x40\xCB"
+      "\x00\x58\x64\x3D\x3D\x14\x73\x59\x5D\x12\x3E\x21\x7F\x12\x28\x1E"
+      "\xFF\xC5\x00\x0A\x03\x41\x00\xFA\x02\xDA\x20\x1D\xE1\x14\x33\x0D"
+      "\x00\x00\x04\x00\x6A\x00\x16\x02\x0D\xF3\x5F\x36\x3B\x3C\x0D\x04"
+      "\x04\x04\x04\x04\x04\x1C\x1E\xCE\x04\xB0\x0D\x00\x40\x00\x40\xCB"
+      "\x00\x90\x42\x7B\x7B\x1F\xD3\x44\x61\x1B\xE9\x20\x00\x22\x28\x62"
+      "\xFF\xC5\x00\x0A\x03\x41\x00\xFA\x02\xDA\x20\x27\xE1\x28\x33\x0D"
+      "\x00\x00\x03\x00\x40\x00\x0D\x02\x11\xEF\x58\x4D\x56\x3C\x10\x80"
+      "\x80\x80\x80\x80\x80\x1D\x1E\xCE\x04\xB0\x0D\x00\x40\x00\x40\xCB"
+      "\x00\x44\x50\x1E\x1E\x17\xD6\x52\x56\x15\xDD\x2A\x76\x01\x18\x76"
+      "\xFF\xC5\x00\x0A\x03\x41\x00\xFA\x02\xDA\x20\x13\xE1\x28\x33\x0D"
+      "\x00\x00\x05\x00\x73\x00\x18\x02\x91\x6F\x5C\x2F\x32\x3C\x16\x40"
+      "\x40\x40\x40\x40\x40\x1D\x1E\xCE\x04\xB0\x0D\x00\x40\x00\x40\xCB"
+      "\x00\x29\x48\x3D\x3D\x15\x07\x59\x26\x11\xEE\x20\x00\x11\x18\x73"
+      "\x05\x00\x00\x4C\x4F\x4C\x1E\x1C\x00\x30\x01\x9F\x55\x02\x02\x00"
+      "\x08\x16\x04\x0A\x10\x00\x00\x00\x00\x10\x0F\x17\x10\x17\x0F\x64"
+      "\x42\x50\x48\x18\x0C\x30\x18\x00\x00\x00\x00\x00\x00\x00\x00\xFF"
+      "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x0F\x00\x00\x00\xE1"
+      "\x00\x00\x00\x02\x00\x00\x37\x00\x00\x0F\x02\x02\x02\x03\x09\x09"
+      "\x09\x0A\x00\x00\x00\x00\x0F\x00\x02\x00\x00\x00\x00\x01\x00\x00"
+      "\x00\x00\x00\x04\x04\x00\x00\x00\x62\x61\x61\x61\x61\x00\x00\x62"
+      "\x01\x62\xFA\x00\x80\x00\x00\xFF\x12\x02\xE1\x00\x1E\x00\x00\x34"
+      "\x00\x02\x50\x00\x00\xFF\xFF\x32\x04\x32\x06\x32\x00\x00\x03\x00"
+      "\x00\x00\x00\x00\x00\x00\x02\x00\x04\x00\x07\x00\x00\x00\x00\x64"
+      "\x21\x64\x64\x64\x20\x64\x64\x64\x21\x64\x64\x64\x22\x64\x64\x0A"
+      "\x20\x0A\x05\x19\xFF\x00\x00\x00\x00\xFF\xFF\x00\x04\xFF\xFF\x12"
+   };
+   const unsigned dd_size = sizeof(dd) / sizeof(dd[0]);
+   const unsigned pages = 7;
+   if (dd_size != pages*64+1) {  // account for trailing "\0"
+      printf("bad setup, dd_size=%u, pages=%u\n", dd_size, pages);
+      return;
+   }
+   printf("XRP7724 flash (WIP)\n");
+   for (unsigned page_no=0; page_no < pages; page_no++) {
+      if (xrp_program_page(dev, page_no, dd+page_no*64, 64)) return;
+   }
+   printf("flash programming complete!?\n");
 }
 
 void xrp_go(uint8_t dev) {
