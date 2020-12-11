@@ -115,6 +115,14 @@ static void pm_bus_display(void)
    xrp_dump(XRP7724);
 }
 
+static void mgtclk_xpoint_en(void)
+{
+   if (xrp_ch_status(XRP7724, 1)) { // CH1: 3.3V
+      switch_i2c_bus(2);
+      adn4600_init();
+   }
+}
+
 unsigned int live_cnt=0;
 unsigned int fpga_prog_cnt=0;
 
@@ -155,10 +163,11 @@ int main(void)
 #ifdef XRP_AUTOBOOT
    xrp_go(XRP7724);
    // TODO: This delay is in here to allow the power supplies come up.
-   HAL_Delay(1000);
-   switch_i2c_bus(2);
-   adn4600_init();
+   marble_SLEEP_ms(1000);
 #endif
+
+   // Enable MGT clock cross-point switch if 3.3V rail is ON
+   mgtclk_xpoint_en();
 
    // Register GPIO interrupt handlers
    marble_GPIOint_handlers(fpga_done_handler);

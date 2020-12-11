@@ -32,6 +32,7 @@ void LM75_print(uint8_t dev);
 int LM75_read(uint8_t dev, LM75_REG reg, int *data);
 int LM75_write(uint8_t dev, LM75_REG reg, int data);
 
+int xrp_ch_status(uint8_t dev, uint8_t chn);
 void xrp_dump(uint8_t dev);
 void xrp_flash(uint8_t dev);
 void xrp_go(uint8_t dev);

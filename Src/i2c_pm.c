@@ -243,6 +243,20 @@ void xrp_dump(uint8_t dev) {
    }
 }
 
+/* Returns fault (x0) and in-regulation (1) status for XRP channels 1-4.
+ * Invalid channel numbers will return fault (1).
+ */
+int xrp_ch_status(uint8_t dev, uint8_t chn)
+{
+   const uint8_t XRP_STS = 0x9;
+   uint8_t i2c_dat[2];
+   if (HAL_OK == marble_I2C_cmdrecv(I2C_PM, dev, XRP_STS, i2c_dat, 2)) {
+      if ((i2c_dat[0] & ~i2c_dat[1]) & (1<<(chn-1)))
+         return 1;
+   }
+   return 0;
+}
+
 static int xrp_reg_write(uint8_t dev, uint8_t regno, uint16_t d)
 {
    uint8_t i2c_dat[4];

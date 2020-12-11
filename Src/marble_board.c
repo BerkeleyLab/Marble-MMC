@@ -442,10 +442,8 @@ void marble_init(bool use_xtal)
    marble_SW_init();
    marble_UART_init();
    ina219_init();
-   adn4600_init();
 
-   printf("** Marble Test **\n");
-   printf("** Init done **\n");
+   printf("** Marble init done **\n");
 
    // Init SSP busses
    //marble_SSP_init(LPC_SSP0);
