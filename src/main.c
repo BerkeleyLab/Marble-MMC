@@ -71,27 +71,21 @@ static void gpio_cmd(void)
       }
 }
 
-// We actually do have a libc installed,
-// so this is useless.
-static void print_uint(unsigned int x)
-{
-   char obuf[16];
-   char *p = obuf+15;
-   *p-- = '\0';
-   do {
-      *p-- = '0' + (x % 10);
-      x = x/10;
-   } while (x>0);
-   marble_UART_send(p+1, obuf+14-p);
-}
-
 static void print_mac_ip(unsigned char mac_ip_data[10])
 {
-   for (unsigned ix=0; ix<10; ix++) {
-      marble_UART_send(" ", 1);
-      print_uint(mac_ip_data[ix]);
+   int ix;
+   printf("MAC: ");
+   for (ix=0; ix<5; ix++) {
+      printf("%x:", mac_ip_data[ix]);
    }
-   marble_UART_send("\r\n", 2);
+   printf("%x", mac_ip_data[ix]);
+
+   printf("\n\rIP: ");
+   for (ix++; ix<9; ix++) {
+      printf("%d.", mac_ip_data[ix]);
+   }
+   printf("%d", mac_ip_data[ix]);
+   printf("\n\r");
 }
 
 static void ina219_test(void)
@@ -169,7 +163,7 @@ int main(void)
    char rx_ch;
 
    while (1) {
-      printf("Single-character actions, ? for menu\n");
+      printf("Single-character actions, ? for menu\r\n");
       // Wait for user selection
       while(marble_UART_recv(&rx_ch, 1) == 0);
       switch (rx_ch) {
