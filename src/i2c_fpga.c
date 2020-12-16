@@ -1,16 +1,32 @@
-/*
- * i2c_fpga.c
- *
- *  Created on: 11.09.2020
- *      Author: micha
- */
-
 #include "marble_api.h"
-// #include "main.h"
 #define HAL_OK (0U)
 #include <stdio.h>
 #include <string.h>
 #include "i2c_fpga.h"
+
+
+void I2C_FPGA_scan(void)
+{
+   int result;
+   uint8_t data[4];
+   printf("Scanning I2C_FPGA bus:\r\n");
+   for (unsigned j = 0; j < 8; j++)
+   {
+      printf("\r\nI2C switch port: %d\r\n", j);
+      switch_i2c_bus(j);
+      marble_SLEEP_ms(100);
+      for (unsigned i = 1; i < 128; i++)
+      {
+         // Using 8-bit I2C addresses
+         if (marble_I2C_send(I2C_FPGA, (uint8_t) (i<<1), 0, 1) != HAL_OK) {
+            printf("."); // No ACK received at that address
+         } else {
+            printf("0x%02X", i << 1); // Received an ACK at that address
+         }
+   }
+}
+   printf("\r\n");
+}
 
 /************
 * INA219 interface
@@ -47,15 +63,11 @@ bool wireReadRegister(uint8_t addr, uint8_t reg, uint16_t *value)
 	uint8_t buffer[2];
 	bool success = 0;
 
-#if 0
-	success = marble_I2C_cmdrecv(I2C_FPGA, addr, reg, buffer, 2) == HAL_OK);
-#else
 	buffer[0] = reg;
 	marble_I2C_send(I2C_FPGA, addr, buffer, 1);
 	buffer[0] = 0xde;
 	buffer[1] = 0xad;
 	success = marble_I2C_recv(I2C_FPGA, addr, buffer, 2) == HAL_OK;
-#endif
 	if (success) {
 		*value = (((uint16_t)buffer[0] << 8) | buffer[1]);
 	} else {
@@ -243,6 +255,8 @@ void adn4600_init(){
 	uint8_t config;
 	int rc;
 
+	switch_i2c_bus(2);
+	marble_SLEEP_ms(100);
 	config = (ADN4600_OUT_CFG_0 << 4) + ADN4600_OUT_0;
 	marble_I2C_cmdsend(I2C_FPGA, ADN4600, ADN4600_XPT_Conf, &config, 1);
 	config = (ADN4600_OUT_CFG_1 << 4) + ADN4600_OUT_1;

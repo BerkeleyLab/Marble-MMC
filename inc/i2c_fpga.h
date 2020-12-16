@@ -1,10 +1,3 @@
-/*
- * i2c_fpga.h
- *
- *  Created on: 11.09.2020
- *      Author: micha
- */
-
 #ifndef I2C_FPGA_H_
 #define I2C_FPGA_H_
 
@@ -28,6 +21,15 @@ typedef enum {
 } I2C_APP_BUS;
 
 #define I2C_APP_NUM 5
+
+void I2C_FPGA_scan(void);
+void switch_i2c_bus(uint8_t);
+void adn4600_init(void);
+void adn4600_printStatus(void);
+void ina219_init(void);
+void ina219_debug(uint8_t addr);
+float getBusVoltage_V(uint8_t);
+float getCurrentAmps(uint8_t);
 
 /************
 * INA219

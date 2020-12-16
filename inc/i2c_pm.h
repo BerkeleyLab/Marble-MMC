@@ -10,6 +10,7 @@ typedef enum {
 
 #define I2C_NUM 4
 
+void I2C_PM_scan(void);
 void I2C_PM_probe(void);
 void print_max6639(void);
 
@@ -37,5 +38,13 @@ void xrp_dump(uint8_t dev);
 void xrp_flash(uint8_t dev);
 void xrp_go(uint8_t dev);
 void xrp_hex_in(uint8_t dev);
+
+/* communication between i2c_pm and hexrec */
+int xrp_push_low(uint8_t dev, uint16_t addr, uint8_t data[], unsigned len);
+int xrp_set2(uint8_t dev, uint16_t addr, uint8_t data);
+int xrp_read2(uint8_t dev, uint16_t addr);
+int xrp_srecord(uint8_t dev, uint8_t data[]);
+int xrp_program_static(uint8_t dev);
+int xrp_file(uint8_t dev);
 
 #endif /* I2C_PM_H_ */

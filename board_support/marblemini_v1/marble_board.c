@@ -342,44 +342,17 @@ static void marble_I2C_init(I2C_ID_T id, int poll)
  * return 0 on success, 1 on failure */
 int marble_I2C_send(I2C_BUS I2C_bus, uint8_t addr, const uint8_t *data, int size) {
    addr = addr >> 1;
-   switch (I2C_bus) {
-      case I2C_IPMB:
-         return Chip_I2C_MasterSend(I2C0, addr, data, size) != size;
-      case I2C_PM:
-         return Chip_I2C_MasterSend(I2C1, addr, data, size) != size;
-      case I2C_FPGA:
-         return Chip_I2C_MasterSend(I2C2, addr, data, size) != size;
-      default:
-         return 1;  // Error
-   }
+   return Chip_I2C_MasterSend(I2C_bus, addr, data, size) != size;
 }
 
 int marble_I2C_recv(I2C_BUS I2C_bus, uint8_t addr, uint8_t *data, int size) {
    addr = addr >> 1;
-   switch (I2C_bus) {
-      case I2C_IPMB:
-         return Chip_I2C_MasterRead(I2C0, addr, data, size) != size;
-      case I2C_PM:
-         return Chip_I2C_MasterRead(I2C1, addr, data, size) != size;
-      case I2C_FPGA:
-         return Chip_I2C_MasterRead(I2C2, addr, data, size) != size;
-      default:
-         return 1;  // Error
-   }
+   return Chip_I2C_MasterRead(I2C_bus, addr, data, size) != size;
 }
 
 int marble_I2C_cmdrecv(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size) {
    addr = addr >> 1;
-   switch (I2C_bus) {
-      case I2C_IPMB:
-         return Chip_I2C_MasterCmdRead(I2C0, addr, cmd, data, size) != size;
-      case I2C_PM:
-         return Chip_I2C_MasterCmdRead(I2C1, addr, cmd, data, size) != size;
-      case I2C_FPGA:
-         return Chip_I2C_MasterCmdRead(I2C2, addr, cmd, data, size) != size;
-      default:
-         return 1;  // Error
-   }
+   return Chip_I2C_MasterCmdRead(I2C_bus, addr, cmd, data, size) != size;
 }
 
 int marble_I2C_cmdsend(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size) {
@@ -407,13 +380,6 @@ int marble_I2C_cmdrecv_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *
    uint8_t cmd_be[2];
    cmd_be[0] = cmd >> 8;
    cmd_be[1] = cmd & 0xff;
-   I2C_ID_T i2cx;  // enum
-   switch (I2C_bus) {
-      case I2C_IPMB:  i2cx = I2C0;  break;
-      case I2C_PM:    i2cx = I2C1;  break;
-      case I2C_FPGA:  i2cx = I2C2;  break;
-      default: return 1;  // Error
-   }
 
    // Setup low-level transfer
    // Based on Chip_I2C_MasterCmdRead in i2c_17xx_40xx.c
@@ -423,7 +389,7 @@ int marble_I2C_cmdrecv_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *
    xfer.txSz = 2;
    xfer.rxBuff = data;
    xfer.rxSz = size;
-   while (Chip_I2C_MasterTransfer(i2cx, &xfer) == I2C_STATUS_ARBLOST) {}
+   while (Chip_I2C_MasterTransfer(I2C_bus, &xfer) == I2C_STATUS_ARBLOST) {}
    // printf("marble_I2C_cmdrecv_a2: %u %u\n", i2cx, xfer.rxSz);
    return xfer.rxSz != 0;
 }
@@ -513,29 +479,6 @@ uint16_t marble_MDIO_read(uint8_t reg)
    return Chip_ENET_ReadMIIData(LPC_ETHERNET);
 }
 
-void i2c_scan(void)
-{
-	printf("Scanning I2C_PM bus:\r\n");
-	int result;
-	uint8_t data[4];
-	for (unsigned i = 1; i < 128; i++)
-	{
-			/*
-			 * the HAL wants a left aligned i2c address
-			 * (uint16_t)(i<<1) is the i2c address left aligned
-			 */
-		result = marble_I2C_send(I2C_PM, (uint8_t) (i<<1), 0, 1);
-		if (result != 0) {
-			printf("."); // No ACK received at that address
-		} else {
-			printf("0x%02X", i << 1); // Received an ACK at that address
-		}
-	}
-	printf("\r\n");
-
-	// printf("Scanning I2C_APP bus:\r\n");
-}
-
 /************
 * System Timer and Stopwatch
 ************/
@@ -608,6 +551,9 @@ uint32_t marble_init(bool use_xtal)
    marble_I2C_init(I2C0, !I2C_POLL);
    marble_I2C_init(I2C1, !I2C_POLL);
    marble_I2C_init(I2C2, !I2C_POLL);
+   I2C_IPMB = I2C0;
+   I2C_PM = I2C1;
+   I2C_FPGA = I2C2;
 
    // Init SSP busses
    marble_SSP_init(LPC_SSP0);

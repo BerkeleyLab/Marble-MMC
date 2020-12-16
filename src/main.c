@@ -11,7 +11,14 @@
 #define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
 
 // Setup UART strings
+#ifdef MARBLEM_V1
 const char demo_str[] = "Marble Mini v1 UART DEMO\r\n";
+#elif MARBLE_V2
+const char demo_str[] = "Marble v2 UART DEMO\r\n";
+#endif
+
+#define PRINT_NA printf("Function not available on this board.\r\n")
+
 const char lb_str[] = "Loopback... ESC to exit\r\n";
 const char menu_str[] = "\r\n"
 	"Build based on git commit " GIT_REV "\r\n"
@@ -216,14 +223,17 @@ int main(void)
             break;
          case 'a':
             printf("I2C scanner\r\n");
-            i2c_scan();
+            I2C_PM_scan();
+            I2C_FPGA_scan();
             break;
          case 'b':
             printf("ADN4600\r\n");
-            switch_i2c_bus(2);
+#if MARBLEM_V1
+            PRINT_NA;
+#else
             adn4600_init();
             adn4600_printStatus();
-            //i2c_scan();
+#endif
             break;
          case 'c':
             printf("INA test\r\n");
@@ -231,7 +241,11 @@ int main(void)
             break;
          case 'd':
             printf("Switch MGT to QSFP 2\r\n");
-            // HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, true);
+#if MARBLEM_V1
+            PRINT_NA;
+#else
+            HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, true);
+#endif
             break;
          case 'e':
             printf("PM bus display\r\n");

@@ -4,6 +4,22 @@
 #include <string.h>
 #include "i2c_pm.h"
 
+void I2C_PM_scan(void)
+{
+   int result;
+   uint8_t data[4];
+   printf("Scanning I2C_PM bus:\r\n");
+   for (unsigned i = 1; i < 128; i++)
+   {
+      // Using 8-bit I2C addresses
+      if (marble_I2C_send(I2C_PM, (uint8_t) (i<<1), 0, 1) != HAL_OK) {
+         printf("."); // No ACK received at that address
+      } else {
+         printf("0x%02X", i << 1); // Received an ACK at that address
+      }
+   }
+   printf("\r\n");
+}
 
 int set_max6639_reg(int regno, int value)
 {
