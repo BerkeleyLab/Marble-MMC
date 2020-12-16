@@ -259,7 +259,7 @@ void xrp_dump(uint8_t dev) {
    }
 }
 
-/* Returns fault (x0) and in-regulation (1) status for XRP channels 1-4.
+/* Returns fault (0) and in-regulation (1) status for XRP channels 1-4.
  * Invalid channel numbers will return fault (1).
  */
 int xrp_ch_status(uint8_t dev, uint8_t chn)

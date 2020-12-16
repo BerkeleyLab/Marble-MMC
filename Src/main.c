@@ -122,6 +122,20 @@ static void mgtclk_xpoint_en(void)
    }
 }
 
+static void xrp_boot(void)
+{
+   uint8_t pwr_on=0;
+   for (int i=1; i<5; i++) {
+      pwr_on |= xrp_ch_status(XRP7724, i);
+   }
+   if (pwr_on) {
+      printf("XRP already ON. Skipping autoboot...\r\n");
+   } else {
+      xrp_go(XRP7724);
+      marble_SLEEP_ms(1000);
+   }
+}
+
 unsigned int live_cnt=0;
 unsigned int fpga_prog_cnt=0;
 
@@ -160,9 +174,7 @@ int main(void)
    marble_LED_set(2, true);
 
 #ifdef XRP_AUTOBOOT
-   xrp_go(XRP7724);
-   // TODO: This delay is in here to allow the power supplies come up.
-   marble_SLEEP_ms(1000);
+   xrp_boot();
 #endif
 
    // Enable MGT clock cross-point switch if 3.3V rail is ON
@@ -182,7 +194,7 @@ int main(void)
 
    while (1) {
       uint8_t rx_ch;
-      printf("Single-character actions, ? for menu\n");
+      printf("Single-character actions, ? for menu\r\n");
       // Wait for user selection
       while(marble_UART_recv(&rx_ch, 1) == 0);
       switch (rx_ch) {
@@ -262,11 +274,7 @@ int main(void)
             break;
          case 'g':
             printf("XRP go\r\n");
-#ifdef XRP_AUTOBOOT
-            printf("XRP already programmed at boot.\r\n");
-#else
-            xrp_go(XRP7724);
-#endif
+            xrp_boot();
             break;
          case 'h':
             printf("XRP hex input\r\n");
