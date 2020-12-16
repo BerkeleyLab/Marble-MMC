@@ -118,7 +118,6 @@ static void pm_bus_display(void)
 static void mgtclk_xpoint_en(void)
 {
    if (xrp_ch_status(XRP7724, 1)) { // CH1: 3.3V
-      switch_i2c_bus(2);
       adn4600_init();
    }
 }
@@ -237,14 +236,13 @@ int main(void)
             break;
          case 'a':
             printf("I2C scanner\r\n");
-            i2c_scan();
+            I2C_PM_scan();
+            I2C_FPGA_scan();
             break;
          case 'b':
             printf("ADN4600\r\n");
-            switch_i2c_bus(2);
             adn4600_init();
             adn4600_printStatus();
-            //i2c_scan();
             break;
          case 'c':
             printf("INA test\r\n");

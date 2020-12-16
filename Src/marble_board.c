@@ -155,7 +155,7 @@ void marble_PSU_pwr(bool on)
 {
    if (on == false) {
       SystemClock_Config_HSI(); // switch to internal clock source, external clock is powered from 3V3!
-      HAL_Delay(50);
+      marble_SLEEP_ms(50);
       HAL_GPIO_WritePin(GPIOD, GPIO_PIN_11, on);
    } else {
       HAL_GPIO_WritePin(GPIOD, GPIO_PIN_11, on);
@@ -194,7 +194,7 @@ void reset_fpga(void)
 {
    /* Pull the PROGRAM_B pin low; it's spelled PROG_B on schematic */
    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, false);
-   HAL_Delay(50);
+   marble_SLEEP_ms(50);
    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, true);
 }
 
@@ -243,10 +243,15 @@ void marble_GPIOint_handlers(void *FPGA_DONE_handler) {
 ************/
 #define SPEED_100KHZ 100000
 
+
+/* Non-destructive I2C probe function based on empty data command, i.e. S+[A,RW]+P */
+int marble_I2C_probe(I2C_BUS I2C_bus, uint8_t addr) {
+   return HAL_I2C_IsDeviceReady(I2C_bus, addr, 2, 2);
+}
+
 /* Generic I2C send function with selectable I2C bus and 8-bit I2C addresses (R/W bit = 0) */
 /* 1-byte register addresses */
 int marble_I2C_send(I2C_BUS I2C_bus, uint8_t addr, const uint8_t *data, int size) {
-   //addr = addr >> 1;
    return HAL_I2C_Master_Transmit(I2C_bus, (uint16_t)addr, data, size, HAL_MAX_DELAY);
 }
 
@@ -255,7 +260,6 @@ int marble_I2C_cmdsend(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data
 }
 
 int marble_I2C_recv(I2C_BUS I2C_bus, uint8_t addr, uint8_t *data, int size) {
-   //addr = addr >> 1;
    return HAL_I2C_Master_Receive(I2C_bus, (uint16_t)addr, data, size, HAL_MAX_DELAY);
 }
 
@@ -317,56 +321,6 @@ uint32_t marble_MDIO_read(uint8_t reg)
    uint32_t value;
    printf("\r\nPHYread Stat: %d\r\n", HAL_ETH_ReadPHYRegister(&heth, reg, &value));
    return value;
-}
-
-void i2c_scan(void)
-{
-   printf("Scanning I2C_PM bus:\r\n");
-   HAL_StatusTypeDef result;
-   uint8_t i;
-   uint8_t j;
-   for (i = 1; i < 128; i++)
-   {
-      /*
-       * the HAL wants a left aligned i2c address
-       * &hi2c3 is the handle
-       * (uint16_t)(i<<1) is the i2c address left aligned
-       */
-      result = HAL_I2C_IsDeviceReady(&hi2c3, (uint16_t) (i<<1), 2, 2);
-      if (result != HAL_OK) // HAL_ERROR or HAL_BUSY or HAL_TIMEOUT
-      {
-         printf("."); // No ACK received at that address
-      }
-
-      if (result == HAL_OK)
-      {
-         printf("0x%02X", i << 1); // Received an ACK at that address
-      }
-   }
-
-   printf("\r\n");
-
-   printf("Scanning I2C_APP bus:\r\n");
-   for (j = 0; j < 8; j++)
-   {
-      printf("\r\nI2C switch port: %d\r\n", j);
-      switch_i2c_bus(j);
-      HAL_Delay(100);
-      for (i = 1; i < 128; i++)
-         {
-            result = HAL_I2C_IsDeviceReady(&hi2c1, (uint16_t) (i<<1), 2, 2);
-            if (result != HAL_OK) // HAL_ERROR or HAL_BUSY or HAL_TIMEOUT
-            {
-               printf("."); // No ACK received at that address
-            }
-
-            if (result == HAL_OK)
-            {
-               printf("0x%02X", i << 1); // Received an ACK at that address
-            }
-         }
-   }
-   printf("\r\n");
 }
 
 /************
@@ -441,7 +395,6 @@ void marble_init(bool use_xtal)
    marble_LED_init();
    marble_SW_init();
    marble_UART_init();
-   ina219_init();
 
    printf("** Marble init done **\n");
 
