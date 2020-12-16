@@ -4,7 +4,6 @@
 #include <string.h>
 #include "i2c_fpga.h"
 
-
 void I2C_FPGA_scan(void)
 {
    int result;
@@ -18,7 +17,7 @@ void I2C_FPGA_scan(void)
       for (unsigned i = 1; i < 128; i++)
       {
          // Using 8-bit I2C addresses
-         if (marble_I2C_send(I2C_FPGA, (uint8_t) (i<<1), 0, 1) != HAL_OK) {
+         if (marble_I2C_probe(I2C_FPGA, (uint8_t) (i<<1)) != HAL_OK) {
             printf("."); // No ACK received at that address
          } else {
             printf("0x%02X", i << 1); // Received an ACK at that address

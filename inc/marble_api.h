@@ -85,6 +85,7 @@ I2C_BUS I2C_PM;
 I2C_BUS I2C_IPMB;
 I2C_BUS I2C_FPGA;
 
+int marble_I2C_probe(I2C_BUS I2C_bus, uint8_t addr);
 int marble_I2C_send(I2C_BUS I2C_bus, uint8_t addr, const uint8_t *data, int size);
 int marble_I2C_cmdsend(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size);
 int marble_I2C_recv(I2C_BUS I2C_bus, uint8_t addr, uint8_t *data, int size);

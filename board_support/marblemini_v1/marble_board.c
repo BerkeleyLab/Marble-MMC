@@ -337,6 +337,15 @@ static void marble_I2C_init(I2C_ID_T id, int poll)
    }
 }
 
+/* Non-destructive I2C probe function based on a single-byte read; Probe with no
+   data payload, i.e. S+[A,RW]+P, is not supported by this chip.
+*/
+int marble_I2C_probe(I2C_BUS I2C_bus, uint8_t addr) {
+   uint8_t data;
+   addr = addr >> 1;
+   return Chip_I2C_MasterRead(I2C_bus, addr, &data, 1) != 1;
+}
+
 /* Generic I2C send function with selectable I2C bus and 8-bit I2C addresses (R/W bit = 0) */
 /* For compatiblity with STM32 code base (!?),
  * return 0 on success, 1 on failure */
