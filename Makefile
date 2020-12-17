@@ -15,3 +15,6 @@ marble_mini_download:
 
 marble_mini_clean:
 	make -f makefile.board BOARD=marble_mini clean
+
+# marble_clean and marble_mini_clean really do the same thing
+clean: marble_mini_clean
