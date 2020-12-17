@@ -96,8 +96,8 @@ int marble_I2C_cmdrecv_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *
 /************
 * MDIO to PHY
 ************/
-void marble_MDIO_write(uint8_t reg, uint16_t data);
-uint16_t marble_MDIO_read(uint8_t reg);
+void marble_MDIO_write(uint16_t reg, uint32_t data);
+uint32_t marble_MDIO_read(uint16_t reg);
 
 /************
 * System Timer and Stopwatch

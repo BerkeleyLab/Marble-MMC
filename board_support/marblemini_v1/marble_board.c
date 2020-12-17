@@ -475,13 +475,13 @@ void marble_MDIO_init()
    Chip_ENET_SetupMII(LPC_ETHERNET, Chip_ENET_FindMIIDiv(LPC_ETHERNET, 2500000), 0);
 }
 
-void marble_MDIO_write(uint8_t reg, uint16_t data)
+void marble_MDIO_write(uint16_t reg, uint32_t data)
 {
    Chip_ENET_StartMIIWrite(LPC_ETHERNET, reg, data);
    while (Chip_ENET_IsMIIBusy(LPC_ETHERNET));
 }
 
-uint16_t marble_MDIO_read(uint8_t reg)
+uint32_t marble_MDIO_read(uint16_t reg)
 {
    Chip_ENET_StartMIIRead(LPC_ETHERNET, reg);
    while (Chip_ENET_IsMIIBusy(LPC_ETHERNET));

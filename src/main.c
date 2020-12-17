@@ -110,6 +110,27 @@ static void pm_bus_display(void)
 	xrp_dump(XRP7724);
 }
 
+static void mgtclk_xpoint_en(void)
+{
+   if (xrp_ch_status(XRP7724, 1)) { // CH1: 3.3V
+      adn4600_init();
+   }
+}
+
+static void xrp_boot(void)
+{
+   uint8_t pwr_on=0;
+   for (int i=1; i<5; i++) {
+      pwr_on |= xrp_ch_status(XRP7724, i);
+   }
+   if (pwr_on) {
+      printf("XRP already ON. Skipping autoboot...\r\n");
+   } else {
+      xrp_go(XRP7724);
+      marble_SLEEP_ms(1000);
+   }
+}
+
 unsigned int live_cnt=0;
 
 unsigned int fpga_prog_cnt=0;
@@ -120,10 +141,17 @@ void fpga_done_handler(void) {
 
 void timer_int_handler(void)
 {
-   marble_LED_toggle(0);
-   marble_LED_toggle(1);
-   marble_LED_toggle(2);
    live_cnt++;
+   static uint16_t i = 0;
+   // Snake-pattern LEDs
+   if(i == 0)
+      marble_LED_toggle(0);
+   else if(i == 330)
+      marble_LED_toggle(1);
+   else if(i == 660)
+      marble_LED_toggle(2);
+
+   i = (i + 1) % 1000;
 }
 
 int main(void)
@@ -134,15 +162,30 @@ int main(void)
       192, 168, 19, 31   // IP
    };
 
+#ifdef MARBLEM_V1
    // Initialize Marble(mini) board with IRC, so it works even when
    // the XRP7724 isn't running, keeping the final 25 MHz source away.
    const bool use_xtal = false;
    uint32_t sysclk_freq = marble_init(use_xtal);
+   printf("marble_init with use_xtal = %d\n", use_xtal);
+   printf("system clock = %lu Hz\n", sysclk_freq);
+#elif MARBLE_V2
+   marble_init(0);
+#endif
 
    /* Turn on LEDs */
    marble_LED_set(0, true);
    marble_LED_set(1, true);
    marble_LED_set(2, true);
+
+#ifdef XRP_AUTOBOOT
+   xrp_boot();
+#endif
+
+#ifdef MARBLE_V2
+   // Enable MGT clock cross-point switch if 3.3V rail is ON
+   mgtclk_xpoint_en();
+#endif
 
    // Power FMCs
    marble_FMC_pwr(true);
@@ -158,11 +201,9 @@ int main(void)
 
    // Send demo string over UART at 115200 BAUD
    marble_UART_send(demo_str, strlen(demo_str));
-   printf("marble_init with use_xtal = %d\n", use_xtal);
-   printf("system clock = %lu Hz\n", sysclk_freq);
-   char rx_ch;
 
    while (1) {
+      uint8_t rx_ch;
       printf("Single-character actions, ? for menu\r\n");
       // Wait for user selection
       while(marble_UART_recv(&rx_ch, 1) == 0);
@@ -197,7 +238,11 @@ int main(void)
             break;
          case '6':
             print_mac_ip(mac_ip_data);
+#ifdef MARBLEM_V1
             push_fpga_mac_ip(mac_ip_data);
+#elif MARBLE_V2
+            printf("Functionality not implemented!\r\n");
+#endif
             printf("DONE\r\n");
             break;
          case '7':
@@ -224,7 +269,7 @@ int main(void)
             printf("ADN4600\r\n");
 #if MARBLEM_V1
             PRINT_NA;
-#else
+#elif MARBLE_V2
             adn4600_init();
             adn4600_printStatus();
 #endif
@@ -237,8 +282,10 @@ int main(void)
             printf("Switch MGT to QSFP 2\r\n");
 #if MARBLEM_V1
             PRINT_NA;
-#else
-            HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, true);
+#elif MARBLE_V2
+            // TODO: Abstract this functionality; disable for now
+            //HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, true);
+            PRINT_NA;
 #endif
             break;
          case 'e':
@@ -251,11 +298,7 @@ int main(void)
             break;
          case 'g':
             printf("XRP go\r\n");
-#ifdef XRP_AUTOBOOT
-            printf("XRP already programmed at boot.\r\n");
-#else
-            xrp_go(XRP7724);
-#endif
+            xrp_boot();
             break;
          case 'h':
             printf("XRP hex input\r\n");
