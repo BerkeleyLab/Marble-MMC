@@ -266,6 +266,7 @@ float getCurrentAmps(uint8_t ina)
 
 void adn4600_init()
 {
+   uint8_t disables[] = {0xD0, 0xD8, 0xF0, 0xF};  // Channels 2, 3, 6, 7
    uint8_t configs[] = {
       (ADN4600_OUT_CFG_0 << 4) + ADN4600_OUT_0,
       (ADN4600_OUT_CFG_1 << 4) + ADN4600_OUT_1,
@@ -276,6 +277,16 @@ void adn4600_init()
 
    switch_i2c_bus(2);
    marble_SLEEP_ms(100);
+
+   // Disable Tx channels (ones that have N/C on PCB)
+   const unsigned disable_len = sizeof disables / sizeof disables[0];
+   for (unsigned ix=0; ix < disable_len; ix++) {
+      uint8_t disable = disables[ix];
+      config = 0;
+      rc = marble_I2C_cmdsend(I2C_FPGA, ADN4600, disable, &config, 1);
+      printf("> ADN4600 reg[0x%2.2x] <= 0x%2.2x (rc=%d)\n", disable, config, rc);
+   }
+
    const unsigned config_len = sizeof configs / sizeof configs[0];
    for (unsigned ix=0; ix < config_len; ix++) {
       config = configs[ix];
