@@ -52,6 +52,7 @@
 #include <time.h>
 #include <sys/time.h>
 #include <sys/times.h>
+#include "fake_newlib.h"
 
 
 /* Variables */
@@ -90,30 +91,28 @@ void _exit (int status)
 }
 #endif
 
-__attribute__((weak)) int _read(int file, char *ptr, int len)
+__attribute__((weak)) int _read(int file, void *ptr, size_t len)
 {
-	int DataIdx;
-
-	for (DataIdx = 0; DataIdx < len; DataIdx++)
+	char *p = ptr;
+	for (size_t DataIdx = 0; DataIdx < len; DataIdx++)
 	{
-		*ptr++ = __io_getchar();
+		*p++ = __io_getchar();
 	}
 
 return len;
 }
 
-__attribute__((weak)) int _write(int file, char *ptr, int len)
+__attribute__((weak)) int _write(int file, const void *ptr, size_t len)
 {
-	int DataIdx;
-
-	for (DataIdx = 0; DataIdx < len; DataIdx++)
+	const char *p = ptr;
+	for (size_t DataIdx = 0; DataIdx < len; DataIdx++)
 	{
-		__io_putchar(*ptr++);
+		__io_putchar(*p++);
 	}
 	return len;
 }
 
-caddr_t _sbrk(int incr)
+void *_sbrk(ptrdiff_t incr)
 {
 	extern char end __asm__("end");
 	static char *heap_end;
@@ -155,12 +154,12 @@ int _isatty(int file)
 	return 1;
 }
 
-int _lseek(int file, int ptr, int dir)
+off_t _lseek(int file, off_t ptr, int dir)
 {
 	return 0;
 }
 
-int _open(char *path, int flags, ...)
+int _open(const char *path, int flags, ...)
 {
 	/* Pretend like we always fail */
 	return -1;
@@ -172,24 +171,24 @@ int _wait(int *status)
 	return -1;
 }
 
-int _unlink(char *name)
+int _unlink(const char *name)
 {
 	errno = ENOENT;
 	return -1;
 }
 
-int _times(struct tms *buf)
+clock_t _times(struct tms *buf)
 {
 	return -1;
 }
 
-int _stat(char *file, struct stat *st)
+int _stat(const char *file, struct stat *st)
 {
 	st->st_mode = S_IFCHR;
 	return 0;
 }
 
-int _link(char *old, char *new)
+int _link(const char *old, const char *new)
 {
 	errno = EMLINK;
 	return -1;
@@ -201,7 +200,7 @@ int _fork(void)
 	return -1;
 }
 
-int _execve(char *name, char **argv, char **env)
+int _execve(const char *name, char * const argv[], char * const env[])
 {
 	errno = ENOMEM;
 	return -1;

@@ -7,9 +7,6 @@
 #include "phy_mdio.h"
 #include "rev.h"
 
-// Toolchain dependent?
-#define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
-
 // Setup UART strings
 #ifdef MARBLEM_V1
 const char demo_str[] = "Marble Mini v1 UART DEMO\r\n";
@@ -137,11 +134,11 @@ unsigned int live_cnt=0;
 
 unsigned int fpga_prog_cnt=0;
 
-void fpga_done_handler(void) {
+static void fpga_done_handler(void) {
    fpga_prog_cnt++;
 }
 
-void timer_int_handler(void)
+static void timer_int_handler(void)
 {
    live_cnt++;
    static uint16_t i = 0;
@@ -317,7 +314,9 @@ int main(void)
    }
 }
 
-PUTCHAR_PROTOTYPE
+// This probably belongs in some other file, but which one?
+int __io_putchar(int ch);
+int __io_putchar(int ch)
 {
   marble_UART_send((const char *)&ch, 1);
   return ch;

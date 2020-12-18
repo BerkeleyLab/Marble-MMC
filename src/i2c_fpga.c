@@ -48,7 +48,7 @@ void ina219_init()
    setCalibration_16V_2A();
 }
 
-int wireWriteRegister (uint8_t addr, uint8_t reg, uint16_t value)
+static int wireWriteRegister (uint8_t addr, uint8_t reg, uint16_t value)
 {
    uint8_t data[3];
    data[0] = reg;
@@ -57,7 +57,7 @@ int wireWriteRegister (uint8_t addr, uint8_t reg, uint16_t value)
    return marble_I2C_send(I2C_FPGA, addr, data, 3);
 }
 
-bool wireReadRegister(uint8_t addr, uint8_t reg, uint16_t *value)
+static bool wireReadRegister(uint8_t addr, uint8_t reg, uint16_t *value)
 {
    uint8_t buffer[2];
    bool success = 0;
@@ -167,7 +167,7 @@ void setCalibration_16V_2A(void)
 
 }
 
-int16_t getBusVoltage_raw(uint8_t ina)
+static int16_t getBusVoltage_raw(uint8_t ina)
 {
    uint16_t value = 0;
    wireReadRegister(ina, INA_REG_BUSVOLTAGE, &value);
@@ -176,14 +176,7 @@ int16_t getBusVoltage_raw(uint8_t ina)
    return (int16_t)((value >> 3) * 4);
 }
 
-int16_t getShuntVoltage_raw(uint8_t ina)
-{
-   uint16_t value = 0;
-   wireReadRegister(ina, INA_REG_SHUNTVOLTAGE, &value);
-   return (int16_t)value;
-}
-
-int16_t getCurrent_raw(uint8_t ina)
+static int16_t getCurrent_raw(uint8_t ina)
 {
    uint16_t value = 0;
 
@@ -204,7 +197,8 @@ int16_t getCurrent_raw(uint8_t ina)
    return (int16_t)value;
 }
 
-int16_t getPower_raw(uint8_t ina)
+#if 0
+static int16_t getPower_raw(uint8_t ina)
 {
    uint16_t value = 0;
 
@@ -219,13 +213,23 @@ int16_t getPower_raw(uint8_t ina)
 
    return (int16_t)value;
 }
+#endif
 
-float getShuntVoltage_mV(uint8_t ina)
+#if 0
+static int16_t getShuntVoltage_raw(uint8_t ina)
+{
+   uint16_t value = 0;
+   wireReadRegister(ina, INA_REG_SHUNTVOLTAGE, &value);
+   return (int16_t)value;
+}
+
+static float getShuntVoltage_mV(uint8_t ina)
 {
    int16_t value = 0;
    value = getShuntVoltage_raw(ina);
    return value * 0.01f;
 }
+#endif
 
 float getBusVoltage_V(uint8_t ina)
 {
@@ -234,12 +238,14 @@ float getBusVoltage_V(uint8_t ina)
    return value * 0.001;
 }
 
-float getCurrent_mA(uint8_t ina)
+#if 0
+static float getCurrent_mA(uint8_t ina)
 {
    float valueDec = getCurrent_raw(ina);
    valueDec /= currentDivider_mA;
    return valueDec;
 }
+#endif
 
 float getCurrentAmps(uint8_t ina)
 {

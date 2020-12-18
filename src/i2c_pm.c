@@ -19,7 +19,7 @@ void I2C_PM_scan(void)
    printf("\r\n");
 }
 
-int set_max6639_reg(int regno, int value)
+static int set_max6639_reg(int regno, int value)
 {
    uint8_t addr = MAX6639;
    uint8_t i2c_dat[4];
@@ -29,7 +29,7 @@ int set_max6639_reg(int regno, int value)
    return rc;
 }
 
-int get_max6639_reg(int regno, int *value)
+static int get_max6639_reg(int regno, int *value)
 {
    uint8_t i2c_dat[4];
    uint8_t addr = MAX6639;
@@ -38,7 +38,7 @@ int get_max6639_reg(int regno, int *value)
    return rc;
 }
 
-void set_fans(int speed[2])
+static void set_fans(int speed[2])
 {
     set_max6639_reg(0x11, 2);  // Fan 1 PWM sign = 1
     set_max6639_reg(0x15, 2);  // Fan 2 PWM sign = 1
@@ -403,7 +403,7 @@ static int xrp_pull(uint8_t dev, unsigned len)
 // See Figures 3 and 4 of ANP-38
 // Figure 3:  cmd is FLASH_PAGE_CLEAR (0x4E),  mode is 1,  dwell is 10
 // Figure 4:  cmd is FLASH_PAGE_ERASE (0x4F),  mode is 5,  dwell is 50
-int xrp_process_flash(uint8_t dev, int page_no, int cmd, int mode, int dwell)
+static int xrp_process_flash(uint8_t dev, int page_no, int cmd, int mode, int dwell)
 {
    int rc;
    uint8_t i2c_dat[4];
@@ -607,6 +607,7 @@ void xrp_hex_in(uint8_t dev) {
 }
 
 // Didn't work when tested; why?
+#if 0
 void xrp_halt(uint8_t dev) {
    printf("XRP7724 halt [%2.2x]\n", dev);
    xrp_reg_write(dev, 0x1E, 0x0000);  // turn off Ch1
@@ -615,3 +616,4 @@ void xrp_halt(uint8_t dev) {
    xrp_reg_write(dev, 0x1E, 0x0300);  // turn off Ch4
    printf("DONE\n");
 }
+#endif

@@ -1,4 +1,5 @@
 #include "marble_api.h"
+#include "ssp.h"
 
 int push_fpga_mac_ip(unsigned char data[10])
 {
