@@ -42,6 +42,7 @@ include dir_list.mk
 # Edit the project name, chip, includes directories and so on in this file.
 #
 include $(BUILD_DIR)/$(BOARD).conf
+OUTPUT_DIR := out_$(BOARD)
 
 # Shell Commands
 #
@@ -102,7 +103,7 @@ OBJECTS = $(addprefix $(OUTPUT_DIR)/,$(objects))
 src/rev.h: $(SOURCES)
 	(git rev-parse --short=8 HEAD | awk '{print "#define GIT_REV \"" $$1 "\""}'; \
 	! git diff | grep -q .; echo "#define GIT_DIRTY $$?")  > $@
-out/src/main.o: src/rev.h
+$(OUTPUT_DIR)/src/main.o: src/rev.h
 
 # Rule for generating object and dependancy files from source files
 #
