@@ -110,12 +110,14 @@ static void pm_bus_display(void)
 	xrp_dump(XRP7724);
 }
 
+#ifdef MARBLE_V2
 static void mgtclk_xpoint_en(void)
 {
    if (xrp_ch_status(XRP7724, 1)) { // CH1: 3.3V
       adn4600_init();
    }
 }
+#endif
 
 static void xrp_boot(void)
 {
@@ -203,7 +205,7 @@ int main(void)
    marble_UART_send(demo_str, strlen(demo_str));
 
    while (1) {
-      uint8_t rx_ch;
+      char rx_ch;
       printf("Single-character actions, ? for menu\r\n");
       // Wait for user selection
       while(marble_UART_recv(&rx_ch, 1) == 0);
@@ -267,7 +269,7 @@ int main(void)
             break;
          case 'b':
             printf("ADN4600\r\n");
-#if MARBLEM_V1
+#ifdef MARBLEM_V1
             PRINT_NA;
 #elif MARBLE_V2
             adn4600_init();
@@ -280,7 +282,7 @@ int main(void)
             break;
          case 'd':
             printf("Switch MGT to QSFP 2\r\n");
-#if MARBLEM_V1
+#ifdef MARBLEM_V1
             PRINT_NA;
 #elif MARBLE_V2
             marble_MGTMUX_set(3, true);
@@ -317,6 +319,6 @@ int main(void)
 
 PUTCHAR_PROTOTYPE
 {
-  marble_UART_send((uint8_t *)&ch, 1);
+  marble_UART_send((const char *)&ch, 1);
   return ch;
 }

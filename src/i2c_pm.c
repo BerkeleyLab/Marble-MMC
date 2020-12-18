@@ -6,8 +6,6 @@
 
 void I2C_PM_scan(void)
 {
-   int result;
-   uint8_t data[4];
    printf("Scanning I2C_PM bus:\r\n");
    for (unsigned i = 1; i < 128; i++)
    {
@@ -52,7 +50,6 @@ void print_max6639(void)
 {
    char p_buf[40];
    int value;
-   uint8_t addr = MAX6639;
    // ix is the MAX6639 register address
    for (unsigned ix=0; ix<64; ix++) {
       if (get_max6639_reg(ix, &value) != 0) {
@@ -110,6 +107,8 @@ static int LM75_readwrite(uint8_t dev, LM75_REG reg, int *data, bool rnw) {
             i2c_buf[1] = (*data) & 0xff;
             i2c_stat = marble_I2C_send(I2C_PM, dev, i2c_buf, 2);
          }
+         break;
+      default:
          break;
    }
    return i2c_stat;
@@ -303,6 +302,7 @@ static int xrp_reg_write_check(uint8_t dev, uint8_t regno, uint16_t d)
    return 0;
 }
 
+#if 0
 static void xrp_print_reg(uint8_t dev, uint8_t regno)
 {
    uint8_t i2c_dat[4];
@@ -316,6 +316,7 @@ static void xrp_print_reg(uint8_t dev, uint8_t regno)
       printf("r[%2.2x]    unread\n", regno);
    }
 }
+#endif
 
 // Sending data to flash, see ANP-38
 int xrp_push_low(uint8_t dev, uint16_t addr, uint8_t data[], unsigned len)
@@ -379,6 +380,7 @@ int xrp_push_low(uint8_t dev, uint16_t addr, uint8_t data[], unsigned len)
    return 0;  // Success!
 }
 
+#if 0
 static int xrp_pull(uint8_t dev, unsigned len)
 {
    for (unsigned jx = 0; jx < len; jx++) {
@@ -396,6 +398,7 @@ static int xrp_pull(uint8_t dev, unsigned len)
    xrp_print_reg(dev, 0x40);
    return 1;
 }
+#endif
 
 // See Figures 3 and 4 of ANP-38
 // Figure 3:  cmd is FLASH_PAGE_CLEAR (0x4E),  mode is 1,  dwell is 10

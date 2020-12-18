@@ -6,8 +6,6 @@
 
 void I2C_FPGA_scan(void)
 {
-   int result;
-   uint8_t data[4];
    printf("Scanning I2C_FPGA bus:\r\n");
    for (unsigned j = 0; j < 8; j++)
    {
