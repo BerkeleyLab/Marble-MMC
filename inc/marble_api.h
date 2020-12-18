@@ -71,6 +71,13 @@ int marble_SSP_read(SSP_PORT ssp, uint8_t *buffer, int size);
 ************/
 void marble_GPIOint_handlers(void *FPGA_DONE_handler);
 
+/************
+* MGT Multiplexer
+************/
+#ifdef MARBLE_V2
+void marble_MGTMUX_set(uint8_t mgt_num, bool on);
+#endif
+
 /****
 * I2C
 ****/

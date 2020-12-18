@@ -283,9 +283,7 @@ int main(void)
 #if MARBLEM_V1
             PRINT_NA;
 #elif MARBLE_V2
-            // TODO: Abstract this functionality; disable for now
-            //HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, true);
-            PRINT_NA;
+            marble_MGTMUX_set(3, true);
 #endif
             break;
          case 'e':

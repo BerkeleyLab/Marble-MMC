@@ -78,13 +78,6 @@ void marble_UART_init(void)
 int marble_UART_send(const char *str, int size)
 {
    HAL_UART_Transmit(&huart1, str, size, 1000);
-   //int sent;
-   //int wait_cnt;
-   //sent = Chip_UART_SendRB(LPC_UART0, &txring, str, size);
-   //if (sent < size) {
-    //  for (wait_cnt = UART_WAIT; wait_cnt > 0; wait_cnt--) {} // Busy-wait
-      //sent += Chip_UART_SendRB(LPC_UART0, &txring, str+sent, size-sent);
-   //}
    return 1;
 }
 
@@ -240,6 +233,20 @@ void marble_GPIOint_init(void)
 /* Register user-defined interrupt handlers */
 void marble_GPIOint_handlers(void *FPGA_DONE_handler) {
    marble_FPGA_DONE_handler = FPGA_DONE_handler;
+}
+
+/************
+* MGT Multiplexer
+************/
+#define MAXMGT 3
+static const uint16_t mgtmux_pins[MAXMGT] = {GPIO_PIN_8, GPIO_PIN_9, GPIO_PIN_10};
+
+void marble_MGTMUX_set(uint8_t mgt_num, bool on)
+{
+   mgt_num -= 1;
+   if (mgt_num < MAXMGT) {
+      HAL_GPIO_WritePin(GPIOE, mgtmux_pins[mgt_num], on);
+   }
 }
 
 /************
