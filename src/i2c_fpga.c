@@ -262,19 +262,22 @@ float getCurrentAmps(uint8_t ina)
 
 void adn4600_init()
 {
+   uint8_t configs[] = {
+      (ADN4600_OUT_CFG_0 << 4) + ADN4600_OUT_0,
+      (ADN4600_OUT_CFG_1 << 4) + ADN4600_OUT_1,
+      (ADN4600_OUT_CFG_4 << 4) + ADN4600_OUT_4,
+      (ADN4600_OUT_CFG_5 << 4) + ADN4600_OUT_5};
    uint8_t config;
    int rc;
 
    switch_i2c_bus(2);
    marble_SLEEP_ms(100);
-   config = (ADN4600_OUT_CFG_0 << 4) + ADN4600_OUT_0;
-   marble_I2C_cmdsend(I2C_FPGA, ADN4600, ADN4600_XPT_Conf, &config, 1);
-   config = (ADN4600_OUT_CFG_1 << 4) + ADN4600_OUT_1;
-   marble_I2C_cmdsend(I2C_FPGA, ADN4600, ADN4600_XPT_Conf, &config, 1);
-   config = (ADN4600_OUT_CFG_4 << 4) + ADN4600_OUT_4;
-   marble_I2C_cmdsend(I2C_FPGA, ADN4600, ADN4600_XPT_Conf, &config, 1);
-   config = (ADN4600_OUT_CFG_5 << 4) + ADN4600_OUT_5;
-   marble_I2C_cmdsend(I2C_FPGA, ADN4600, ADN4600_XPT_Conf, &config, 1);
+   const unsigned config_len = sizeof configs / sizeof configs[0];
+   for (unsigned ix=0; ix < config_len; ix++) {
+      config = configs[ix];
+      rc = marble_I2C_cmdsend(I2C_FPGA, ADN4600, ADN4600_XPT_Conf, &config, 1);
+      printf("> ADN4600 XPT Conf <= 0x%2.2x (rc=%d)\n", config, rc);
+   }
 
    // Table 9. Switch Core Temporary Registers
    uint8_t status;
@@ -293,8 +296,7 @@ void adn4600_printStatus()
 {
    uint8_t status;
 
-   for(unsigned ix = 0; ix < 8; ix++)
-   {
+   for (unsigned ix = 0; ix < 8; ix++) {
       uint8_t cmd = ADN4600_XPT_Status0 + ix;
       marble_I2C_cmdrecv(I2C_FPGA, ADN4600, cmd, &status, 1);
       printf("> ADN4600 reg: %x: Output number: %d, Connected input: [%d]\r\n", cmd, ix, status);
