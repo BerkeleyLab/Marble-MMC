@@ -266,7 +266,7 @@ void marble_GPIOint_init(void)
 }
 
 /* Register user-defined interrupt handlers */
-void marble_GPIOint_handlers(void *FPGA_DONE_handler) {
+void marble_GPIOint_handlers(void (*FPGA_DONE_handler)(void)) {
    marble_FPGA_DONE_handler = FPGA_DONE_handler;
 }
 
@@ -502,7 +502,7 @@ void SysTick_Handler(void)
 }
 
 /* Register user-defined interrupt handlers */
-void marble_SYSTIMER_handler(void *handler) {
+void marble_SYSTIMER_handler(void (*handler)(void)) {
    marble_SysTick_Handler = handler;
 }
 

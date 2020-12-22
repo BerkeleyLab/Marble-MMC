@@ -5,8 +5,7 @@
 CC = arm-none-eabi-gcc
 CFLAGS = -mcpu=cortex-m3 --std=c99 -O2 -I. -I ../inc -DMARBLE_LPC1776 -DMARBLE_V2
 CFLAGS += -Wall -Wextra -Wno-unused-parameter -Wstrict-prototypes -Wundef
-CFLAGS += -Wmissing-prototypes -Wshadow
-# XXX add -pedantic, and fix warnings
+CFLAGS += -Wmissing-prototypes -Wshadow -pedantic
 vpath %.c ../src
 
 OBJS = i2c_fpga.o i2c_pm.o main.o phy_mdio.o ssp.o syscalls.o

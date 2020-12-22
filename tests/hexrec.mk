@@ -3,8 +3,11 @@ CFLAGS += -pedantic -Wall -Wextra -Wstrict-prototypes
 
 vpath %.c ../src
 
-all: hexrec Marble_runtime_3A.hex
-	./hexrec 433 < $(word 2, $^)
+all: hexrec.out
+
+hexrec.out: hexrec Marble_runtime_3A.hex
+	./hexrec 433 < $(word 2, $^) > $@
+	@echo PASS
 
 clean:
-	rm -f hexrec
+	rm -f hexrec hexrec.out

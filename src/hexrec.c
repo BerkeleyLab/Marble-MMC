@@ -73,7 +73,8 @@ int xrp_srecord(uint8_t dev, uint8_t data[])
    return rc;
 }
 
-int xrp_program_static(uint8_t dev) {
+int xrp_program_static(uint8_t dev)
+{
    // each element of dd represents a hex record,
    // https://en.wikipedia.org/wiki/Intel_HEX
    // including length, address, record type, data, and checksum,
@@ -194,7 +195,8 @@ static int hexdig_fun(unsigned char c)
 // Return codes:
 //   0  OK, normal end of file reached
 //   1  Fault, abort
-int xrp_file(uint8_t dev) {
+int xrp_file(uint8_t dev)
+{
    printf("XRP7724 hex record file input [%2.2x]\n", dev);
    char rx_ch;
    int mode = 0;

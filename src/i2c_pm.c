@@ -73,7 +73,8 @@ void print_max6639(void)
 * LM75 Register interface
 ************/
 
-static int LM75_readwrite(uint8_t dev, LM75_REG reg, int *data, bool rnw) {
+static int LM75_readwrite(uint8_t dev, LM75_REG reg, int *data, bool rnw)
+{
    uint8_t i2c_buf[3];
    int i2c_stat;
    short temp;
@@ -114,16 +115,19 @@ static int LM75_readwrite(uint8_t dev, LM75_REG reg, int *data, bool rnw) {
    return i2c_stat;
 }
 
-int LM75_read(uint8_t dev, LM75_REG reg, int *data) {
+int LM75_read(uint8_t dev, LM75_REG reg, int *data)
+{
    return LM75_readwrite(dev, reg, data, true);
 }
 
-int LM75_write(uint8_t dev, LM75_REG reg, int data) {
+int LM75_write(uint8_t dev, LM75_REG reg, int data)
+{
    return LM75_readwrite(dev, reg, &data, false);
 }
 
-void LM75_print(uint8_t dev) {
-   static const  uint8_t rlist[LM75_MAX] = {LM75_TEMP, LM75_CFG, LM75_HYST, LM75_OS};
+void LM75_print(uint8_t dev)
+{
+   static const uint8_t rlist[LM75_MAX] = {LM75_TEMP, LM75_CFG, LM75_HYST, LM75_OS};
    int i;
    int recv;
    const char ok_str[] = "> LM75 %x: [%d]: %d\r\n";
@@ -147,7 +151,8 @@ const char i2c_nok[] = "> I2C slave not found: %x\r\n";
 const char i2c_ret[] = "> %x\r\n";
 
 /* Perform basic sanity check and print result to UART */
-void I2C_PM_probe(void) {
+void I2C_PM_probe(void)
+{
    int i;
    int i2c_stat=0;
    uint8_t i2c_dat[4];
@@ -221,7 +226,8 @@ int xrp_read2(uint8_t dev, uint16_t addr)
    return chk;
 }
 
-void xrp_dump(uint8_t dev) {
+void xrp_dump(uint8_t dev)
+{
    // https://www.maxlinear.com/appnote/anp-38.pdf
    printf("XRP7724 dump [%2.2x]\n", dev);
    struct {int a; char *n;} r_table[] = {
@@ -565,7 +571,8 @@ void xrp_flash(uint8_t dev)
    printf("flash programming complete!?\n");
 }
 
-void xrp_go(uint8_t dev) {
+void xrp_go(uint8_t dev)
+{
    printf("XRP7724 go [%2.2x]\n", dev);
    // check that PWR_CHIP_READY (0E) reads back 0
    xrp_reg_write_check(dev, 0x0E, 0x0000);
@@ -585,7 +592,8 @@ void xrp_go(uint8_t dev) {
    }
 }
 
-void xrp_hex_in(uint8_t dev) {
+void xrp_hex_in(uint8_t dev)
+{
    printf("XRP7724 hex in (WIP) [%2.2x]\n", dev);
    printf("Do not use for flash programming! (yet)\n");
    // check that PWR_CHIP_READY (0E) reads back 0
@@ -608,7 +616,8 @@ void xrp_hex_in(uint8_t dev) {
 
 // Didn't work when tested; why?
 #if 0
-void xrp_halt(uint8_t dev) {
+void xrp_halt(uint8_t dev)
+{
    printf("XRP7724 halt [%2.2x]\n", dev);
    xrp_reg_write(dev, 0x1E, 0x0000);  // turn off Ch1
    xrp_reg_write(dev, 0x1E, 0x0100);  // turn off Ch2

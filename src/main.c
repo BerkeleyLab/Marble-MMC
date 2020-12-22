@@ -134,7 +134,8 @@ unsigned int live_cnt=0;
 
 unsigned int fpga_prog_cnt=0;
 
-static void fpga_done_handler(void) {
+static void fpga_done_handler(void)
+{
    fpga_prog_cnt++;
 }
 
