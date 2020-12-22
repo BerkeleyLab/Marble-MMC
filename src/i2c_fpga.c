@@ -190,7 +190,7 @@ static int16_t getCurrent_raw(uint8_t ina)
    //wireReadRegister(ina, INA_REG_CURRENT, &value);
    for(uint8_t i = 0; i < 7; i++)
       {
-         wireReadRegister(INA219_0, i, &value);
+         wireReadRegister(ina, i, &value);
          printf("> INA219 reg: %x:  [%d]\r\n", i, value);
       }
 

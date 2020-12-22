@@ -4,7 +4,7 @@
 
 CC = arm-none-eabi-gcc
 CFLAGS = -mcpu=cortex-m3 --std=c99 -O2 -I. -I ../inc -DMARBLE_LPC1776 -DMARBLE_V2
-CFLAGS += -Wall -Wextra -Wno-unused-parameter -Wstrict-prototypes -Wundef
+CFLAGS += -Wall -Wextra -Wstrict-prototypes -Wundef
 CFLAGS += -Wmissing-prototypes -Wshadow -pedantic
 vpath %.c ../src
 

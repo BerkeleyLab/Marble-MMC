@@ -97,6 +97,7 @@ STATIC INLINE uint32_t getClkRate(I2C_ID_T id)
 #if defined(CHIP_LPC175X_6X)
 	return Chip_Clock_GetPeripheralClockRate(I2C_PeriphClk[id]);
 #else
+	(void) id;  /* not used */
 	return Chip_Clock_GetPeripheralClockRate();
 #endif
 }

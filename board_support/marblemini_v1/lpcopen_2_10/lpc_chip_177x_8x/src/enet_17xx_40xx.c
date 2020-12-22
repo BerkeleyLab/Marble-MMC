@@ -134,6 +134,7 @@ void Chip_ENET_SetupMII(LPC_ENET_T *pENET, uint32_t div, uint8_t addr)
 uint32_t Chip_ENET_FindMIIDiv(LPC_ENET_T *pENET, uint32_t clockRate)
 {
 	uint32_t tmp, divIdx = 0;
+	(void) pENET;  /* not used */
 
 	/* Find desired divider value */
 	tmp = Chip_Clock_GetENETClockRate() / clockRate;
@@ -222,6 +223,7 @@ ENET_BUFF_STATUS_T Chip_ENET_GetBufferStatus(LPC_ENET_T *pENET,
 											 uint16_t consumeIndex,
 											 uint16_t buffSize)
 {
+	(void) pENET;  /* not used */
 	/* Empty descriptor list */
 	if (consumeIndex == produceIndex) {
 		return ENET_BUFF_EMPTY;
@@ -244,6 +246,7 @@ ENET_BUFF_STATUS_T Chip_ENET_GetBufferStatus(LPC_ENET_T *pENET,
 /* Get the number of descriptor filled */
 uint32_t Chip_ENET_GetFillDescNum(LPC_ENET_T *pENET, uint16_t produceIndex, uint16_t consumeIndex, uint16_t buffSize)
 {
+	(void) pENET;  /* not used */
 	/* Empty descriptor list */
 	if (consumeIndex == produceIndex) {
 		return 0;

@@ -79,6 +79,7 @@ int _getpid(void)
 
 int _kill(int pid, int sig)
 {
+	(void) pid; (void) sig;
 	errno = EINVAL;
 	return -1;
 }
@@ -93,6 +94,7 @@ void _exit (int status)
 
 __attribute__((weak)) int _read(int file, void *ptr, size_t len)
 {
+	(void) file;  // no files here
 	char *p = ptr;
 	for (size_t DataIdx = 0; DataIdx < len; DataIdx++)
 	{
@@ -104,6 +106,7 @@ return len;
 
 __attribute__((weak)) int _write(int file, const void *ptr, size_t len)
 {
+	(void) file;  // no files here
 	const char *p = ptr;
 	for (size_t DataIdx = 0; DataIdx < len; DataIdx++)
 	{
@@ -139,57 +142,66 @@ void *_sbrk(ptrdiff_t incr)
 
 int _close(int file)
 {
+	(void) file;
 	return -1;
 }
 
-
 int _fstat(int file, struct stat *st)
 {
+	(void) file;
 	st->st_mode = S_IFCHR;
 	return 0;
 }
 
 int _isatty(int file)
 {
+	(void) file;
 	return 1;
 }
 
 off_t _lseek(int file, off_t ptr, int dir)
 {
+	(void) file;  (void) ptr;  (void) dir;
 	return 0;
 }
 
 int _open(const char *path, int flags, ...)
 {
 	/* Pretend like we always fail */
+	(void) path;  (void) flags;
 	return -1;
 }
 
 int _wait(int *status)
 {
+	(void) status;
 	errno = ECHILD;
 	return -1;
 }
 
 int _unlink(const char *name)
 {
+	(void) name;
 	errno = ENOENT;
 	return -1;
 }
 
 clock_t _times(struct tms *buf)
 {
+	(void) buf;
 	return -1;
 }
 
 int _stat(const char *file, struct stat *st)
 {
+	(void) file;
 	st->st_mode = S_IFCHR;
 	return 0;
 }
 
 int _link(const char *old, const char *new)
 {
+	(void) old;  (void) new;
 	errno = EMLINK;
 	return -1;
 }
@@ -202,6 +214,7 @@ int _fork(void)
 
 int _execve(const char *name, char * const argv[], char * const env[])
 {
+	(void) name;  (void) argv;  (void) env;
 	errno = ENOMEM;
 	return -1;
 }

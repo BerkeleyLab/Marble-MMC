@@ -291,21 +291,15 @@ int marble_I2C_cmdrecv_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *
 ************/
 int marble_SSP_write(SSP_PORT ssp, uint8_t *buffer, int size)
 {
-   //if (ssp == SSP_FPGA) {
-   //   return Chip_SSP_WriteFrames_Blocking(LPC_SSP0, buffer, size);
-   //} else if (ssp == SSP_PMOD) {
-   //   return Chip_SSP_WriteFrames_Blocking(LPC_SSP1, buffer, size);
-  // }
+   // function stubbed out; XXX write me!
+   (void) ssp; (void) buffer; (void) size;
    return 0;
 }
 
 int marble_SSP_read(SSP_PORT ssp, uint8_t *buffer, int size)
 {
-   //if (ssp == SSP_FPGA) {
-   //   return Chip_SSP_ReadFrames_Blocking(LPC_SSP0, buffer, size);
-   //} else if (ssp == SSP_PMOD) {
-   //   return Chip_SSP_ReadFrames_Blocking(LPC_SSP1, buffer, size);
-   //}
+   // function stubbed out; XXX write me!
+   (void) ssp; (void) buffer; (void) size;
    return 0;
 }
 
@@ -377,7 +371,9 @@ void marble_SLEEP_ms(uint32_t delay)
 
 void marble_SLEEP_us(uint32_t delay)
 {
-   return; // Not available unless HAL weak definitions are overridden
+   (void) delay;
+   return; // XXX Not available unless HAL weak definitions are overridden
+   // Good thing nobody depends on this (yet)
 }
 
 
@@ -387,6 +383,8 @@ void marble_SLEEP_us(uint32_t delay)
 
 uint32_t marble_init(bool use_xtal)
 {
+   (void) use_xtal;  // feature not yet supported with this chip
+
    // Must happen before any other clock manipulations:
    HAL_Init();
    SystemClock_Config_HSI();
