@@ -230,7 +230,7 @@ void xrp_dump(uint8_t dev)
 {
    // https://www.maxlinear.com/appnote/anp-38.pdf
    printf("XRP7724 dump [%2.2x]\n", dev);
-   struct {int a; char *n;} r_table[] = {
+   struct {int a; const char *n;} r_table[] = {
       {0x02, "HOST_STS"},
       {0x05, "FAULT_STATUS"},
       {0x09, "STATUS"},

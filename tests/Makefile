@@ -5,16 +5,16 @@
 CC = arm-none-eabi-gcc
 CFLAGS = -mcpu=cortex-m3 --std=c99 -O2 -I. -I ../inc -DMARBLE_LPC1776 -DMARBLE_V2
 CFLAGS += -Wall -Wextra -Wstrict-prototypes -Wundef
-CFLAGS += -Wmissing-prototypes -Wshadow -pedantic
+CFLAGS += -Wmissing-prototypes -Wshadow -pedantic -Wwrite-strings
 vpath %.c ../src
 
-OBJS = i2c_fpga.o i2c_pm.o main.o phy_mdio.o ssp.o syscalls.o
+OBJS = hexrec.o i2c_fpga.o i2c_pm.o main.o phy_mdio.o ssp.o syscalls.o
 
 all: $(OBJS) hexrec_check
 
 hexrec_check:
-	make -f hexrec.mk
+	cd hex && make
 
 clean:
 	rm -f *.o
-	make -f hexrec.mk clean
+	cd hex && make clean
