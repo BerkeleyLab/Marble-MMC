@@ -469,7 +469,7 @@ int marble_SSP_read(SSP_PORT ssp, uint8_t *buffer, int size)
 /************
 * MDIO to PHY
 ************/
-void marble_MDIO_init()
+void marble_MDIO_init(void)
 {
    Chip_Clock_EnablePeriphClock(SYSCTL_CLOCK_ENET);
 

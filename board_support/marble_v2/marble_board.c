@@ -77,7 +77,7 @@ void marble_UART_init(void)
 /* Send \0 terminated string over UART. Returns number of bytes sent */
 int marble_UART_send(const char *str, int size)
 {
-   HAL_UART_Transmit(&huart1, str, size, 1000);
+   HAL_UART_Transmit(&huart1, (const uint8_t *) str, size, 1000);
    return 1;
 }
 
@@ -86,7 +86,7 @@ int marble_UART_send(const char *str, int size)
 int marble_UART_recv(char *str, int size)
 {
    if (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_RXNE) == SET) {
-      HAL_UART_Receive(&huart1, str, size, 100);
+      HAL_UART_Receive(&huart1, (uint8_t *) str, size, 100);
       return 1;
    } else {
       return 0;
@@ -198,7 +198,7 @@ void reset_fpga(void)
 /************
 * GPIO interrupt setup and user-defined handlers
 ************/
-void FPGA_DONE_dummy(void) {};
+void FPGA_DONE_dummy(void) {}
 void (*volatile marble_FPGA_DONE_handler)(void) = FPGA_DONE_dummy;
 
 
@@ -331,7 +331,7 @@ uint32_t marble_MDIO_read(uint16_t reg)
 /************
 * System Timer and Stopwatch
 ************/
-void SysTick_Handler_dummy(void) {};
+void SysTick_Handler_dummy(void) {}
 void (*volatile marble_SysTick_Handler)(void) = SysTick_Handler_dummy;
 
 // Override default (weak) SysTick_Handler
