@@ -315,6 +315,8 @@ static void marble_I2C_pins(I2C_ID_T id)
          Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 10, (IOCON_MODE_INACT | IOCON_OPENDRAIN_EN | IOCON_FUNC2));
          Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 11, (IOCON_MODE_INACT | IOCON_OPENDRAIN_EN | IOCON_FUNC2));
          break;
+      default:
+         break;  // unknown id, fail silently
    }
 }
 
