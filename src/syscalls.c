@@ -61,8 +61,6 @@ extern int errno;
 extern int __io_putchar(int ch) __attribute__((weak));
 extern int __io_getchar(void) __attribute__((weak));
 
-register char * stack_ptr __asm__("sp");
-
 char *__env[1] = { 0 };
 char **environ = __env;
 
@@ -117,6 +115,8 @@ __attribute__((weak)) int _write(int file, const void *ptr, size_t len)
 
 void *_sbrk(ptrdiff_t incr)
 {
+	// See https://gcc.gnu.org/onlinedocs/gcc/Local-Register-Variables.html
+	register char * stack_ptr __asm__("sp");
 	extern char end __asm__("end");
 	static char *heap_end;
 	char *prev_heap_end;
