@@ -80,8 +80,8 @@ OPENOCD         = openocd
 # Display all warnings. Compile functions and data into their own sections so
 # they can be discarded if unused.  The linker performs garbage collection of
 # unused input sections.
-CFLAGS	= $(FLAGS) -Os -std=c99 -ffunction-sections -fdata-sections $(ARCH_FLAGS) $(USR_CFLAGS)
-CFLAGS += -Wall -Wextra -Wundef -Wshadow -Wstrict-prototypes -Wwrite-strings
+CFLAGS	= $(FLAGS) -Os -std=c11 -ffunction-sections -fdata-sections $(ARCH_FLAGS) $(USR_CFLAGS)
+CFLAGS += -Wall -Wextra -Wundef -Wshadow -Wstrict-prototypes -Wwrite-strings -pedantic
 
 ASFLAGS	= $(FLAGS) $(ARCH_FLAGS)
 LDFLAGS = $(FLAGS) $(LINKER_FLAGS) -Wextra $(ARCH_FLAGS)

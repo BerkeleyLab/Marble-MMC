@@ -236,7 +236,7 @@ void reset_fpga(void)
 * GPIO interrupt setup and user-defined handlers
 ************/
 const uint8_t FPGA_DONE_INT_PIN = 5;
-void FPGA_DONE_dummy(void) {};
+void FPGA_DONE_dummy(void) {}
 void (*volatile marble_FPGA_DONE_handler)(void) = FPGA_DONE_dummy;
 
 // Override default (weak) IRQHandler
@@ -493,7 +493,7 @@ uint32_t marble_MDIO_read(uint16_t reg)
 /************
 * System Timer and Stopwatch
 ************/
-void SysTick_Handler_dummy(void) {};
+void SysTick_Handler_dummy(void) {}
 void (*volatile marble_SysTick_Handler)(void) = SysTick_Handler_dummy;
 
 // Override default (weak) SysTick_Handler

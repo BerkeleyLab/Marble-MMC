@@ -92,7 +92,7 @@ extern void __StackLimit(void);
  * linker script can position it at 0x00000000.
  */
 __attribute__ ((section(".isr_vector")))
-const void *isr_vectors[] = {
+void (*isr_vectors[])(void) = {
   /* Cortex-M3 Core Interrupts */
   &__StackLimit,	  // The end of the stack.
   Reset_Handler,	  // The Reset handler
