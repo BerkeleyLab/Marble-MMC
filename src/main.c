@@ -179,6 +179,8 @@ int main(void)
    marble_LED_set(2, true);
 
 #ifdef XRP_AUTOBOOT
+   printf("XRP_AUTOBOOT\n");
+   marble_SLEEP_ms(300);
    xrp_boot();
 #endif
 
