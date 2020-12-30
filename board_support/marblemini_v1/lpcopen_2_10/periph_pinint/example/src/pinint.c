@@ -36,9 +36,9 @@
  ****************************************************************************/
 
 /* Handy list of GPIO pins on 17xx/40xx boards.
- 
+
     LPCXpresso LPC1769 on base board...
- 
+
 		PORT	PIN	Xpresso Pin	Function
 		----	---	-----------	------------------------------------------
 		0		17	12			Joystick center button
@@ -52,9 +52,9 @@
 		2		0	42			RGB LED RED   PIO1_9
 		0		26	18			RGB LED BLUE  PIO1_2
 		2		1	43			RGB LED GREEN PIO1_10
- 
+
     Embedded Artists Devkit LPC1788/LPC4088 on base board...
- 
+
 		PORT	PIN	DIMM Pin	Function
 		----	---	--------	------------------------------------------
 		2		22	120-GPIO73	Joystick center button
@@ -62,7 +62,7 @@
 		2		25	122-GPIO75	Joystick button
 		2		26	123-GPIO76  Joystick button
     	2		27  124-GPIO77	Joystick button
-    	
+
     	2		10  35-GPIO10	Interrupt button SW6
  */
 

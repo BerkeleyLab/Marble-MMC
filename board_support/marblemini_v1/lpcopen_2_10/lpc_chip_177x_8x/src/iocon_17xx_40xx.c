@@ -48,9 +48,9 @@
 /* Sets I/O Control pin mux */
 void Chip_IOCON_PinMuxSet(LPC_IOCON_T *pIOCON, uint8_t port, uint8_t pin, uint32_t modefunc)
 {
-	Chip_IOCON_PinMux(pIOCON, port, pin, 
+	Chip_IOCON_PinMux(pIOCON, port, pin,
 					  /* mode is in bits 3:2 */
-					  modefunc >> 2, 
+					  modefunc >> 2,
 					  /* func is in bits 1:0 */
 					  modefunc & 3 );
 }
@@ -63,7 +63,7 @@ void Chip_IOCON_PinMux(LPC_IOCON_T *pIOCON, uint8_t port, uint8_t pin, uint32_t 
 
 	bitPos =  IOCON_BIT_INDEX(pin);
 	reg = IOCON_REG_INDEX(port,pin);
-	
+
 	temp = pIOCON->PINSEL[reg] & ~(0x03UL << bitPos);
 	pIOCON->PINSEL[reg] = temp | (func << bitPos);
 

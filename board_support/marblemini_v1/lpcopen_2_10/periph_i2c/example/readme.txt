@@ -36,7 +36,7 @@ reg1). Multibyte reads will read (IN REG, OUT REG) repeatedly, multi byte writes
 write to OUT REG repeatedly. OUT REG represent LEDS in the board set/reset them will
 turn LED0-LED7 (If present) to ON/OFF, IN REG represent key press (KEY0 to KEY7).
 
-To turn on LED1 and LED2, follow the steps given below 
+To turn on LED1 and LED2, follow the steps given below
 1. Select I2C1 as default device by selecting option 1 and 1
 2. Select option 5 to write data to slave
 3. Enter 0x5B as the slave device address
@@ -67,9 +67,9 @@ the address will automatically roll back to location 0.</blockquote>
 
 Special connection requirements
 - EA-DEVKIT 1788/4088
-- I2C1_SDA (J5 pin 45) connected to I2C0_SDA (J5 pin 25) 
-- I2C1_SCL (J5 pin 54) connected to I2C0_SCL (J5 pin 26) 
-- Jumper @a J5 is the 64 pin expansion connecter close to 200pin OEM board connector 
+- I2C1_SDA (J5 pin 45) connected to I2C0_SDA (J5 pin 25)
+- I2C1_SCL (J5 pin 54) connected to I2C0_SCL (J5 pin 26)
+- Jumper @a J5 is the 64 pin expansion connecter close to 200pin OEM board connector
 - Make sure double check the connected pins as there is a great possibility of connecting wrong pins
 - LPCXpresso 1769 (using UART3)
 - P0.19(SDA1) PAD17 connected to P0.27(SDA0) J6-PIN25

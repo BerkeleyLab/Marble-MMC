@@ -81,7 +81,7 @@ static void mute_toggle()
 	}
 	else {
 		Chip_I2S_DisableMute(LPC_I2S);
-		DEBUGOUT("MUTE DISABLE\n\r"); 
+		DEBUGOUT("MUTE DISABLE\n\r");
 	}
 }
 /* Get status of the ring buffer */

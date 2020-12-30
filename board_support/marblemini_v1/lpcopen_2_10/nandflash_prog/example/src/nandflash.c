@@ -217,7 +217,7 @@ int main(void)
 	DEBUGSTR("\r\nWrite to flash...\r\n");
 	lpc_nandflash_write_page(useBlock, PAGE_INDEX,(uint8_t *) buffer, (4 + stSize));
 	waitForReady();
-	
+
 	/* Check the result of writting */
 	if(lpc_nandflash_read_status() & NANDFLASH_STATUS_PAGE_PROG_FAIL) {
 		DEBUGSTR("Writing failed!!!\r\n");

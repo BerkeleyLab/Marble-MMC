@@ -29,7 +29,7 @@
  *  \brief Common definitions and declarations for the USB stack.
  *
  *  Common definitions and declarations for the USB stack.
- *  \addtogroup USBD_Core 
+ *  \addtogroup USBD_Core
  *  @{
  */
 
@@ -91,8 +91,8 @@ PRE_PACK union POST_PACK __WORD_BYTE
 /** Union of \ref _WB_T struct and 16 bit word.*/
 typedef union __WORD_BYTE WORD_BYTE;
 
-/** bmRequestType.Dir defines 
- * @{ 
+/** bmRequestType.Dir defines
+ * @{
  */
 /** Request from host to device */
 #define REQUEST_HOST_TO_DEVICE     0
@@ -100,8 +100,8 @@ typedef union __WORD_BYTE WORD_BYTE;
 #define REQUEST_DEVICE_TO_HOST     1
 /** @} */
 
-/** bmRequestType.Type defines  
- * @{ 
+/** bmRequestType.Type defines
+ * @{
  */
 /** Standard Request */
 #define REQUEST_STANDARD           0
@@ -113,8 +113,8 @@ typedef union __WORD_BYTE WORD_BYTE;
 #define REQUEST_RESERVED           3
 /** @} */
 
-/** bmRequestType.Recipient defines  
- * @{ 
+/** bmRequestType.Recipient defines
+ * @{
  */
 /** Request to device */
 #define REQUEST_TO_DEVICE          0
@@ -145,8 +145,8 @@ PRE_PACK union POST_PACK _REQUEST_TYPE
 /** Union of \ref _BM_T struct and 8 bit byte.*/
 typedef union _REQUEST_TYPE REQUEST_TYPE;
 
-/** USB Standard Request Codes 
- * @{ 
+/** USB Standard Request Codes
+ * @{
  */
 /** GET_STATUS request */
 #define USB_REQUEST_GET_STATUS                 0
@@ -172,8 +172,8 @@ typedef union _REQUEST_TYPE REQUEST_TYPE;
 #define USB_REQUEST_SYNC_FRAME                 12
 /** @} */
 
-/** USB GET_STATUS Bit Values 
- * @{ 
+/** USB GET_STATUS Bit Values
+ * @{
  */
 /** SELF_POWERED status*/
 #define USB_GETSTATUS_SELF_POWERED             0x01
@@ -183,8 +183,8 @@ typedef union _REQUEST_TYPE REQUEST_TYPE;
 #define USB_GETSTATUS_ENDPOINT_STALL           0x01
 /** @} */
 
-/** USB Standard Feature selectors 
- * @{ 
+/** USB Standard Feature selectors
+ * @{
  */
 /** ENDPOINT_STALL feature*/
 #define USB_FEATURE_ENDPOINT_STALL             0
@@ -200,19 +200,19 @@ PRE_PACK struct POST_PACK _USB_SETUP_PACKET
   REQUEST_TYPE bmRequestType; /**< This bitmapped field identifies the characteristics
                               of the specific request. \sa _BM_T.
                               */
-  uint8_t      bRequest; /**< This field specifies the particular request. The 
-                         Type bits in the bmRequestType field modify the meaning 
+  uint8_t      bRequest; /**< This field specifies the particular request. The
+                         Type bits in the bmRequestType field modify the meaning
                          of this field. \sa USBD_REQUEST.
                          */
   WORD_BYTE    wValue; /**< Used to pass a parameter to the device, specific
                         to the request.
                         */
   WORD_BYTE    wIndex; /**< Used to pass a parameter to the device, specific
-                        to the request. The wIndex field is often used in 
+                        to the request. The wIndex field is often used in
                         requests to specify an endpoint or an interface.
                         */
-  uint16_t     wLength; /**< This field specifies the length of the data 
-                        transferred during the second phase of the control 
+  uint16_t     wLength; /**< This field specifies the length of the data
+                        transferred during the second phase of the control
                         transfer.
                         */
 } ;
@@ -220,8 +220,8 @@ PRE_PACK struct POST_PACK _USB_SETUP_PACKET
 typedef struct _USB_SETUP_PACKET USB_SETUP_PACKET;
 
 
-/** USB Descriptor Types 
- * @{ 
+/** USB Descriptor Types
+ * @{
  */
 /** Device descriptor type  */
 #define USB_DEVICE_DESCRIPTOR_TYPE             1
@@ -247,8 +247,8 @@ typedef struct _USB_SETUP_PACKET USB_SETUP_PACKET;
 #define USB_INTERFACE_ASSOCIATION_DESCRIPTOR_TYPE  11
 /** @} */
 
-/** USB Device Classes 
- * @{ 
+/** USB Device Classes
+ * @{
  */
 /** Reserved device class  */
 #define USB_DEVICE_CLASS_RESERVED              0x00
@@ -278,8 +278,8 @@ typedef struct _USB_SETUP_PACKET USB_SETUP_PACKET;
 #define USB_DEVICE_CLASS_VENDOR_SPECIFIC       0xFF
 /** @} */
 
-/** bmAttributes in Configuration Descriptor 
- * @{ 
+/** bmAttributes in Configuration Descriptor
+ * @{
  */
 /** Power field mask */
 #define USB_CONFIG_POWERED_MASK                0x40
@@ -294,8 +294,8 @@ typedef struct _USB_SETUP_PACKET USB_SETUP_PACKET;
 /** bMaxPower in Configuration Descriptor */
 #define USB_CONFIG_POWER_MA(mA)                ((mA)/2)
 
-/** bEndpointAddress in Endpoint Descriptor 
- * @{ 
+/** bEndpointAddress in Endpoint Descriptor
+ * @{
  */
 /** Endopint address mask */
 #define USB_ENDPOINT_DIRECTION_MASK            0x80
@@ -305,8 +305,8 @@ typedef struct _USB_SETUP_PACKET USB_SETUP_PACKET;
 #define USB_ENDPOINT_IN(addr)                  ((addr) | 0x80)
 /** @} */
 
-/** bmAttributes in Endpoint Descriptor 
- * @{ 
+/** bmAttributes in Endpoint Descriptor
+ * @{
  */
 /** Endopint type mask */
 #define USB_ENDPOINT_TYPE_MASK                 0x03
@@ -380,7 +380,7 @@ PRE_PACK struct POST_PACK _USB_DEVICE_DESCRIPTOR
                             this field must also be reset to zero. \n
                             If the bDeviceClass field is not set to FFH,
                             all values are reserved for assignment by
-                            the USB-IF. 
+                            the USB-IF.
                             */
   uint8_t  bDeviceProtocol; /**< Protocol code (assigned by the USB-IF).
                             These codes are qualified by the value of
@@ -396,7 +396,7 @@ PRE_PACK struct POST_PACK _USB_DEVICE_DESCRIPTOR
                             device basis. However, it may use classspecific
                             protocols on an interface basis. \n
                             If this field is set to FFH, the device uses a
-                            vendor-specific protocol on a device basis. 
+                            vendor-specific protocol on a device basis.
                             */
   uint8_t  bMaxPacketSize0; /**< Maximum packet size for endpoint zero
                             (only 8, 16, 32, or 64 are valid). For HS devices
@@ -408,7 +408,7 @@ PRE_PACK struct POST_PACK _USB_DEVICE_DESCRIPTOR
   uint16_t bcdDevice; /**< Device release number in binary-coded decimal. */
   uint8_t  iManufacturer; /**< Index of string descriptor describing manufacturer. */
   uint8_t  iProduct; /**< Index of string descriptor describing product. */
-  uint8_t  iSerialNumber; /**< Index of string descriptor describing the device’s 
+  uint8_t  iSerialNumber; /**< Index of string descriptor describing the device's
                           serial number.
                           */
   uint8_t  bNumConfigurations; /**< Number of possible configurations. */
@@ -444,7 +444,7 @@ PRE_PACK struct POST_PACK _USB_CONFIGURATION_DESCRIPTOR
                           returned for this configuration.*/
   uint8_t  bNumInterfaces; /**< Number of interfaces supported by this configuration*/
   uint8_t  bConfigurationValue; /**< Value to use as an argument to the
-                                SetConfiguration() request to select this 
+                                SetConfiguration() request to select this
                                 configuration. */
   uint8_t  iConfiguration; /**< Index of string descriptor describing this
                             configuration*/
@@ -487,7 +487,7 @@ PRE_PACK struct POST_PACK _USB_CONFIGURATION_DESCRIPTOR
                       no longer support. The USB System Software
                       may determine the cause of the failure by
                       checking the status and noting the loss of the
-                      device’s power source.*/
+                      device's power source.*/
 } ;
 /** USB Standard Configuration Descriptor */
 typedef struct _USB_CONFIGURATION_DESCRIPTOR USB_CONFIGURATION_DESCRIPTOR;
@@ -579,7 +579,7 @@ PRE_PACK struct POST_PACK _USB_ENDPOINT_DESCRIPTOR
                             Bit 7: Direction, ignored for control endpoints
                             0 = OUT endpoint
                             1 = IN endpoint.  \n \sa USBD_ENDPOINT_ADR_Type*/
-  uint8_t  bmAttributes; /**< This field describes the endpoint’s attributes when it is
+  uint8_t  bmAttributes; /**< This field describes the endpoint's attributes when it is
                           configured using the bConfigurationValue. \n
                           Bits 1..0: Transfer Type
                           \li 00 = Control
@@ -626,11 +626,11 @@ PRE_PACK struct POST_PACK _USB_ENDPOINT_DESCRIPTOR
   uint8_t  bInterval; /**< Interval for polling endpoint for data transfers.
                       Expressed in frames or microframes depending on the
                       device operating speed (i.e., either 1 millisecond or
-                      125 µs units). 
+                      125 microsecond units).
                       \li For full-/high-speed isochronous endpoints, this value
                       must be in the range from 1 to 16. The bInterval value
                       is used as the exponent for a \f$ 2^(bInterval-1) \f$ value; e.g., a
-                      bInterval of 4 means a period of 8 (\f$ 2^(4-1) \f$). 
+                      bInterval of 4 means a period of 8 (\f$ 2^(4-1) \f$).
                       \li For full-/low-speed interrupt endpoints, the value of
                       this field may be from 1 to 255.
                       \li For high-speed interrupt endpoints, the bInterval value
@@ -683,8 +683,8 @@ PRE_PACK struct POST_PACK _USB_OTHER_SPEED_CONFIGURATION
 /** USB Other Speed Configuration */
 typedef struct _USB_OTHER_SPEED_CONFIGURATION USB_OTHER_SPEED_CONFIGURATION;
 
-/** \ingroup USBD_Core 
- * USB device stack/module handle. 
+/** \ingroup USBD_Core
+ * USB device stack/module handle.
  */
 typedef void* USBD_HANDLE_T;
 

@@ -2,7 +2,7 @@
   ******************************************************************************
   * @file      startup_stm32f207xx.s
   * @author    MCD Application Team
-  * @brief     STM32F207xx Devices vector table for Atollic TrueSTUDIO toolchain. 
+  * @brief     STM32F207xx Devices vector table for Atollic TrueSTUDIO toolchain.
   *            This module performs:
   *                - Set the initial SP
   *                - Set the initial PC == Reset_Handler,
@@ -48,7 +48,7 @@
 .global  g_pfnVectors
 .global  Default_Handler
 
-/* start address for the initialization values of the .data section. 
+/* start address for the initialization values of the .data section.
 defined in linker script */
 .word  _sidata
 /* start address for the .data section. defined in linker script */
@@ -65,7 +65,7 @@ defined in linker script */
  * @brief  This is the code that gets called when the processor first
  *          starts execution following a reset event. Only the absolutely
  *          necessary set is performed, after which the application
- *          supplied main() routine is called. 
+ *          supplied main() routine is called.
  * @param  None
  * @retval : None
 */
@@ -73,7 +73,7 @@ defined in linker script */
     .section  .text.Reset_Handler
   .weak  Reset_Handler
   .type  Reset_Handler, %function
-Reset_Handler:  
+Reset_Handler:
   ldr   sp, =_estack     /* set stack pointer */
 
 /* Copy the data segment initializers from flash to SRAM */
@@ -114,11 +114,11 @@ LoopFillZerobss:
 .size  Reset_Handler, .-Reset_Handler
 
 /**
- * @brief  This is the code that gets called when the processor receives an 
+ * @brief  This is the code that gets called when the processor receives an
  *         unexpected interrupt.  This simply enters an infinite loop, preserving
  *         the system state for examination by a debugger.
- * @param  None     
- * @retval None       
+ * @param  None
+ * @retval None
 */
     .section  .text.Default_Handler,"ax",%progbits
 Default_Handler:
@@ -130,13 +130,13 @@ Infinite_Loop:
 * The minimal vector table for a Cortex M3. Note that the proper constructs
 * must be placed on this to ensure that it ends up at physical address
 * 0x0000.0000.
-* 
+*
 *******************************************************************************/
    .section  .isr_vector,"a",%progbits
   .type  g_pfnVectors, %object
   .size  g_pfnVectors, .-g_pfnVectors
-    
-    
+
+
 g_pfnVectors:
   .word  _estack
   .word  Reset_Handler
@@ -154,7 +154,7 @@ g_pfnVectors:
   .word  0
   .word  PendSV_Handler
   .word  SysTick_Handler
-  
+
   /* External Interrupts */
   .word     WWDG_IRQHandler                   /* Window WatchDog              */
   .word     PVD_IRQHandler                    /* PVD through EXTI Line detection */
@@ -237,14 +237,14 @@ g_pfnVectors:
   .word     DCMI_IRQHandler                   /* DCMI                         */
   .word     0                                 /* CRYP crypto                  */
   .word     HASH_RNG_IRQHandler               /* Hash and Rng                 */
-                         
-                         
+
+
 /*******************************************************************************
 *
-* Provide weak aliases for each Exception handler to the Default_Handler. 
-* As they are weak aliases, any function with the same name will override 
+* Provide weak aliases for each Exception handler to the Default_Handler.
+* As they are weak aliases, any function with the same name will override
 * this definition.
-* 
+*
 *******************************************************************************/
    .weak      NMI_Handler
    .thumb_set NMI_Handler,Default_Handler
@@ -298,7 +298,7 @@ g_pfnVectors:
    .thumb_set EXTI1_IRQHandler,Default_Handler
 
    .weak      EXTI2_IRQHandler
-   .thumb_set EXTI2_IRQHandler,Default_Handler 
+   .thumb_set EXTI2_IRQHandler,Default_Handler
 
    .weak      EXTI3_IRQHandler
    .thumb_set EXTI3_IRQHandler,Default_Handler
@@ -316,7 +316,7 @@ g_pfnVectors:
    .thumb_set DMA1_Stream2_IRQHandler,Default_Handler
 
    .weak      DMA1_Stream3_IRQHandler
-   .thumb_set DMA1_Stream3_IRQHandler,Default_Handler 
+   .thumb_set DMA1_Stream3_IRQHandler,Default_Handler
 
    .weak      DMA1_Stream4_IRQHandler
    .thumb_set DMA1_Stream4_IRQHandler,Default_Handler

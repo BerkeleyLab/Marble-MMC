@@ -59,7 +59,7 @@
 /** \brief Communication Device Class function driver initialization parameter data structure.
  *  \ingroup USBD_CDC
  *
- *  \details  This data structure is used to pass initialization parameters to the 
+ *  \details  This data structure is used to pass initialization parameters to the
  *  Communication Device Class function driver's init function.
  *
  */
@@ -71,27 +71,27 @@ typedef struct USBD_CDC_INIT_PARAM
                       should be accessible by USB DMA controller. Also this value
                       should be aligned on 4 byte boundary.
                       */
-  uint32_t mem_size;  /**< The size of memory buffer which stack can use. 
-                      \note The \em mem_size should be greater than the size 
+  uint32_t mem_size;  /**< The size of memory buffer which stack can use.
+                      \note The \em mem_size should be greater than the size
                       returned by USBD_CDC_API::GetMemSize() routine.*/
   /** Pointer to the control interface descriptor within the descriptor
-  * array (\em high_speed_desc) passed to Init() through \ref USB_CORE_DESCS_T 
-  * structure. The stack assumes both HS and FS use same BULK endpoints. 
+  * array (\em high_speed_desc) passed to Init() through \ref USB_CORE_DESCS_T
+  * structure. The stack assumes both HS and FS use same BULK endpoints.
   */
   uint8_t* cif_intf_desc;
   /** Pointer to the data interface descriptor within the descriptor
-  * array (\em high_speed_desc) passed to Init() through \ref USB_CORE_DESCS_T 
-  * structure. The stack assumes both HS and FS use same BULK endpoints. 
+  * array (\em high_speed_desc) passed to Init() through \ref USB_CORE_DESCS_T
+  * structure. The stack assumes both HS and FS use same BULK endpoints.
   */
   uint8_t* dif_intf_desc;
 
   /* user defined functions */
 
   /* required functions */
-  /** 
+  /**
   *  Communication Interface Class specific get request call-back function.
   *
-  *  This function is provided by the application software. This function gets called 
+  *  This function is provided by the application software. This function gets called
   *  when host sends CIC management element get requests.
   *  \note Applications implementing Abstract Control Model subclass can set this
   *  param to NULL. As the default driver parses ACM requests and calls the
@@ -104,26 +104,26 @@ typedef struct USBD_CDC_INIT_PARAM
   *  code can directly write data into this buffer as long as data is less than 64 byte.
   *  If more data has to be sent then application code should update \em pBuffer pointer
   *  and length accordingly.
-  *   
-  *  
-  *  \param[in] hCdc Handle to CDC function driver. 
+  *
+  *
+  *  \param[in] hCdc Handle to CDC function driver.
   *  \param[in] pSetup Pointer to setup packet received from host.
-  *  \param[in, out] pBuffer  Pointer to a pointer of data buffer containing request data. 
-  *                       Pointer-to-pointer is used to implement zero-copy buffers. 
+  *  \param[in, out] pBuffer  Pointer to a pointer of data buffer containing request data.
+  *                       Pointer-to-pointer is used to implement zero-copy buffers.
   *                       See \ref USBD_ZeroCopy for more details on zero-copy concept.
   *  \param[in, out] length  Amount of data to be sent back to host.
   *  \return The call back should returns \ref ErrorCode_t type to indicate success or error condition.
   *          \retval LPC_OK On success.
-  *          \retval ERR_USBD_UNHANDLED  Event is not handled hence pass the event to next in line. 
-  *          \retval ERR_USBD_xxx  For other error conditions. 
-  *                                             
+  *          \retval ERR_USBD_UNHANDLED  Event is not handled hence pass the event to next in line.
+  *          \retval ERR_USBD_xxx  For other error conditions.
+  *
   */
-  ErrorCode_t (*CIC_GetRequest)( USBD_HANDLE_T hHid, USB_SETUP_PACKET* pSetup, uint8_t** pBuffer, uint16_t* length); 
-  
-  /** 
+  ErrorCode_t (*CIC_GetRequest)( USBD_HANDLE_T hHid, USB_SETUP_PACKET* pSetup, uint8_t** pBuffer, uint16_t* length);
+
+  /**
   *  Communication Interface Class specific set request call-back function.
   *
-  *  This function is provided by the application software. This function gets called 
+  *  This function is provided by the application software. This function gets called
   *  when host sends a CIC management element requests.
   *  \note Applications implementing Abstract Control Model subclass can set this
   *  param to NULL. As the default driver parses ACM requests and calls the
@@ -136,61 +136,61 @@ typedef struct USBD_CDC_INIT_PARAM
   *  -# First when setup request is received, at this time application code could update
   *  \em pBuffer pointer to point to the intended destination. The length param is set to 0
   *  so that application code knows this is first time. By default the stack will
-  *  assign \em pBuffer pointer to \em EP0Buff allocated at init. Note, if data length is 
-  *  greater than 64 bytes and application code doesn't update \em pBuffer pointer the 
+  *  assign \em pBuffer pointer to \em EP0Buff allocated at init. Note, if data length is
+  *  greater than 64 bytes and application code doesn't update \em pBuffer pointer the
   *  stack will send STALL condition to host.
   *  -# Second when the data is received from the host. This time the length param is set
   *  with number of data bytes received.
-  *  
-  *  \param[in] hCdc Handle to CDC function driver. 
+  *
+  *  \param[in] hCdc Handle to CDC function driver.
   *  \param[in] pSetup Pointer to setup packet received from host.
-  *  \param[in, out] pBuffer  Pointer to a pointer of data buffer containing request data. 
-  *                       Pointer-to-pointer is used to implement zero-copy buffers. 
+  *  \param[in, out] pBuffer  Pointer to a pointer of data buffer containing request data.
+  *                       Pointer-to-pointer is used to implement zero-copy buffers.
   *                       See \ref USBD_ZeroCopy for more details on zero-copy concept.
   *  \param[in] length  Amount of data copied to destination buffer.
   *  \return The call back should returns \ref ErrorCode_t type to indicate success or error condition.
   *          \retval LPC_OK On success.
-  *          \retval ERR_USBD_UNHANDLED  Event is not handled hence pass the event to next in line. 
-  *          \retval ERR_USBD_xxx  For other error conditions. 
-  *                                             
+  *          \retval ERR_USBD_UNHANDLED  Event is not handled hence pass the event to next in line.
+  *          \retval ERR_USBD_xxx  For other error conditions.
+  *
   */
   ErrorCode_t (*CIC_SetRequest)( USBD_HANDLE_T hCdc, USB_SETUP_PACKET* pSetup, uint8_t** pBuffer, uint16_t length);
 
-  /** 
+  /**
   *  Communication Device Class specific BULK IN endpoint handler.
   *
   *  The application software should provide the BULK IN endpoint handler.
-  *  Applications should transfer data depending on the communication protocol type set in descriptors. 
+  *  Applications should transfer data depending on the communication protocol type set in descriptors.
   *  \n
-  *  \note 
-  *  
-  *  \param[in] hUsb Handle to the USB device stack. 
-  *  \param[in] data Pointer to the data which will be passed when callback function is called by the stack. 
+  *  \note
+  *
+  *  \param[in] hUsb Handle to the USB device stack.
+  *  \param[in] data Pointer to the data which will be passed when callback function is called by the stack.
   *  \param[in] event  Type of endpoint event. See \ref USBD_EVENT_T for more details.
   *  \return The call back should returns \ref ErrorCode_t type to indicate success or error condition.
   *          \retval LPC_OK On success.
-  *          \retval ERR_USBD_UNHANDLED  Event is not handled hence pass the event to next in line. 
-  *          \retval ERR_USBD_xxx  For other error conditions. 
-  *                                             
+  *          \retval ERR_USBD_UNHANDLED  Event is not handled hence pass the event to next in line.
+  *          \retval ERR_USBD_xxx  For other error conditions.
+  *
   */
   ErrorCode_t (*CDC_BulkIN_Hdlr) (USBD_HANDLE_T hUsb, void* data, uint32_t event);
 
-  /** 
+  /**
   *  Communication Device Class specific BULK OUT endpoint handler.
   *
   *  The application software should provide the BULK OUT endpoint handler.
-  *  Applications should transfer data depending on the communication protocol type set in descriptors. 
+  *  Applications should transfer data depending on the communication protocol type set in descriptors.
   *  \n
-  *  \note 
-  *  
-  *  \param[in] hUsb Handle to the USB device stack. 
-  *  \param[in] data Pointer to the data which will be passed when callback function is called by the stack. 
+  *  \note
+  *
+  *  \param[in] hUsb Handle to the USB device stack.
+  *  \param[in] data Pointer to the data which will be passed when callback function is called by the stack.
   *  \param[in] event  Type of endpoint event. See \ref USBD_EVENT_T for more details.
   *  \return The call back should returns \ref ErrorCode_t type to indicate success or error condition.
   *          \retval LPC_OK On success.
-  *          \retval ERR_USBD_UNHANDLED  Event is not handled hence pass the event to next in line. 
-  *          \retval ERR_USBD_xxx  For other error conditions. 
-  *                                             
+  *          \retval ERR_USBD_UNHANDLED  Event is not handled hence pass the event to next in line.
+  *          \retval ERR_USBD_xxx  For other error conditions.
+  *
   */
   ErrorCode_t (*CDC_BulkOUT_Hdlr) (USBD_HANDLE_T hUsb, void* data, uint32_t event);
 
@@ -339,26 +339,26 @@ typedef struct USBD_CDC_INIT_PARAM
   */
   ErrorCode_t (*SetLineCode) (USBD_HANDLE_T hCDC, CDC_LINE_CODING* line_coding);
 
-  /** 
+  /**
   *  Optional Communication Device Class specific INTERRUPT IN endpoint handler.
   *
   *  The application software should provide the INT IN endpoint handler.
-  *  Applications should transfer data depending on the communication protocol type set in descriptors. 
+  *  Applications should transfer data depending on the communication protocol type set in descriptors.
   *  \n
-  *  \note 
-  *  
-  *  \param[in] hUsb Handle to the USB device stack. 
-  *  \param[in] data Pointer to the data which will be passed when callback function is called by the stack. 
+  *  \note
+  *
+  *  \param[in] hUsb Handle to the USB device stack.
+  *  \param[in] data Pointer to the data which will be passed when callback function is called by the stack.
   *  \param[in] event  Type of endpoint event. See \ref USBD_EVENT_T for more details.
   *  \return The call back should returns \ref ErrorCode_t type to indicate success or error condition.
   *          \retval LPC_OK On success.
-  *          \retval ERR_USBD_UNHANDLED  Event is not handled hence pass the event to next in line. 
-  *          \retval ERR_USBD_xxx  For other error conditions. 
-  *                                             
+  *          \retval ERR_USBD_UNHANDLED  Event is not handled hence pass the event to next in line.
+  *          \retval ERR_USBD_xxx  For other error conditions.
+  *
   */
   ErrorCode_t (*CDC_InterruptEP_Hdlr) (USBD_HANDLE_T hUsb, void* data, uint32_t event);
 
-  /** 
+  /**
   *  Optional user override-able function to replace the default CDC class handler.
   *
   *  The application software could override the default EP0 class handler with their
@@ -366,16 +366,16 @@ typedef struct USBD_CDC_INIT_PARAM
   *  structure. Application which like the default handler should set this data member
   *  to zero before calling the USBD_CDC_API::Init().
   *  \n
-  *  \note 
-  *  
-  *  \param[in] hUsb Handle to the USB device stack. 
-  *  \param[in] data Pointer to the data which will be passed when callback function is called by the stack. 
+  *  \note
+  *
+  *  \param[in] hUsb Handle to the USB device stack.
+  *  \param[in] data Pointer to the data which will be passed when callback function is called by the stack.
   *  \param[in] event  Type of endpoint event. See \ref USBD_EVENT_T for more details.
   *  \return The call back should returns \ref ErrorCode_t type to indicate success or error condition.
   *          \retval LPC_OK On success.
-  *          \retval ERR_USBD_UNHANDLED  Event is not handled hence pass the event to next in line. 
-  *          \retval ERR_USBD_xxx  For other error conditions. 
-  *                                             
+  *          \retval ERR_USBD_UNHANDLED  Event is not handled hence pass the event to next in line.
+  *          \retval ERR_USBD_xxx  For other error conditions.
+  *
   */
   ErrorCode_t (*CDC_Ep0_Hdlr) (USBD_HANDLE_T hUsb, void* data, uint32_t event);
 
@@ -391,59 +391,59 @@ typedef struct USBD_CDC_API
 {
   /** \fn uint32_t GetMemSize(USBD_CDC_INIT_PARAM_T* param)
    *  Function to determine the memory required by the CDC function driver module.
-   * 
-   *  This function is called by application layer before calling pUsbApi->CDC->Init(), to allocate memory used 
+   *
+   *  This function is called by application layer before calling pUsbApi->CDC->Init(), to allocate memory used
    *  by CDC function driver module. The application should allocate the memory which is accessible by USB
-   *  controller/DMA controller. 
+   *  controller/DMA controller.
    *  \note Some memory areas are not accessible by all bus masters.
    *
    *  \param[in] param Structure containing CDC function driver module initialization parameters.
    *  \return Returns the required memory size in bytes.
    */
   uint32_t (*GetMemSize)(USBD_CDC_INIT_PARAM_T* param);
-  
+
   /** \fn ErrorCode_t init(USBD_HANDLE_T hUsb, USBD_CDC_INIT_PARAM_T* param)
    *  Function to initialize CDC function driver module.
-   * 
+   *
    *  This function is called by application layer to initialize CDC function driver module.
    *
-   *  \param[in] hUsb Handle to the USB device stack. 
+   *  \param[in] hUsb Handle to the USB device stack.
    *  \param[in, out] param Structure containing CDC function driver module initialization parameters.
    *  \return Returns \ref ErrorCode_t type to indicate success or error condition.
    *          \retval LPC_OK On success
-   *          \retval ERR_USBD_BAD_MEM_BUF  Memory buffer passed is not 4-byte 
-   *              aligned or smaller than required. 
+   *          \retval ERR_USBD_BAD_MEM_BUF  Memory buffer passed is not 4-byte
+   *              aligned or smaller than required.
    *          \retval ERR_API_INVALID_PARAM2 Either CDC_Write() or CDC_Read() or
-   *              CDC_Verify() callbacks are not defined. 
-   *          \retval ERR_USBD_BAD_INTF_DESC  Wrong interface descriptor is passed. 
-   *          \retval ERR_USBD_BAD_EP_DESC  Wrong endpoint descriptor is passed. 
+   *              CDC_Verify() callbacks are not defined.
+   *          \retval ERR_USBD_BAD_INTF_DESC  Wrong interface descriptor is passed.
+   *          \retval ERR_USBD_BAD_EP_DESC  Wrong endpoint descriptor is passed.
    */
   ErrorCode_t (*init)(USBD_HANDLE_T hUsb, USBD_CDC_INIT_PARAM_T* param, USBD_HANDLE_T* phCDC);
 
   /** \fn ErrorCode_t SendNotification(USBD_HANDLE_T hCdc, uint8_t bNotification, uint16_t data)
-   *  Function to send CDC class notifications to host. 
-   * 
-   *  This function is called by application layer to send CDC class notifications to host. 
+   *  Function to send CDC class notifications to host.
+   *
+   *  This function is called by application layer to send CDC class notifications to host.
    *  See usbcdc11.pdf, section 6.3, Table 67 for various notification types the CDC device can send.
    *  \note The current version of the driver only supports following notifications allowed by ACM subclass:
    *  CDC_NOTIFICATION_NETWORK_CONNECTION, CDC_RESPONSE_AVAILABLE, CDC_NOTIFICATION_SERIAL_STATE.
-   *  \n 
+   *  \n
    *  For all other notifications application should construct the notification buffer appropriately
    *  and call hw->USB_WriteEP() for interrupt endpoint associated with the interface.
    *
-   *  \param[in] hCdc Handle to CDC function driver.  
+   *  \param[in] hCdc Handle to CDC function driver.
    *  \param[in] bNotification Notification type allowed by ACM subclass. Should be CDC_NOTIFICATION_NETWORK_CONNECTION,
    *        CDC_RESPONSE_AVAILABLE or CDC_NOTIFICATION_SERIAL_STATE. For all other types ERR_API_INVALID_PARAM2
    *        is returned. See usbcdc11.pdf, section 3.6.2.1, table 5.
-   *  \param[in] data Data associated with notification.  
+   *  \param[in] data Data associated with notification.
    *        \n For CDC_NOTIFICATION_NETWORK_CONNECTION a non-zero data value is interpreted as connected state.
    *        \n For CDC_RESPONSE_AVAILABLE this parameter is ignored.
-   *        \n For CDC_NOTIFICATION_SERIAL_STATE the data should use bitmap values defined in usbcdc11.pdf, 
+   *        \n For CDC_NOTIFICATION_SERIAL_STATE the data should use bitmap values defined in usbcdc11.pdf,
    *        section 6.3.5, Table 69.
    *  \return Returns \ref ErrorCode_t type to indicate success or error condition.
    *          \retval LPC_OK On success
-   *          \retval ERR_API_INVALID_PARAM2  If unsupported notification type is passed. 
-   *              
+   *          \retval ERR_API_INVALID_PARAM2  If unsupported notification type is passed.
+   *
    */
   ErrorCode_t (*SendNotification)(USBD_HANDLE_T hCdc, uint8_t bNotification, uint16_t data);
 
@@ -479,7 +479,7 @@ typedef struct _CDC_CTRL_T
   ErrorCode_t (*SetLineCode) (USBD_HANDLE_T hCDC, CDC_LINE_CODING* line_coding);
 
   /* virtual functions */
-  ErrorCode_t (*CIC_GetRequest)( USBD_HANDLE_T hHid, USB_SETUP_PACKET* pSetup, uint8_t** pBuffer, uint16_t* length); 
+  ErrorCode_t (*CIC_GetRequest)( USBD_HANDLE_T hHid, USB_SETUP_PACKET* pSetup, uint8_t** pBuffer, uint16_t* length);
   ErrorCode_t (*CIC_SetRequest)( USBD_HANDLE_T hCdc, USB_SETUP_PACKET* pSetup, uint8_t** pBuffer, uint16_t length);
 
 } USB_CDC_CTRL_T;
@@ -517,7 +517,7 @@ typedef ErrorCode_t (*CIC_SetRequest_t)(USBD_HANDLE_T hCdc, USB_SETUP_PACKET *pS
 /** @cond  DIRECT_API */
 extern uint32_t mwCDC_GetMemSize(USBD_CDC_INIT_PARAM_T* param);
 extern ErrorCode_t mwCDC_init(USBD_HANDLE_T hUsb, USBD_CDC_INIT_PARAM_T* param, USBD_HANDLE_T* phCDC);
-extern ErrorCode_t mwCDC_SendNotification (USBD_HANDLE_T hCdc, uint8_t bNotification, uint16_t data); 
+extern ErrorCode_t mwCDC_SendNotification (USBD_HANDLE_T hCdc, uint8_t bNotification, uint16_t data);
 /** @endcond */
 
 /** @endcond */
@@ -526,4 +526,4 @@ extern ErrorCode_t mwCDC_SendNotification (USBD_HANDLE_T hCdc, uint8_t bNotifica
 
 
 
-#endif  /* __CDCUSER_H__ */ 
+#endif  /* __CDCUSER_H__ */

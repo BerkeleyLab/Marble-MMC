@@ -30,13 +30,13 @@
  *  \brief Common definitions and declarations for the library USB HID Class driver.
  *
  *  Common definitions and declarations for the library USB HID Class driver.
- *  \addtogroup USBD_HID 
+ *  \addtogroup USBD_HID
  *  @{
  */
 
 
-/** HID Subclass Codes  
- * @{ 
+/** HID Subclass Codes
+ * @{
  */
 /** Descriptor Subclass value indicating that the device or interface does not implement a HID boot protocol. */
 #define HID_SUBCLASS_NONE               0x00
@@ -44,8 +44,8 @@
 #define HID_SUBCLASS_BOOT               0x01
 /** @} */
 
-/** HID Protocol Codes 
- * @{ 
+/** HID Protocol Codes
+ * @{
  */
 /** Descriptor Protocol value indicating that the device or interface does not belong to a HID boot protocol. */
 #define HID_PROTOCOL_NONE               0x00
@@ -57,8 +57,8 @@
 
 
 
-/** Descriptor Types  
- * @{ 
+/** Descriptor Types
+ * @{
  */
 /** Descriptor header type value, to indicate a HID class HID descriptor. */
 #define HID_HID_DESCRIPTOR_TYPE         0x21
@@ -81,7 +81,7 @@ PRE_PACK struct POST_PACK _HID_DESCRIPTOR {
   uint16_t bcdHID; /**< BCD encoded version that the HID descriptor and device complies to. */
   uint8_t  bCountryCode; /**< Country code of the localized device, or zero if universal. */
   uint8_t  bNumDescriptors; /**< Total number of HID report descriptors for the interface. */
-  
+
   PRE_PACK struct POST_PACK _HID_DESCRIPTOR_LIST {
     uint8_t  bDescriptorType; /**< Type of HID report. */
     uint16_t wDescriptorLength; /**< Length of the associated HID report descriptor, in bytes. */
@@ -92,8 +92,8 @@ typedef struct _HID_DESCRIPTOR HID_DESCRIPTOR;
 
 #define HID_DESC_SIZE   sizeof(HID_DESCRIPTOR)
 
-/** HID Request Codes  
- * @{ 
+/** HID Request Codes
+ * @{
  */
 #define HID_REQUEST_GET_REPORT          0x01
 #define HID_REQUEST_GET_IDLE            0x02
@@ -103,8 +103,8 @@ typedef struct _HID_DESCRIPTOR HID_DESCRIPTOR;
 #define HID_REQUEST_SET_PROTOCOL        0x0B
 /** @} */
 
-/** HID Report Types  
- * @{ 
+/** HID Report Types
+ * @{
  */
 #define HID_REPORT_INPUT                0x01
 #define HID_REPORT_OUTPUT               0x02
@@ -112,8 +112,8 @@ typedef struct _HID_DESCRIPTOR HID_DESCRIPTOR;
 /** @} */
 
 
-/** Usage Pages  
- * @{ 
+/** Usage Pages
+ * @{
  */
 #define HID_USAGE_PAGE_UNDEFINED        0x00
 #define HID_USAGE_PAGE_GENERIC          0x01
@@ -134,8 +134,8 @@ typedef struct _HID_DESCRIPTOR HID_DESCRIPTOR;
 /** @} */
 
 
-/** Generic Desktop Page (0x01)  
- * @{ 
+/** Generic Desktop Page (0x01)
+ * @{
  */
 #define HID_USAGE_GENERIC_POINTER               0x01
 #define HID_USAGE_GENERIC_MOUSE                 0x02
@@ -179,8 +179,8 @@ typedef struct _HID_DESCRIPTOR HID_DESCRIPTOR;
 #define HID_USAGE_GENERIC_SYSCTL_MENU_DOWN      0x8D
 /** @} */
 
-/** Simulation Controls Page (0x02)  
- * @{ 
+/** Simulation Controls Page (0x02)
+ * @{
  */
 #define HID_USAGE_SIMULATION_RUDDER             0xBA
 #define HID_USAGE_SIMULATION_THROTTLE           0xBB
@@ -198,8 +198,8 @@ typedef struct _HID_DESCRIPTOR HID_DESCRIPTOR;
 /* Generic Device Controls Page (0x06) */
 /* ... */
 
-/** Keyboard/Keypad Page (0x07)  
- * @{ 
+/** Keyboard/Keypad Page (0x07)
+ * @{
  */
 /** Error "keys" */
 #define HID_USAGE_KEYBOARD_NOEVENT              0x00
@@ -241,8 +241,8 @@ typedef struct _HID_DESCRIPTOR HID_DESCRIPTOR;
 
 /* ... */
 
-/** LED Page (0x08)  
- * @{ 
+/** LED Page (0x08)
+ * @{
  */
 #define HID_USAGE_LED_NUM_LOCK                  0x01
 #define HID_USAGE_LED_CAPS_LOCK                 0x02
@@ -321,16 +321,16 @@ typedef struct _HID_DESCRIPTOR HID_DESCRIPTOR;
 #define HID_USAGE_LED_GENERIC_INDICATOR         0x4B
 /** @} */
 
-/*  Button Page (0x09)  
+/*  Button Page (0x09)
  */
 /*   There is no need to label these usages. */
 
-/*  Ordinal Page (0x0A)  
+/*  Ordinal Page (0x0A)
  */
 /*   There is no need to label these usages. */
 
-/** Telephony Device Page (0x0B)  
- * @{ 
+/** Telephony Device Page (0x0B)
+ * @{
  */
 #define HID_USAGE_TELEPHONY_PHONE               0x01
 #define HID_USAGE_TELEPHONY_ANSWERING_MACHINE   0x02
@@ -342,8 +342,8 @@ typedef struct _HID_DESCRIPTOR HID_DESCRIPTOR;
 /** @} */
 /* ... */
 
-/** Consumer Page (0x0C)  
- * @{ 
+/** Consumer Page (0x0C)
+ * @{
  */
 #define HID_USAGE_CONSUMER_CONTROL              0x01
 #define HID_USAGE_CONSUMER_FAST_FORWARD       0xB3
@@ -357,8 +357,8 @@ typedef struct _HID_DESCRIPTOR HID_DESCRIPTOR;
 /* and others ... */
 
 
-/** HID Report Item Macros  
- * @{ 
+/** HID Report Item Macros
+ * @{
  */
 /** Main Items */
 #define HID_Input(x)           0x81,x

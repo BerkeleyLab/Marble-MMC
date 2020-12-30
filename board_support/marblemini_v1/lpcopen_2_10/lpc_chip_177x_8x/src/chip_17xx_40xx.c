@@ -59,7 +59,7 @@ void SystemCoreClockUpdate(void)
 }
 
 /* Sets up USB PLL, all needed clocks and enables USB PHY on the chip. USB pins which are
-	muxed to different pads are not initialized here. This routine assumes that the XTAL 
+	muxed to different pads are not initialized here. This routine assumes that the XTAL
 	OSC is enabled and running prior to this call. */
 void Chip_USB_Init(void)
 {
@@ -94,7 +94,7 @@ void Chip_USB_Init(void)
 	   PLL output = 48MHz = FIN * MSEL, so MSEL = 4
 	   FCCO must be between 156 MHz to 320 MHz, where FCCO = PLL output * 2 * P,
 	   so P = 2 and FCCO = 48MHz * 2 * 2 = 192MHz */
-	Chip_Clock_SetupPLL(SYSCTL_USB_PLL, 3, 1);  
+	Chip_Clock_SetupPLL(SYSCTL_USB_PLL, 3, 1);
 
 	/* Wait for USB PLL to lock */
 	while ((Chip_Clock_GetPLLStatus(SYSCTL_USB_PLL) & SYSCTL_PLLSTS_LOCKED) == 0) {}

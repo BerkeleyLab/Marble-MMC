@@ -1,7 +1,7 @@
 SDMMC benchmark example
 
 Example description
-This example measures the performance of SD/MMC raw read & write 
+This example measures the performance of SD/MMC raw read & write
 operations.
 
 To use the example, plug a SD card,  connect a serial cable to the board's

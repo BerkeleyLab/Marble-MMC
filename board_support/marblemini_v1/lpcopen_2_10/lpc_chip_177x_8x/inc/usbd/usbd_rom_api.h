@@ -42,30 +42,30 @@
 /** \brief Main USBD API functions structure.
  *  \ingroup Group_USBD
  *
- *  This structure contains pointer to various USB Device stack's sub-module 
+ *  This structure contains pointer to various USB Device stack's sub-module
  *  function tables. This structure is used as main entry point to access
- *  various methods (grouped in sub-modules) exposed by ROM based USB device 
+ *  various methods (grouped in sub-modules) exposed by ROM based USB device
  *  stack.
  *
  */
-typedef struct USBD_API 
+typedef struct USBD_API
 {
-  const USBD_HW_API_T* hw; /**< Pointer to function table which exposes functions 
-                           which interact directly with USB device stack's core 
+  const USBD_HW_API_T* hw; /**< Pointer to function table which exposes functions
+                           which interact directly with USB device stack's core
                            layer.*/
-  const USBD_CORE_API_T* core; /**< Pointer to function table which exposes functions 
-                           which interact directly with USB device controller 
+  const USBD_CORE_API_T* core; /**< Pointer to function table which exposes functions
+                           which interact directly with USB device controller
                            hardware.*/
-  const USBD_MSC_API_T* msc; /**< Pointer to function table which exposes functions 
+  const USBD_MSC_API_T* msc; /**< Pointer to function table which exposes functions
                            provided by MSC function driver module.
                            */
-  const USBD_DFU_API_T* dfu; /**< Pointer to function table which exposes functions 
+  const USBD_DFU_API_T* dfu; /**< Pointer to function table which exposes functions
                            provided by DFU function driver module.
                            */
-  const USBD_HID_API_T* hid; /**< Pointer to function table which exposes functions 
+  const USBD_HID_API_T* hid; /**< Pointer to function table which exposes functions
                            provided by HID function driver module.
                            */
-  const USBD_CDC_API_T* cdc; /**< Pointer to function table which exposes functions 
+  const USBD_CDC_API_T* cdc; /**< Pointer to function table which exposes functions
                            provided by CDC-ACM function driver module.
                            */
   const uint32_t* reserved6; /**< Reserved for future function driver module.
@@ -79,12 +79,12 @@ typedef struct USBD_API
                            D - 19:16 - 4bit DFU class module version number
                            H - 23:20 - 4bit HID class module version number
                            C - 27:24 - 4bit CDC class module version number
-                           H - 31:28 - 4bit reserved 
+                           H - 31:28 - 4bit reserved
                            */
 
 } USBD_API_T;
 
-/* Applications using USBD ROM API should define this instance. The pointer should be assigned a value computed based on chip definitions. */ 
+/* Applications using USBD ROM API should define this instance. The pointer should be assigned a value computed based on chip definitions. */
 extern const USBD_API_T* g_pUsbApi;
 #define USBD_API g_pUsbApi
 
