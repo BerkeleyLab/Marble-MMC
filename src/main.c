@@ -38,7 +38,8 @@ const char menu_str[] = "\r\n"
 	"f) XRP7724 flash\r\n"
 	"g) XRP7724 go\r\n"
 	"h) XRP7724 hex input\r\n"
-	"i) timer check/cal\r\n";
+	"i) timer check/cal\r\n"
+	"j) SPI mailbox\r\n";
 
 const char unk_str[] = "> Unknown option\r\n";
 const char gpio_str[] = "GPIO pins, caps for on, lower case for off\r\n"
@@ -309,6 +310,9 @@ int main(void)
                printf("%d\n", ix);
                marble_SLEEP_ms(1000);
             }
+            break;
+         case 'j':
+            mailbox_test();
             break;
          default:
             printf(unk_str);

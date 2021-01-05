@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "i2c_pm.h"
+#include "rev.h"
 
 void I2C_PM_scan(void)
 {
@@ -612,6 +613,41 @@ void xrp_hex_in(uint8_t dev)
    if (1) {
       xrp_reg_write_check(dev, 0x0E, 0x0001);  // Set the XRP7724 to operate mode
    }
+}
+
+void mailbox_test(void)
+{
+   // Just feeling my way around; don't take this seriously
+   static uint16_t count=0;
+   const char git_rev[] = GIT_REV;
+   unsigned char page3[16];
+   count++;
+   page3[0] = count >> 8;
+   page3[1] = count & 0xff;
+   int lm75_0_temp, lm75_1_temp;
+   LM75_read(LM75_0, LM75_TEMP, &lm75_0_temp);
+   LM75_read(LM75_1, LM75_TEMP, &lm75_1_temp);
+   page3[2] = 0xff;
+   page3[3] = 0x00;
+   page3[4] = lm75_0_temp >> 8;
+   page3[5] = lm75_0_temp & 0xff;
+   page3[6] = lm75_1_temp >> 8;
+   page3[7] = lm75_1_temp & 0xff;
+   memcpy(page3+8, git_rev, 8);
+   printf("Sending to FPGA:");
+   for (unsigned jx=0; jx<16; jx++) printf(" %2.2x", page3[jx]);
+   printf("\n");
+   //
+   // Set page pointer to 3
+   uint16_t ssp_buf;
+   ssp_buf = 0x2203;
+   marble_SSP_write(SSP_FPGA, (uint8_t*) &ssp_buf, 2);
+   // Write 16 bytes to that page
+   for (unsigned jx=0; jx<16; jx++) {
+      ssp_buf = 0x5000 + (jx<<8) + page3[jx];
+      marble_SSP_write(SSP_FPGA, (uint8_t*) &ssp_buf, 2);
+   }
+   printf("Done.\n");
 }
 
 // Didn't work when tested; why?
