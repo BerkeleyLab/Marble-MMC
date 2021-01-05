@@ -446,24 +446,14 @@ static void marble_SSP_init(LPC_SSP_T *ssp)
    //NVIC_EnableIRQ(SSP_IRQ);
 }
 
-int marble_SSP_write(SSP_PORT ssp, uint8_t *buffer, int size)
+int marble_SSP_write16(SSP_PORT ssp, uint16_t *buffer, int size)
 {
-   if (ssp == SSP_FPGA) {
-      return Chip_SSP_WriteFrames_Blocking(LPC_SSP0, buffer, size);
-   } else if (ssp == SSP_PMOD) {
-      return Chip_SSP_WriteFrames_Blocking(LPC_SSP1, buffer, size);
-   }
-   return 0;
+   return Chip_SSP_WriteFrames_Blocking(ssp, (uint8_t*) buffer, size*2); // API expectes length in bytes
 }
 
-int marble_SSP_read(SSP_PORT ssp, uint8_t *buffer, int size)
+int marble_SSP_read16(SSP_PORT ssp, uint16_t *buffer, int size)
 {
-   if (ssp == SSP_FPGA) {
-      return Chip_SSP_ReadFrames_Blocking(LPC_SSP0, buffer, size);
-   } else if (ssp == SSP_PMOD) {
-      return Chip_SSP_ReadFrames_Blocking(LPC_SSP1, buffer, size);
-   }
-   return 0;
+   return Chip_SSP_ReadFrames_Blocking(ssp, (uint8_t*) buffer, size*2);
 }
 
 /************
@@ -569,6 +559,8 @@ uint32_t marble_init(bool use_xtal)
    // Init SSP busses
    marble_SSP_init(LPC_SSP0);
    //marble_SSP_init(LPC_SSP1);
+   SSP_FPGA = LPC_SSP0;
+   SSP_PMOD = LPC_SSP1;
 
    marble_MDIO_init();
 

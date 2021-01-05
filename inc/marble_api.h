@@ -58,13 +58,12 @@ void reset_fpga(void);
 /****
 * SPI/SSP
 ****/
-typedef enum {
-   SSP_FPGA,
-   SSP_PMOD
-} SSP_PORT;
+typedef void *SSP_PORT;
+SSP_PORT SSP_FPGA;
+SSP_PORT SSP_PMOD;
 
-int marble_SSP_write(SSP_PORT ssp, uint8_t *buffer, int size);
-int marble_SSP_read(SSP_PORT ssp, uint8_t *buffer, int size);
+int marble_SSP_write16(SSP_PORT ssp, uint16_t *buffer, int size);
+int marble_SSP_read16(SSP_PORT ssp, uint16_t *buffer, int size);
 
 /************
 * GPIO user-defined handlers

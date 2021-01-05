@@ -12,16 +12,16 @@ int push_fpga_mac_ip(unsigned char data[10])
    ssp_buf = 0x2000 | test_only; // disable FPGA Ethernet
 
    ssp_expect += 2;
-   ssp_cnt += marble_SSP_write(SSP_FPGA, (uint8_t*) &ssp_buf, 2);
+   ssp_cnt += marble_SSP_write16(SSP_FPGA, &ssp_buf, 1);
 
    for (unsigned ix = 0; ix < 10; ix++) {
       ssp_buf = data[ix] | (ix<<8) | 0x1000 | test_only;
       ssp_expect += 2;
-      ssp_cnt += marble_SSP_write(SSP_FPGA, (uint8_t*) &ssp_buf, 2);
+      ssp_cnt += marble_SSP_write16(SSP_FPGA, &ssp_buf, 1);
    }
    ssp_buf = 0x2001 | test_only;  // enable FPGA Ethernet
    ssp_expect += 2;
-   ssp_cnt += marble_SSP_write(SSP_FPGA, (uint8_t*) &ssp_buf, 2);
+   ssp_cnt += marble_SSP_write16(SSP_FPGA, &ssp_buf, 1);
 
    return (ssp_cnt == ssp_expect);
 }

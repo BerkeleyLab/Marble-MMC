@@ -241,11 +241,7 @@ int main(void)
             break;
          case '6':
             print_mac_ip(mac_ip_data);
-#ifdef MARBLEM_V1
             push_fpga_mac_ip(mac_ip_data);
-#elif MARBLE_V2
-            printf("Functionality not implemented!\r\n");
-#endif
             printf("DONE\r\n");
             break;
          case '7':

@@ -289,18 +289,22 @@ int marble_I2C_cmdrecv_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *
 /************
 * SSP/SPI
 ************/
-int marble_SSP_write(SSP_PORT ssp, uint8_t *buffer, int size)
+static void SPI_CSB_SET(SSP_PORT ssp, bool set);
+
+int marble_SSP_write16(SSP_PORT ssp, uint16_t *buffer, int size)
 {
-   // function stubbed out; XXX write me!
-   (void) ssp; (void) buffer; (void) size;
-   return 0;
+   SPI_CSB_SET(ssp, false);
+   int rc = HAL_SPI_Transmit(ssp, (uint8_t*) buffer, size, HAL_MAX_DELAY);
+   SPI_CSB_SET(ssp, true);
+   return rc;
 }
 
-int marble_SSP_read(SSP_PORT ssp, uint8_t *buffer, int size)
+int marble_SSP_read16(SSP_PORT ssp, uint16_t *buffer, int size)
 {
-   // function stubbed out; XXX write me!
-   (void) ssp; (void) buffer; (void) size;
-   return 0;
+   SPI_CSB_SET(ssp, false);
+   int rc = HAL_SPI_Receive(ssp, (uint8_t*) buffer, size, HAL_MAX_DELAY);
+   SPI_CSB_SET(ssp, true);
+   return rc;
 }
 
 /************
@@ -544,10 +548,10 @@ static void MX_SPI1_Init(void)
    hspi1.Instance = SPI1;
    hspi1.Init.Mode = SPI_MODE_MASTER;
    hspi1.Init.Direction = SPI_DIRECTION_2LINES;
-   hspi1.Init.DataSize = SPI_DATASIZE_8BIT;
-   hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
+   hspi1.Init.DataSize = SPI_DATASIZE_16BIT;
+   hspi1.Init.CLKPolarity = SPI_POLARITY_HIGH;
    hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
-   hspi1.Init.NSS = SPI_NSS_HARD_OUTPUT;
+   hspi1.Init.NSS = SPI_NSS_SOFT;
    hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
    hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
    hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
@@ -557,6 +561,7 @@ static void MX_SPI1_Init(void)
    {
       Error_Handler();
    }
+   SSP_FPGA = &hspi1;
 }
 
 static void MX_SPI2_Init(void)
@@ -564,8 +569,8 @@ static void MX_SPI2_Init(void)
    hspi2.Instance = SPI2;
    hspi2.Init.Mode = SPI_MODE_MASTER;
    hspi2.Init.Direction = SPI_DIRECTION_2LINES;
-   hspi2.Init.DataSize = SPI_DATASIZE_8BIT;
-   hspi2.Init.CLKPolarity = SPI_POLARITY_LOW;
+   hspi2.Init.DataSize = SPI_DATASIZE_16BIT;
+   hspi2.Init.CLKPolarity = SPI_POLARITY_HIGH;
    hspi2.Init.CLKPhase = SPI_PHASE_1EDGE;
    hspi2.Init.NSS = SPI_NSS_HARD_OUTPUT;
    hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
@@ -576,6 +581,16 @@ static void MX_SPI2_Init(void)
    if (HAL_SPI_Init(&hspi2) != HAL_OK)
    {
       Error_Handler();
+   }
+   SSP_PMOD = &hspi2;
+}
+
+static void SPI_CSB_SET(SSP_PORT ssp, bool set)
+{
+   if (ssp == SSP_FPGA) {
+      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, set ? GPIO_PIN_SET : GPIO_PIN_RESET);
+   } else {
+      HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, set ? GPIO_PIN_SET : GPIO_PIN_RESET);
    }
 }
 

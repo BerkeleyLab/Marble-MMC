@@ -641,11 +641,11 @@ void mailbox_test(void)
    // Set page pointer to 3
    uint16_t ssp_buf;
    ssp_buf = 0x2203;
-   marble_SSP_write(SSP_FPGA, (uint8_t*) &ssp_buf, 2);
+   marble_SSP_write16(SSP_FPGA, &ssp_buf, 1);
    // Write 16 bytes to that page
    for (unsigned jx=0; jx<16; jx++) {
       ssp_buf = 0x5000 + (jx<<8) + page3[jx];
-      marble_SSP_write(SSP_FPGA, (uint8_t*) &ssp_buf, 2);
+      marble_SSP_write16(SSP_FPGA, &ssp_buf, 1);
    }
    printf("Done.\n");
 }
