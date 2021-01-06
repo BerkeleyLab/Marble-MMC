@@ -456,6 +456,13 @@ int marble_SSP_read16(SSP_PORT ssp, uint16_t *buffer, int size)
    return Chip_SSP_ReadFrames_Blocking(ssp, (uint8_t*) buffer, size*2);
 }
 
+int marble_SSP_exch16(SSP_PORT ssp, uint16_t *tx_buf, uint16_t *rx_buf, int size)
+{
+   // function stubbed out; XXX write me!
+   (void) ssp; (void) tx_buf; (void) rx_buf; (void) size;
+   return 0;
+}
+
 /************
 * MDIO to PHY
 ************/

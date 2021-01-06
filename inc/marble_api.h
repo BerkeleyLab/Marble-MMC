@@ -64,6 +64,7 @@ SSP_PORT SSP_PMOD;
 
 int marble_SSP_write16(SSP_PORT ssp, uint16_t *buffer, int size);
 int marble_SSP_read16(SSP_PORT ssp, uint16_t *buffer, int size);
+int marble_SSP_exch16(SSP_PORT ssp, uint16_t *tx_buf, uint16_t *rx_buf, int size);
 
 /************
 * GPIO user-defined handlers

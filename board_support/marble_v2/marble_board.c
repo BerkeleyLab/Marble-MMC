@@ -307,6 +307,14 @@ int marble_SSP_read16(SSP_PORT ssp, uint16_t *buffer, int size)
    return rc;
 }
 
+int marble_SSP_exch16(SSP_PORT ssp, uint16_t *tx_buf, uint16_t *rx_buf, int size)
+{
+   SPI_CSB_SET(ssp, false);
+   int rc = HAL_SPI_TransmitReceive(ssp, (uint8_t*) tx_buf, (uint8_t*) rx_buf,size, HAL_MAX_DELAY);
+   SPI_CSB_SET(ssp, true);
+   return rc;
+}
+
 /************
 * MDIO to PHY
 ************/
@@ -552,7 +560,7 @@ static void MX_SPI1_Init(void)
    hspi1.Init.CLKPolarity = SPI_POLARITY_HIGH;
    hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
    hspi1.Init.NSS = SPI_NSS_SOFT;
-   hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+   hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_128;
    hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
    hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
    hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -572,8 +580,8 @@ static void MX_SPI2_Init(void)
    hspi2.Init.DataSize = SPI_DATASIZE_16BIT;
    hspi2.Init.CLKPolarity = SPI_POLARITY_HIGH;
    hspi2.Init.CLKPhase = SPI_PHASE_1EDGE;
-   hspi2.Init.NSS = SPI_NSS_HARD_OUTPUT;
-   hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+   hspi2.Init.NSS = SPI_NSS_SOFT;
+   hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_128;
    hspi2.Init.FirstBit = SPI_FIRSTBIT_MSB;
    hspi2.Init.TIMode = SPI_TIMODE_DISABLE;
    hspi2.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;

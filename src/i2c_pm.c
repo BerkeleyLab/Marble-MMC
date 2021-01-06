@@ -647,6 +647,14 @@ void mailbox_test(void)
       ssp_buf = 0x5000 + (jx<<8) + page3[jx];
       marble_SSP_write16(SSP_FPGA, &ssp_buf, 1);
    }
+   printf("Reading from FPGA:\n");
+   for (unsigned jx=0; jx<16; jx++) {
+      uint16_t ssp_recv;
+      ssp_buf = 0x4000 + (jx<<8) + page3[jx];
+      marble_SSP_exch16(SSP_FPGA, &ssp_buf, &ssp_recv, 1);
+      printf(" %2.2x", ssp_recv);
+   }
+   printf("\n");
    printf("Done.\n");
 }
 
