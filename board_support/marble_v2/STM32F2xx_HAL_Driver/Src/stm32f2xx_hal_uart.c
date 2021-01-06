@@ -615,7 +615,7 @@ __weak void HAL_UART_MspDeInit(UART_HandleTypeDef *huart)
   */
 HAL_StatusTypeDef HAL_UART_Transmit(UART_HandleTypeDef *huart, const uint8_t *pData, uint16_t Size, uint32_t Timeout)
 {
-  uint16_t* tmp;
+  const uint16_t* tmp;
   uint32_t tickstart = 0U;
 
   /* Check that a Tx process is not already ongoing */
@@ -646,7 +646,7 @@ HAL_StatusTypeDef HAL_UART_Transmit(UART_HandleTypeDef *huart, const uint8_t *pD
         {
           return HAL_TIMEOUT;
         }
-        tmp = (uint16_t*) pData;
+        tmp = (const uint16_t*) pData;
         huart->Instance->DR = (*tmp & (uint16_t)0x01FF);
         if(huart->Init.Parity == UART_PARITY_NONE)
         {

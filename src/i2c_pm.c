@@ -326,7 +326,7 @@ static void xrp_print_reg(uint8_t dev, uint8_t regno)
 #endif
 
 // Sending data to flash, see ANP-38
-int xrp_push_low(uint8_t dev, uint16_t addr, uint8_t data[], unsigned len)
+int xrp_push_low(uint8_t dev, uint16_t addr, const uint8_t data[], unsigned len)
 {
    printf("xrp_push_low WIP 0x%4.4x\n", addr);
    int rc;

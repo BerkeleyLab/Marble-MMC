@@ -206,7 +206,7 @@ void Chip_UART_TXDisable(LPC_USART_T *pUART)
 int Chip_UART_Send(LPC_USART_T *pUART, const void *data, int numBytes)
 {
 	int sent = 0;
-	uint8_t *p8 = (uint8_t *) data;
+	const uint8_t *p8 = (const uint8_t *) data;
 
 	/* Send until the transmit FIFO is full or out of bytes */
 	while ((sent < numBytes) &&
@@ -234,7 +234,7 @@ FlagStatus Chip_UART_CheckBusy(LPC_USART_T *pUART)
 int Chip_UART_SendBlocking(LPC_USART_T *pUART, const void *data, int numBytes)
 {
 	int pass, sent = 0;
-	uint8_t *p8 = (uint8_t *) data;
+	const uint8_t *p8 = (const uint8_t *) data;
 
 	while (numBytes > 0) {
 		pass = Chip_UART_Send(pUART, p8, numBytes);
@@ -331,7 +331,7 @@ void Chip_UART_TXIntHandlerRB(LPC_USART_T *pUART, RINGBUFF_T *pRB)
 uint32_t Chip_UART_SendRB(LPC_USART_T *pUART, RINGBUFF_T *pRB, const void *data, int bytes)
 {
 	uint32_t ret;
-	uint8_t *p8 = (uint8_t *) data;
+	const uint8_t *p8 = (const uint8_t *) data;
 
 	/* Don't let UART transmit ring buffer change in the UART IRQ handler */
 	Chip_UART_IntDisable(pUART, UART_IER_THREINT);

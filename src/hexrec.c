@@ -3,10 +3,10 @@
 #include <stdlib.h>
 
 #ifdef SELFTEST
-int xrp_push_low(uint8_t dev, uint16_t addr, uint8_t data[], unsigned len);
+int xrp_push_low(uint8_t dev, uint16_t addr, const uint8_t data[], unsigned len);
 int xrp_set2(uint8_t dev, uint16_t addr, uint8_t data);
 int xrp_read2(uint8_t dev, uint16_t addr);
-int xrp_srecord(uint8_t dev, uint8_t data[]);
+int xrp_srecord(uint8_t dev, const uint8_t data[]);
 int xrp_program_static(uint8_t dev);
 int xrp_file(uint8_t dev);
 int marble_UART_recv(char *str, int size);
@@ -16,7 +16,7 @@ int marble_UART_recv(char *str, int size);
 #endif
 
 // Sending data to runtime memory, see ANP-39
-static int xrp_push_high(uint8_t dev, uint16_t addr, uint8_t data[], unsigned len)
+static int xrp_push_high(uint8_t dev, uint16_t addr, const uint8_t data[], unsigned len)
 {
    int rc = 0;
    for (unsigned jx=0; jx<len; jx++) {
@@ -44,7 +44,7 @@ static int xrp_push_high(uint8_t dev, uint16_t addr, uint8_t data[], unsigned le
 //   0  OK, continue
 //   1  Fault, abort?
 //   2  End of file detected
-int xrp_srecord(uint8_t dev, uint8_t data[])
+int xrp_srecord(uint8_t dev, const uint8_t data[])
 {
    unsigned len = data[0];
    uint16_t addr = (((unsigned) data[1]) << 8) | data[2];
@@ -175,7 +175,7 @@ int xrp_program_static(uint8_t dev)
    const unsigned dd_size = sizeof(dd) / sizeof(dd[0]);
    int rc=1;
    for (unsigned jx=0; jx<dd_size; jx++) {
-      rc = xrp_srecord(dev, (uint8_t *) dd[jx]);
+      rc = xrp_srecord(dev, (const uint8_t *) dd[jx]);
       if (rc) break;
    }
    return rc&1;  // Turn 2 (End of file detected) into 0
@@ -248,7 +248,7 @@ int xrp_file(uint8_t dev)
 
 #ifdef SELFTEST
 // Sending data to flash, see ANP-38
-int xrp_push_low(uint8_t dev, uint16_t addr, uint8_t data[], unsigned len)
+int xrp_push_low(uint8_t dev, uint16_t addr, const uint8_t data[], unsigned len)
 {
    printf("xrp_push_low not part of test framework.\n");
    (void) dev;

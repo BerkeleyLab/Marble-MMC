@@ -44,10 +44,10 @@ void xrp_hex_in(uint8_t dev);
 void mailbox_test(void);
 
 /* communication between i2c_pm and hexrec */
-int xrp_push_low(uint8_t dev, uint16_t addr, uint8_t data[], unsigned len);
+int xrp_push_low(uint8_t dev, uint16_t addr, const uint8_t data[], unsigned len);
 int xrp_set2(uint8_t dev, uint16_t addr, uint8_t data);
 int xrp_read2(uint8_t dev, uint16_t addr);
-int xrp_srecord(uint8_t dev, uint8_t data[]);
+int xrp_srecord(uint8_t dev, const uint8_t data[]);
 int xrp_program_static(uint8_t dev);
 int xrp_file(uint8_t dev);
 

@@ -7,7 +7,6 @@ pid_t   _fork (void);
 pid_t   _getpid (void);
 int     _isatty (int __fildes);
 int     _link (const char *__path1, const char *__path2);
-int     _unlink (const char *__path);
 void *  _sbrk (ptrdiff_t __incr);
 int     _unlink (const char *__path);
 int     _kill (pid_t, int);

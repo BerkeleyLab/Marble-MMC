@@ -446,17 +446,17 @@ static void marble_SSP_init(LPC_SSP_T *ssp)
    //NVIC_EnableIRQ(SSP_IRQ);
 }
 
-int marble_SSP_write16(SSP_PORT ssp, uint16_t *buffer, int size)
+int marble_SSP_write16(SSP_PORT ssp, uint16_t *buffer, unsigned size)
 {
    return Chip_SSP_WriteFrames_Blocking(ssp, (uint8_t*) buffer, size*2); // API expectes length in bytes
 }
 
-int marble_SSP_read16(SSP_PORT ssp, uint16_t *buffer, int size)
+int marble_SSP_read16(SSP_PORT ssp, uint16_t *buffer, unsigned size)
 {
    return Chip_SSP_ReadFrames_Blocking(ssp, (uint8_t*) buffer, size*2);
 }
 
-int marble_SSP_exch16(SSP_PORT ssp, uint16_t *tx_buf, uint16_t *rx_buf, int size)
+int marble_SSP_exch16(SSP_PORT ssp, uint16_t *tx_buf, uint16_t *rx_buf, unsigned size)
 {
    Chip_SSP_DATA_SETUP_T set;
    set.tx_data = tx_buf;

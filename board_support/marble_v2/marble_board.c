@@ -291,7 +291,7 @@ int marble_I2C_cmdrecv_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *
 ************/
 static void SPI_CSB_SET(SSP_PORT ssp, bool set);
 
-int marble_SSP_write16(SSP_PORT ssp, uint16_t *buffer, int size)
+int marble_SSP_write16(SSP_PORT ssp, uint16_t *buffer, unsigned size)
 {
    SPI_CSB_SET(ssp, false);
    int rc = HAL_SPI_Transmit(ssp, (uint8_t*) buffer, size, HAL_MAX_DELAY);
@@ -299,7 +299,7 @@ int marble_SSP_write16(SSP_PORT ssp, uint16_t *buffer, int size)
    return rc;
 }
 
-int marble_SSP_read16(SSP_PORT ssp, uint16_t *buffer, int size)
+int marble_SSP_read16(SSP_PORT ssp, uint16_t *buffer, unsigned size)
 {
    SPI_CSB_SET(ssp, false);
    int rc = HAL_SPI_Receive(ssp, (uint8_t*) buffer, size, HAL_MAX_DELAY);
@@ -307,7 +307,7 @@ int marble_SSP_read16(SSP_PORT ssp, uint16_t *buffer, int size)
    return rc;
 }
 
-int marble_SSP_exch16(SSP_PORT ssp, uint16_t *tx_buf, uint16_t *rx_buf, int size)
+int marble_SSP_exch16(SSP_PORT ssp, uint16_t *tx_buf, uint16_t *rx_buf, unsigned size)
 {
    SPI_CSB_SET(ssp, false);
    int rc = HAL_SPI_TransmitReceive(ssp, (uint8_t*) tx_buf, (uint8_t*) rx_buf,size, HAL_MAX_DELAY);
