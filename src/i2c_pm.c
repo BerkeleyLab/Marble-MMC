@@ -634,7 +634,7 @@ void mailbox_test(void)
    page3[6] = lm75_1_temp >> 8;
    page3[7] = lm75_1_temp & 0xff;
    memcpy(page3+8, git_rev, 8);
-   printf("Sending to FPGA:");
+   printf("Sending  to  FPGA:");
    for (unsigned jx=0; jx<16; jx++) printf(" %2.2x", page3[jx]);
    printf("\n");
    //
@@ -647,7 +647,7 @@ void mailbox_test(void)
       ssp_buf = 0x5000 + (jx<<8) + page3[jx];
       marble_SSP_write16(SSP_FPGA, &ssp_buf, 1);
    }
-   printf("Reading from FPGA:\n");
+   printf("Reading from FPGA:");
    for (unsigned jx=0; jx<16; jx++) {
       uint16_t ssp_recv;
       ssp_buf = 0x4000 + (jx<<8) + page3[jx];

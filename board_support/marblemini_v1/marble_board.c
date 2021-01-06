@@ -458,9 +458,13 @@ int marble_SSP_read16(SSP_PORT ssp, uint16_t *buffer, int size)
 
 int marble_SSP_exch16(SSP_PORT ssp, uint16_t *tx_buf, uint16_t *rx_buf, int size)
 {
-   // function stubbed out; XXX write me!
-   (void) ssp; (void) tx_buf; (void) rx_buf; (void) size;
-   return 0;
+   Chip_SSP_DATA_SETUP_T set;
+   set.tx_data = tx_buf;
+   set.tx_cnt = 0;
+   set.rx_data = rx_buf;
+   set.rx_cnt = 0;
+   set.length = size;
+   return Chip_SSP_RWFrames_Blocking(ssp, &set);
 }
 
 /************
