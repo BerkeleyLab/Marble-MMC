@@ -42,32 +42,6 @@ const char menu_str[] = "\r\n"
 	"j) SPI mailbox\r\n";
 
 const char unk_str[] = "> Unknown option\r\n";
-const char gpio_str[] = "GPIO pins, caps for on, lower case for off\r\n"
-	"a) FMC power\r\n"
-	"b) EN_PSU_CH\r\n";
-
-static void gpio_cmd(void)
-{
-   char rx_ch;
-   marble_UART_send(gpio_str, strlen(gpio_str));
-   while(marble_UART_recv(&rx_ch, 1) == 0);
-   bool on = ((rx_ch >> 5) & 1) == 0;
-   if (on) marble_UART_send("ON\r\n", 4);
-   else marble_UART_send("OFF\r\n", 5);
-   switch (rx_ch) {
-      case 'a':
-      case 'A':
-         marble_FMC_pwr(on);
-         break;
-      case 'b':
-      case 'B':
-         marble_PSU_pwr(on);
-         break;
-      default:
-         marble_UART_send(unk_str, strlen(unk_str));
-         break;
-      }
-}
 
 static void print_mac_ip(unsigned char mac_ip_data[10])
 {
@@ -155,7 +129,43 @@ static void timer_int_handler(void)
    i = (i + 1) % 1000;
 }
 
-int main(void)
+// XXX still need to add CONSOLE_HEX, see hexrec.c
+typedef enum {
+   CONSOLE_TOP,
+   CONSOLE_LOOP,
+   CONSOLE_GPIO
+} console_state_e;
+
+static console_state_e console_gpio(char rx_ch)
+{
+   bool on = ((rx_ch >> 5) & 1) == 0;
+   if (on) marble_UART_send("ON\r\n", 4);
+   else marble_UART_send("OFF\r\n", 5);
+   switch (rx_ch) {
+      case 'a':
+      case 'A':
+         marble_FMC_pwr(on);
+         break;
+      case 'b':
+      case 'B':
+         marble_PSU_pwr(on);
+         break;
+      default:
+         marble_UART_send(unk_str, strlen(unk_str));
+         break;
+   }
+   return CONSOLE_TOP;
+}
+
+static console_state_e console_loop(char rx_ch)
+{
+   marble_UART_send(&rx_ch, 1);
+   if (rx_ch != 27) return CONSOLE_LOOP;
+   printf("\r\n");
+   return CONSOLE_TOP;
+}
+
+static console_state_e console_top(char rx_ch)
 {
    // Static for now; eventually needs to be read from EEPROM
    unsigned char mac_ip_data[10] = {
@@ -163,65 +173,14 @@ int main(void)
       192, 168, 19, 31   // IP
    };
 
-#ifdef MARBLEM_V1
-   // Initialize Marble(mini) board with IRC, so it works even when
-   // the XRP7724 isn't running, keeping the final 25 MHz source away.
-   const bool use_xtal = false;
-   uint32_t sysclk_freq = marble_init(use_xtal);
-   printf("marble_init with use_xtal = %d\n", use_xtal);
-   printf("system clock = %lu Hz\n", sysclk_freq);
-#elif MARBLE_V2
-   marble_init(0);
-#endif
-
-   /* Turn on LEDs */
-   marble_LED_set(0, true);
-   marble_LED_set(1, true);
-   marble_LED_set(2, true);
-
-#ifdef XRP_AUTOBOOT
-   printf("XRP_AUTOBOOT\n");
-   marble_SLEEP_ms(300);
-   xrp_boot();
-#endif
-
-#ifdef MARBLE_V2
-   // Enable MGT clock cross-point switch if 3.3V rail is ON
-   mgtclk_xpoint_en();
-#endif
-
-   // Power FMCs
-   marble_FMC_pwr(true);
-
-   // Register GPIO interrupt handlers
-   marble_GPIOint_handlers(fpga_done_handler);
-
-   // Register System Timer interrupt handler
-   marble_SYSTIMER_handler(timer_int_handler);
-
-   /* Configure the System Timer for 20 Hz interrupts */
-   marble_SYSTIMER_ms(50);
-
-   // Send demo string over UART at 115200 BAUD
-   marble_UART_send(demo_str, strlen(demo_str));
-
-   while (1) {
-      char rx_ch;
-      printf("Single-character actions, ? for menu\r\n");
-      // Wait for user selection
-      while(marble_UART_recv(&rx_ch, 1) == 0);
-      switch (rx_ch) {
+   console_state_e rc = CONSOLE_TOP;
+   switch (rx_ch) {
          case '?':
             printf(menu_str);
             break;
          case '0':
             printf(lb_str);
-            do {
-               if (marble_UART_recv(&rx_ch, 1) != 0) {
-                  marble_UART_send(&rx_ch, 1);
-               }
-            } while (rx_ch != 27);
-            printf("\r\n");
+            rc = CONSOLE_LOOP;
             break;
          case '1':
             phy_print();
@@ -234,7 +193,7 @@ int main(void)
             printf("FPGA prog counter: %d\r\n", fpga_prog_cnt);
             break;
          case '4':
-            gpio_cmd();
+            rc = CONSOLE_GPIO;
             break;
          case '5':
             reset_fpga();
@@ -313,6 +272,74 @@ int main(void)
          default:
             printf(unk_str);
             break;
+      }
+   return rc;
+}
+
+int main(void)
+{
+#ifdef MARBLEM_V1
+   // Initialize Marble(mini) board with IRC, so it works even when
+   // the XRP7724 isn't running, keeping the final 25 MHz source away.
+   const bool use_xtal = false;
+   uint32_t sysclk_freq = marble_init(use_xtal);
+   printf("marble_init with use_xtal = %d\n", use_xtal);
+   printf("system clock = %lu Hz\n", sysclk_freq);
+#elif MARBLE_V2
+   marble_init(0);
+#endif
+
+   /* Turn on LEDs */
+   marble_LED_set(0, true);
+   marble_LED_set(1, true);
+   marble_LED_set(2, true);
+
+#ifdef XRP_AUTOBOOT
+   printf("XRP_AUTOBOOT\n");
+   marble_SLEEP_ms(300);
+   xrp_boot();
+#endif
+
+#ifdef MARBLE_V2
+   // Enable MGT clock cross-point switch if 3.3V rail is ON
+   mgtclk_xpoint_en();
+#endif
+
+   // Power FMCs
+   marble_FMC_pwr(true);
+
+   // Register GPIO interrupt handlers
+   marble_GPIOint_handlers(fpga_done_handler);
+
+   // Register System Timer interrupt handler
+   marble_SYSTIMER_handler(timer_int_handler);
+
+   /* Configure the System Timer for 20 Hz interrupts */
+   marble_SYSTIMER_ms(50);
+
+   // Send demo string over UART at 115200 BAUD
+   marble_UART_send(demo_str, strlen(demo_str));
+
+   console_state_e state = CONSOLE_TOP;
+   while (1) {
+      char rx_ch;
+      switch (state) {
+         case CONSOLE_TOP:
+            printf("Single-character actions, ? for menu\r\n");  break;
+         case CONSOLE_LOOP:
+            break;
+         case CONSOLE_GPIO:
+            printf("GPIO pins, caps for on, lower case for off\r\n"
+                   "a) FMC power\r\n"
+                   "b) EN_PSU_CH\r\n");
+            break;
+      }
+      // Wait for user selection
+      while(marble_UART_recv(&rx_ch, 1) == 0);
+      switch (state) {
+         case CONSOLE_TOP:   state = console_top(rx_ch);   break;
+         case CONSOLE_LOOP:  state = console_loop(rx_ch);  break;
+         case CONSOLE_GPIO:  state = console_gpio(rx_ch);  break;
       }
    }
 }
