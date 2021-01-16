@@ -109,7 +109,7 @@ uint32_t marble_MDIO_read(uint16_t reg);
 /************
 * System Timer and Stopwatch
 ************/
-int marble_SYSTIMER_ms(uint32_t delay);
+uint32_t marble_SYSTIMER_ms(uint32_t delay);
 void marble_SYSTIMER_handler(void (*handler)(void));
 
 void marble_SLEEP_ms(uint32_t delay);

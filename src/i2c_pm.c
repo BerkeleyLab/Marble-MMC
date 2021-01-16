@@ -615,7 +615,7 @@ void xrp_hex_in(uint8_t dev)
    }
 }
 
-void mailbox_test(void)
+void mailbox_write(bool verbose)
 {
    // Just feeling my way around; don't take this seriously
    static uint16_t count=0;
@@ -634,10 +634,11 @@ void mailbox_test(void)
    page3[6] = lm75_1_temp >> 8;
    page3[7] = lm75_1_temp & 0xff;
    memcpy(page3+8, git_rev, 8);
-   printf("Sending  to  FPGA:");
-   for (unsigned jx=0; jx<16; jx++) printf(" %2.2x", page3[jx]);
-   printf("\n");
-   //
+   if (verbose) {
+      printf("Sending  to  FPGA:");
+      for (unsigned jx=0; jx<16; jx++) printf(" %2.2x", page3[jx]);
+      printf("\n");
+   }
    // Set page pointer to 3
    uint16_t ssp_buf;
    ssp_buf = 0x2203;
@@ -647,15 +648,23 @@ void mailbox_test(void)
       ssp_buf = 0x5000 + (jx<<8) + page3[jx];
       marble_SSP_write16(SSP_FPGA, &ssp_buf, 1);
    }
-   printf("Reading from FPGA:");
+}
+
+void mailbox_read(bool verbose)
+{
+   if (verbose) printf("Reading from FPGA:");
+
+   uint16_t ssp_buf;
    for (unsigned jx=0; jx<16; jx++) {
       uint16_t ssp_recv;
-      ssp_buf = 0x4000 + (jx<<8) + page3[jx];
+      ssp_buf = 0x4000 + (jx<<8);
       marble_SSP_exch16(SSP_FPGA, &ssp_buf, &ssp_recv, 1);
-      printf(" %2.2x", ssp_recv);
+      if (verbose) printf(" %2.2x", ssp_recv);
    }
-   printf("\n");
-   printf("Done.\n");
+   if (verbose) {
+      printf("\n");
+      printf("Done.\n");
+   }
 }
 
 // Didn't work when tested; why?

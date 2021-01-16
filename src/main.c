@@ -39,7 +39,7 @@ const char menu_str[] = "\r\n"
 	"g) XRP7724 go\r\n"
 	"h) XRP7724 hex input\r\n"
 	"i) timer check/cal\r\n"
-	"j) SPI mailbox\r\n";
+	"j) Read SPI mailbox\r\n";
 
 const char unk_str[] = "> Unknown option\r\n";
 
@@ -114,19 +114,31 @@ static void fpga_done_handler(void)
    fpga_prog_cnt++;
 }
 
+static volatile bool spi_update = false;
+
+static uint32_t systimer_ms=1; // System timer interrupt period
 static void timer_int_handler(void)
 {
-   live_cnt++;
-   static uint16_t i = 0;
-   // Snake-pattern LEDs
-   if(i == 0)
-      marble_LED_toggle(0);
-   else if(i == 330)
-      marble_LED_toggle(1);
-   else if(i == 660)
-      marble_LED_toggle(2);
+   const uint32_t SPI_MBOX_RATE = 5000; // ms
+   static uint16_t led_cnt = 0;
+   static uint32_t spi_ms_cnt=0;
 
-   i = (i + 1) % 1000;
+   // SPI mailbox update flag; soft-realtime
+   spi_ms_cnt += systimer_ms;
+   if (spi_ms_cnt > SPI_MBOX_RATE) {
+      spi_update = true;
+      spi_ms_cnt = 0;
+      // Use LED2 for SPI heartbeat
+      marble_LED_toggle(2);
+   }
+
+   // Snake-pattern LEDs on two LEDs
+   if(led_cnt == 330)
+      marble_LED_toggle(0);
+   else if(led_cnt == 660)
+      marble_LED_toggle(1);
+   led_cnt = (led_cnt + 1) % 1000;
+   live_cnt++;
 }
 
 // XXX still need to add CONSOLE_HEX, see hexrec.c
@@ -267,7 +279,7 @@ static console_state_e console_top(char rx_ch)
             }
             break;
          case 'j':
-            mailbox_test();
+            mailbox_read(true);
             break;
          default:
             printf(unk_str);
@@ -294,6 +306,15 @@ int main(void)
    marble_LED_set(1, true);
    marble_LED_set(2, true);
 
+   // Register GPIO interrupt handlers
+   marble_GPIOint_handlers(fpga_done_handler);
+
+   /* Configure the System Timer for 200 Hz interrupts (if supported) */
+   systimer_ms = marble_SYSTIMER_ms(5);
+
+   // Register System Timer interrupt handler
+   marble_SYSTIMER_handler(timer_int_handler);
+
 #ifdef XRP_AUTOBOOT
    printf("XRP_AUTOBOOT\n");
    marble_SLEEP_ms(300);
@@ -308,22 +329,24 @@ int main(void)
    // Power FMCs
    marble_FMC_pwr(true);
 
-   // Register GPIO interrupt handlers
-   marble_GPIOint_handlers(fpga_done_handler);
-
-   // Register System Timer interrupt handler
-   marble_SYSTIMER_handler(timer_int_handler);
-
-   /* Configure the System Timer for 20 Hz interrupts */
-   marble_SYSTIMER_ms(50);
-
    // Send demo string over UART at 115200 BAUD
    marble_UART_send(demo_str, strlen(demo_str));
 
-   console_state_e state = CONSOLE_TOP;
+   console_state_e con_state = CONSOLE_TOP;
    while (1) {
+      // Run all system update/monitoring tasks and only then handle console
+      if (spi_update) {
+         mailbox_write(false);
+         mailbox_read(false);
+         spi_update = false; // Clear flag
+      }
+
       char rx_ch;
-      switch (state) {
+      // Wait for user selection
+      if (marble_UART_recv(&rx_ch, 1) == 0) {
+         continue;
+      }
+      switch (con_state) {
          case CONSOLE_TOP:
             printf("Single-character actions, ? for menu\r\n");  break;
          case CONSOLE_LOOP:
@@ -334,12 +357,10 @@ int main(void)
                    "b) EN_PSU_CH\r\n");
             break;
       }
-      // Wait for user selection
-      while(marble_UART_recv(&rx_ch, 1) == 0);
-      switch (state) {
-         case CONSOLE_TOP:   state = console_top(rx_ch);   break;
-         case CONSOLE_LOOP:  state = console_loop(rx_ch);  break;
-         case CONSOLE_GPIO:  state = console_gpio(rx_ch);  break;
+      switch (con_state) {
+         case CONSOLE_TOP:   con_state = console_top(rx_ch);   break;
+         case CONSOLE_LOOP:  con_state = console_loop(rx_ch);  break;
+         case CONSOLE_GPIO:  con_state = console_gpio(rx_ch);  break;
       }
    }
 }

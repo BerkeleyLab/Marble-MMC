@@ -360,20 +360,21 @@ void marble_SYSTIMER_handler(void (*handler)(void)) {
 }
 
 /* Configures 24-bit count-down timer and enables systimer interrupt */
-int marble_SYSTIMER_ms(uint32_t delay)
+uint32_t marble_SYSTIMER_ms(uint32_t delay)
 {
    // WARNING: Hardcoded to 1 ms since this is what increments HAL_IncTick() and
    // enables HAL_Delay
    delay = 1; // TODO: Consider decoupling stopwatch from system timer
 
    const uint32_t MAX_TICKS = (1<<24)-1;
+   const uint32_t MAX_DELAY_MS = (SystemCoreClock * 1000U) / MAX_TICKS;
    uint32_t ticks = (SystemCoreClock / 1000U) * delay;
-   if (ticks > MAX_TICKS) {
-      SysTick_Config(MAX_TICKS);
-      return -1;
+   if (delay > MAX_DELAY_MS) {
+      ticks = MAX_TICKS;
+      delay = MAX_DELAY_MS;
    }
    SysTick_Config(ticks);
-   return 0;
+   return delay;
 }
 
 void marble_SLEEP_ms(uint32_t delay)

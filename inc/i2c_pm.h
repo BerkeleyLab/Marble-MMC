@@ -41,7 +41,8 @@ void xrp_go(uint8_t dev);
 void xrp_hex_in(uint8_t dev);
 
 /* misc */
-void mailbox_test(void);
+void mailbox_write(bool verbose);
+void mailbox_read(bool verbose);
 
 /* communication between i2c_pm and hexrec */
 int xrp_push_low(uint8_t dev, uint16_t addr, const uint8_t data[], unsigned len);
