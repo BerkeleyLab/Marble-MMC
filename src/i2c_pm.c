@@ -615,6 +615,13 @@ void xrp_hex_in(uint8_t dev)
    }
 }
 
+static void mailbox_page(uint8_t page)
+{
+   uint16_t ssp_buf;
+   ssp_buf = 0x2200 + page;
+   marble_SSP_write16(SSP_FPGA, &ssp_buf, 1);
+}
+
 void mailbox_write(bool verbose)
 {
    // Just feeling my way around; don't take this seriously
@@ -639,13 +646,10 @@ void mailbox_write(bool verbose)
       for (unsigned jx=0; jx<16; jx++) printf(" %2.2x", page3[jx]);
       printf("\n");
    }
-   // Set page pointer to 3
-   uint16_t ssp_buf;
-   ssp_buf = 0x2203;
-   marble_SSP_write16(SSP_FPGA, &ssp_buf, 1);
+   mailbox_page(3);  // Set page pointer to 3
    // Write 16 bytes to that page
    for (unsigned jx=0; jx<16; jx++) {
-      ssp_buf = 0x5000 + (jx<<8) + page3[jx];
+      uint16_t ssp_buf = 0x5000 + (jx<<8) + page3[jx];
       marble_SSP_write16(SSP_FPGA, &ssp_buf, 1);
    }
 }
@@ -654,16 +658,32 @@ void mailbox_read(bool verbose)
 {
    if (verbose) printf("Reading from FPGA:");
 
-   uint16_t ssp_buf;
+   mailbox_page(3);  // Set page pointer to 3
    for (unsigned jx=0; jx<16; jx++) {
-      uint16_t ssp_recv;
-      ssp_buf = 0x4000 + (jx<<8);
+      uint16_t ssp_recv, ssp_buf = 0x4000 + (jx<<8);
       marble_SSP_exch16(SSP_FPGA, &ssp_buf, &ssp_recv, 1);
       if (verbose) printf(" %2.2x", ssp_recv);
    }
    if (verbose) {
       printf("\n");
       printf("Done.\n");
+   }
+   {
+      // Control of FMC power based on page 2, byte 0
+      // Currently addressed as 0x200020 = 2097184 in test_marble_family
+      mailbox_page(2);  // Set page pointer to 2
+      unsigned jx=0;
+      uint16_t ssp_recv, ssp_buf = 0x4000 + (jx<<8);
+      marble_SSP_exch16(SSP_FPGA, &ssp_buf, &ssp_recv, 1);
+      unsigned fmc_cmd = ssp_recv & 0xff;
+      if (verbose) printf("FMC power command 0x%2.2x\n", fmc_cmd);
+      if (fmc_cmd != 0) {  // clear that mailbox entry
+         ssp_buf = 0x5000 + (jx<<8) + 0;
+         marble_SSP_write16(SSP_FPGA, &ssp_buf, 1);
+         if (fmc_cmd & 2) {
+            marble_FMC_pwr(fmc_cmd & 1);
+         }
+      }
    }
 }
 

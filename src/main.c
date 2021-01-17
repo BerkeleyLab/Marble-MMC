@@ -119,7 +119,7 @@ static volatile bool spi_update = false;
 static uint32_t systimer_ms=1; // System timer interrupt period
 static void timer_int_handler(void)
 {
-   const uint32_t SPI_MBOX_RATE = 5000; // ms
+   const uint32_t SPI_MBOX_RATE = 2000;  // ms
    static uint16_t led_cnt = 0;
    static uint32_t spi_ms_cnt=0;
 
