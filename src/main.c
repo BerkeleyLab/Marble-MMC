@@ -109,9 +109,18 @@ unsigned int live_cnt=0;
 
 unsigned int fpga_prog_cnt=0;
 
+unsigned int fpga_net_prog_pend=0;
+
+// Static for now; eventually needs to be read from EEPROM
+unsigned char mac_ip_data[10] = {
+   18, 85, 85, 0, 1, 46,  // MAC (locally managed)
+   192, 168, 19, 31   // IP
+};
+
 static void fpga_done_handler(void)
 {
    fpga_prog_cnt++;
+   fpga_net_prog_pend=1;
 }
 
 static volatile bool spi_update = false;
@@ -179,11 +188,6 @@ static console_state_e console_loop(char rx_ch)
 
 static console_state_e console_top(char rx_ch)
 {
-   // Static for now; eventually needs to be read from EEPROM
-   unsigned char mac_ip_data[10] = {
-      18, 85, 85, 0, 1, 46,  // MAC (locally managed)
-      192, 168, 19, 31   // IP
-   };
 
    console_state_e rc = CONSOLE_TOP;
    switch (rx_ch) {
@@ -339,6 +343,10 @@ int main(void)
          mailbox_write(false);
          mailbox_read(false);
          spi_update = false; // Clear flag
+      }
+      if (fpga_net_prog_pend) {
+         push_fpga_mac_ip(mac_ip_data);
+         fpga_net_prog_pend=0;
       }
 
       char rx_ch;
