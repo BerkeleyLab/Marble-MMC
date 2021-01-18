@@ -1,0 +1,5 @@
+device STM32F207VC
+loadfile Debug/Marblesoft.hex
+r
+g
+exit

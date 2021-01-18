@@ -47,7 +47,7 @@ UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
 UART_HandleTypeDef huart3;
 
-
+uint16_t VirtAddVarTab = 0x5555;
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
@@ -94,6 +94,34 @@ int marble_UART_recv(char *str, int size)
    } else {
       return 0;
    }
+}
+
+/************
+* EEPROM
+************/
+
+
+void init_eeprom(void)
+{
+	HAL_FLASH_Unlock();
+	EE_Init();
+}
+
+void save_ip_address(uint8_t *data, uint8_t  addr)
+{
+	printf("Status: %x, data: %d\r\n", EE_WriteVariable(VirtAddVarTab + addr,  data), data);
+}
+
+void read_ip_address(uint8_t *data, uint8_t numb)
+{
+	for (unsigned x=0; x<numb; x++) {
+		EE_ReadVariable(VirtAddVarTab + x,  data + x);
+	}
+}
+
+void eeprom_lock_flash(void)
+{
+	HAL_FLASH_Lock();
 }
 
 /************

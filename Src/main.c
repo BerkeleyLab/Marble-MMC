@@ -20,7 +20,7 @@ void phy_print(void);
 const char demo_str[] = "Marble v2 UART DEMO\r\n";
 const char lb_str[] = "Loopback... ESC to exit\r\n";
 const char menu_str[] = "\r\n"
-   "Build based on git commit " GIT_REV "\r\n"
+   "Build based on git commit " GIT_REV " \r\n"
    "Menu:\r\n"
    "0) Loopback\r\n"
    "1) MDIO/PHY\r\n"
@@ -40,7 +40,9 @@ const char menu_str[] = "\r\n"
    "f) XRP7724 flash\r\n"
    "g) XRP7724 go\r\n"
    "h) XRP7724 hex input\r\n"
-   "i) timer check/cal\r\n";
+   "i) timer check/cal\r\n"
+   "j) save IP to EEPROM\r\n"
+   "k) read IP from EEPROM\r\n";
 
 const char unk_str[] = "> Unknown option\r\n";
 const char gpio_str[] = "GPIO pins, caps for on, lower case for off\r\n"
@@ -160,10 +162,14 @@ void timer_int_handler(void)
 
 int main(void)
 {
+	uint8_t mac_ip_read_from_flash[10] = {
+			0, 0, 0, 0, 0, 0,  // MAC (locally managed)
+			0, 0, 0, 0   // IP
+	};
    // Static for now; eventually needs to be read from EEPROM
    unsigned char mac_ip_data[10] = {
-      18, 85, 85, 0, 1, 46,  // MAC (locally managed)
-      192, 168, 19, 31   // IP
+		   18, 85, 85, 0, 1, 46,  // MAC (locally managed)
+		   192, 168, 19, 31   // IP
    };
 
    marble_init(0);
@@ -285,6 +291,21 @@ int main(void)
                printf("%d\n", ix);
                marble_SLEEP_ms(1000);
             }
+            break;
+         case 'j':
+        	init_eeprom();
+			for (unsigned ix=0; ix<10; ix++) {
+			  save_ip_address(mac_ip_data[ix], ix);
+			}
+			eeprom_lock_flash();
+        	break;
+         case 'k':
+        	read_ip_address(mac_ip_read_from_flash, 10);
+			for (unsigned jx=0; jx<10; jx++) {
+				marble_UART_send(" ", 1);
+				print_uint(mac_ip_read_from_flash[jx]);
+			}
+			marble_UART_send("\r\n", 2);
             break;
          default:
             printf(unk_str);

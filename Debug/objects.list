@@ -15,6 +15,8 @@
 "Drivers/STM32F2xx_HAL_Driver/Src/stm32f2xx_hal_tim.o"
 "Drivers/STM32F2xx_HAL_Driver/Src/stm32f2xx_hal_tim_ex.o"
 "Drivers/STM32F2xx_HAL_Driver/Src/stm32f2xx_hal_uart.o"
+"Src/eeprom.o"
+"Src/hexrec.o"
 "Src/i2c_fpga.o"
 "Src/i2c_pm.o"
 "Src/main.o"

@@ -4,6 +4,8 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
+../Src/eeprom.c \
+../Src/hexrec.c \
 ../Src/i2c_fpga.c \
 ../Src/i2c_pm.c \
 ../Src/main.c \
@@ -14,6 +16,8 @@ C_SRCS += \
 ../Src/system_stm32f2xx.c 
 
 OBJS += \
+./Src/eeprom.o \
+./Src/hexrec.o \
 ./Src/i2c_fpga.o \
 ./Src/i2c_pm.o \
 ./Src/main.o \
@@ -24,6 +28,8 @@ OBJS += \
 ./Src/system_stm32f2xx.o 
 
 C_DEPS += \
+./Src/eeprom.d \
+./Src/hexrec.d \
 ./Src/i2c_fpga.d \
 ./Src/i2c_pm.d \
 ./Src/main.d \
