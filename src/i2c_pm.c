@@ -683,6 +683,14 @@ void mailbox_read(bool verbose)
          if (fmc_cmd & 2) {
             marble_FMC_pwr(fmc_cmd & 1);
          }
+         // Three bits controlling MUX{1,2,3}_MMC pins
+         unsigned v = fmc_cmd;
+         for (unsigned kx=1; kx<4; kx++) {
+            v = v >> 2;
+            if (v & 2) {
+               marble_MGTMUX_set(kx, v & 1);
+            }
+         }
       }
    }
 }
