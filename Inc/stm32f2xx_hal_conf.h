@@ -180,7 +180,7 @@
 /* Section 2: PHY configuration section */
 
 /* PHY_USER_NAME_PHY_ADDRESS Address*/ 
-#define PHY_USER_NAME_PHY_ADDRESS           1U
+#define PHY_USER_NAME_PHY_ADDRESS           0U
 /* PHY Reset delay these values are based on a 1 ms Systick interrupt*/ 
 #define PHY_RESET_DELAY                 ((uint32_t)0x000000FFU)
 /* PHY Configuration delay */
