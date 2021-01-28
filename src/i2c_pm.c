@@ -688,7 +688,9 @@ void mailbox_read(bool verbose)
          for (unsigned kx=1; kx<4; kx++) {
             v = v >> 2;
             if (v & 2) {
+#ifdef MARBLE_V2
                marble_MGTMUX_set(kx, v & 1);
+#endif
             }
          }
       }
