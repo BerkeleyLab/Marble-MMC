@@ -148,6 +148,16 @@ void marble_FMC_pwr(bool on)
    HAL_GPIO_WritePin(GPIOD, GPIO_PIN_10, on);
 }
 
+uint8_t marble_FMC_status(void)
+{
+   uint8_t status = 0;
+   status = WRITE_BIT(status, M_FMC_STATUS_FMC1_PWR,  HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_10));
+   status = WRITE_BIT(status, M_FMC_STATUS_FMC1_FUSE, HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_10));
+   status = WRITE_BIT(status, M_FMC_STATUS_FMC2_PWR,  HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_9));
+   status = WRITE_BIT(status, M_FMC_STATUS_FMC2_FUSE, HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_11));
+   return status;
+}
+
 void marble_PSU_pwr(bool on)
 {
    if (on == false) {
@@ -158,6 +168,15 @@ void marble_PSU_pwr(bool on)
       HAL_GPIO_WritePin(GPIOD, GPIO_PIN_11, on);
       SystemClock_Config(); // switch back to external clock source
    }
+}
+
+uint8_t marble_PWR_status(void)
+{
+   uint8_t status = 0;
+   status = WRITE_BIT(status, M_PWR_STATUS_PSU_EN, HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_11));
+   status = WRITE_BIT(status, M_PWR_STATUS_POE,    HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_8));
+   status = WRITE_BIT(status, M_PWR_STATUS_OTEMP,  HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_7));
+   return status;
 }
 
 /************
@@ -247,6 +266,15 @@ void marble_MGTMUX_set(uint8_t mgt_num, bool on)
    if (mgt_num < MAXMGT) {
       HAL_GPIO_WritePin(GPIOE, mgtmux_pins[mgt_num], on);
    }
+}
+
+uint8_t marble_MGTMUX_status()
+{
+   uint8_t status = 0;
+   for (unsigned i=0; i < MAXMGT; i++) {
+      status |= HAL_GPIO_ReadPin(GPIOE, mgtmux_pins[i]);
+   }
+   return status;
 }
 
 /************

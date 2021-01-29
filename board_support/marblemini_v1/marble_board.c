@@ -182,11 +182,31 @@ void marble_FMC_pwr(bool on)
    Chip_GPIO_WritePortBit(LPC_GPIO, fmc_port, fmc2_pin, on);
 }
 
+uint8_t marble_FMC_status(void)
+{
+   uint8_t status = 0;
+   status = WRITE_BIT(status, M_FMC_STATUS_FMC1_PWR,  Chip_GPIO_ReadPortBit(LPC_GPIO, 1, 27));
+   status = WRITE_BIT(status, M_FMC_STATUS_FMC1_FUSE, Chip_GPIO_ReadPortBit(LPC_GPIO, 0, 23));
+   status = WRITE_BIT(status, M_FMC_STATUS_FMC2_PWR,  Chip_GPIO_ReadPortBit(LPC_GPIO, 1, 19));
+   status = WRITE_BIT(status, M_FMC_STATUS_FMC2_FUSE, Chip_GPIO_ReadPortBit(LPC_GPIO, 0, 24));
+   return status;
+}
+
 void marble_PSU_pwr(bool on)
 {
    Chip_GPIO_WriteDirBit(LPC_GPIO, 1, 31, true);
    Chip_GPIO_WritePortBit(LPC_GPIO, 1, 31, on);
 }
+
+uint8_t marble_PWR_status(void)
+{
+   uint8_t status = 0;
+   status = WRITE_BIT(status, M_PWR_STATUS_PSU_EN, Chip_GPIO_ReadPortBit(LPC_GPIO, 1, 31));
+   status = WRITE_BIT(status, M_PWR_STATUS_POE,    Chip_GPIO_ReadPortBit(LPC_GPIO, 1, 0));
+   status = WRITE_BIT(status, M_PWR_STATUS_OTEMP,  Chip_GPIO_ReadPortBit(LPC_GPIO, 0, 29));
+   return status;
+}
+
 
 /************
 * Switches and FPGA interrupt

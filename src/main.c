@@ -23,7 +23,7 @@ const char menu_str[] = "\r\n"
 	"0) Loopback\r\n"
 	"1) MDIO/PHY\r\n"
 	"2) I2C monitor\r\n"
-	"3) Status counters\r\n"
+	"3) Status & counters\r\n"
 	"4) GPIO control\r\n"
 	"5) Reset FPGA\r\n"
 	"6) Push IP&MAC\r\n"
@@ -207,6 +207,11 @@ static console_state_e console_top(char rx_ch)
          case '3':
             printf("Live counter: %u\r\n", live_cnt);
             printf("FPGA prog counter: %d\r\n", fpga_prog_cnt);
+            printf("FMC status: %x\r\n", marble_FMC_status());
+            printf("PWR status: %x\r\n", marble_PWR_status());
+#ifdef MARBLE_V2
+            printf("MGT CLK Mux: %x\r\n", marble_MGTMUX_status());
+#endif
             break;
          case '4':
             rc = CONSOLE_GPIO;
@@ -355,6 +360,11 @@ int main(void)
          continue;
       }
       switch (con_state) {
+         case CONSOLE_TOP:   con_state = console_top(rx_ch);   break;
+         case CONSOLE_LOOP:  con_state = console_loop(rx_ch);  break;
+         case CONSOLE_GPIO:  con_state = console_gpio(rx_ch);  break;
+      }
+      switch (con_state) {
          case CONSOLE_TOP:
             printf("Single-character actions, ? for menu\r\n");  break;
          case CONSOLE_LOOP:
@@ -364,11 +374,6 @@ int main(void)
                    "a) FMC power\r\n"
                    "b) EN_PSU_CH\r\n");
             break;
-      }
-      switch (con_state) {
-         case CONSOLE_TOP:   con_state = console_top(rx_ch);   break;
-         case CONSOLE_LOOP:  con_state = console_loop(rx_ch);  break;
-         case CONSOLE_GPIO:  con_state = console_gpio(rx_ch);  break;
       }
    }
 }

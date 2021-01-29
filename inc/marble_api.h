@@ -11,6 +11,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define WRITE_BIT(REG, BIT, VAL) ((REG & ~(1<<BIT)) | (VAL<<BIT))
+#define TEST_BIT(REG, BIT) (REG & (1<<BIT))
+
 /* Initialize uC and peripherals before main code can run. */
 uint32_t marble_init(bool use_xtal);
 
@@ -47,7 +50,24 @@ bool marble_FPGAint_get(void);
 ****/
 void marble_FMC_pwr(bool on);
 
+typedef enum {
+   M_FMC_STATUS_FMC1_PWR = 0,
+   M_FMC_STATUS_FMC1_FUSE,
+   M_FMC_STATUS_FMC2_PWR,
+   M_FMC_STATUS_FMC2_FUSE,
+} M_FMC_STATUS;
+
+uint8_t marble_FMC_status(void);
+
 void marble_PSU_pwr(bool on);
+
+typedef enum {
+   M_PWR_STATUS_PSU_EN = 0,
+   M_PWR_STATUS_POE,
+   M_PWR_STATUS_OTEMP
+} M_PWR_STATUS;
+
+uint8_t marble_PWR_status(void);
 
 /****
 * FPGA reset/init control
@@ -76,6 +96,8 @@ void marble_GPIOint_handlers(void (*FPGA_DONE_handler)(void));
 ************/
 #ifdef MARBLE_V2
 void marble_MGTMUX_set(uint8_t mgt_num, bool on);
+
+uint8_t marble_MGTMUX_status(void);
 #endif
 
 /****
