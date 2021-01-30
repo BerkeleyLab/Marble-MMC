@@ -105,6 +105,7 @@ OBJECTS = $(addprefix $(OUTPUT_DIR)/,$(objects))
 src/rev.h: $(SOURCES)
 	(git rev-parse --short=8 HEAD | awk '{print "#define GIT_REV \"" $$1 "\""}'; \
 	! git diff | grep -q .; echo "#define GIT_DIRTY $$?")  > $@
+	git rev-parse --short=8 HEAD | awk '{print "#define GIT_REV_32BIT 0x" $$1 ""}' >> $@
 $(OUTPUT_DIR)/src/main.o $(OUTPUT_DIR)/src/i2c_pm.o: src/rev.h
 
 # Rule for generating object and dependancy files from source files

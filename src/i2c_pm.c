@@ -626,7 +626,6 @@ void mailbox_write(bool verbose)
 {
    // Just feeling my way around; don't take this seriously
    static uint16_t count=0;
-   const char git_rev[] = GIT_REV;
    unsigned char page3[16];
    count++;
    page3[0] = count >> 8;
@@ -640,7 +639,17 @@ void mailbox_write(bool verbose)
    page3[5] = lm75_0_temp & 0xff;
    page3[6] = lm75_1_temp >> 8;
    page3[7] = lm75_1_temp & 0xff;
-   memcpy(page3+8, git_rev, 8);
+   page3[8] = marble_FMC_status();
+   page3[9] = marble_PWR_status();
+#ifdef MARBLE_V2
+   page3[10] = marble_MGTMUX_status();
+#else
+   page3[10] = 0xFF;
+#endif
+   page3[11] = 0x00;
+   for (unsigned i=0; i<4; i++) {
+      page3[i+12] = (GIT_REV_32BIT >> (32-8*(i+1))) & 0xff;
+   }
    if (verbose) {
       printf("Sending  to  FPGA:");
       for (unsigned jx=0; jx<16; jx++) printf(" %2.2x", page3[jx]);
