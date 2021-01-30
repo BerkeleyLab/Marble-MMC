@@ -272,7 +272,7 @@ uint8_t marble_MGTMUX_status()
 {
    uint8_t status = 0;
    for (unsigned i=0; i < MAXMGT; i++) {
-      status |= HAL_GPIO_ReadPin(GPIOE, mgtmux_pins[i]);
+      status |= HAL_GPIO_ReadPin(GPIOE, mgtmux_pins[i])<<i;
    }
    return status;
 }

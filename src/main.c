@@ -288,7 +288,7 @@ static console_state_e console_top(char rx_ch)
             }
             break;
          case 'j':
-            mailbox_read(true);
+            mbox_peek();
             break;
          default:
             printf(unk_str);
@@ -345,8 +345,7 @@ int main(void)
    while (1) {
       // Run all system update/monitoring tasks and only then handle console
       if (spi_update) {
-         mailbox_write(false);
-         mailbox_read(false);
+         mbox_update(false);
          spi_update = false; // Clear flag
       }
       if (fpga_net_prog_pend) {
