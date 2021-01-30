@@ -3,7 +3,7 @@
 #include "marble_api.h"
 #include "i2c_pm.h"
 #include "i2c_fpga.h"
-#include "ssp.h"
+#include "mailbox.h"
 #include "phy_mdio.h"
 #include "rev.h"
 
