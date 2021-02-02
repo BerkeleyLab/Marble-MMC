@@ -10,7 +10,7 @@ CFLAGS += -Wpointer-arith -Wcast-align -Wcast-qual -Wredundant-decls -Wunreachab
 # Too strict for now: -Wconversion
 vpath %.c ../src
 
-OBJS = hexrec.o i2c_fpga.o i2c_pm.o main.o phy_mdio.o ssp.o syscalls.o
+OBJS = hexrec.o i2c_fpga.o i2c_pm.o main.o phy_mdio.o mailbox.o syscalls.o
 
 all: $(OBJS) hexrec_check
 
