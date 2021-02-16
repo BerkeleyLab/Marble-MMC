@@ -31,6 +31,7 @@
 #include "main.h"
 #include "marble_api.h"
 #include "string.h"
+#include "eeprom.h"
 #include <stdio.h>
 
 void SystemClock_Config_HSI(void);
@@ -107,7 +108,7 @@ void init_eeprom(void)
 	EE_Init();
 }
 
-void save_ip_address(uint8_t *data, uint8_t  addr)
+void save_ip_address(uint8_t data, uint8_t  addr)
 {
 	printf("Status: %x, data: %d\r\n", EE_WriteVariable(VirtAddVarTab + addr,  data), data);
 }
@@ -115,7 +116,9 @@ void save_ip_address(uint8_t *data, uint8_t  addr)
 void read_ip_address(uint8_t *data, uint8_t numb)
 {
 	for (unsigned x=0; x<numb; x++) {
-		EE_ReadVariable(VirtAddVarTab + x,  data + x);
+		uint16_t temp;
+		EE_ReadVariable(VirtAddVarTab + x, &temp);
+		*(data+x) = temp;  // discards upper byte
 	}
 }
 

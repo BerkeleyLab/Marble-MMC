@@ -24,6 +24,14 @@ int marble_UART_send(const char *str, int size);
 int marble_UART_recv(char *str, int size);
 
 /****
+* EEPROM (experimental)
+****/
+void init_eeprom(void);
+void save_ip_address(uint8_t data, uint8_t addr);
+void read_ip_address(uint8_t *data, uint8_t numb);
+void eeprom_lock_flash(void);
+
+/****
 * LED
 ****/
 void marble_LED_set(uint8_t led_num, bool on);
