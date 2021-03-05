@@ -275,6 +275,23 @@ void adn4600_init()
    uint8_t config;
    int rc;
 
+   switch_i2c_bus(6);
+   // Reset U39 P1_7, an mimick that on P1_3 (watch an LED blink)
+   uint8_t data[2];
+   data[0] = 0x7; // Config reg (7)
+   data[1] = 0x77; // Configure P1_7 and P1_3 as outputs (set those bits to 0)
+   marble_I2C_send(I2C_FPGA, 0x42, data, 2);
+   marble_SLEEP_ms(100);
+
+   data[0] = 0x3; // P1
+   data[1] = 0x0; // Write zeros to P1_7 and P1_3
+   marble_I2C_send(I2C_FPGA, 0x42, data, 2);
+
+   marble_SLEEP_ms(1000);
+   data[0] = 0x3; // Config reg (7)
+   data[1] = 0x88;// Write ones to P1_7 and P1_3
+   marble_I2C_send(I2C_FPGA, 0x42, data, 2);
+
    switch_i2c_bus(2);
    marble_SLEEP_ms(100);
 
