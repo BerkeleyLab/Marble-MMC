@@ -111,10 +111,12 @@ unsigned int fpga_prog_cnt=0;
 
 unsigned int fpga_net_prog_pend=0;
 
-// Static for now; eventually needs to be read from EEPROM
+// Static for now; eventually needs to be read from EEPROM.
+// Lower two bits of first MAC byte should be 10 to indicate
+// locally administered, unicast.
 unsigned char mac_ip_data[10] = {
-   18, 85, 85, 0, 1, 46,  // MAC (locally managed)
-   192, 168, 19, 31   // IP
+   18, 85, 85, 0, 1, 33,  // MAC
+   192, 168, 19, 33   // IP
 };
 
 static void fpga_done_handler(void)
