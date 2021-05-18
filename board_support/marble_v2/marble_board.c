@@ -446,7 +446,7 @@ uint32_t marble_init(bool use_xtal)
    marble_SW_init();
    marble_UART_init();
 
-   printf("** Marble init done **\n");
+   printf("** Marble init done **\r\n");
 
    // Init SSP busses
    //marble_SSP_init(LPC_SSP0);

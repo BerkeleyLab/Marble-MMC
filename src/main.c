@@ -304,8 +304,8 @@ int main(void)
    // the XRP7724 isn't running, keeping the final 25 MHz source away.
    const bool use_xtal = false;
    uint32_t sysclk_freq = marble_init(use_xtal);
-   printf("marble_init with use_xtal = %d\n", use_xtal);
-   printf("system clock = %lu Hz\n", sysclk_freq);
+   printf("marble_init with use_xtal = %d\r\n", use_xtal);
+   printf("system clock = %lu Hz\r\n", sysclk_freq);
 #elif MARBLE_V2
    marble_init(0);
 #endif
@@ -325,7 +325,7 @@ int main(void)
    marble_SYSTIMER_handler(timer_int_handler);
 
 #ifdef XRP_AUTOBOOT
-   printf("XRP_AUTOBOOT\n");
+   printf("XRP_AUTOBOOT\r\n");
    marble_SLEEP_ms(300);
    xrp_boot();
 #endif
@@ -337,6 +337,12 @@ int main(void)
 
    // Power FMCs
    marble_FMC_pwr(true);
+
+   if (0) {
+      printf("** Policy: reset FPGA on MMC reset.  Doing it now. **\r\n");
+      reset_fpga();
+      printf("**\r\n");
+   }
 
    // Send demo string over UART at 115200 BAUD
    marble_UART_send(demo_str, strlen(demo_str));

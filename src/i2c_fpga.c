@@ -301,14 +301,14 @@ void adn4600_init()
       uint8_t disable = disables[ix];
       config = 0;
       rc = marble_I2C_cmdsend(I2C_FPGA, ADN4600, disable, &config, 1);
-      printf("> ADN4600 reg[0x%2.2x] <= 0x%2.2x (rc=%d)\n", disable, config, rc);
+      printf("> ADN4600 reg[0x%2.2x] <= 0x%2.2x (rc=%d)\r\n", disable, config, rc);
    }
 
    const unsigned config_len = sizeof configs / sizeof configs[0];
    for (unsigned ix=0; ix < config_len; ix++) {
       config = configs[ix];
       rc = marble_I2C_cmdsend(I2C_FPGA, ADN4600, ADN4600_XPT_Conf, &config, 1);
-      printf("> ADN4600 XPT Conf <= 0x%2.2x (rc=%d)\n", config, rc);
+      printf("> ADN4600 XPT Conf <= 0x%2.2x (rc=%d)\r\n", config, rc);
    }
 
    // Table 9. Switch Core Temporary Registers
@@ -316,12 +316,12 @@ void adn4600_init()
    for (unsigned ix=0; ix<4; ix++) {
       uint8_t cmd = 0x58 + ix;
       rc = marble_I2C_cmdrecv(I2C_FPGA, ADN4600, cmd, &status, 1);
-      printf("> ADN6400 XPT Temp %d r[0x%x] = 0x%2.2x (rc=%d)\n", ix, cmd, status, rc);
+      printf("> ADN6400 XPT Temp %d r[0x%x] = 0x%2.2x (rc=%d)\r\n", ix, cmd, status, rc);
    }
 
    config = 1;
    rc = marble_I2C_cmdsend(I2C_FPGA, ADN4600, ADN4600_XPT_Update, &config, 1);
-   printf("> ADN6400 Update (rc=%d)\n", rc);
+   printf("> ADN6400 Update (rc=%d)\r\n", rc);
 }
 
 void adn4600_printStatus()
