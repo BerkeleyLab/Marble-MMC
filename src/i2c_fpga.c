@@ -6,8 +6,6 @@
 
 void I2C_FPGA_scan(void)
 {
-   int result;
-   uint8_t data[4];
    printf("Scanning I2C_FPGA bus:\r\n");
    for (unsigned j = 0; j < 8; j++)
    {
@@ -50,7 +48,7 @@ void ina219_init()
    setCalibration_16V_2A();
 }
 
-int wireWriteRegister (uint8_t addr, uint8_t reg, uint16_t value)
+static int wireWriteRegister (uint8_t addr, uint8_t reg, uint16_t value)
 {
    uint8_t data[3];
    data[0] = reg;
@@ -59,7 +57,7 @@ int wireWriteRegister (uint8_t addr, uint8_t reg, uint16_t value)
    return marble_I2C_send(I2C_FPGA, addr, data, 3);
 }
 
-bool wireReadRegister(uint8_t addr, uint8_t reg, uint16_t *value)
+static bool wireReadRegister(uint8_t addr, uint8_t reg, uint16_t *value)
 {
    uint8_t buffer[2];
    bool success = 0;
@@ -169,7 +167,7 @@ void setCalibration_16V_2A(void)
 
 }
 
-int16_t getBusVoltage_raw(uint8_t ina)
+static int16_t getBusVoltage_raw(uint8_t ina)
 {
    uint16_t value = 0;
    wireReadRegister(ina, INA_REG_BUSVOLTAGE, &value);
@@ -178,14 +176,7 @@ int16_t getBusVoltage_raw(uint8_t ina)
    return (int16_t)((value >> 3) * 4);
 }
 
-int16_t getShuntVoltage_raw(uint8_t ina)
-{
-   uint16_t value = 0;
-   wireReadRegister(ina, INA_REG_SHUNTVOLTAGE, &value);
-   return (int16_t)value;
-}
-
-int16_t getCurrent_raw(uint8_t ina)
+static int16_t getCurrent_raw(uint8_t ina)
 {
    uint16_t value = 0;
 
@@ -199,14 +190,15 @@ int16_t getCurrent_raw(uint8_t ina)
    //wireReadRegister(ina, INA_REG_CURRENT, &value);
    for(uint8_t i = 0; i < 7; i++)
       {
-         wireReadRegister(INA219_0, i, &value);
+         wireReadRegister(ina, i, &value);
          printf("> INA219 reg: %x:  [%d]\r\n", i, value);
       }
 
    return (int16_t)value;
 }
 
-int16_t getPower_raw(uint8_t ina)
+#if 0
+static int16_t getPower_raw(uint8_t ina)
 {
    uint16_t value = 0;
 
@@ -221,13 +213,23 @@ int16_t getPower_raw(uint8_t ina)
 
    return (int16_t)value;
 }
+#endif
 
-float getShuntVoltage_mV(uint8_t ina)
+#if 0
+static int16_t getShuntVoltage_raw(uint8_t ina)
+{
+   uint16_t value = 0;
+   wireReadRegister(ina, INA_REG_SHUNTVOLTAGE, &value);
+   return (int16_t)value;
+}
+
+static float getShuntVoltage_mV(uint8_t ina)
 {
    int16_t value = 0;
    value = getShuntVoltage_raw(ina);
    return value * 0.01f;
 }
+#endif
 
 float getBusVoltage_V(uint8_t ina)
 {
@@ -236,12 +238,14 @@ float getBusVoltage_V(uint8_t ina)
    return value * 0.001;
 }
 
-float getCurrent_mA(uint8_t ina)
+#if 0
+static float getCurrent_mA(uint8_t ina)
 {
    float valueDec = getCurrent_raw(ina);
    valueDec /= currentDivider_mA;
    return valueDec;
 }
+#endif
 
 float getCurrentAmps(uint8_t ina)
 {
@@ -262,39 +266,69 @@ float getCurrentAmps(uint8_t ina)
 
 void adn4600_init()
 {
+   uint8_t disables[] = {0xD0, 0xD8, 0xF0, 0xF};  // Channels 2, 3, 6, 7
+   uint8_t configs[] = {
+      (ADN4600_OUT_CFG_0 << 4) + ADN4600_OUT_0,
+      (ADN4600_OUT_CFG_1 << 4) + ADN4600_OUT_1,
+      (ADN4600_OUT_CFG_4 << 4) + ADN4600_OUT_4,
+      (ADN4600_OUT_CFG_5 << 4) + ADN4600_OUT_5};
    uint8_t config;
    int rc;
 
+   switch_i2c_bus(6);
+   // Reset U39 P1_7, an mimick that on P1_3 (watch an LED blink)
+   uint8_t data[2];
+   data[0] = 0x7; // Config reg (7)
+   data[1] = 0x77; // Configure P1_7 and P1_3 as outputs (set those bits to 0)
+   marble_I2C_send(I2C_FPGA, 0x42, data, 2);
+   marble_SLEEP_ms(100);
+
+   data[0] = 0x3; // P1
+   data[1] = 0x0; // Write zeros to P1_7 and P1_3
+   marble_I2C_send(I2C_FPGA, 0x42, data, 2);
+
+   marble_SLEEP_ms(1000);
+   data[0] = 0x3; // Config reg (7)
+   data[1] = 0x88;// Write ones to P1_7 and P1_3
+   marble_I2C_send(I2C_FPGA, 0x42, data, 2);
+
    switch_i2c_bus(2);
    marble_SLEEP_ms(100);
-   config = (ADN4600_OUT_CFG_0 << 4) + ADN4600_OUT_0;
-   marble_I2C_cmdsend(I2C_FPGA, ADN4600, ADN4600_XPT_Conf, &config, 1);
-   config = (ADN4600_OUT_CFG_1 << 4) + ADN4600_OUT_1;
-   marble_I2C_cmdsend(I2C_FPGA, ADN4600, ADN4600_XPT_Conf, &config, 1);
-   config = (ADN4600_OUT_CFG_4 << 4) + ADN4600_OUT_4;
-   marble_I2C_cmdsend(I2C_FPGA, ADN4600, ADN4600_XPT_Conf, &config, 1);
-   config = (ADN4600_OUT_CFG_5 << 4) + ADN4600_OUT_5;
-   marble_I2C_cmdsend(I2C_FPGA, ADN4600, ADN4600_XPT_Conf, &config, 1);
+
+   // Disable Tx channels (ones that have N/C on PCB)
+   const unsigned disable_len = sizeof disables / sizeof disables[0];
+   for (unsigned ix=0; ix < disable_len; ix++) {
+      uint8_t disable = disables[ix];
+      config = 0;
+      rc = marble_I2C_cmdsend(I2C_FPGA, ADN4600, disable, &config, 1);
+      printf("> ADN4600 reg[0x%2.2x] <= 0x%2.2x (rc=%d)\r\n", disable, config, rc);
+   }
+
+   const unsigned config_len = sizeof configs / sizeof configs[0];
+   for (unsigned ix=0; ix < config_len; ix++) {
+      config = configs[ix];
+      rc = marble_I2C_cmdsend(I2C_FPGA, ADN4600, ADN4600_XPT_Conf, &config, 1);
+      printf("> ADN4600 XPT Conf <= 0x%2.2x (rc=%d)\r\n", config, rc);
+   }
 
    // Table 9. Switch Core Temporary Registers
    uint8_t status;
    for (unsigned ix=0; ix<4; ix++) {
       uint8_t cmd = 0x58 + ix;
       rc = marble_I2C_cmdrecv(I2C_FPGA, ADN4600, cmd, &status, 1);
-      printf("> ADN6400 XPT Temp %d r[0x%x] = 0x%2.2x (rc=%d)\n", ix, cmd, status, rc);
+      printf("> ADN6400 XPT Temp %d r[0x%x] = 0x%2.2x (rc=%d)\r\n", ix, cmd, status, rc);
    }
 
    config = 1;
    rc = marble_I2C_cmdsend(I2C_FPGA, ADN4600, ADN4600_XPT_Update, &config, 1);
-   printf("> ADN6400 Update (rc=%d)\n", rc);
+   printf("> ADN6400 Update (rc=%d)\r\n", rc);
 }
 
 void adn4600_printStatus()
 {
    uint8_t status;
 
-   for(unsigned ix = 0; ix < 8; ix++)
-   {
+   for (unsigned ix = 0; ix < 8; ix++) {
       uint8_t cmd = ADN4600_XPT_Status0 + ix;
       marble_I2C_cmdrecv(I2C_FPGA, ADN4600, cmd, &status, 1);
       printf("> ADN4600 reg: %x: Output number: %d, Connected input: [%d]\r\n", cmd, ix, status);

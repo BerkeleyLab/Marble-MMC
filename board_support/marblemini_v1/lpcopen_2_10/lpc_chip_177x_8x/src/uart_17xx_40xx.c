@@ -77,16 +77,16 @@ STATIC void Chip_UART_ABIntHandler(LPC_USART_T *pUART)
 {
 	/* Handle End Of Autobaud interrupt */
 	if((Chip_UART_ReadIntIDReg(pUART) & UART_IIR_ABEO_INT) != 0) {
-        Chip_UART_SetAutoBaudReg(pUART, UART_ACR_ABEOINT_CLR); 
+        Chip_UART_SetAutoBaudReg(pUART, UART_ACR_ABEOINT_CLR);
 		Chip_UART_IntDisable(pUART, UART_IER_ABEOINT);
 	    if (ABsyncSts == RESET) {
 	        ABsyncSts = SET;
         }
 	}
-	
+
     /* Handle Autobaud Timeout interrupt */
 	if((Chip_UART_ReadIntIDReg(pUART) & UART_IIR_ABTO_INT) != 0) {
-        Chip_UART_SetAutoBaudReg(pUART, UART_ACR_ABTOINT_CLR); 
+        Chip_UART_SetAutoBaudReg(pUART, UART_ACR_ABTOINT_CLR);
 		Chip_UART_IntDisable(pUART, UART_IER_ABTOINT);
 	}
 }
@@ -124,16 +124,16 @@ void Chip_UART_Init(LPC_USART_T *pUART)
     uint32_t tmp;
 
 	(void) tmp;
-	
+
 	/* Enable UART clocking. UART base clock(s) must already be enabled */
 	Chip_Clock_EnablePeriphClock(Chip_UART_GetClockIndex(pUART));
 
 	/* Enable FIFOs by default, reset them */
 	Chip_UART_SetupFIFOS(pUART, (UART_FCR_FIFO_EN | UART_FCR_RX_RS | UART_FCR_TX_RS));
-    
+
     /* Disable Tx */
     Chip_UART_TXDisable(pUART);
-	
+
     /* Disable interrupts */
 	pUART->IER = 0;
 	/* Set LCR to default state */
@@ -146,7 +146,7 @@ void Chip_UART_Init(LPC_USART_T *pUART)
 	pUART->RS485DLY = 0;
 	/* Set RS485 addr match to default state */
 	pUART->RS485ADRMATCH = 0;
-	
+
     /* Clear MCR */
     if (pUART == LPC_UART1) {
 		/* Set Modem Control to default state */
@@ -206,7 +206,7 @@ void Chip_UART_TXDisable(LPC_USART_T *pUART)
 int Chip_UART_Send(LPC_USART_T *pUART, const void *data, int numBytes)
 {
 	int sent = 0;
-	uint8_t *p8 = (uint8_t *) data;
+	const uint8_t *p8 = (const uint8_t *) data;
 
 	/* Send until the transmit FIFO is full or out of bytes */
 	while ((sent < numBytes) &&
@@ -234,7 +234,7 @@ FlagStatus Chip_UART_CheckBusy(LPC_USART_T *pUART)
 int Chip_UART_SendBlocking(LPC_USART_T *pUART, const void *data, int numBytes)
 {
 	int pass, sent = 0;
-	uint8_t *p8 = (uint8_t *) data;
+	const uint8_t *p8 = (const uint8_t *) data;
 
 	while (numBytes > 0) {
 		pass = Chip_UART_Send(pUART, p8, numBytes);
@@ -331,7 +331,7 @@ void Chip_UART_TXIntHandlerRB(LPC_USART_T *pUART, RINGBUFF_T *pRB)
 uint32_t Chip_UART_SendRB(LPC_USART_T *pUART, RINGBUFF_T *pRB, const void *data, int bytes)
 {
 	uint32_t ret;
-	uint8_t *p8 = (uint8_t *) data;
+	const uint8_t *p8 = (const uint8_t *) data;
 
 	/* Don't let UART transmit ring buffer change in the UART IRQ handler */
 	Chip_UART_IntDisable(pUART, UART_IER_THREINT);
@@ -393,7 +393,7 @@ uint32_t Chip_UART_SetBaudFDR(LPC_USART_T *pUART, uint32_t baudrate)
 #else
 	uClk = Chip_Clock_GetPeripheralClockRate();
 #endif
-    
+
 	/* In the Uart IP block, baud rate is calculated using FDR and DLL-DLM registers
 	 * The formula is :
 	 * BaudRate= uClk * (mulFracDiv/(mulFracDiv+dividerAddFracDiv) / (16 * (DLL)

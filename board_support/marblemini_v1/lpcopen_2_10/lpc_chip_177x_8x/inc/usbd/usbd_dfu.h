@@ -35,9 +35,9 @@
 
 /**
  * If USB device is only DFU capable, DFU Interface number is always 0.
- * if USB device is (DFU + Other Class (Audio/Mass Storage/HID), DFU 
+ * if USB device is (DFU + Other Class (Audio/Mass Storage/HID), DFU
  * Interface number should also be 0 in this implementation.
- */ 
+ */
 #define USB_DFU_IF_NUM	0x0
 
 #define USB_DFU_DESCRIPTOR_TYPE     0x21
@@ -114,7 +114,7 @@ PRE_PACK struct POST_PACK _DFU_STATUS {
 typedef struct _DFU_STATUS DFU_STATUS_T;
 
 #define DFU_FUNC_DESC_SIZE    sizeof(USB_DFU_FUNC_DESCRIPTOR)
-#define DFU_GET_STATUS_SIZE   0x6 
+#define DFU_GET_STATUS_SIZE   0x6
 
 
 #endif  /* __MW_USBD_DFU_H__ */

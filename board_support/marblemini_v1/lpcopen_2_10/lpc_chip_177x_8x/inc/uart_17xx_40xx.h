@@ -288,7 +288,7 @@ typedef struct {					/*!< USARTn Structure       */
 #define UART_TER2_TXEN      (1 << 0)		/*!< Transmit enable bit  - valid for 18xx/43xx only */
 
 /**
- * @brief Macro defines for UART Synchronous Control Register - 11xx, 18xx/43xx UART0/2/3 only 
+ * @brief Macro defines for UART Synchronous Control Register - 11xx, 18xx/43xx UART0/2/3 only
  */
 #define UART_SYNCCTRL_SYNC             (1 << 0)			/*!< enable synchronous mode*/
 #define UART_SYNCCTRL_CSRC_MASTER      (1 << 1)  		/*!< synchronous master mode*/
@@ -796,11 +796,11 @@ FlagStatus Chip_UART_GetABEOStatus(LPC_USART_T *pUART);
  * @param	pUART	    : Pointer to selected UART peripheral
  * @param	mode	    : Autobaud mode (UART_ACR_MODE0 or UART_ACR_MODE1)
  * @param	autorestart	: Enable autorestart (true to enable or false to disable)
- * @param	NewState	: ENABLE to start autobaud operation, DISABLE to 
+ * @param	NewState	: ENABLE to start autobaud operation, DISABLE to
  *                          stop autobaud operation
  * @return	Nothing
  */
-void Chip_UART_ABCmd(LPC_USART_T *pUART, uint32_t mode, bool autorestart, 
+void Chip_UART_ABCmd(LPC_USART_T *pUART, uint32_t mode, bool autorestart,
         FunctionalState NewState);
 
 /**

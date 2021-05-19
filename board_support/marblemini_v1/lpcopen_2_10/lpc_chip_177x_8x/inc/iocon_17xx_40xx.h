@@ -41,9 +41,9 @@ extern "C" {
  * @{
  */
 
-/** 
- * @brief Array of IOCON pin definitions passed to Chip_IOCON_SetPinMuxing() must be in this format 
- */ 
+/**
+ * @brief Array of IOCON pin definitions passed to Chip_IOCON_SetPinMuxing() must be in this format
+ */
 typedef struct {
 	uint32_t pingrp:3;		/* Pin group */
 	uint32_t pinnum:5;		/* Pin number */
@@ -150,6 +150,7 @@ typedef struct {
  */
 STATIC INLINE void Chip_IOCON_Init(LPC_IOCON_T *pIOCON)
 {
+	(void) pIOCON;  // not used
 	Chip_Clock_EnablePeriphClock(SYSCTL_CLOCK_GPIO);
 }
 
@@ -205,7 +206,7 @@ STATIC INLINE void Chip_IOCON_DisableOD(LPC_IOCON_T *pIOCON, uint8_t port, uint8
 }
 
 /**
- * @brief I2C pin configuration definitions 
+ * @brief I2C pin configuration definitions
  */
 typedef enum {
 	I2CPADCFG_STD_MODE = 0x00,                  /*!< Standard I2C mode */

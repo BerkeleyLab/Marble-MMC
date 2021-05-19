@@ -156,7 +156,7 @@ int main(void)
 			fIntervalReached = 0;
 
 			On1 = (bool) !On1;
-#if !defined(CHIP_LPC175X_6X)			
+#if !defined(CHIP_LPC175X_6X)
 			Board_LED_Set(1, On1);
 #endif
 			/* read and display time */

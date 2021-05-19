@@ -97,6 +97,7 @@ STATIC INLINE uint32_t getClkRate(I2C_ID_T id)
 #if defined(CHIP_LPC175X_6X)
 	return Chip_Clock_GetPeripheralClockRate(I2C_PeriphClk[id]);
 #else
+	(void) id;  /* not used */
 	return Chip_Clock_GetPeripheralClockRate();
 #endif
 }
@@ -209,10 +210,12 @@ int handleMasterXferState(LPC_I2C_T *pI2C, I2C_XFER_T  *xfer)
 	/* Rx handling */
 	case 0x58:		/* Data Received and NACK sent */
 		cclr &= ~I2C_CON_STO;
+		/* FALLTHROUGH */
 
 	case 0x50:		/* Data Received and ACK sent */
 		*xfer->rxBuff++ = pI2C->DAT;
 		xfer->rxSz--;
+		/* FALLTHROUGH */
 
 	case 0x40:		/* SLA+R sent and ACK received */
 		if (xfer->rxSz > 1) {
@@ -300,6 +303,7 @@ int handleSlaveXferState(LPC_I2C_T *pI2C, I2C_XFER_T *xfer)
 	case 0xA8:		/* SLA+R received */
 	case 0xB0:		/* SLA+R received after losing arbitration */
 		xfer->slaveAddr = pI2C->DAT & ~1;
+		/* FALLTHROUGH */
 
 	case 0xB8:		/* DATA sent and ACK received */
 		pI2C->DAT = *xfer->txBuff++;

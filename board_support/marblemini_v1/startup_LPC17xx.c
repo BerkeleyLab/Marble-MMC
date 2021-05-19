@@ -1,7 +1,7 @@
-/* 
+/*
  * Contains the entry point for the project, and defines the ISR vectors
  * Copyright (C) 2013 Richard Meadows
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
  * "Software"), to deal in the Software without restriction, including
@@ -9,10 +9,10 @@
  * distribute, sublicense, and/or sell copies of the Software, and to
  * permit persons to whom the Software is furnished to do so, subject to
  * the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
  * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -62,7 +62,7 @@ weak void PLL0_IRQHandler(void) alias (Default_Handler);
 weak void RTC_IRQHandler(void) alias (Default_Handler);
 weak void EINT0_IRQHandler(void) alias (Default_Handler);
 weak void EINT1_IRQHandler(void) alias (Default_Handler);
-weak void EINT2_IRQHandler(void) alias (Default_Handler);  
+weak void EINT2_IRQHandler(void) alias (Default_Handler);
 weak void EINT3_IRQHandler(void) alias (Default_Handler);
 weak void ADC_IRQHandler(void) alias (Default_Handler);
 weak void BOD_IRQHandler(void) alias (Default_Handler);
@@ -92,7 +92,7 @@ extern void __StackLimit(void);
  * linker script can position it at 0x00000000.
  */
 __attribute__ ((section(".isr_vector")))
-const void *isr_vectors[] = {
+void (*isr_vectors[])(void) = {
   /* Cortex-M3 Core Interrupts */
   &__StackLimit,	  // The end of the stack.
   Reset_Handler,	  // The Reset handler
@@ -179,7 +179,7 @@ void Reset_Handler (void) {
     *destination++ = 0;
 
   main();
-  
+
   /* Wait here forever so the chip doesn't go haywire */
   while (1);
 }

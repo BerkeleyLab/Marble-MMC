@@ -11,6 +11,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define WRITE_BIT(REG, BIT, VAL) ((REG & ~(1<<BIT)) | (VAL<<BIT))
+#define TEST_BIT(REG, BIT) (REG & (1<<BIT))
+
 /* Initialize uC and peripherals before main code can run. */
 uint32_t marble_init(bool use_xtal);
 
@@ -47,7 +50,24 @@ bool marble_FPGAint_get(void);
 ****/
 void marble_FMC_pwr(bool on);
 
+typedef enum {
+   M_FMC_STATUS_FMC1_PWR = 0,
+   M_FMC_STATUS_FMC1_FUSE,
+   M_FMC_STATUS_FMC2_PWR,
+   M_FMC_STATUS_FMC2_FUSE,
+} M_FMC_STATUS;
+
+uint8_t marble_FMC_status(void);
+
 void marble_PSU_pwr(bool on);
+
+typedef enum {
+   M_PWR_STATUS_PSU_EN = 0,
+   M_PWR_STATUS_POE,
+   M_PWR_STATUS_OTEMP
+} M_PWR_STATUS;
+
+uint8_t marble_PWR_status(void);
 
 /****
 * FPGA reset/init control
@@ -58,18 +78,27 @@ void reset_fpga(void);
 /****
 * SPI/SSP
 ****/
-typedef enum {
-   SSP_FPGA,
-   SSP_PMOD
-} SSP_PORT;
+typedef void *SSP_PORT;
+SSP_PORT SSP_FPGA;
+SSP_PORT SSP_PMOD;
 
-int marble_SSP_write(SSP_PORT ssp, uint8_t *buffer, int size);
-int marble_SSP_read(SSP_PORT ssp, uint8_t *buffer, int size);
+int marble_SSP_write16(SSP_PORT ssp, uint16_t *buffer, unsigned size);
+int marble_SSP_read16(SSP_PORT ssp, uint16_t *buffer, unsigned size);
+int marble_SSP_exch16(SSP_PORT ssp, uint16_t *tx_buf, uint16_t *rx_buf, unsigned size);
 
 /************
 * GPIO user-defined handlers
 ************/
-void marble_GPIOint_handlers(void *FPGA_DONE_handler);
+void marble_GPIOint_handlers(void (*FPGA_DONE_handler)(void));
+
+/************
+* MGT Multiplexer
+************/
+#ifdef MARBLE_V2
+void marble_MGTMUX_set(uint8_t mgt_num, bool on);
+
+uint8_t marble_MGTMUX_status(void);
+#endif
 
 /****
 * I2C
@@ -96,14 +125,14 @@ int marble_I2C_cmdrecv_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *
 /************
 * MDIO to PHY
 ************/
-void marble_MDIO_write(uint8_t reg, uint16_t data);
-uint16_t marble_MDIO_read(uint8_t reg);
+void marble_MDIO_write(uint16_t reg, uint32_t data);
+uint32_t marble_MDIO_read(uint16_t reg);
 
 /************
 * System Timer and Stopwatch
 ************/
-int marble_SYSTIMER_ms(uint32_t delay);
-void marble_SYSTIMER_handler(void *handler);
+uint32_t marble_SYSTIMER_ms(uint32_t delay);
+void marble_SYSTIMER_handler(void (*handler)(void));
 
 void marble_SLEEP_ms(uint32_t delay);
 void marble_SLEEP_us(uint32_t delay);

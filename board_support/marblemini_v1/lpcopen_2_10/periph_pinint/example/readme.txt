@@ -3,8 +3,8 @@ GPIO pin Interrupt example
 Example description
 This example demonstrates use of the GPIO pin interrupts.
 
-This example configures a GPIO interrupt as a falling edge wake up interrupt. 
-The application will wait for interrupts in a loop.  With every interrupt the 
+This example configures a GPIO interrupt as a falling edge wake up interrupt.
+The application will wait for interrupts in a loop.  With every interrupt the
 board LED0 will be toggled.
 
 Special connection requirements

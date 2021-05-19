@@ -1,4 +1,7 @@
-Based on lpc-toolchain. See [README here](README-lpc-toolchain.md)
+Originally based on lpc-toolchain. See its [README here](README-lpc-toolchain.md).
+
+Pro-tip: People using Debian Buster (and related Linux distributions) can
+get the required ARM compilers etc. with `apt-get install gcc-arm-none-eabi`.
 
 ## UART connectivity ##
 Due to an odd interaction of the Linux kernel with the FTDI UART,

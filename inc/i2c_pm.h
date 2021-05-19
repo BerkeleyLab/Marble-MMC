@@ -34,16 +34,17 @@ void LM75_print(uint8_t dev);
 int LM75_read(uint8_t dev, LM75_REG reg, int *data);
 int LM75_write(uint8_t dev, LM75_REG reg, int data);
 
+int xrp_ch_status(uint8_t dev, uint8_t chn);
 void xrp_dump(uint8_t dev);
 void xrp_flash(uint8_t dev);
 void xrp_go(uint8_t dev);
 void xrp_hex_in(uint8_t dev);
 
 /* communication between i2c_pm and hexrec */
-int xrp_push_low(uint8_t dev, uint16_t addr, uint8_t data[], unsigned len);
+int xrp_push_low(uint8_t dev, uint16_t addr, const uint8_t data[], unsigned len);
 int xrp_set2(uint8_t dev, uint16_t addr, uint8_t data);
 int xrp_read2(uint8_t dev, uint16_t addr);
-int xrp_srecord(uint8_t dev, uint8_t data[]);
+int xrp_srecord(uint8_t dev, const uint8_t data[]);
 int xrp_program_static(uint8_t dev);
 int xrp_file(uint8_t dev);
 

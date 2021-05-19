@@ -57,7 +57,7 @@ Remove jumpers on JP24~JP27 when SSP1 is used.
 				- P0.6:  SSP1_SSEL 		J5/6.7  (on baseboard)
 				- P0.8:  SSP1_MISO 		J5/6.13 (on baseboard)
 				- P0.9:  SSP1_MOSI 		J5/6.14 (on baseboard)
-Need to connect with base board for using RS232/UART port. 
+Need to connect with base board for using RS232/UART port.
 <dt>Common ground must be connected together between two boards.</dt>
 
 Build procedures:

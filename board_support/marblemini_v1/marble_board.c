@@ -182,11 +182,31 @@ void marble_FMC_pwr(bool on)
    Chip_GPIO_WritePortBit(LPC_GPIO, fmc_port, fmc2_pin, on);
 }
 
+uint8_t marble_FMC_status(void)
+{
+   uint8_t status = 0;
+   status = WRITE_BIT(status, M_FMC_STATUS_FMC1_PWR,  Chip_GPIO_ReadPortBit(LPC_GPIO, 1, 27));
+   status = WRITE_BIT(status, M_FMC_STATUS_FMC1_FUSE, Chip_GPIO_ReadPortBit(LPC_GPIO, 0, 23));
+   status = WRITE_BIT(status, M_FMC_STATUS_FMC2_PWR,  Chip_GPIO_ReadPortBit(LPC_GPIO, 1, 19));
+   status = WRITE_BIT(status, M_FMC_STATUS_FMC2_FUSE, Chip_GPIO_ReadPortBit(LPC_GPIO, 0, 24));
+   return status;
+}
+
 void marble_PSU_pwr(bool on)
 {
    Chip_GPIO_WriteDirBit(LPC_GPIO, 1, 31, true);
    Chip_GPIO_WritePortBit(LPC_GPIO, 1, 31, on);
 }
+
+uint8_t marble_PWR_status(void)
+{
+   uint8_t status = 0;
+   status = WRITE_BIT(status, M_PWR_STATUS_PSU_EN, Chip_GPIO_ReadPortBit(LPC_GPIO, 1, 31));
+   status = WRITE_BIT(status, M_PWR_STATUS_POE,    Chip_GPIO_ReadPortBit(LPC_GPIO, 1, 0));
+   status = WRITE_BIT(status, M_PWR_STATUS_OTEMP,  Chip_GPIO_ReadPortBit(LPC_GPIO, 0, 29));
+   return status;
+}
+
 
 /************
 * Switches and FPGA interrupt
@@ -236,7 +256,7 @@ void reset_fpga(void)
 * GPIO interrupt setup and user-defined handlers
 ************/
 const uint8_t FPGA_DONE_INT_PIN = 5;
-void FPGA_DONE_dummy(void) {};
+void FPGA_DONE_dummy(void) {}
 void (*volatile marble_FPGA_DONE_handler)(void) = FPGA_DONE_dummy;
 
 // Override default (weak) IRQHandler
@@ -266,7 +286,7 @@ void marble_GPIOint_init(void)
 }
 
 /* Register user-defined interrupt handlers */
-void marble_GPIOint_handlers(void *FPGA_DONE_handler) {
+void marble_GPIOint_handlers(void (*FPGA_DONE_handler)(void)) {
    marble_FPGA_DONE_handler = FPGA_DONE_handler;
 }
 
@@ -315,6 +335,8 @@ static void marble_I2C_pins(I2C_ID_T id)
          Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 10, (IOCON_MODE_INACT | IOCON_OPENDRAIN_EN | IOCON_FUNC2));
          Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 11, (IOCON_MODE_INACT | IOCON_OPENDRAIN_EN | IOCON_FUNC2));
          break;
+      default:
+         break;  // unknown id, fail silently
    }
 }
 
@@ -444,30 +466,31 @@ static void marble_SSP_init(LPC_SSP_T *ssp)
    //NVIC_EnableIRQ(SSP_IRQ);
 }
 
-int marble_SSP_write(SSP_PORT ssp, uint8_t *buffer, int size)
+int marble_SSP_write16(SSP_PORT ssp, uint16_t *buffer, unsigned size)
 {
-   if (ssp == SSP_FPGA) {
-      return Chip_SSP_WriteFrames_Blocking(LPC_SSP0, buffer, size);
-   } else if (ssp == SSP_PMOD) {
-      return Chip_SSP_WriteFrames_Blocking(LPC_SSP1, buffer, size);
-   }
-   return 0;
+   return Chip_SSP_WriteFrames_Blocking(ssp, (uint8_t*) buffer, size*2); // API expectes length in bytes
 }
 
-int marble_SSP_read(SSP_PORT ssp, uint8_t *buffer, int size)
+int marble_SSP_read16(SSP_PORT ssp, uint16_t *buffer, unsigned size)
 {
-   if (ssp == SSP_FPGA) {
-      return Chip_SSP_ReadFrames_Blocking(LPC_SSP0, buffer, size);
-   } else if (ssp == SSP_PMOD) {
-      return Chip_SSP_ReadFrames_Blocking(LPC_SSP1, buffer, size);
-   }
-   return 0;
+   return Chip_SSP_ReadFrames_Blocking(ssp, (uint8_t*) buffer, size*2);
+}
+
+int marble_SSP_exch16(SSP_PORT ssp, uint16_t *tx_buf, uint16_t *rx_buf, unsigned size)
+{
+   Chip_SSP_DATA_SETUP_T set;
+   set.tx_data = tx_buf;
+   set.tx_cnt = 0;
+   set.rx_data = rx_buf;
+   set.rx_cnt = 0;
+   set.length = size;
+   return Chip_SSP_RWFrames_Blocking(ssp, &set);
 }
 
 /************
 * MDIO to PHY
 ************/
-void marble_MDIO_init()
+void marble_MDIO_init(void)
 {
    Chip_Clock_EnablePeriphClock(SYSCTL_CLOCK_ENET);
 
@@ -475,13 +498,13 @@ void marble_MDIO_init()
    Chip_ENET_SetupMII(LPC_ETHERNET, Chip_ENET_FindMIIDiv(LPC_ETHERNET, 2500000), 0);
 }
 
-void marble_MDIO_write(uint8_t reg, uint16_t data)
+void marble_MDIO_write(uint16_t reg, uint32_t data)
 {
    Chip_ENET_StartMIIWrite(LPC_ETHERNET, reg, data);
    while (Chip_ENET_IsMIIBusy(LPC_ETHERNET));
 }
 
-uint16_t marble_MDIO_read(uint8_t reg)
+uint32_t marble_MDIO_read(uint16_t reg)
 {
    Chip_ENET_StartMIIRead(LPC_ETHERNET, reg);
    while (Chip_ENET_IsMIIBusy(LPC_ETHERNET));
@@ -491,7 +514,7 @@ uint16_t marble_MDIO_read(uint8_t reg)
 /************
 * System Timer and Stopwatch
 ************/
-void SysTick_Handler_dummy(void) {};
+void SysTick_Handler_dummy(void) {}
 void (*volatile marble_SysTick_Handler)(void) = SysTick_Handler_dummy;
 
 // Override default (weak) SysTick_Handler
@@ -502,21 +525,22 @@ void SysTick_Handler(void)
 }
 
 /* Register user-defined interrupt handlers */
-void marble_SYSTIMER_handler(void *handler) {
+void marble_SYSTIMER_handler(void (*handler)(void)) {
    marble_SysTick_Handler = handler;
 }
 
 /* Configures 24-bit count-down timer and enables systimer interrupt */
-int marble_SYSTIMER_ms(uint32_t delay)
+uint32_t marble_SYSTIMER_ms(uint32_t delay)
 {
    const uint32_t MAX_TICKS = (1<<24)-1;
-   uint32_t ticks = (SystemCoreClock / 1000) * delay;
-   if (ticks > MAX_TICKS) {
-      SysTick_Config(MAX_TICKS);
-      return -1;
+   const uint32_t MAX_DELAY_MS = (SystemCoreClock * 1000U) / MAX_TICKS;
+   uint32_t ticks = (SystemCoreClock / 1000U) * delay;
+   if (delay > MAX_DELAY_MS) {
+      ticks = MAX_TICKS;
+      delay = MAX_DELAY_MS;
    }
    SysTick_Config(ticks);
-   return 0;
+   return delay;
 }
 
 void marble_SLEEP_ms(uint32_t delay)
@@ -567,6 +591,8 @@ uint32_t marble_init(bool use_xtal)
    // Init SSP busses
    marble_SSP_init(LPC_SSP0);
    //marble_SSP_init(LPC_SSP1);
+   SSP_FPGA = LPC_SSP0;
+   SSP_PMOD = LPC_SSP1;
 
    marble_MDIO_init();
 

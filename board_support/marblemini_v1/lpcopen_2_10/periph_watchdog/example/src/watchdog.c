@@ -75,7 +75,7 @@ static void wdt_handle(void) {
 			Chip_WWDT_Feed(LPC_WWDT);
 		}
 	}
-#endif /*!defined(CHIP_LPC175X_6X)*/	
+#endif /*!defined(CHIP_LPC175X_6X)*/
 }
 
 /*****************************************************************************
@@ -129,15 +129,15 @@ int main(void)
 #else
 	wdtFreq = WDT_OSC;
 #endif
-	
+
 	/* Set watchdog feed time constant to 0.1s */
 	Chip_WWDT_SetTimeOut(LPC_WWDT, wdtFreq / 10);
-#if !defined(CHIP_LPC175X_6X)	
+#if !defined(CHIP_LPC175X_6X)
 	/* Set watchdog warning time to 512 ticks after feed time constant
 	   Set watchdog window time to 0.9s */
 	Chip_WWDT_SetWarning(LPC_WWDT, 512);
 	Chip_WWDT_SetWindow(LPC_WWDT, wdtFreq - (wdtFreq / 10));
-#endif /*!defined(CHIP_LPC175X_6X)*/	
+#endif /*!defined(CHIP_LPC175X_6X)*/
 
 	/* Configure WWDT to reset on timeout */
 	Chip_WWDT_SetOption(LPC_WWDT, WWDT_WDMOD_WDRESET);
@@ -158,9 +158,9 @@ int main(void)
 
 	/* Watchdog test options */
 	DEBUGOUT("Press '1' to enable watchdog feed on systick interrupt\n\r");
-#if !defined(CHIP_LPC175X_6X)	
+#if !defined(CHIP_LPC175X_6X)
 	DEBUGOUT("Press '2' to enable watchdog feed on warning interrupt\n\r");
-#endif	
+#endif
 	DEBUGOUT("Press '3' to disable watchdog feed (will reset device)\n\r");
 
 	while (1) {
