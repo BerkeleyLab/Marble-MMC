@@ -59,3 +59,27 @@ ls -l ftdi_eeprom/ftdi_eeprom
   * Enter the unique serial number in `ftdi/marble_mini.conf`
   * Make sure `lsusb -d 0403:6011` shows exactly 0 devices, then plug in the Marble-Mini, and see exactly 1 device
   * Run `ftdi/program_ftdi.sh`
+
+## Credits
+
+This code base was initially developed as a collaboration between Michal Gaska (WUT) and Larry Doolittle (LBNL), with important contribuitons from Sergio Paiagua, Vamsi Vytla and Michael Betz (LBNL).
+
+## Copyright
+
+Marble MMC v1.0 Copyright (c) 2021, The Regents of the University of
+California, through Lawrence Berkeley National Laboratory (subject to
+receipt of any required approvals from the U.S. Dept. of Energy) and
+Creotech Instruments SA. All rights reserved.
+
+If you have questions about your rights to use or distribute this software,
+please contact Berkeley Lab's Intellectual Property Office at
+IPO@lbl.gov.
+
+NOTICE.  This Software was developed under funding from the U.S. Department
+of Energy and the U.S. Government consequently retains certain rights.  As
+such, the U.S. Government has been granted for itself and others acting on
+its behalf a paid-up, nonexclusive, irrevocable, worldwide license in the
+Software to reproduce, distribute copies to the public, prepare derivative 
+works, and perform publicly and display publicly, and to permit others to do so.
+
+
