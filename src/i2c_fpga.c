@@ -334,3 +334,37 @@ void adn4600_printStatus()
       printf("> ADN4600 reg: %x: Output number: %d, Connected input: [%d]\r\n", cmd, ix, status);
    }
 }
+
+
+// Try read the values at all the registers 0x42
+void pca9555_status()
+{
+   uint8_t val;
+   switch_i2c_bus(6);
+   for (unsigned ix = 0; ix < 8; ix++) {
+           uint8_t reg = 0x00 + ix;
+           marble_I2C_cmdrecv(I2C_FPGA, PCA9555_1, reg, &val, 1);
+           printf("> PCA9555 reg: %x: Value: %d \r\n", reg, val);
+   }
+}
+
+// not used yet
+void pca9555_config()
+{
+   switch_i2c_bus(6);
+   // Reset U39 P1_7, an mimick that on P1_3 (watch an LED blink)
+   uint8_t data[2];
+   data[0] = 0x7; // Config reg (7)
+   data[1] = 0x77; // Configure P1_7 and P1_3 as outputs (set those bits to 0)
+   marble_I2C_send(I2C_FPGA, PCA9555_1, data, 2);
+   marble_SLEEP_ms(100);
+
+   data[0] = 0x3; // P1
+   data[1] = 0x0; // Write zeros to P1_7 and P1_3
+   marble_I2C_send(I2C_FPGA, PCA9555_1, data, 2);
+
+   marble_SLEEP_ms(1000);
+   data[0] = 0x3; // P1
+   data[1] = 0x88;// Write ones to P1_7 and P1_3
+   marble_I2C_send(I2C_FPGA, PCA9555_1, data, 2);
+}

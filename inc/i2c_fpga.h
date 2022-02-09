@@ -30,6 +30,8 @@ void ina219_init(void);
 void ina219_debug(uint8_t addr);
 float getBusVoltage_V(uint8_t);
 float getCurrentAmps(uint8_t);
+void pca9555_status(void);
+void pca9555_config(void);
 
 /************
 * INA219

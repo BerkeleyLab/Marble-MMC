@@ -39,7 +39,8 @@ const char menu_str[] = "\r\n"
 	"g) XRP7724 go\r\n"
 	"h) XRP7724 hex input\r\n"
 	"i) timer check/cal\r\n"
-	"j) Read SPI mailbox\r\n";
+	"j) Read SPI mailbox\r\n"
+	"k) PCA9555 status\r\n";
 
 const char unk_str[] = "> Unknown option\r\n";
 
@@ -289,6 +290,10 @@ static console_state_e console_top(char rx_ch)
             break;
          case 'j':
             mbox_peek();
+            break;
+         case 'k':
+            printf("PCA9555 U34 and U35 status\r\n");
+            pca9555_status();
             break;
          default:
             printf(unk_str);
