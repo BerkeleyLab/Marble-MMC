@@ -87,7 +87,7 @@ static void pm_bus_display(void)
 static void mgtclk_xpoint_en(void)
 {
    if (xrp_ch_status(XRP7724, 1)) { // CH1: 3.3V
-      adn4600_init();
+      //adn4600_init();
    }
 }
 #endif
@@ -250,7 +250,7 @@ static console_state_e console_top(char rx_ch)
 #ifdef MARBLEM_V1
             PRINT_NA;
 #elif MARBLE_V2
-            adn4600_init();
+            //adn4600_init();
             adn4600_printStatus();
 #endif
             break;
@@ -292,7 +292,6 @@ static console_state_e console_top(char rx_ch)
             mbox_peek();
             break;
          case 'k':
-            printf("PCA9555 U34 and U35 status\r\n");
             pca9555_status();
             break;
          default:

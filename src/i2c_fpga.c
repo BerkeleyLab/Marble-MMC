@@ -336,17 +336,21 @@ void adn4600_printStatus()
 }
 
 
-// Try read the values at all the registers 0x42
+// Try read the values at all the registers 0x42 and 0x40
 void pca9555_status()
 {
    uint8_t val;
    switch_i2c_bus(6);
-   for (unsigned ix = 0; ix < 8; ix++) {
+   for (unsigned jx = 0x40; jx <= 0x42; jx+=2) {
+       printf("PCA9555 status at address 0x%x\r\n", jx);
+       for (unsigned ix = 0; ix < 8; ix++) {
            uint8_t reg = 0x00 + ix;
-           marble_I2C_cmdrecv(I2C_FPGA, PCA9555_1, reg, &val, 1);
-           printf("> PCA9555 reg: %x: Value: %d \r\n", reg, val);
+           marble_I2C_cmdrecv(I2C_FPGA, jx, reg, &val, 1);
+           printf("> Reg: %x: Value: %d \r\n", reg, val);
+       }
    }
 }
+
 
 // not used yet
 void pca9555_config()
