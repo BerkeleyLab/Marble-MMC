@@ -338,7 +338,7 @@ int main(void)
    // Power FMCs
    marble_FMC_pwr(true);
 
-   if (0) {
+   if (1) {
       printf("** Policy: reset FPGA on MMC reset.  Doing it now. **\r\n");
       reset_fpga();
       printf("**\r\n");
