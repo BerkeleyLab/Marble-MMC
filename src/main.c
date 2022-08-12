@@ -87,6 +87,8 @@ static void mgtclk_xpoint_en(void)
 {
    if (xrp_ch_status(XRP7724, 1)) { // CH1: 3.3V
       adn4600_init();
+   } else {
+      printf("Skipping adn4600_init\r\n");
    }
 }
 #endif
@@ -338,7 +340,7 @@ int main(void)
    // Power FMCs
    marble_FMC_pwr(true);
 
-   if (0) {
+   if (1) {
       printf("** Policy: reset FPGA on MMC reset.  Doing it now. **\r\n");
       reset_fpga();
       printf("**\r\n");
@@ -355,7 +357,9 @@ int main(void)
          spi_update = false; // Clear flag
       }
       if (fpga_net_prog_pend) {
+         print_mac_ip(mac_ip_data);
          push_fpga_mac_ip(mac_ip_data);
+         printf("DONE\r\n");
          fpga_net_prog_pend=0;
       }
 
