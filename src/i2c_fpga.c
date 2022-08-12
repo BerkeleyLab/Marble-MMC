@@ -79,13 +79,13 @@ void ina219_debug(uint8_t addr)
 {
    uint16_t value = 0;
    bool rc;
-   printf("> INA219 debug at address %2.2xh\n", (unsigned) addr);
+   printf("> INA219 debug at address %2.2xh\r\n", (unsigned) addr);
    rc = wireReadRegister(addr, INA_REG_CONFIG, &value);
-   printf("Register %d value 0x%4.4x (%d)\n", INA_REG_CONFIG, value, rc);
+   printf("Register %d value 0x%4.4x (%d)\r\n", INA_REG_CONFIG, value, rc);
    rc = wireReadRegister(addr, INA_REG_SHUNTVOLTAGE, &value);
-   printf("Register %d value 0x%4.4x (%d)\n", INA_REG_SHUNTVOLTAGE, value, rc);
+   printf("Register %d value 0x%4.4x (%d)\r\n", INA_REG_SHUNTVOLTAGE, value, rc);
    rc = wireReadRegister(addr, INA_REG_BUSVOLTAGE, &value);
-   printf("Register %d value 0x%4.4x (%d)\n", INA_REG_BUSVOLTAGE, value, rc);
+   printf("Register %d value 0x%4.4x (%d)\r\n", INA_REG_BUSVOLTAGE, value, rc);
 }
 
 void setCalibration_16V_2A(void)
@@ -234,7 +234,7 @@ static float getShuntVoltage_mV(uint8_t ina)
 float getBusVoltage_V(uint8_t ina)
 {
    int16_t value = getBusVoltage_raw(ina);
-   printf("Voltage: %dV\n", value);
+   printf("Voltage: %dV\r\n", value);
    return value * 0.001;
 }
 
@@ -252,7 +252,7 @@ float getCurrentAmps(uint8_t ina)
    int16_t valueRaw;
    float valueDec;
    valueRaw = getCurrent_raw(ina);
-   printf("Current: %dmA\n", valueRaw);
+   printf("Current: %dmA\r\n", valueRaw);
    valueDec = valueRaw;
    valueDec /= currentDivider_mA;
    valueDec /= 1000.0f;

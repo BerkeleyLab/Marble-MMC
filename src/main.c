@@ -285,7 +285,7 @@ static console_state_e console_top(char rx_ch)
             break;
          case 'i':
             for (unsigned ix=0; ix<10; ix++) {
-               printf("%d\n", ix);
+               printf("%d\r\n", ix);
                marble_SLEEP_ms(1000);
             }
             break;

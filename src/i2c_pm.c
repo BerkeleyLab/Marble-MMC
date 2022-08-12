@@ -229,7 +229,7 @@ int xrp_read2(uint8_t dev, uint16_t addr)
 void xrp_dump(uint8_t dev)
 {
    // https://www.maxlinear.com/appnote/anp-38.pdf
-   printf("XRP7724 dump [%2.2x]\n", dev);
+   printf("XRP7724 dump [%2.2x]\r\n", dev);
    struct {int a; const char *n;} r_table[] = {
       {0x02, "HOST_STS"},
       {0x05, "FAULT_STATUS"},
@@ -257,9 +257,9 @@ void xrp_dump(uint8_t dev)
       int rc = marble_I2C_cmdrecv(I2C_PM, dev, regno, i2c_dat, 2);
       if (rc == HAL_OK) {
           unsigned value = (((unsigned) i2c_dat[0]) << 8) | i2c_dat[1];
-          printf("r[%2.2x] = 0x%4.4x = %5d   (%s)\n", regno, value, value, r_table[ix].n);
+          printf("r[%2.2x] = 0x%4.4x = %5d   (%s)\r\n", regno, value, value, r_table[ix].n);
       } else {
-          printf("r[%2.2x]    unread          (%s)\n", regno, r_table[ix].n);
+          printf("r[%2.2x]    unread          (%s)\r\n", regno, r_table[ix].n);
       }
    }
 }

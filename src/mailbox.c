@@ -75,7 +75,7 @@ void mbox_update(bool verbose)
    if (verbose) {
       printf("Writing mailbox page 3:");
       for (unsigned jx=0; jx<MB3_SIZE; jx++) printf(" %2.2x", page3[jx]);
-      printf("\n");
+      printf("\r\n");
    }
    // Write page
    mbox_write_page(3, MB3_SIZE, page3);
@@ -90,7 +90,7 @@ void mbox_update(bool verbose)
    if (verbose) {
       printf("Reading mailbox page 2:");
       for (unsigned jx=0; jx<MB2_SIZE; jx++) printf(" %2.2x", page2[jx]);
-      printf("\n");
+      printf("\r\n");
    }
 
    // Control of FMC power and MGT mux based on page 2, entry 0
@@ -101,7 +101,7 @@ void mbox_update(bool verbose)
    // [7] - MGT_MUX2_SEL, [6] - ON/OFF
    uint8_t fmc_mgt_cmd = page2[MB2_FMC_MGT_CTL];
 
-   if (verbose) printf("FMC/MGT command 0x%2.2x\n", fmc_mgt_cmd);
+   if (verbose) printf("FMC/MGT command 0x%2.2x\r\n", fmc_mgt_cmd);
 
    if (fmc_mgt_cmd != 0) {  // clear mailbox entry
       mbox_set_page(2);
