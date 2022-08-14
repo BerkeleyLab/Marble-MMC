@@ -346,7 +346,7 @@ void pca9555_status()
        for (unsigned ix = 0; ix < 8; ix++) {
            uint8_t reg = 0x00 + ix;
            marble_I2C_cmdrecv(I2C_FPGA, jx, reg, &val, 1);
-           printf("> Reg: %x: Value: %x \r\n", reg, val);
+           printf("> Reg: %x: Value: %x\r\n", reg, val);
        }
    }
 }
@@ -361,33 +361,33 @@ void pca9555_config()
    data[0] = 0x7; // Config reg (7)
    data[1] = 0x77; // Configure P1_7 and P1_3 as outputs (set those bits to 0)
    marble_I2C_send(I2C_FPGA, 0x42, data, 2);
-   printf("> reg: %x: value: %x \r\n", data[0], data[1]);
+   printf("> reg: %x: value: %x\r\n", data[0], data[1]);
    marble_SLEEP_ms(100);
 
    data[0] = 0x3; // P1
    data[1] = 0x0; // Write zeros to P1_7 and P1_3
    marble_I2C_send(I2C_FPGA, 0x42, data, 2);
-   printf("> reg: %x: value: %x \r\n", data[0], data[1]);
+   printf("> reg: %x: value: %x\r\n", data[0], data[1]);
 
    marble_SLEEP_ms(1000);
    data[0] = 0x3; // P1
    data[1] = 0x88;// Write ones to P1_7 and P1_3
    marble_I2C_send(I2C_FPGA, 0x42, data, 2);
-   printf("> reg: %x: value: %x \r\n", data[0], data[1]);
+   printf("> reg: %x: value: %x\r\n", data[0], data[1]);
 
    printf("Configuring PCA9555 at address 0x44\r\n");
    data[0] = 0x6; // Config regs 6(port 0) and 7(port 1)
    data[1] = 0x37; // Configure P0_7, P0_6 and P0_3 as outputs (set those bits to 0)
    data[2] = 0x37; // Configure P1_7, P1_6 and P0_3 as outputs (set those bits to 0)
    marble_I2C_send(I2C_FPGA, 0x44, data, 3);
-   printf("> reg: %x: value: %x \r\n", data[0], data[1]);
-   printf("> reg: %x: value: %x \r\n", data[0]+1, data[2]);
+   printf("> reg: %x: value: %x\r\n", data[0], data[1]);
+   printf("> reg: %x: value: %x\r\n", data[0]+1, data[2]);
    marble_SLEEP_ms(100);
 
    data[0] = 0x2; // P1 and P2
    data[1] = 0x48; // Write ones to P0_7 and P0_3
    data[2] = 0x48; // Write ones to P1_7 and P1_3
    marble_I2C_send(I2C_FPGA, 0x44, data, 3);
-   printf("> reg: %x: value: %x \r\n", data[0], data[1]);
-   printf("> reg: %x: value: %x \r\n", data[0]+1, data[2]);
+   printf("> reg: %x: value: %x\r\n", data[0], data[1]);
+   printf("> reg: %x: value: %x\r\n", data[0]+1, data[2]);
 }
