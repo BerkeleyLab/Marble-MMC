@@ -391,3 +391,45 @@ void pca9555_config()
    printf("> reg: %x: value: %x\r\n", data[0], data[1]);
    printf("> reg: %x: value: %x\r\n", data[0]+1, data[2]);
 }
+
+// Compute the current SI570 Frequency
+void si570_status()
+{
+   switch_i2c_bus(6);
+   uint8_t val[6];
+   printf("SI570 status at address 0xee\r\n");
+   for (unsigned ix = 0; ix < 6; ix++) {
+      uint8_t reg = 0x07 + ix;
+      marble_I2C_cmdrecv(I2C_FPGA, 0xee, reg, &val[ix], 1);
+      printf("> Reg: %x: Value: %x\r\n", reg, val[ix]);
+   }
+
+   uint8_t hs_div = val[0] >> 5;
+   uint8_t n1 = (((val[0] & 0x1f) << 2) | (val[1] >> 6));
+   float res = pow(2, 28);
+   float rfreq = (((val[1] & 0x3f) << 32) | (val[2] << 24) | (val[3] << 16) | (val[4] << 8) | val[5]) * res;
+   // Nominal internal crystal frequency
+   float fxtal = 114285000;
+   float fout = (fxtal * rfreq)/(hs_div*n1);
+
+   printf("> fxtal: %f MHz\r\n", fxtal/1000000);
+   printf("> HS_DIV: %x\r\n", hs_div);
+   printf("> N1: %x\r\n", n1);
+   printf("> RFREQ: %f\r\n", rfreq);
+   printf("> Current SI570 frequency: %f MHz\r\n", fout/1000000);
+
+  // return hs_div, n1, rfreq, fout;
+}
+
+void si570_config(freq_n)
+{
+}
+
+// Change the SI570 based on the input given
+//void si570_config(freq_n)
+//{
+//   switch_i2c_bus(6);
+   // first get the current frequency values
+//   hs_div_c, n1_c, rfreq_c, fout_c = si570_status();
+//   fxtal = (fout_c * hs_div_c * n1) / rfreq_c
+//   //}
