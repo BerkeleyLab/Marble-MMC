@@ -55,12 +55,12 @@ static void print_mac_ip(unsigned char mac_ip_data[10])
    }
    printf("%x", mac_ip_data[ix]);
 
-   printf("\n\rIP: ");
+   printf("\r\nIP: ");
    for (ix++; ix<9; ix++) {
       printf("%d.", mac_ip_data[ix]);
    }
    printf("%d", mac_ip_data[ix]);
-   printf("\n\r");
+   printf("\r\n");
 }
 
 static void ina219_test(void)
@@ -89,7 +89,7 @@ static void pm_bus_display(void)
 static void mgtclk_xpoint_en(void)
 {
    if (xrp_ch_status(XRP7724, 1)) { // CH1: 3.3V
-      //adn4600_init();
+      adn4600_init();
    }
 }
 #endif
@@ -254,7 +254,7 @@ static console_state_e console_top(char rx_ch)
 #ifdef MARBLEM_V1
             PRINT_NA;
 #elif MARBLE_V2
-            //adn4600_init();
+            adn4600_init();
             adn4600_printStatus();
 #endif
             break;
@@ -349,7 +349,7 @@ int main(void)
    // Power FMCs
    marble_FMC_pwr(true);
 
-   if (0) {
+   if (1) {
       printf("** Policy: reset FPGA on MMC reset.  Doing it now. **\r\n");
       reset_fpga();
       printf("**\r\n");
@@ -366,7 +366,9 @@ int main(void)
          spi_update = false; // Clear flag
       }
       if (fpga_net_prog_pend) {
+         print_mac_ip(mac_ip_data);
          push_fpga_mac_ip(mac_ip_data);
+         printf("DONE\r\n");
          fpga_net_prog_pend=0;
       }
 
