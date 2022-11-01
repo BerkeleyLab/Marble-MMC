@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "i2c_fpga.h"
+#include <math.h>
 
 void I2C_FPGA_scan(void)
 {
@@ -358,22 +359,28 @@ void pca9555_config()
    // Reset U39 P1_7, an mimick that on P1_3 (watch an LED blink)
    uint8_t data[3];
    printf("Configuring PCA9555 at address 0x42\r\n");
-   data[0] = 0x7; // Config reg (7)
-   data[1] = 0x77; // Configure P1_7 and P1_3 as outputs (set those bits to 0)
-   marble_I2C_send(I2C_FPGA, 0x42, data, 2);
+   data[0] = 0x6; // Config reg (6) and (7)
+   data[1] = 0xFE; // Configure P0_0 as output (set those bits to 0)
+   data[2] = 0x77; // Configure P1_7 and P1_3 as outputs (set those bits to 0)
+   marble_I2C_send(I2C_FPGA, 0x42, data, 3);
    printf("> reg: %x: value: %x\r\n", data[0], data[1]);
+   printf("> reg: %x: value: %x\r\n", data[0]+1, data[2]);
    marble_SLEEP_ms(100);
 
-   data[0] = 0x3; // P1
-   data[1] = 0x0; // Write zeros to P1_7 and P1_3
-   marble_I2C_send(I2C_FPGA, 0x42, data, 2);
+   data[0] = 0x2; // P1
+   data[1] = 0x0; // Write zeros to P0_7 and P0_3
+   data[2] = 0x0; // Write zeros to P1_7 and P1_3
+   marble_I2C_send(I2C_FPGA, 0x42, data, 3);
    printf("> reg: %x: value: %x\r\n", data[0], data[1]);
+   printf("> reg: %x: value: %x\r\n", data[0]+1, data[2]);
 
    marble_SLEEP_ms(1000);
-   data[0] = 0x3; // P1
-   data[1] = 0x88;// Write ones to P1_7 and P1_3
-   marble_I2C_send(I2C_FPGA, 0x42, data, 2);
+   data[0] = 0x2; // P1
+   data[1] = 0x01;// Write ones to P0_0
+   data[2] = 0x88;// Write ones to P1_7 and P1_3
+   marble_I2C_send(I2C_FPGA, 0x42, data, 3);
    printf("> reg: %x: value: %x\r\n", data[0], data[1]);
+   printf("> reg: %x: value: %x\r\n", data[0]+1, data[2]);
 
    printf("Configuring PCA9555 at address 0x44\r\n");
    data[0] = 0x6; // Config regs 6(port 0) and 7(port 1)
@@ -398,6 +405,9 @@ void si570_status()
    switch_i2c_bus(6);
    uint8_t val[6];
    printf("SI570 status at address 0xee\r\n");
+   // First do register reset
+   // marble_I2C_cmdsend(I2C_FPGA, 0xee, 0x87, 128, 1);
+   // marble_SLEEP_ms(100);
    for (unsigned ix = 0; ix < 6; ix++) {
       uint8_t reg = 0x07 + ix;
       marble_I2C_cmdrecv(I2C_FPGA, 0xee, reg, &val[ix], 1);
@@ -407,22 +417,26 @@ void si570_status()
    uint8_t hs_div = val[0] >> 5;
    uint8_t n1 = (((val[0] & 0x1f) << 2) | (val[1] >> 6));
    float res = pow(2, 28);
-   float rfreq = (((val[1] & 0x3f) << 32) | (val[2] << 24) | (val[3] << 16) | (val[4] << 8) | val[5]) * res;
+   uint64_t t1 = ((uint64_t)(val[1] & 0x3f)) << 32;
+   double rfreq = (t1 | (val[2] << 24) | (val[3] << 16) | (val[4] << 8) | val[5]) * res;
    // Nominal internal crystal frequency
-   float fxtal = 114285000;
+   float fxtal = 156.25000e6;
    float fout = (fxtal * rfreq)/(hs_div*n1);
 
+   printf("> t1: %llu \r\n", t1);
    printf("> fxtal: %f MHz\r\n", fxtal/1000000);
    printf("> HS_DIV: %x\r\n", hs_div);
    printf("> N1: %x\r\n", n1);
-   printf("> RFREQ: %f\r\n", rfreq);
+   printf("> RFREQ: %lf\r\n", rfreq);
    printf("> Current SI570 frequency: %f MHz\r\n", fout/1000000);
 
   // return hs_div, n1, rfreq, fout;
 }
 
-void si570_config(freq_n)
+
+void si570_config()
 {
+   printf("Doing nothing now");
 }
 
 // Change the SI570 based on the input given
