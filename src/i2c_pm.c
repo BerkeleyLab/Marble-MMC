@@ -4,6 +4,9 @@
 #include <string.h>
 #include "i2c_pm.h"
 
+// Moved from marble_api.h, declared in marble_board.c
+extern I2C_BUS I2C_PM;
+
 void I2C_PM_scan(void)
 {
    printf("Scanning I2C_PM bus:\r\n");

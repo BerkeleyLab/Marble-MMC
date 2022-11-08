@@ -44,6 +44,13 @@
 const uint32_t OscRateIn = 25000000;
 const uint32_t RTCOscRateIn = 32768;
 
+// Moved here from marble_api.h
+SSP_PORT SSP_FPGA;
+SSP_PORT SSP_PMOD;
+I2C_BUS I2C_FPGA;
+I2C_BUS I2C_PM;
+I2C_BUS I2C_IPMB;
+
 /************
 * UART
 ************/

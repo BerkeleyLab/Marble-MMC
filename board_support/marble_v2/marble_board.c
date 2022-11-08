@@ -51,7 +51,11 @@ UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
 UART_HandleTypeDef huart3;
 
-
+// Moved here from marble_api.h
+SSP_PORT SSP_FPGA;
+SSP_PORT SSP_PMOD;
+I2C_BUS I2C_FPGA;
+I2C_BUS I2C_PM;
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
