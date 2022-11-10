@@ -5,6 +5,10 @@
 #include "i2c_pm.h"
 #include "max6639.h"
 
+/* ============================= Helper Macros ============================== */
+#define MAX6639_GET_TEMP_DOUBLE(rTemp, rTempExt) \
+   ((double)(((uint16_t)rTemp << 3) | (uint16_t)rTempExt >> 5)/8)
+
 // Moved from marble_api.h, declared in marble_board.c
 extern I2C_BUS I2C_PM;
 
