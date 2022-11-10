@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "i2c_pm.h"
+#include "max6639.h"
 
 // Moved from marble_api.h, declared in marble_board.c
 extern I2C_BUS I2C_PM;
@@ -71,6 +72,48 @@ void print_max6639(void)
    }
 }
 
+void print_max6639_decoded(void)
+{
+  char p_buf[64];
+  int vTemp, vTempExt;
+  double temp;
+  int rTemp, rTempExt;
+  int rval;
+  snprintf(p_buf, sizeof(p_buf)/sizeof(char), "MAX6639 Temperatures:\n");
+  marble_UART_send(p_buf, strlen(p_buf));
+  // Read/decode temperature for channels 1 and 2
+  for (int nChan = 1; nChan < 3; nChan++) {
+    if (nChan == 1) {
+      rTemp = MAX6639_TEMP_CH1;
+      rTempExt = MAX6639_TEMP_EXT_CH1;
+    } else {
+      rTemp = MAX6639_TEMP_CH2;
+      rTempExt = MAX6639_TEMP_EXT_CH2;
+    }
+    rval = get_max6639_reg(rTemp, &vTemp);
+    rval = get_max6639_reg(rTempExt, &vTempExt);
+    if (rval) {
+      marble_UART_send("I2C fault!\r\n", 11);
+      return;
+    }
+    temp = MAX6639_GET_TEMP_DOUBLE(vTemp, vTempExt);
+    //temp = (double)vTemp;
+    snprintf(p_buf, sizeof(p_buf)/sizeof(char), "  Ch %d Temp = %.3f\n", nChan, temp);
+    marble_UART_send(p_buf, strlen(p_buf));
+  }
+  // Now just dump the register contents
+  snprintf(p_buf, sizeof(p_buf)/sizeof(char), "MAX6639 Registers:\n");
+  marble_UART_send(p_buf, strlen(p_buf));
+#define X(nReg, desc) \
+  do{ \
+    get_max6639_reg(nReg, &vTemp); \
+    snprintf(p_buf, sizeof(p_buf)/sizeof(char), "  %s (0x%X) = 0x%X\n", desc, nReg, vTemp); \
+    marble_UART_send(p_buf, strlen(p_buf)); \
+  }while(0);
+  MAX6639_FOR_EACH_REGISTER();
+#undef X
+  return;
+}
 
 /************
 * LM75 Register interface

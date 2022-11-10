@@ -1,3 +1,6 @@
 gdbscript
 out/*
 out_marble/*
+.*.swp
+src/.*.swp
+inc/.*.swp
