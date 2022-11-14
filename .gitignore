@@ -6,3 +6,4 @@ src/rev.h
 .*.swp
 src/.*.swp
 inc/.*.swp
+tags
