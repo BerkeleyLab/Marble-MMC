@@ -70,8 +70,10 @@ void print_max6639(void)
    }
    if (0) {
       int fan_speed[2];
-      fan_speed[0] = 200;
-      fan_speed[1] = 150;
+      // update fan speed to 83%, max is 120
+      // see page 9 in datasheet
+      fan_speed[0] = 100;
+      fan_speed[1] = 100;
       set_fans(fan_speed);
    }
 }
