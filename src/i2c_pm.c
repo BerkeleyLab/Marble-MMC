@@ -83,8 +83,7 @@ void print_max6639_decoded(void)
   double temp;
   int rTemp, rTempExt;
   int rval;
-  snprintf(p_buf, sizeof(p_buf)/sizeof(char), "MAX6639 Temperatures:\n");
-  marble_UART_send(p_buf, strlen(p_buf));
+  printf("MAX6639 Temperatures:\n");
   // Read/decode temperature for channels 1 and 2
   for (int nChan = 1; nChan < 3; nChan++) {
     if (nChan == 1) {
@@ -97,22 +96,18 @@ void print_max6639_decoded(void)
     rval = get_max6639_reg(rTemp, &vTemp);
     rval = get_max6639_reg(rTempExt, &vTempExt);
     if (rval) {
-      marble_UART_send("I2C fault!\r\n", 11);
+      printf("I2C fault!\r\n");
       return;
     }
     temp = MAX6639_GET_TEMP_DOUBLE(vTemp, vTempExt);
-    //temp = (double)vTemp;
-    snprintf(p_buf, sizeof(p_buf)/sizeof(char), "  Ch %d Temp = %.3f\n", nChan, temp);
-    marble_UART_send(p_buf, strlen(p_buf));
+    printf("  Ch %d Temp = %.3f\n", nChan, temp);
   }
   // Now just dump the register contents
-  snprintf(p_buf, sizeof(p_buf)/sizeof(char), "MAX6639 Registers:\n");
-  marble_UART_send(p_buf, strlen(p_buf));
+  printf("MAX6639 Registers:\n");
 #define X(nReg, desc) \
   do{ \
     get_max6639_reg(nReg, &vTemp); \
-    snprintf(p_buf, sizeof(p_buf)/sizeof(char), "  %s (0x%X) = 0x%X\n", desc, nReg, vTemp); \
-    marble_UART_send(p_buf, strlen(p_buf)); \
+    printf("  %s (0x%X) = 0x%X\n", desc, nReg, vTemp); \
   }while(0);
   MAX6639_FOR_EACH_REGISTER();
 #undef X
