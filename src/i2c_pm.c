@@ -78,7 +78,6 @@ void print_max6639(void)
 
 void print_max6639_decoded(void)
 {
-  char p_buf[64];
   int vTemp, vTempExt;
   double temp;
   int rTemp, rTempExt;
