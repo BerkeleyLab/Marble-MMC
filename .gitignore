@@ -2,8 +2,10 @@ gdbscript
 out/*
 out_marble/*
 out_marble_mini/*
+out_sim/*
 src/rev.h
 .*.swp
 src/.*.swp
 inc/.*.swp
+sim/.*.swp
 tags
