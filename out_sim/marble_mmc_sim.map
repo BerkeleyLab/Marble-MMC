@@ -1,0 +1,1123 @@
+Archive member included to satisfy reference by file (symbol)
+
+/usr/lib/x86_64-linux-gnu/libc_nonshared.a(elf-init.oS)
+                              /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o (__libc_csu_init)
+
+Merging program properties
+
+
+As-needed library included to satisfy reference by file (symbol)
+
+libc.so.6                     out_sim/sim/sim_platform.o (__printf_chk@@GLIBC_2.3.4)
+
+Allocating common symbols
+Common symbol       size              file
+
+I2C_PM              0x8               out_sim/sim/sim_i2c.o
+I2C_FPGA            0x8               out_sim/sim/sim_i2c.o
+currentDivider_mA   0x4               out_sim/src/i2c_fpga.o
+powerMultiplier_mW  0x4               out_sim/src/i2c_fpga.o
+SSP_FPGA            0x8               out_sim/sim/sim_platform.o
+
+Discarded input sections
+
+ .note.GNU-stack
+                0x0000000000000000        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ .note.gnu.property
+                0x0000000000000000       0x20 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/crti.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/crti.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/crtbeginS.o
+ .note.gnu.property
+                0x0000000000000000       0x20 /usr/lib/gcc/x86_64-linux-gnu/9/crtbeginS.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 out_sim/sim/sim_platform.o
+ .note.gnu.property
+                0x0000000000000000       0x20 out_sim/sim/sim_platform.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 out_sim/sim/sim_i2c.o
+ .note.gnu.property
+                0x0000000000000000       0x20 out_sim/sim/sim_i2c.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 out_sim/src/i2c_pm.o
+ .note.gnu.property
+                0x0000000000000000       0x20 out_sim/src/i2c_pm.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 out_sim/src/i2c_fpga.o
+ .note.gnu.property
+                0x0000000000000000       0x20 out_sim/src/i2c_fpga.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 out_sim/src/mailbox.o
+ .note.gnu.property
+                0x0000000000000000       0x20 out_sim/src/mailbox.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 out_sim/src/phy_mdio.o
+ .note.gnu.property
+                0x0000000000000000       0x20 out_sim/src/phy_mdio.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 out_sim/src/hexrec.o
+ .note.gnu.property
+                0x0000000000000000       0x20 out_sim/src/hexrec.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 out_sim/src/main.o
+ .note.gnu.property
+                0x0000000000000000       0x20 out_sim/src/main.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 out_sim/src/uart_fifo.o
+ .note.gnu.property
+                0x0000000000000000       0x20 out_sim/src/uart_fifo.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 out_sim/src/console.o
+ .note.gnu.property
+                0x0000000000000000       0x20 out_sim/src/console.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 /usr/lib/x86_64-linux-gnu/libc_nonshared.a(elf-init.oS)
+ .note.gnu.property
+                0x0000000000000000       0x20 /usr/lib/x86_64-linux-gnu/libc_nonshared.a(elf-init.oS)
+ .note.GNU-stack
+                0x0000000000000000        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/crtendS.o
+ .note.gnu.property
+                0x0000000000000000       0x20 /usr/lib/gcc/x86_64-linux-gnu/9/crtendS.o
+ .note.gnu.property
+                0x0000000000000000       0x20 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/crtn.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/crtn.o
+
+Memory Configuration
+
+Name             Origin             Length             Attributes
+*default*        0x0000000000000000 0xffffffffffffffff
+
+Linker script and memory map
+
+LOAD /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+LOAD /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/crti.o
+LOAD /usr/lib/gcc/x86_64-linux-gnu/9/crtbeginS.o
+LOAD out_sim/sim/sim_platform.o
+LOAD out_sim/sim/sim_i2c.o
+LOAD out_sim/src/i2c_pm.o
+LOAD out_sim/src/i2c_fpga.o
+LOAD out_sim/src/mailbox.o
+LOAD out_sim/src/phy_mdio.o
+LOAD out_sim/src/hexrec.o
+LOAD out_sim/src/main.o
+LOAD out_sim/src/uart_fifo.o
+LOAD out_sim/src/console.o
+LOAD /usr/lib/gcc/x86_64-linux-gnu/9/libgcc.a
+LOAD /usr/lib/gcc/x86_64-linux-gnu/9/libgcc_s.so
+START GROUP
+LOAD /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/libgcc_s.so.1
+LOAD /usr/lib/gcc/x86_64-linux-gnu/9/libgcc.a
+END GROUP
+LOAD /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/libc.so
+START GROUP
+LOAD /lib/x86_64-linux-gnu/libc.so.6
+LOAD /usr/lib/x86_64-linux-gnu/libc_nonshared.a
+LOAD /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+END GROUP
+LOAD /usr/lib/gcc/x86_64-linux-gnu/9/libgcc.a
+LOAD /usr/lib/gcc/x86_64-linux-gnu/9/libgcc_s.so
+START GROUP
+LOAD /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/libgcc_s.so.1
+LOAD /usr/lib/gcc/x86_64-linux-gnu/9/libgcc.a
+END GROUP
+LOAD /usr/lib/gcc/x86_64-linux-gnu/9/crtendS.o
+LOAD /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/crtn.o
+                [!provide]                        PROVIDE (__executable_start = SEGMENT_START ("text-segment", 0x0))
+                0x0000000000000318                . = (SEGMENT_START ("text-segment", 0x0) + SIZEOF_HEADERS)
+
+.interp         0x0000000000000318       0x1c
+ *(.interp)
+ .interp        0x0000000000000318       0x1c /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+
+.note.gnu.property
+                0x0000000000000338       0x20
+ .note.gnu.property
+                0x0000000000000338       0x20 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+
+.note.gnu.build-id
+                0x0000000000000358       0x24
+ *(.note.gnu.build-id)
+ .note.gnu.build-id
+                0x0000000000000358       0x24 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+
+.note.ABI-tag   0x000000000000037c       0x20
+ .note.ABI-tag  0x000000000000037c       0x20 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+
+.hash
+ *(.hash)
+
+.gnu.hash       0x00000000000003a0       0x28
+ *(.gnu.hash)
+ .gnu.hash      0x00000000000003a0       0x28 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+
+.dynsym         0x00000000000003c8      0x138
+ *(.dynsym)
+ .dynsym        0x00000000000003c8      0x138 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+
+.dynstr         0x0000000000000500       0xe1
+ *(.dynstr)
+ .dynstr        0x0000000000000500       0xe1 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+
+.gnu.version    0x00000000000005e2       0x1a
+ *(.gnu.version)
+ .gnu.version   0x00000000000005e2       0x1a /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+
+.gnu.version_d  0x0000000000000600        0x0
+ *(.gnu.version_d)
+ .gnu.version_d
+                0x0000000000000600        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+
+.gnu.version_r  0x0000000000000600       0x40
+ *(.gnu.version_r)
+ .gnu.version_r
+                0x0000000000000600       0x40 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+
+.rela.dyn       0x0000000000000640      0x900
+ *(.rela.init)
+ *(.rela.text .rela.text.* .rela.gnu.linkonce.t.*)
+ .rela.text.sim_platform_service
+                0x0000000000000640        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ .rela.text.get_max6639_reg
+                0x0000000000000640        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ .rela.text.LM75_readwrite
+                0x0000000000000640        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ .rela.text.xrp_reg_write
+                0x0000000000000640        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ .rela.text.xrp_reg_write_check
+                0x0000000000000640        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ .rela.text.I2C_PM_scan
+                0x0000000000000640        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ .rela.text.I2C_PM_probe
+                0x0000000000000640        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ .rela.text.xrp_set2
+                0x0000000000000640        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ .rela.text.xrp_read2
+                0x0000000000000640        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ .rela.text.xrp_process_flash
+                0x0000000000000640        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ .rela.text.xrp_dump
+                0x0000000000000640        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ .rela.text.xrp_ch_status
+                0x0000000000000640        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ .rela.text.xrp_push_low
+                0x0000000000000640        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ .rela.text.wireReadRegister
+                0x0000000000000640        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ .rela.text.switch_i2c_bus.part.0
+                0x0000000000000640        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ .rela.text.I2C_FPGA_scan
+                0x0000000000000640        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ .rela.text.setCalibration_16V_2A
+                0x0000000000000640        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ .rela.text.getCurrentAmps
+                0x0000000000000640        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ .rela.text.adn4600_init
+                0x0000000000000640        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ .rela.text.adn4600_printStatus
+                0x0000000000000640        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ .rela.text.pca9555_status
+                0x0000000000000640        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ .rela.text.pca9555_config
+                0x0000000000000640        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ .rela.text.mbox_set_page
+                0x0000000000000640        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ .rela.text.mbox_read_page
+                0x0000000000000640        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ .rela.text.mbox_update
+                0x0000000000000640        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ .rela.text.push_fpga_mac_ip
+                0x0000000000000640        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ .rela.text.OLDpush_fpga_mac_ip
+                0x0000000000000640        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ .rela.text     0x0000000000000640        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ *(.rela.fini)
+ *(.rela.rodata .rela.rodata.* .rela.gnu.linkonce.r.*)
+ *(.rela.data .rela.data.* .rela.gnu.linkonce.d.*)
+ .rela.data.rel.ro
+                0x0000000000000640        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ .rela.data.rel.local
+                0x0000000000000640       0x18 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ .rela.data     0x0000000000000658      0x570 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ .rela.data.rel.local.menu_str
+                0x0000000000000bc8      0x2b8 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ *(.rela.tdata .rela.tdata.* .rela.gnu.linkonce.td.*)
+ *(.rela.tbss .rela.tbss.* .rela.gnu.linkonce.tb.*)
+ *(.rela.ctors)
+ *(.rela.dtors)
+ *(.rela.got)
+ .rela.got      0x0000000000000e80       0x78 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ *(.rela.bss .rela.bss.* .rela.gnu.linkonce.b.*)
+ .rela.bss      0x0000000000000ef8       0x18 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ *(.rela.ldata .rela.ldata.* .rela.gnu.linkonce.l.*)
+ *(.rela.lbss .rela.lbss.* .rela.gnu.linkonce.lb.*)
+ *(.rela.lrodata .rela.lrodata.* .rela.gnu.linkonce.lr.*)
+ *(.rela.ifunc)
+ .rela.ifunc    0x0000000000000f10        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ .rela.fini_array
+                0x0000000000000f10       0x18 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ .rela.init_array
+                0x0000000000000f28       0x18 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+
+.rela.plt       0x0000000000000f40       0x90
+ *(.rela.plt)
+ .rela.plt      0x0000000000000f40       0x90 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ *(.rela.iplt)
+                0x0000000000001000                . = ALIGN (CONSTANT (MAXPAGESIZE))
+
+.init           0x0000000000001000       0x1b
+ *(SORT_NONE(.init))
+ .init          0x0000000000001000       0x16 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/crti.o
+                0x0000000000001000                _init
+ .init          0x0000000000001016        0x5 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/crtn.o
+
+.plt            0x0000000000001020       0x70
+ *(.plt)
+ .plt           0x0000000000001020       0x70 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ *(.iplt)
+
+.plt.got        0x0000000000001090       0x10
+ *(.plt.got)
+ .plt.got       0x0000000000001090       0x10 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+                0x0000000000001090                __cxa_finalize@@GLIBC_2.2.5
+
+.plt.sec        0x00000000000010a0       0x60
+ *(.plt.sec)
+ .plt.sec       0x00000000000010a0       0x60 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+                0x00000000000010a0                __snprintf_chk@@GLIBC_2.3.4
+                0x00000000000010b0                __stack_chk_fail@@GLIBC_2.4
+                0x00000000000010c0                fgetc@@GLIBC_2.2.5
+                0x00000000000010d0                __sysv_signal@@GLIBC_2.2.5
+                0x00000000000010e0                select@@GLIBC_2.2.5
+                0x00000000000010f0                __printf_chk@@GLIBC_2.3.4
+
+.text           0x0000000000001100     0x3935
+ *(.text.unlikely .text.*_unlikely .text.unlikely.*)
+ *(.text.exit .text.exit.*)
+ *(.text.startup .text.startup.*)
+ .text.startup.main
+                0x0000000000001100       0xfb out_sim/src/main.o
+                0x0000000000001100                main
+ *(.text.hot .text.hot.*)
+ *(SORT_BY_NAME(.text.sorted.*))
+ *(.text .stub .text.* .gnu.linkonce.t.*)
+ *fill*         0x00000000000011fb        0x5 
+ .text          0x0000000000001200       0x2f /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+                0x0000000000001200                _start
+ .text          0x000000000000122f        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/crti.o
+ *fill*         0x000000000000122f        0x1 
+ .text          0x0000000000001230       0xb9 /usr/lib/gcc/x86_64-linux-gnu/9/crtbeginS.o
+ .text          0x00000000000012e9        0x0 out_sim/sim/sim_platform.o
+ .text._sigHandler
+                0x00000000000012e9       0x24 out_sim/sim/sim_platform.o
+ .text.sim_platform_service
+                0x000000000000130d       0xdf out_sim/sim/sim_platform.o
+                0x000000000000130d                sim_platform_service
+ .text.marble_init
+                0x00000000000013ec       0x25 out_sim/sim/sim_platform.o
+                0x00000000000013ec                marble_init
+ .text.marble_UART_init
+                0x0000000000001411        0x5 out_sim/sim/sim_platform.o
+                0x0000000000001411                marble_UART_init
+ .text.marble_UART_send
+                0x0000000000001416       0xaa out_sim/sim/sim_platform.o
+                0x0000000000001416                marble_UART_send
+ .text.marble_UART_recv
+                0x00000000000014c0        0xa out_sim/sim/sim_platform.o
+                0x00000000000014c0                marble_UART_recv
+ .text.UART_FIFO_ISR
+                0x00000000000014ca        0x5 out_sim/sim/sim_platform.o
+                0x00000000000014ca                UART_FIFO_ISR
+ .text.marble_LED_set
+                0x00000000000014cf        0x5 out_sim/sim/sim_platform.o
+                0x00000000000014cf                marble_LED_set
+ .text.marble_LED_get
+                0x00000000000014d4        0x7 out_sim/sim/sim_platform.o
+                0x00000000000014d4                marble_LED_get
+ .text.marble_LED_toggle
+                0x00000000000014db        0x5 out_sim/sim/sim_platform.o
+                0x00000000000014db                marble_LED_toggle
+ .text.marble_SW_get
+                0x00000000000014e0        0x7 out_sim/sim/sim_platform.o
+                0x00000000000014e0                marble_SW_get
+ .text.marble_FPGAint_get
+                0x00000000000014e7        0x7 out_sim/sim/sim_platform.o
+                0x00000000000014e7                marble_FPGAint_get
+ .text.marble_FMC_pwr
+                0x00000000000014ee        0x5 out_sim/sim/sim_platform.o
+                0x00000000000014ee                marble_FMC_pwr
+ .text.marble_FMC_status
+                0x00000000000014f3        0x7 out_sim/sim/sim_platform.o
+                0x00000000000014f3                marble_FMC_status
+ .text.marble_PSU_pwr
+                0x00000000000014fa        0x5 out_sim/sim/sim_platform.o
+                0x00000000000014fa                marble_PSU_pwr
+ .text.marble_PWR_status
+                0x00000000000014ff        0x7 out_sim/sim/sim_platform.o
+                0x00000000000014ff                marble_PWR_status
+ .text.reset_fpga
+                0x0000000000001506        0x5 out_sim/sim/sim_platform.o
+                0x0000000000001506                reset_fpga
+ .text.marble_SSP_write16
+                0x000000000000150b        0x7 out_sim/sim/sim_platform.o
+                0x000000000000150b                marble_SSP_write16
+ .text.marble_SSP_read16
+                0x0000000000001512        0x7 out_sim/sim/sim_platform.o
+                0x0000000000001512                marble_SSP_read16
+ .text.marble_SSP_exch16
+                0x0000000000001519        0x7 out_sim/sim/sim_platform.o
+                0x0000000000001519                marble_SSP_exch16
+ .text.marble_GPIOint_handlers
+                0x0000000000001520        0x5 out_sim/sim/sim_platform.o
+                0x0000000000001520                marble_GPIOint_handlers
+ .text.marble_MGTMUX_set
+                0x0000000000001525        0x5 out_sim/sim/sim_platform.o
+                0x0000000000001525                marble_MGTMUX_set
+ .text.marble_MGTMUX_status
+                0x000000000000152a        0x7 out_sim/sim/sim_platform.o
+                0x000000000000152a                marble_MGTMUX_status
+ .text.marble_MDIO_write
+                0x0000000000001531        0x5 out_sim/sim/sim_platform.o
+                0x0000000000001531                marble_MDIO_write
+ .text.marble_MDIO_read
+                0x0000000000001536        0x7 out_sim/sim/sim_platform.o
+                0x0000000000001536                marble_MDIO_read
+ .text.marble_SYSTIMER_ms
+                0x000000000000153d        0x7 out_sim/sim/sim_platform.o
+                0x000000000000153d                marble_SYSTIMER_ms
+ .text.marble_SYSTIMER_handler
+                0x0000000000001544        0x5 out_sim/sim/sim_platform.o
+                0x0000000000001544                marble_SYSTIMER_handler
+ .text.marble_SLEEP_ms
+                0x0000000000001549        0x5 out_sim/sim/sim_platform.o
+                0x0000000000001549                marble_SLEEP_ms
+ .text.marble_SLEEP_us
+                0x000000000000154e        0x5 out_sim/sim/sim_platform.o
+                0x000000000000154e                marble_SLEEP_us
+ .text          0x0000000000001553        0x0 out_sim/sim/sim_i2c.o
+ .text.marble_I2C_probe
+                0x0000000000001553        0x7 out_sim/sim/sim_i2c.o
+                0x0000000000001553                marble_I2C_probe
+ .text.marble_I2C_send
+                0x000000000000155a        0x7 out_sim/sim/sim_i2c.o
+                0x000000000000155a                marble_I2C_send
+ .text.marble_I2C_cmdsend
+                0x0000000000001561        0x7 out_sim/sim/sim_i2c.o
+                0x0000000000001561                marble_I2C_cmdsend
+ .text.marble_I2C_recv
+                0x0000000000001568        0x7 out_sim/sim/sim_i2c.o
+                0x0000000000001568                marble_I2C_recv
+ .text.marble_I2C_cmdrecv
+                0x000000000000156f        0x7 out_sim/sim/sim_i2c.o
+                0x000000000000156f                marble_I2C_cmdrecv
+ .text.marble_I2C_cmdsend_a2
+                0x0000000000001576        0x7 out_sim/sim/sim_i2c.o
+                0x0000000000001576                marble_I2C_cmdsend_a2
+ .text.marble_I2C_cmdrecv_a2
+                0x000000000000157d        0x7 out_sim/sim/sim_i2c.o
+                0x000000000000157d                marble_I2C_cmdrecv_a2
+ .text          0x0000000000001584        0x0 out_sim/src/i2c_pm.o
+ .text.get_max6639_reg
+                0x0000000000001584       0x5c out_sim/src/i2c_pm.o
+ .text.LM75_readwrite
+                0x00000000000015e0       0xf4 out_sim/src/i2c_pm.o
+ .text.xrp_reg_write
+                0x00000000000016d4       0x8e out_sim/src/i2c_pm.o
+ .text.xrp_reg_write_check
+                0x0000000000001762       0xd4 out_sim/src/i2c_pm.o
+ .text.I2C_PM_scan
+                0x0000000000001836       0x7f out_sim/src/i2c_pm.o
+                0x0000000000001836                I2C_PM_scan
+ .text.print_max6639
+                0x00000000000018b5       0xd2 out_sim/src/i2c_pm.o
+                0x00000000000018b5                print_max6639
+ .text.print_max6639_decoded
+                0x0000000000001987      0x747 out_sim/src/i2c_pm.o
+                0x0000000000001987                print_max6639_decoded
+ .text.LM75_read
+                0x00000000000020ce       0x12 out_sim/src/i2c_pm.o
+                0x00000000000020ce                LM75_read
+ .text.LM75_write
+                0x00000000000020e0       0x21 out_sim/src/i2c_pm.o
+                0x00000000000020e0                LM75_write
+ .text.LM75_print
+                0x0000000000002101       0xff out_sim/src/i2c_pm.o
+                0x0000000000002101                LM75_print
+ .text.I2C_PM_probe
+                0x0000000000002200      0x166 out_sim/src/i2c_pm.o
+                0x0000000000002200                I2C_PM_probe
+ .text.xrp_set2
+                0x0000000000002366       0xeb out_sim/src/i2c_pm.o
+                0x0000000000002366                xrp_set2
+ .text.xrp_read2
+                0x0000000000002451       0x80 out_sim/src/i2c_pm.o
+                0x0000000000002451                xrp_read2
+ .text.xrp_process_flash
+                0x00000000000024d1      0x205 out_sim/src/i2c_pm.o
+ .text.xrp_dump
+                0x00000000000026d6       0xfb out_sim/src/i2c_pm.o
+                0x00000000000026d6                xrp_dump
+ .text.xrp_ch_status
+                0x00000000000027d1       0x76 out_sim/src/i2c_pm.o
+                0x00000000000027d1                xrp_ch_status
+ .text.xrp_push_low
+                0x0000000000002847      0x2d5 out_sim/src/i2c_pm.o
+                0x0000000000002847                xrp_push_low
+ .text.xrp_flash
+                0x0000000000002b1c      0x1ae out_sim/src/i2c_pm.o
+                0x0000000000002b1c                xrp_flash
+ .text.xrp_go   0x0000000000002cca       0xb9 out_sim/src/i2c_pm.o
+                0x0000000000002cca                xrp_go
+ .text.xrp_hex_in
+                0x0000000000002d83       0xcc out_sim/src/i2c_pm.o
+                0x0000000000002d83                xrp_hex_in
+ .text          0x0000000000002e4f        0x0 out_sim/src/i2c_fpga.o
+ .text.wireReadRegister
+                0x0000000000002e4f       0x9e out_sim/src/i2c_fpga.o
+ .text.switch_i2c_bus.part.0
+                0x0000000000002eed       0x56 out_sim/src/i2c_fpga.o
+ .text.switch_i2c_bus
+                0x0000000000002f43       0x14 out_sim/src/i2c_fpga.o
+                0x0000000000002f43                switch_i2c_bus
+ .text.I2C_FPGA_scan
+                0x0000000000002f57       0xb0 out_sim/src/i2c_fpga.o
+                0x0000000000002f57                I2C_FPGA_scan
+ .text.ina219_debug
+                0x0000000000003007       0xe5 out_sim/src/i2c_fpga.o
+                0x0000000000003007                ina219_debug
+ .text.setCalibration_16V_2A
+                0x00000000000030ec       0x99 out_sim/src/i2c_fpga.o
+                0x00000000000030ec                setCalibration_16V_2A
+ .text.ina219_init
+                0x0000000000003185        0x9 out_sim/src/i2c_fpga.o
+                0x0000000000003185                ina219_init
+ .text.getBusVoltage_V
+                0x000000000000318e       0x83 out_sim/src/i2c_fpga.o
+                0x000000000000318e                getBusVoltage_V
+ .text.getCurrentAmps
+                0x0000000000003211       0xae out_sim/src/i2c_fpga.o
+                0x0000000000003211                getCurrentAmps
+ .text.adn4600_init
+                0x00000000000032bf      0x213 out_sim/src/i2c_fpga.o
+                0x00000000000032bf                adn4600_init
+ .text.adn4600_printStatus
+                0x00000000000034d2       0x87 out_sim/src/i2c_fpga.o
+                0x00000000000034d2                adn4600_printStatus
+ .text.pca9555_status
+                0x0000000000003559       0xa7 out_sim/src/i2c_fpga.o
+                0x0000000000003559                pca9555_status
+ .text.pca9555_config
+                0x0000000000003600      0x202 out_sim/src/i2c_fpga.o
+                0x0000000000003600                pca9555_config
+ .text          0x0000000000003802        0x0 out_sim/src/mailbox.o
+ .text.mbox_set_page
+                0x0000000000003802       0x52 out_sim/src/mailbox.o
+ .text.mbox_read_page
+                0x0000000000003854       0x80 out_sim/src/mailbox.o
+ .text.mbox_update
+                0x00000000000038d4      0x1ff out_sim/src/mailbox.o
+                0x00000000000038d4                mbox_update
+ .text.mbox_peek
+                0x0000000000003ad3       0xef out_sim/src/mailbox.o
+                0x0000000000003ad3                mbox_peek
+ .text.push_fpga_mac_ip
+                0x0000000000003bc2       0xff out_sim/src/mailbox.o
+                0x0000000000003bc2                push_fpga_mac_ip
+ .text.OLDpush_fpga_mac_ip
+                0x0000000000003cc1       0xbd out_sim/src/mailbox.o
+                0x0000000000003cc1                OLDpush_fpga_mac_ip
+ .text          0x0000000000003d7e        0x0 out_sim/src/phy_mdio.o
+ .text.phy_print
+                0x0000000000003d7e       0x35 out_sim/src/phy_mdio.o
+                0x0000000000003d7e                phy_print
+ .text          0x0000000000003db3        0x0 out_sim/src/hexrec.o
+ .text.xrp_srecord
+                0x0000000000003db3      0x157 out_sim/src/hexrec.o
+                0x0000000000003db3                xrp_srecord
+ .text.xrp_program_static
+                0x0000000000003f0a       0x81 out_sim/src/hexrec.o
+                0x0000000000003f0a                xrp_program_static
+ .text.xrp_file
+                0x0000000000003f8b      0x180 out_sim/src/hexrec.o
+                0x0000000000003f8b                xrp_file
+ .text          0x000000000000410b        0x0 out_sim/src/main.o
+ .text.fpga_done_handler
+                0x000000000000410b       0x15 out_sim/src/main.o
+ .text.timer_int_handler
+                0x0000000000004120       0x35 out_sim/src/main.o
+ .text.print_status_counters
+                0x0000000000004155       0x6e out_sim/src/main.o
+                0x0000000000004155                print_status_counters
+ .text.__io_putchar
+                0x00000000000041c3       0x24 out_sim/src/main.o
+                0x00000000000041c3                __io_putchar
+ .text          0x00000000000041e7        0x0 out_sim/src/uart_fifo.o
+ .text.UARTQUEUE_Init
+                0x00000000000041e7       0x1c out_sim/src/uart_fifo.o
+                0x00000000000041e7                UARTQUEUE_Init
+ .text.UARTQUEUE_Add
+                0x0000000000004203       0x4a out_sim/src/uart_fifo.o
+                0x0000000000004203                UARTQUEUE_Add
+ .text.UARTQUEUE_Get
+                0x000000000000424d       0x4c out_sim/src/uart_fifo.o
+                0x000000000000424d                UARTQUEUE_Get
+ .text.UARTQUEUE_Status
+                0x0000000000004299       0x24 out_sim/src/uart_fifo.o
+                0x0000000000004299                UARTQUEUE_Status
+ .text.UARTQUEUE_ShiftOut
+                0x00000000000042bd       0x5d out_sim/src/uart_fifo.o
+                0x00000000000042bd                UARTQUEUE_ShiftOut
+ .text.UARTQUEUE_SetDataLost
+                0x000000000000431a        0xf out_sim/src/uart_fifo.o
+                0x000000000000431a                UARTQUEUE_SetDataLost
+ .text.UARTQUEUE_IsDataLost
+                0x0000000000004329        0xb out_sim/src/uart_fifo.o
+                0x0000000000004329                UARTQUEUE_IsDataLost
+ .text          0x0000000000004334        0x0 out_sim/src/console.o
+ .text.print_ip.constprop.0
+                0x0000000000004334       0x61 out_sim/src/console.o
+ .text.print_mac.constprop.0
+                0x0000000000004395       0x62 out_sim/src/console.o
+ .text.console_init
+                0x00000000000043f7       0x39 out_sim/src/console.o
+                0x00000000000043f7                console_init
+ .text.console_push_fpga_mac_ip
+                0x0000000000004430       0x10 out_sim/src/console.o
+                0x0000000000004430                console_push_fpga_mac_ip
+ .text.console_print_mac_ip
+                0x0000000000004440       0x10 out_sim/src/console.o
+                0x0000000000004440                console_print_mac_ip
+ .text.xrp_boot
+                0x0000000000004450       0x55 out_sim/src/console.o
+                0x0000000000004450                xrp_boot
+ .text.console_pend_msg
+                0x00000000000044a5        0xc out_sim/src/console.o
+                0x00000000000044a5                console_pend_msg
+ .text.console_service
+                0x00000000000044b1      0x50a out_sim/src/console.o
+                0x00000000000044b1                console_service
+ *fill*         0x00000000000049bb        0x5 
+ .text          0x00000000000049c0       0x75 /usr/lib/x86_64-linux-gnu/libc_nonshared.a(elf-init.oS)
+                0x00000000000049c0                __libc_csu_init
+                0x0000000000004a30                __libc_csu_fini
+ .text          0x0000000000004a35        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/crtendS.o
+ .text          0x0000000000004a35        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/crtn.o
+ *(.gnu.warning)
+
+.fini           0x0000000000004a38        0xd
+ *(SORT_NONE(.fini))
+ .fini          0x0000000000004a38        0x8 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/crti.o
+                0x0000000000004a38                _fini
+ .fini          0x0000000000004a40        0x5 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/crtn.o
+                [!provide]                        PROVIDE (__etext = .)
+                [!provide]                        PROVIDE (_etext = .)
+                [!provide]                        PROVIDE (etext = .)
+                0x0000000000005000                . = ALIGN (CONSTANT (MAXPAGESIZE))
+                0x0000000000005000                . = SEGMENT_START ("rodata-segment", (ALIGN (CONSTANT (MAXPAGESIZE)) + (. & (CONSTANT (MAXPAGESIZE) - 0x1))))
+
+.rodata         0x0000000000005000     0x164a
+ *(.rodata .rodata.* .gnu.linkonce.r.*)
+ .rodata.cst4   0x0000000000005000        0x4 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+                0x0000000000005000                _IO_stdin_used
+ .rodata._sigHandler.str1.1
+                0x0000000000005004        0xa out_sim/sim/sim_platform.o
+ .rodata.marble_UART_send.str1.1
+                0x000000000000500e        0x3 out_sim/sim/sim_platform.o
+ .rodata.str1.1
+                0x0000000000005011       0xd8 out_sim/src/i2c_pm.o
+                                         0xdf (size before relaxing)
+ .rodata.xrp_reg_write.str1.1
+                0x00000000000050e9       0x2c out_sim/src/i2c_pm.o
+ .rodata.xrp_reg_write_check.str1.1
+                0x0000000000005115       0x42 out_sim/src/i2c_pm.o
+ .rodata.I2C_PM_scan.str1.1
+                0x0000000000005157       0x1e out_sim/src/i2c_pm.o
+                                         0x23 (size before relaxing)
+ .rodata.print_max6639.str1.1
+                0x0000000000005175       0x22 out_sim/src/i2c_pm.o
+ .rodata.print_max6639_decoded.str1.1
+                0x0000000000005197      0x351 out_sim/src/i2c_pm.o
+ .rodata.LM75_print.str1.1
+                0x00000000000054e8       0x16 out_sim/src/i2c_pm.o
+ .rodata.xrp_set2.str1.1
+                0x00000000000054fe       0x61 out_sim/src/i2c_pm.o
+ .rodata.xrp_read2.str1.1
+                0x000000000000555f       0x24 out_sim/src/i2c_pm.o
+ .rodata.xrp_process_flash.str1.1
+                0x0000000000005583       0x9b out_sim/src/i2c_pm.o
+ .rodata.xrp_dump.str1.1
+                0x000000000000561e       0x5c out_sim/src/i2c_pm.o
+ .rodata.xrp_push_low.str1.1
+                0x000000000000567a       0xa2 out_sim/src/i2c_pm.o
+                                         0xa7 (size before relaxing)
+ .rodata.xrp_flash.str1.1
+                0x000000000000571c       0xc6 out_sim/src/i2c_pm.o
+ .rodata        0x00000000000057e2      0x1c1 out_sim/src/i2c_pm.o
+ .rodata.xrp_go.str1.1
+                0x00000000000059a3       0x60 out_sim/src/i2c_pm.o
+ .rodata.xrp_hex_in.str1.1
+                0x0000000000005a03       0x7c out_sim/src/i2c_pm.o
+ .rodata.rlist.2530
+                0x0000000000005a7f        0x4 out_sim/src/i2c_pm.o
+ .rodata.i2c_ret
+                0x0000000000005a83        0x7 out_sim/src/i2c_pm.o
+                0x0000000000005a83                i2c_ret
+ *fill*         0x0000000000005a8a        0x6 
+ .rodata.i2c_nok
+                0x0000000000005a90       0x1c out_sim/src/i2c_pm.o
+                0x0000000000005a90                i2c_nok
+ *fill*         0x0000000000005aac        0x4 
+ .rodata.i2c_ok
+                0x0000000000005ab0       0x18 out_sim/src/i2c_pm.o
+                0x0000000000005ab0                i2c_ok
+ .rodata.i2c_list
+                0x0000000000005ac8        0x4 out_sim/src/i2c_pm.o
+ *fill*         0x0000000000005acc        0x4 
+ .rodata.cst8   0x0000000000005ad0        0x8 out_sim/src/i2c_pm.o
+ *fill*         0x0000000000005ad8        0x8 
+ .rodata.cst16  0x0000000000005ae0       0x10 out_sim/src/i2c_pm.o
+ .rodata.I2C_FPGA_scan.str1.1
+                0x0000000000005af0       0x31 out_sim/src/i2c_fpga.o
+                                         0x3d (size before relaxing)
+ .rodata.ina219_debug.str1.1
+                0x0000000000005b21       0x44 out_sim/src/i2c_fpga.o
+ .rodata.getBusVoltage_V.str1.1
+                0x0000000000005b65        0xf out_sim/src/i2c_fpga.o
+ .rodata.getCurrentAmps.str1.1
+                0x0000000000005b74       0x2a out_sim/src/i2c_fpga.o
+ .rodata.adn4600_init.str1.1
+                0x0000000000005b9e       0xa1 out_sim/src/i2c_fpga.o
+ .rodata.adn4600_printStatus.str1.1
+                0x0000000000005c3f       0x3e out_sim/src/i2c_fpga.o
+ .rodata.pca9555_status.str1.1
+                0x0000000000005c7d       0x38 out_sim/src/i2c_fpga.o
+ .rodata.pca9555_config.str1.1
+                0x0000000000005cb5       0x63 out_sim/src/i2c_fpga.o
+ .rodata.cst8   0x0000000000005d18        0x8 out_sim/src/i2c_fpga.o
+ .rodata.cst4   0x0000000000005d20        0x4 out_sim/src/i2c_fpga.o
+ .rodata.mbox_update.str1.1
+                0x0000000000005d24       0x4a out_sim/src/mailbox.o
+                                         0x54 (size before relaxing)
+ .rodata.mbox_peek.str1.1
+                0x0000000000005d6e       0x20 out_sim/src/mailbox.o
+ .rodata.phy_print.str1.1
+                0x0000000000005d8e       0x18 out_sim/src/phy_mdio.o
+ .rodata        0x0000000000005da6      0x2a2 out_sim/src/hexrec.o
+ .rodata.xrp_srecord.str1.1
+                0x0000000000006048       0x66 out_sim/src/hexrec.o
+                                         0x6d (size before relaxing)
+ .rodata.xrp_file.str1.1
+                0x00000000000060ae       0x33 out_sim/src/hexrec.o
+ .rodata.print_status_counters.str1.1
+                0x00000000000060e1       0x4d out_sim/src/main.o
+ .rodata.main.str1.1
+                0x000000000000612e       0x3f out_sim/src/main.o
+                                         0x44 (size before relaxing)
+ *fill*         0x000000000000616d        0x3 
+ .rodata.demo_str
+                0x0000000000006170       0x19 out_sim/src/main.o
+                0x0000000000006170                demo_str
+ .rodata.print_ip.constprop.0.str1.1
+                0x0000000000006189        0x9 out_sim/src/console.o
+                                          0xe (size before relaxing)
+ .rodata.print_mac.constprop.0.str1.1
+                0x0000000000006192        0xa out_sim/src/console.o
+                                          0xf (size before relaxing)
+ .rodata.xrp_boot.str1.1
+                0x000000000000619c       0x27 out_sim/src/console.o
+ .rodata.console_service.str1.1
+                0x00000000000061c3       0xd6 out_sim/src/console.o
+                                         0xfe (size before relaxing)
+ *fill*         0x0000000000006299        0x3 
+ .rodata.console_service
+                0x000000000000629c       0xfc out_sim/src/console.o
+ .rodata.ip_addr_default
+                0x0000000000006398        0x4 out_sim/src/console.o
+                0x0000000000006398                ip_addr_default
+ .rodata.mac_id_default
+                0x000000000000639c        0x6 out_sim/src/console.o
+                0x000000000000639c                mac_id_default
+ .rodata.str1.1
+                0x00000000000063a2      0x260 out_sim/src/console.o
+ *fill*         0x0000000000006602        0xe 
+ .rodata.unk_str
+                0x0000000000006610       0x13 out_sim/src/console.o
+                0x0000000000006610                unk_str
+ *fill*         0x0000000000006623        0xd 
+ .rodata.lb_str
+                0x0000000000006630       0x1a out_sim/src/console.o
+                0x0000000000006630                lb_str
+
+.rodata1
+ *(.rodata1)
+
+.eh_frame_hdr   0x000000000000664c      0x354
+ *(.eh_frame_hdr)
+ .eh_frame_hdr  0x000000000000664c      0x354 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+                0x000000000000664c                __GNU_EH_FRAME_HDR
+ *(.eh_frame_entry .eh_frame_entry.*)
+
+.eh_frame       0x00000000000069a0      0xe60
+ *(.eh_frame)
+ .eh_frame      0x00000000000069a0       0x30 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+                                         0x2c (size before relaxing)
+ *fill*         0x00000000000069d0        0x0 
+ .eh_frame      0x00000000000069d0       0x28 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+                                         0x40 (size before relaxing)
+ .eh_frame      0x00000000000069f8       0x18 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+                                         0x30 (size before relaxing)
+ .eh_frame      0x0000000000006a10       0x18 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+                                         0x30 (size before relaxing)
+ .eh_frame      0x0000000000006a28      0x270 out_sim/sim/sim_platform.o
+                                        0x288 (size before relaxing)
+ .eh_frame      0x0000000000006c98       0x90 out_sim/sim/sim_i2c.o
+                                         0xa8 (size before relaxing)
+ .eh_frame      0x0000000000006d28      0x450 out_sim/src/i2c_pm.o
+                                        0x468 (size before relaxing)
+ .eh_frame      0x0000000000007178      0x1f8 out_sim/src/i2c_fpga.o
+                                        0x210 (size before relaxing)
+ .eh_frame      0x0000000000007370      0x128 out_sim/src/mailbox.o
+                                        0x140 (size before relaxing)
+ .eh_frame      0x0000000000007498       0x28 out_sim/src/phy_mdio.o
+                                         0x40 (size before relaxing)
+ .eh_frame      0x00000000000074c0       0xc8 out_sim/src/hexrec.o
+                                         0xe0 (size before relaxing)
+ .eh_frame      0x0000000000007588       0x78 out_sim/src/main.o
+                                         0x90 (size before relaxing)
+ .eh_frame      0x0000000000007600       0x90 out_sim/src/uart_fifo.o
+                                         0xa8 (size before relaxing)
+ .eh_frame      0x0000000000007690      0x110 out_sim/src/console.o
+                                        0x128 (size before relaxing)
+ .eh_frame      0x00000000000077a0       0x5c /usr/lib/x86_64-linux-gnu/libc_nonshared.a(elf-init.oS)
+                                         0x78 (size before relaxing)
+ .eh_frame      0x00000000000077fc        0x4 /usr/lib/gcc/x86_64-linux-gnu/9/crtendS.o
+ *(.eh_frame.*)
+
+.gcc_except_table
+ *(.gcc_except_table .gcc_except_table.*)
+
+.gnu_extab
+ *(.gnu_extab*)
+
+.exception_ranges
+ *(.exception_ranges*)
+                0x0000000000008d90                . = DATA_SEGMENT_ALIGN (CONSTANT (MAXPAGESIZE), CONSTANT (COMMONPAGESIZE))
+
+.eh_frame
+ *(.eh_frame)
+ *(.eh_frame.*)
+
+.gnu_extab
+ *(.gnu_extab)
+
+.gcc_except_table
+ *(.gcc_except_table .gcc_except_table.*)
+
+.exception_ranges
+ *(.exception_ranges*)
+
+.tdata          0x0000000000008d90        0x0
+                [!provide]                        PROVIDE (__tdata_start = .)
+ *(.tdata .tdata.* .gnu.linkonce.td.*)
+
+.tbss
+ *(.tbss .tbss.* .gnu.linkonce.tb.*)
+ *(.tcommon)
+
+.preinit_array  0x0000000000008d90        0x0
+                [!provide]                        PROVIDE (__preinit_array_start = .)
+ *(.preinit_array)
+                [!provide]                        PROVIDE (__preinit_array_end = .)
+
+.init_array     0x0000000000008d90        0x8
+                0x0000000000008d90                PROVIDE (__init_array_start = .)
+ *(SORT_BY_INIT_PRIORITY(.init_array.*) SORT_BY_INIT_PRIORITY(.ctors.*))
+ *(.init_array EXCLUDE_FILE(*crtend?.o *crtend.o *crtbegin?.o *crtbegin.o) .ctors)
+ .init_array    0x0000000000008d90        0x8 /usr/lib/gcc/x86_64-linux-gnu/9/crtbeginS.o
+                0x0000000000008d98                PROVIDE (__init_array_end = .)
+
+.fini_array     0x0000000000008d98        0x8
+                [!provide]                        PROVIDE (__fini_array_start = .)
+ *(SORT_BY_INIT_PRIORITY(.fini_array.*) SORT_BY_INIT_PRIORITY(.dtors.*))
+ *(.fini_array EXCLUDE_FILE(*crtend?.o *crtend.o *crtbegin?.o *crtbegin.o) .dtors)
+ .fini_array    0x0000000000008d98        0x8 /usr/lib/gcc/x86_64-linux-gnu/9/crtbeginS.o
+                [!provide]                        PROVIDE (__fini_array_end = .)
+
+.ctors
+ *crtbegin.o(.ctors)
+ *crtbegin?.o(.ctors)
+ *(EXCLUDE_FILE(*crtend?.o *crtend.o) .ctors)
+ *(SORT_BY_NAME(.ctors.*))
+ *(.ctors)
+
+.dtors
+ *crtbegin.o(.dtors)
+ *crtbegin?.o(.dtors)
+ *(EXCLUDE_FILE(*crtend?.o *crtend.o) .dtors)
+ *(SORT_BY_NAME(.dtors.*))
+ *(.dtors)
+
+.jcr
+ *(.jcr)
+
+.data.rel.ro    0x0000000000008da0        0x0
+ *(.data.rel.ro.local* .gnu.linkonce.d.rel.ro.local.*)
+ *(.data.rel.ro .data.rel.ro.* .gnu.linkonce.d.rel.ro.*)
+ .data.rel.ro   0x0000000000008da0        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+
+.dynamic        0x0000000000008da0      0x1f0
+ *(.dynamic)
+ .dynamic       0x0000000000008da0      0x1f0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+                0x0000000000008da0                _DYNAMIC
+
+.got            0x0000000000008f90       0x70
+ *(.got.plt)
+ .got.plt       0x0000000000008f90       0x48 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+                0x0000000000008f90                _GLOBAL_OFFSET_TABLE_
+ *(.igot.plt)
+ *(.got)
+ .got           0x0000000000008fd8       0x28 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ *(.igot)
+                0x0000000000009000                . = DATA_SEGMENT_RELRO_END (., 0x0)
+
+.data           0x0000000000009000      0x388
+ *(.data .data.* .gnu.linkonce.d.*)
+ .data          0x0000000000009000        0x4 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+                0x0000000000009000                data_start
+                0x0000000000009000                __data_start
+ .data          0x0000000000009004        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/crti.o
+ .data          0x0000000000009004        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/crtbeginS.o
+ *fill*         0x0000000000009004        0x4 
+ .data.rel.local
+                0x0000000000009008        0x8 /usr/lib/gcc/x86_64-linux-gnu/9/crtbeginS.o
+                0x0000000000009008                __dso_handle
+ .data          0x0000000000009010        0x0 out_sim/sim/sim_platform.o
+ .data          0x0000000000009010        0x0 out_sim/sim/sim_i2c.o
+ *fill*         0x0000000000009010       0x10 
+ .data          0x0000000000009020      0x120 out_sim/src/i2c_pm.o
+ .data          0x0000000000009140        0x0 out_sim/src/i2c_fpga.o
+ .data          0x0000000000009140        0x0 out_sim/src/mailbox.o
+ .data          0x0000000000009140        0x0 out_sim/src/phy_mdio.o
+ .data          0x0000000000009140      0x140 out_sim/src/hexrec.o
+ .data          0x0000000000009280        0x0 out_sim/src/main.o
+ .data.systimer_ms
+                0x0000000000009280        0x4 out_sim/src/main.o
+ .data          0x0000000000009284        0x0 out_sim/src/uart_fifo.o
+ .data          0x0000000000009284        0x0 out_sim/src/console.o
+ *fill*         0x0000000000009284        0x4 
+ .data.OLDmac_ip_data
+                0x0000000000009288        0xa out_sim/src/console.o
+                0x0000000000009288                OLDmac_ip_data
+ *fill*         0x0000000000009292        0xe 
+ .data.rel.local.menu_str
+                0x00000000000092a0       0xe8 out_sim/src/console.o
+                0x00000000000092a0                menu_str
+ .data          0x0000000000009388        0x0 /usr/lib/x86_64-linux-gnu/libc_nonshared.a(elf-init.oS)
+ .data          0x0000000000009388        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/crtendS.o
+ .data          0x0000000000009388        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/crtn.o
+
+.tm_clone_table
+                0x0000000000009388        0x0
+ .tm_clone_table
+                0x0000000000009388        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/crtbeginS.o
+ .tm_clone_table
+                0x0000000000009388        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/crtendS.o
+
+.data1
+ *(.data1)
+                0x0000000000009388                _edata = .
+                [!provide]                        PROVIDE (edata = .)
+                0x0000000000009388                . = .
+                0x0000000000009388                __bss_start = .
+
+.bss            0x00000000000093a0       0xd8
+ *(.dynbss)
+ .dynbss        0x00000000000093a0        0x8 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+                0x00000000000093a0                stdin@@GLIBC_2.2.5
+ *(.bss .bss.* .gnu.linkonce.b.*)
+ .bss           0x00000000000093a8        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o
+ .bss           0x00000000000093a8        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/crti.o
+ .bss           0x00000000000093a8        0x1 /usr/lib/gcc/x86_64-linux-gnu/9/crtbeginS.o
+ .bss           0x00000000000093a9        0x0 out_sim/sim/sim_platform.o
+ *fill*         0x00000000000093a9        0x7 
+ .bss.sim_console_state
+                0x00000000000093b0        0x8 out_sim/sim/sim_platform.o
+ .bss           0x00000000000093b8        0x0 out_sim/sim/sim_i2c.o
+ .bss           0x00000000000093b8        0x0 out_sim/src/i2c_pm.o
+ .bss           0x00000000000093b8        0x0 out_sim/src/i2c_fpga.o
+ .bss           0x00000000000093b8        0x0 out_sim/src/mailbox.o
+ .bss.count.2413
+                0x00000000000093b8        0x2 out_sim/src/mailbox.o
+ .bss           0x00000000000093ba        0x0 out_sim/src/phy_mdio.o
+ .bss           0x00000000000093ba        0x0 out_sim/src/hexrec.o
+ .bss           0x00000000000093ba        0x0 out_sim/src/main.o
+ *fill*         0x00000000000093ba        0x2 
+ .bss.spi_ms_cnt.2592
+                0x00000000000093bc        0x4 out_sim/src/main.o
+ .bss.spi_update
+                0x00000000000093c0        0x1 out_sim/src/main.o
+ *fill*         0x00000000000093c1        0x3 
+ .bss.fpga_net_prog_pend
+                0x00000000000093c4        0x4 out_sim/src/main.o
+                0x00000000000093c4                fpga_net_prog_pend
+ .bss.fpga_prog_cnt
+                0x00000000000093c8        0x4 out_sim/src/main.o
+                0x00000000000093c8                fpga_prog_cnt
+ .bss.live_cnt  0x00000000000093cc        0x4 out_sim/src/main.o
+                0x00000000000093cc                live_cnt
+ .bss           0x00000000000093d0        0x0 out_sim/src/uart_fifo.o
+ .bss._dataLost
+                0x00000000000093d0        0x1 out_sim/src/uart_fifo.o
+ *fill*         0x00000000000093d1        0xf 
+ .bss.UART_queue
+                0x00000000000093e0       0x67 out_sim/src/uart_fifo.o
+ .bss           0x0000000000009447        0x0 out_sim/src/console.o
+ *fill*         0x0000000000009447        0x1 
+ .bss.mac_ip_data
+                0x0000000000009448        0xa out_sim/src/console.o
+ .bss._msgReady
+                0x0000000000009452        0x1 out_sim/src/console.o
+ *fill*         0x0000000000009453        0x1 
+ .bss.console_mode
+                0x0000000000009454        0x4 out_sim/src/console.o
+ .bss           0x0000000000009458        0x0 /usr/lib/x86_64-linux-gnu/libc_nonshared.a(elf-init.oS)
+ .bss           0x0000000000009458        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/crtendS.o
+ .bss           0x0000000000009458        0x0 /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/crtn.o
+ *(COMMON)
+ COMMON         0x0000000000009458        0x8 out_sim/sim/sim_platform.o
+                0x0000000000009458                SSP_FPGA
+ COMMON         0x0000000000009460       0x10 out_sim/sim/sim_i2c.o
+                0x0000000000009460                I2C_PM
+                0x0000000000009468                I2C_FPGA
+ COMMON         0x0000000000009470        0x8 out_sim/src/i2c_fpga.o
+                0x0000000000009470                currentDivider_mA
+                0x0000000000009474                powerMultiplier_mW
+                0x0000000000009478                . = ALIGN ((. != 0x0)?0x8:0x1)
+
+.lbss
+ *(.dynlbss)
+ *(.lbss .lbss.* .gnu.linkonce.lb.*)
+ *(LARGE_COMMON)
+                0x0000000000009478                . = ALIGN (0x8)
+                0x0000000000009478                . = SEGMENT_START ("ldata-segment", .)
+
+.lrodata
+ *(.lrodata .lrodata.* .gnu.linkonce.lr.*)
+
+.ldata          0x000000000000b478        0x0
+ *(.ldata .ldata.* .gnu.linkonce.l.*)
+                0x000000000000b478                . = ALIGN ((. != 0x0)?0x8:0x1)
+                0x000000000000b478                . = ALIGN (0x8)
+                0x0000000000009478                _end = .
+                [!provide]                        PROVIDE (end = .)
+                0x000000000000b478                . = DATA_SEGMENT_END (.)
+
+.stab
+ *(.stab)
+
+.stabstr
+ *(.stabstr)
+
+.stab.excl
+ *(.stab.excl)
+
+.stab.exclstr
+ *(.stab.exclstr)
+
+.stab.index
+ *(.stab.index)
+
+.stab.indexstr
+ *(.stab.indexstr)
+
+.comment        0x0000000000000000       0x2b
+ *(.comment)
+ .comment       0x0000000000000000       0x2b /usr/lib/gcc/x86_64-linux-gnu/9/crtbeginS.o
+                                         0x2c (size before relaxing)
+ .comment       0x000000000000002b       0x2c out_sim/sim/sim_platform.o
+ .comment       0x000000000000002b       0x2c out_sim/sim/sim_i2c.o
+ .comment       0x000000000000002b       0x2c out_sim/src/i2c_pm.o
+ .comment       0x000000000000002b       0x2c out_sim/src/i2c_fpga.o
+ .comment       0x000000000000002b       0x2c out_sim/src/mailbox.o
+ .comment       0x000000000000002b       0x2c out_sim/src/phy_mdio.o
+ .comment       0x000000000000002b       0x2c out_sim/src/hexrec.o
+ .comment       0x000000000000002b       0x2c out_sim/src/main.o
+ .comment       0x000000000000002b       0x2c out_sim/src/uart_fifo.o
+ .comment       0x000000000000002b       0x2c out_sim/src/console.o
+ .comment       0x000000000000002b       0x2c /usr/lib/gcc/x86_64-linux-gnu/9/crtendS.o
+
+.gnu.build.attributes
+ *(.gnu.build.attributes .gnu.build.attributes.*)
+
+.debug
+ *(.debug)
+
+.line
+ *(.line)
+
+.debug_srcinfo
+ *(.debug_srcinfo)
+
+.debug_sfnames
+ *(.debug_sfnames)
+
+.debug_aranges
+ *(.debug_aranges)
+
+.debug_pubnames
+ *(.debug_pubnames)
+
+.debug_info
+ *(.debug_info .gnu.linkonce.wi.*)
+
+.debug_abbrev
+ *(.debug_abbrev)
+
+.debug_line
+ *(.debug_line .debug_line.* .debug_line_end)
+
+.debug_frame
+ *(.debug_frame)
+
+.debug_str
+ *(.debug_str)
+
+.debug_loc
+ *(.debug_loc)
+
+.debug_macinfo
+ *(.debug_macinfo)
+
+.debug_weaknames
+ *(.debug_weaknames)
+
+.debug_funcnames
+ *(.debug_funcnames)
+
+.debug_typenames
+ *(.debug_typenames)
+
+.debug_varnames
+ *(.debug_varnames)
+
+.debug_pubtypes
+ *(.debug_pubtypes)
+
+.debug_ranges
+ *(.debug_ranges)
+
+.debug_macro
+ *(.debug_macro)
+
+.debug_addr
+ *(.debug_addr)
+
+.gnu.attributes
+ *(.gnu.attributes)
+
+/DISCARD/
+ *(.note.GNU-stack)
+ *(.gnu_debuglink)
+ *(.gnu.lto_*)
+OUTPUT(out_sim/marble_mmc_sim elf64-x86-64)

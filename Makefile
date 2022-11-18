@@ -16,4 +16,15 @@ marble_mini_download:
 marble_mini_clean:
 	make -f makefile.board BOARD=marble_mini clean
 
-clean: marble_mini_clean marble_clean
+.PHONY: sim
+sim:
+	make -f makefile.sim BOARD=sim all
+
+sim_clean:
+	make -f makefile.sim BOARD=sim clean
+
+.PHONY: run
+run:
+	make -f makefile.sim BOARD=sim run
+
+clean: marble_mini_clean marble_clean sim_clean

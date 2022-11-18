@@ -7,6 +7,7 @@
 
 #ifndef _MARBLE_API_H_
 #define _MARBLE_API_H_
+#ifndef SIMULATION
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -14,8 +15,13 @@
 #define WRITE_BIT(REG, BIT, VAL) ((REG & ~(1<<BIT)) | (VAL<<BIT))
 #define TEST_BIT(REG, BIT) (REG & (1<<BIT))
 
+#define UART_MSG_TERMINATOR                     ('\n')
+
 /* Initialize uC and peripherals before main code can run. */
 uint32_t marble_init(bool use_xtal);
+
+// TODO - Move these for encapsulation
+void print_status_counters(void);
 
 /****
 * UART
@@ -25,6 +31,8 @@ void marble_UART_init(void);
 int marble_UART_send(const char *str, int size);
 
 int marble_UART_recv(char *str, int size);
+
+void UART_FIFO_ISR(void);
 
 /****
 * LED
@@ -148,4 +156,5 @@ void marble_SYSTIMER_handler(void (*handler)(void));
 void marble_SLEEP_ms(uint32_t delay);
 void marble_SLEEP_us(uint32_t delay);
 
+#endif /* SIMULATION */
 #endif /* _MARBLE_API_H_ */

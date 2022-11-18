@@ -3,6 +3,8 @@
 
 #define TCA9548 (0xe0)
 
+#include <stdint.h>
+
 typedef enum {
    I2C_FMC1  = 0,
    I2C_FMC2  = 1,

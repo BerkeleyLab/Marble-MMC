@@ -1,4 +1,5 @@
 #include "marble_api.h"
+#include "sim_platform.h"
 #include <stdio.h>
 #include "i2c_pm.h"
 #include "mailbox.h"
@@ -140,7 +141,41 @@ void mbox_peek(void)
 }
 
 // Pseudo-mailbox interaction
-int push_fpga_mac_ip(unsigned char data[10])
+int push_fpga_mac_ip(mac_ip_data_t *pmac_ip_data)
+{
+   uint16_t ssp_buf;
+   int ssp_expect=0;
+   int ssp_cnt=0;
+
+   static unsigned short test_only = 0;  // use 0x4000 to disable
+
+   ssp_buf = 0x2000 | test_only; // disable FPGA Ethernet
+
+   ssp_expect += 2;
+   ssp_cnt += marble_SSP_write16(SSP_FPGA, &ssp_buf, 1);
+
+   // MAC first
+   for (unsigned ix = 0; ix < MAC_LENGTH; ix++) {
+      ssp_buf = pmac_ip_data->mac[ix] | (ix<<8) | 0x1000 | test_only;
+      ssp_expect += 2;
+      ssp_cnt += marble_SSP_write16(SSP_FPGA, &ssp_buf, 1);
+   }
+
+   // IP second
+   for (unsigned ix = 0; ix < IP_LENGTH; ix++) {
+      ssp_buf = pmac_ip_data->mac[ix] | ((ix+MAC_LENGTH)<<8) | 0x1000 | test_only;
+      ssp_expect += 2;
+      ssp_cnt += marble_SSP_write16(SSP_FPGA, &ssp_buf, 1);
+   }
+
+   ssp_buf = 0x2001 | test_only;  // enable FPGA Ethernet
+   ssp_expect += 2;
+   ssp_cnt += marble_SSP_write16(SSP_FPGA, &ssp_buf, 1);
+
+   return (ssp_cnt == ssp_expect);
+}
+
+int OLDpush_fpga_mac_ip(unsigned char data[10])
 {
    uint16_t ssp_buf;
    int ssp_expect=0;

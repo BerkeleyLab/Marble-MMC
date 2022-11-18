@@ -27,10 +27,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <stdio.h>
 #include "stm32f2xx_hal.h"
 #include "marble_api.h"
 #include "string.h"
-#include <stdio.h>
+#include "uart_fifo.h"
+#include "console.h"
 
 void Error_Handler(void) {}
 #ifdef  USE_FULL_ASSERT
@@ -57,6 +59,7 @@ SSP_PORT SSP_PMOD;
 I2C_BUS I2C_FPGA;
 I2C_BUS I2C_PM;
 
+
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
@@ -74,14 +77,18 @@ void marble_UART_init(void)
 {
    /* PA9, PA10 - MMC_CONS_PROG */
    MX_USART1_UART_Init();
+
    /* PD5, PD6 - UART4 (Pmod3_7/3_6) */
    MX_USART2_UART_Init();
 }
 
 /* Send \0 terminated string over UART. Returns number of bytes sent */
+// TODO - need to HAL-ectomy because it keeps disabling the RxNE interrupt
 int marble_UART_send(const char *str, int size)
 {
    HAL_UART_Transmit(&huart1, (const uint8_t *) str, size, 1000);
+   // HACK! Enable RxNE interrupt again
+   SET_BIT(huart1.Instance->CR1, USART_CR1_PEIE | USART_CR1_RXNEIE);
    return 1;
 }
 
@@ -95,6 +102,29 @@ int marble_UART_recv(char *str, int size)
    } else {
       return 0;
    }
+}
+
+/*
+ * void UART_FIFO_ISR(void);
+ *  A low-level ISR to pre-empt the STM32_HAL handler to catch
+ *  received bytes (TxE IRQ passes to HAL handler)
+ */
+void UART_FIFO_ISR(void) {
+  uint8_t c = 0;
+  if (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_RXNE) == SET) {
+    // Clear the Rx not empty flag only
+    CLEAR_BIT(huart1.Instance->CR1, USART_CR1_RXNEIE);
+    c = (uint8_t)(huart1.Instance->DR & (uint8_t)0x00FF);
+    if (UARTQUEUE_Add(&c) == UART_QUEUE_FULL) {
+      UARTQUEUE_SetDataLost(UART_DATA_LOST);
+      // Clear QUEUE at this point?
+    } else {
+      if (c == UART_MSG_TERMINATOR) {
+        console_pend_msg();
+      }
+    }
+  }
+  return;
 }
 
 /************
@@ -649,6 +679,8 @@ static void MX_USART1_UART_Init(void)
    {
       Error_Handler();
    }
+   // Enable RxNE interrupt
+   SET_BIT(huart1.Instance->CR1, USART_CR1_PEIE | USART_CR1_RXNEIE);
 }
 
 static void MX_USART2_UART_Init(void)

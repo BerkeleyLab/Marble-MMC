@@ -57,23 +57,13 @@ RM	:= rm -rf
 SED	:= sed
 SHUF	:= shuf
 
-# ARM GNU Toolchain
-#
-# These tools are available from https://launchpad.net/gcc-arm-embedded/ and
-# should be placed on your path. ALternatively you could compile your own.
-#
-TARGET  := arm-none-eabi
-AS	:= $(TARGET)-as
-CC	:= $(TARGET)-gcc
-CXX	:= $(TARGET)-g++
-OBJCOPY	:= $(TARGET)-objcopy
-SIZE	:= $(TARGET)-size
-
-# Download Tools
-#
-# Binaries supplied with LPCXpresso used for downloading.
-#
-OPENOCD         = openocd
+# Native GNU GCC
+TARGET  := 
+AS	:= as
+CC	:= gcc
+CXX	:= g++
+OBJCOPY	:= objcopy
+SIZE	:= size
 
 # Compilation Flags
 #
@@ -82,19 +72,22 @@ OPENOCD         = openocd
 # unused input sections.
 CFLAGS	= $(FLAGS) -Os -std=c11 -ffunction-sections -fdata-sections $(ARCH_FLAGS) $(USR_CFLAGS)
 CFLAGS += -Wall -Wextra -Wundef -Wshadow -Wstrict-prototypes -Wwrite-strings -pedantic
-CFLAGS += -Wpointer-arith -Wredundant-decls -Wunreachable-code
+CFLAGS += -Wpointer-arith -Wredundant-decls -Wunreachable-code -Wno-unused-parameter
 # to do:  -Wcast-align -Wcast-qual
 
 ASFLAGS	= $(FLAGS) $(ARCH_FLAGS)
 LDFLAGS = $(FLAGS) $(LINKER_FLAGS) -Wextra $(ARCH_FLAGS)
 
 # Default target
-all: $(OUTPUT_DIR)/$(PROJECT_NAME).elf
+all: $(OUTPUT_DIR)/$(PROJECT_NAME)
 
 # Create a definitive list of sources for the project by
 # combining OTHER_SOURCES with sources.mk
-SOURCES := $(OTHER_SOURCES)
+SOURCES := $(SIM_SOURCES)
 include $(BUILD_DIR)/sources.mk
+SOURCES := $(filter-out $(IGNORES), $(SOURCES))
+$(info "SOURCES =" $(SOURCES))
+
 # Translate this list of sources into a list of required objects
 # in the output directory
 objects = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(patsubst %.s,%.o,$(SOURCES))))
@@ -106,7 +99,7 @@ src/rev.h: $(SOURCES)
 	(git rev-parse --short=8 HEAD | awk '{print "#define GIT_REV \"" $$1 "\""}'; \
 	! git diff | grep -q .; echo "#define GIT_DIRTY $$?")  > $@
 	git rev-parse --short=8 HEAD | awk '{print "#define GIT_REV_32BIT 0x" $$1 ""}' >> $@
-$(OUTPUT_DIR)/src/main.o $(OUTPUT_DIR)/src/mailbox.o: src/rev.h
+$(OUTPUT_DIR)/src/main.o $(OUTPUT_DIR)/src/mailbox.o $(OUTPUT_DIR)/src/console.o: src/rev.h
 
 # Rule for generating object and dependancy files from source files
 #
@@ -145,65 +138,20 @@ $(OUTPUT_DIR)/%.o: %.s
 # / linker was run with -g) is created, alongside .hex and .bin files. A just
 # about human-readable .map is also created.
 #
-$(OUTPUT_DIR)/$(PROJECT_NAME).elf: $(OBJECTS) $(LINKERS) gdbscript
-	@$(SED) -i 's/^file.*$$/file $(OUTPUT_DIR)\/$(PROJECT_NAME)\.elf/' gdbscript
-	@$(ECHO)
+$(OUTPUT_DIR)/$(PROJECT_NAME): $(OBJECTS) $(LINKERS)
 	@$(ECHO) 'Linking $@...'
-	$(CC) $(LDFLAGS) $(addprefix -T,$(LINKERS)) -Wl,-Map,$(@:.elf=.map) -o $@ $(OBJECTS)
-	@$(OBJCOPY) -O binary $@ $(@:.elf=.bin)
-	@$(OBJCOPY) -O ihex $@ $(@:.elf=.hex)
+	$(CC) $(LDFLAGS) $(addprefix -T,$(LINKERS)) -Wl,-Map,$@.map -o $@ $(OBJECTS)
 	@$(ECHO)
 	$(SIZE) $@
 	@$(ECHO)
-	@$(SIZE) $@|tail -1 -|awk '{print "ROM Usage: "int(($$1+$$2)/10.24)/100"K / $(ROM_SIZE)"}'
-	@$(SIZE) $@|tail -1 -|awk '{print "RAM Usage: "int(($$2+$$3)/10.24)/100"K / $(RAM_SIZE)"}'
-
-# Creates sources.mk
-#
-# All C and S files in the sources directory are compiled into a makefile.  This
-# makefile should be audited to check that only the required code is linked into
-# the build.
-#
-.PHONY: sources
-sources:
-	@$(ECHO) 'Building sources.mk...'
-	@$(ECHO)
-	@$(FIND) $(SOURCE_DIR)/ | $(GREP) \\.[cS]$ > sources.mk
-	@$(CAT) sources.mk
-	@$(SED) -i '1s/^/SOURCES += /' sources.mk
-	@$(SED) -i 's/$$/ \\/' sources.mk
-
-# Downloads the firmware over J-Link with openocd
-#
-# The 'symbol-file' command in the .gdbscript has the correct symbol file
-# written to it.
-#
-.PHONY: download
-download: all
-	$(OPENOCD) -f prog_support/ocd/$(OCD_CONF) -c "program $(OUTPUT_DIR)/$(PROJECT_NAME).elf reset exit"
-
-# Creates a gdb script if required
-#
-#
-#
-gdbscript:
-	@$(ECHO) "# Load our .elf file into GDB" >> gdbscript
-	@$(ECHO) "file" > gdbscript
-	@$(ECHO) "# Define a target description to override the lpc-link default" >> gdbscript
-	@$(ECHO) "set tdesc filename arm-core.xml" >> gdbscript
-	@$(ECHO) "# Required for semihosting" >> gdbscript
-	@$(ECHO) "set mem inaccessible-by-default off" >> gdbscript
-	@$(ECHO) "# Connect to the debug server launched by make lpc-link" >> gdbscript
-	@$(ECHO) "target extended-remote" >> gdbscript
-	@$(ECHO) "# Enable semihosting" >> gdbscript
-	@$(ECHO) "monitor semihosting enable" >> gdbscript
-
 
 # Removes everything in the output directory
-#
-#
 #
 .PHONY: clean
 clean:
 	$(RM) $(OUTPUT_DIR)/*
-	$(RM) gdbscript src/rev.h
+	$(RM) src/rev.h
+
+.PHONY: run
+run: $(OUTPUT_DIR)/$(PROJECT_NAME)
+	$(OUTPUT_DIR)/$(PROJECT_NAME)

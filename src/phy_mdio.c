@@ -1,4 +1,5 @@
 #include "marble_api.h"
+#include "sim_platform.h"
 #include "phy_mdio.h"
 #include <stdio.h>
 #include <string.h>

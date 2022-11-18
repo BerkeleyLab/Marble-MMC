@@ -1,6 +1,8 @@
 #ifndef I2C_PM_H_
 #define I2C_PM_H_
 
+#include <stdint.h>
+
 typedef enum {
    LM75_0 = 0x92,
    LM75_1 = 0x96,
