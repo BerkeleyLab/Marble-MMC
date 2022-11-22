@@ -277,21 +277,28 @@ void adn4600_init()
    int rc;
 
    switch_i2c_bus(6);
-   // Reset U39 P1_7, an mimick that on P1_3 (watch an LED blink)
-   uint8_t data[2];
-   data[0] = 0x7; // Config reg (7)
-   data[1] = 0x77; // Configure P1_7 and P1_3 as outputs (set those bits to 0)
-   marble_I2C_send(I2C_FPGA, 0x42, data, 2);
+   // Reset U39 P1_7, P1_3 and P0_0, and turn on LED LD13
+   uint8_t data[3];
+   data[0] = 0x6; // Config reg (6) and (7)
+   data[1] = 0xFE; // Configure P0_0 (SI570_OE) as output (set those bits to 0)
+   data[2] = 0x77; // Configure P1_7 (CLKMUX_RST) and P1_3 (LD13) as outputs (set those bits to 0)
+   marble_I2C_send(I2C_FPGA, 0x42, data, 3);
    marble_SLEEP_ms(100);
 
-   data[0] = 0x3; // P1
-   data[1] = 0x0; // Write zeros to P1_7 and P1_3
-   marble_I2C_send(I2C_FPGA, 0x42, data, 2);
+   // from Part number(570_N_): N --> LVDS output with output enable polarity low
+   // SI570_OE = 0, from a scope generally default freq = 125 MHz
+   // but one should measure it through a frequency counter on FPGA
+   data[0] = 0x2; // P0, by default it will jump to next address 3 for P1
+   data[1] = 0x1; // Write one to P0_0
+   // LEDs have reverse polarity
+   data[2] = 0x04; // Write zero to P1_7 and one to P1_3
+   marble_I2C_send(I2C_FPGA, 0x42, data, 3);
 
    marble_SLEEP_ms(1000);
-   data[0] = 0x3; // Config reg (7)
-   data[1] = 0x88;// Write ones to P1_7 and P1_3
-   marble_I2C_send(I2C_FPGA, 0x42, data, 2);
+   data[0] = 0x2; // P0
+   data[1] = 0x00; // Write zero to P0_0, thereby enabling SI570
+   data[2] = 0x80; // Write one to P1_7 and zero to P1_3 (LED 13 should be ON)
+   marble_I2C_send(I2C_FPGA, 0x42, data, 3);
 
    switch_i2c_bus(2);
    marble_SLEEP_ms(100);
@@ -356,28 +363,27 @@ void pca9555_status()
 void pca9555_config()
 {
    switch_i2c_bus(6);
-   // Reset U39 P1_7, an mimick that on P1_3 (watch an LED blink)
+   // Reset U39 P1_7, P1_3 and P0_0, and turn on LED LD13
    uint8_t data[3];
-   printf("Configuring PCA9555 at address 0x42\r\n");
    data[0] = 0x6; // Config reg (6) and (7)
-   data[1] = 0xFE; // Configure P0_0 as output (set those bits to 0)
-   data[2] = 0x77; // Configure P1_7 and P1_3 as outputs (set those bits to 0)
+   data[1] = 0xFE; // Configure P0_0 (SI570_OE) as output (set those bits to 0)
+   data[2] = 0x77; // Configure P1_7 (CLKMUX_RST) and P1_3 (LD13) as outputs (set those bits to 0)
    marble_I2C_send(I2C_FPGA, 0x42, data, 3);
-   printf("> reg: %x: value: %x\r\n", data[0], data[1]);
-   printf("> reg: %x: value: %x\r\n", data[0]+1, data[2]);
    marble_SLEEP_ms(100);
 
-   data[0] = 0x2; // P1
-   data[1] = 0x0; // Write zeros to P0_7 and P0_3
-   data[2] = 0x0; // Write zeros to P1_7 and P1_3
+   // from Part number(570_N_): N --> LVDS output with output enable polarity low
+   // SI570_OE = 0, from a scope generally default freq = 125 MHz
+   // but one should measure it through a frequency counter on FPGA
+   data[0] = 0x2; // P0, by default it will jump to next address 3 for P1
+   data[1] = 0x1; // Write one to P0_0
+   // LEDs have reverse polarity
+   data[2] = 0x04; // Write zero to P1_7 and one to P1_3
    marble_I2C_send(I2C_FPGA, 0x42, data, 3);
-   printf("> reg: %x: value: %x\r\n", data[0], data[1]);
-   printf("> reg: %x: value: %x\r\n", data[0]+1, data[2]);
 
    marble_SLEEP_ms(1000);
-   data[0] = 0x2; // P1
-   data[1] = 0x01;// Write ones to P0_0
-   data[2] = 0x88;// Write ones to P1_7 and P1_3
+   data[0] = 0x2; // P0
+   data[1] = 0x00; // Write zero to P0_0, thereby enabling SI570
+   data[2] = 0x80; // Write one to P1_7 and zero to P1_3 (LED 13 should be ON)
    marble_I2C_send(I2C_FPGA, 0x42, data, 3);
    printf("> reg: %x: value: %x\r\n", data[0], data[1]);
    printf("> reg: %x: value: %x\r\n", data[0]+1, data[2]);
