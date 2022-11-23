@@ -424,24 +424,23 @@ void si570_status()
    for (unsigned ix = 0; ix < 6; ix++) {
       uint8_t reg = 0x07 + ix;
       marble_I2C_cmdrecv(I2C_FPGA, 0xee, reg, &val[ix], 1);
-      printf("> Reg: %x: Value: %x\r\n", reg, val[ix]);
+      printf("> Reg: %x: Value: %2.2x\r\n", reg, val[ix]);
    }
 
    uint8_t hs_div = val[0] >> 5;
    uint8_t n1 = (((val[0] & 0x1f) << 2) | (val[1] >> 6));
-   float res = pow(2, 28);
-   uint64_t t1 = ((uint64_t)(val[1] & 0x3f)) << 32;
-   double rfreq = (t1 | (val[2] << 24) | (val[3] << 16) | (val[4] << 8) | val[5]) * res;
+   double rfreq = (((val[1] & 0x3f) << 8) | (val[2])) * pow(2.0, -4.0);
+   rfreq += ((val[3] << 16) | (val[4] << 8) | val[5]) * pow(2.0, -28.0);
    // Nominal internal crystal frequency
-   float fxtal = 156.25000e6;
+   // In the future, maybe this could this come from a non-volatile mmc parameter
+   float fxtal = 20.000e6;
    float fout = (fxtal * rfreq)/(hs_div*n1);
 
-   printf("> t1: %llu \r\n", t1);
-   printf("> fxtal: %f MHz\r\n", fxtal/1000000);
    printf("> HS_DIV: %x\r\n", hs_div);
    printf("> N1: %x\r\n", n1);
    printf("> RFREQ: %lf\r\n", rfreq);
-   printf("> Current SI570 frequency: %f MHz\r\n", fout/1000000);
+   printf("> assume fxtal: %f MHz\r\n", fxtal*0.000001);
+   printf("> guess SI570 output: %f MHz\r\n", fout*0.000001);
 
   // return hs_div, n1, rfreq, fout;
 }
