@@ -86,14 +86,16 @@ void marble_UART_init(void)
 // TODO - need to HAL-ectomy because it keeps disabling the RxNE interrupt
 int marble_UART_send(const char *str, int size)
 {
-   HAL_UART_Transmit(&huart1, (const uint8_t *) str, size, 1000);
-   // HACK! Enable RxNE interrupt again
-   SET_BIT(huart1.Instance->CR1, USART_CR1_PEIE | USART_CR1_RXNEIE);
-   return 1;
+  //HAL_UART_Transmit(&huart1, (const uint8_t *) str, size, 1000);
+  USART_Tx_LL_Queue(str, size);
+  // TODO HACK! Enable RxNE interrupt again. Remove now?
+  //SET_BIT(huart1.Instance->CR1, USART_CR1_PEIE | USART_CR1_RXNEIE);
+  return 1;
 }
 
 /* Read at most size-1 bytes (due to \0) from UART. Returns bytes read */
 // TODO: Should return bytes read
+/*
 int marble_UART_recv(char *str, int size)
 {
    if (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_RXNE) == SET) {
@@ -103,13 +105,18 @@ int marble_UART_recv(char *str, int size)
       return 0;
    }
 }
+*/
+
+int marble_UART_recv(char *str, int size) {
+  return USART_Tx_LL_Queue(str, size);
+}
 
 /*
- * void UART_FIFO_ISR(void);
+ * void UART_RXNE_ISR(void);
  *  A low-level ISR to pre-empt the STM32_HAL handler to catch
  *  received bytes (TxE IRQ passes to HAL handler)
  */
-void UART_FIFO_ISR(void) {
+void UART_RXNE_ISR(void) {
   uint8_t c = 0;
   if (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_RXNE) == SET) {
     // Clear the Rx not empty flag only
@@ -126,6 +133,17 @@ void UART_FIFO_ISR(void) {
   }
   return;
 }
+
+void USART_TXE_ISR(void) {
+  uint8_t outByte;
+  // If char queue not empty
+  if (UARTTXQUEUE_Get(&outByte) != UARTTX_QUEUE_EMPTY) {
+    // Write new char to DR
+    *(huart1.Instance->DR) = (uint32_t)outByte;
+  }
+  return;
+}
+
 
 /************
 * LEDs

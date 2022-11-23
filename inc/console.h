@@ -41,6 +41,8 @@ void console_pend_msg(void);
 int console_push_fpga_mac_ip(void);
 void console_print_mac_ip(void);
 
+void UARTTXQUEUE_Init(void);
+
 #ifdef __cplusplus
 }
 #endif

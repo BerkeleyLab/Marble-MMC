@@ -22,6 +22,8 @@
  *  *   handleMsg(msg);
  */
 
+#define DEBUG_TX_OUT
+
 typedef struct {
   int toExit;
   int msgReady;
@@ -35,12 +37,19 @@ static void _sigHandler(int c);
 
 static sim_console_state_t sim_console_state;
 
-// Emulate UART_FIFO_ISR() from marble_board.c but with keyboard input from stdin
+// Emulate UART_RXNE_ISR() from marble_board.c but with keyboard input from stdin
+// Also emulate USART_TXE_ISR() for printf()
 int sim_platform_service(void) {
+  uint8_t outByte;
   shiftMessage();
   if (sim_console_state.msgReady) {
     console_pend_msg();
     sim_console_state.msgReady = 0;
+  }
+  // If char queue not empty
+  if (UARTTXQUEUE_Get(&outByte) != UARTTX_QUEUE_EMPTY) {
+    // Write new char to DR
+    putchar((char)outByte);
   }
   return sim_console_state.toExit;
 }
@@ -102,16 +111,23 @@ void marble_UART_init(void) {
 }
 
 int marble_UART_send(const char *str, int size) {
+#ifdef DEBUG_TX_OUT
+  USART_Tx_LL_Queue((char *)str, size);
+#else
   char termStr[size+1];
   memcpy(termStr, str, size);
   termStr[size] = '\0';
   printf("%s", termStr);
+#endif
   return 0;
 }
 
 int marble_UART_recv(char *str, int size) {
-  // TODO
-  *str = 'a';
+  uint8_t outByte;
+  if (UARTTXQUEUE_Get(&outByte) == UARTTX_QUEUE_EMPTY) {
+    return -1;
+  }
+  *str = (char)outByte;
   return 0;
 }
 

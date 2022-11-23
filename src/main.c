@@ -8,6 +8,7 @@
 #include "phy_mdio.h"
 #include "rev.h"
 #include "console.h"
+#include "uart_fifo.h"
 
 // Setup UART strings
 #ifdef MARBLEM_V1
@@ -52,7 +53,6 @@ static uint32_t systimer_ms=1; // System timer interrupt period
 static void timer_int_handler(void)
 {
    const uint32_t SPI_MBOX_RATE = 2000;  // ms
-   static uint16_t led_cnt = 0;
    static uint32_t spi_ms_cnt=0;
 
    // SPI mailbox update flag; soft-realtime
@@ -65,13 +65,14 @@ static void timer_int_handler(void)
    }
 
    // Snake-pattern LEDs on two LEDs
-   /*
+#ifdef LED_SNAKE
+   static uint16_t led_cnt = 0;
    if(led_cnt == 330)
       marble_LED_toggle(0);
    else if(led_cnt == 660)
       marble_LED_toggle(1);
    led_cnt = (led_cnt + 1) % 1000;
-   */
+#endif /* LED_SNAKE */
    live_cnt++;
 }
 
@@ -166,6 +167,7 @@ int main(void)
 int __io_putchar(int ch);
 int __io_putchar(int ch)
 {
-  marble_UART_send((const char *)&ch, 1);
+  //marble_UART_send((const char *)&ch, 1);
+  USART_Tx_LL_Queue((char *)&ch, 1);
   return ch;
 }

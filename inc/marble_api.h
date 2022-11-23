@@ -32,7 +32,8 @@ int marble_UART_send(const char *str, int size);
 
 int marble_UART_recv(char *str, int size);
 
-void UART_FIFO_ISR(void);
+void UART_RXNE_ISR(void);
+void USART_TXE_ISR(void);
 
 /****
 * LED

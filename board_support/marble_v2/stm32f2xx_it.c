@@ -195,10 +195,11 @@ void USART1_IRQHandler(void)
 
   /* USER CODE END USART1_IRQn 0 */
   marble_LED_toggle(0);
-  UART_FIFO_ISR();  // Handle RX interrupts first
-  HAL_UART_IRQHandler(&huart1);
-  // TODO HACK! Get around HAL tools
-  SET_BIT(huart1.Instance->CR1, USART_CR1_PEIE | USART_CR1_RXNEIE);
+  UART_RXNE_ISR();   // Handle RX interrupts first
+  USART_TXE_ISR();  // Then handle TX interrupts
+  //HAL_UART_IRQHandler(&huart1);
+  // TODO HACK! Get around HAL tools. Remove now?
+  //SET_BIT(huart1.Instance->CR1, USART_CR1_PEIE | USART_CR1_RXNEIE);
   /* USER CODE BEGIN USART1_IRQn 1 */
 
   /* USER CODE END USART1_IRQn 1 */
