@@ -1,0 +1,57 @@
+# Memory Map definition file: MAX6639
+# Syntax Summary:
+#   # single-line comments (no in-line)
+#   Comma-delimited
+#   Line 0 (after comments) = device macro prefix,starting register number
+#   Subsequent lines are:
+#     If startswith plus sign (+), increment register count
+#     Else if startswith plus sign (-), increment register count
+#     Else if startswith greater-than sign (>), set register count
+#     Else, postfix,description
+MAX6639,0
+TEMP_CH1,Temperature Channel 1
+TEMP_CH2,Temperature Channel 2
+STATUS,Status Byte
+OUT_MASK,Output Mask
+GLOBAL_CONFIG,Global Configuration
+TEMP_EXT_CH1,Channel 1 Extended Temperature
+TEMP_EXT_CH2,Channel 2 Extended Temperature
+# skip 07h
++1
+NALERT_LIM_CH1,Channel 1 nALERT Limit
+NALERT_LIM_CH2,Channel 2 nALERT Limit
+NOT_LIM_CH1,Channel 1 nOT Limit
+NOT_LIM_CH2,Channel 2 nOT Limit
+NTHERM_LIM_CH1,Channel 1 nTHERM Limit
+NTHERM_LIM_CH2,Channel 2 nTHERM Limit
+# skip 0Eh-0Fh
++2
+FAN1_CONFIG1,Fan 1 Configuration 1
+FAN1_CONFIG2A,Fan 1 Configuration 2a
+FAN1_CONFIG2B,Fan 1 Configuration 2b
+FAN1_CONFIG3,Fan 1 Configuration 3
+FAN2_CONFIG1,Fan 2 Configuration 1
+FAN2_CONFIG2A,Fan 2 Configuration 2a
+FAN2_CONFIG2B,Fan 2 Configuration 2b
+FAN2_CONFIG3,Fan 2 Configuration 3
+# skip 18h-1Fh
++8
+FAN1_TACH_CNT,Fan 1 Tachometer Count
+FAN2_TACH_CNT,Fan 2 Tachometer Count
+FAN1_START_TACH_CNT,Fan 1 Start Tach Count
+FAN2_MAX_TACH_CNT,Fan 2 Max Tach Count
+FAN1_PULSE_PER_REV,Pulses Per Revolution Fan 1
+FAN2_PULSE_PER_REV,Pulses Per Revolution Fan 2
+FAN1_DUTY,Fan 1 Duty Cycle
+FAN2_DUTY,Fan 2 Duty Cycle
+MIN_FANSTART_TEMP_CH1,Channel 1 Minimum Fan Start Temperature
+MIN_FANSTART_TEMP_CH2,Channel 2 Minimum Fan Start Temperature
+# Next address is 3Dh
+>3Dh
+DEV_ID,Device ID
+MFG_ID,Manufacturer ID
+DEV_REV,Device Revision
+
+
+
+

@@ -3,6 +3,14 @@
 #include <stdio.h>
 #include <string.h>
 #include "i2c_pm.h"
+#include "max6639.h"
+
+/* ============================= Helper Macros ============================== */
+#define MAX6639_GET_TEMP_DOUBLE(rTemp, rTempExt) \
+   ((double)(((uint16_t)rTemp << 3) | (uint16_t)rTempExt >> 5)/8)
+
+// Moved from marble_api.h, declared in marble_board.c
+extern I2C_BUS I2C_PM;
 
 void I2C_PM_scan(void)
 {
@@ -62,12 +70,50 @@ void print_max6639(void)
    }
    if (0) {
       int fan_speed[2];
-      fan_speed[0] = 200;
-      fan_speed[1] = 150;
+      // update fan speed to 83%, max is 120
+      // see page 9 in datasheet
+      fan_speed[0] = 100;
+      fan_speed[1] = 100;
       set_fans(fan_speed);
    }
 }
 
+void print_max6639_decoded(void)
+{
+  int vTemp, vTempExt;
+  double temp;
+  int rTemp, rTempExt;
+  int rval;
+  printf("MAX6639 Temperatures:\n");
+  // Read/decode temperature for channels 1 and 2
+  for (int nChan = 1; nChan < 3; nChan++) {
+    if (nChan == 1) {
+      rTemp = MAX6639_TEMP_CH1;
+      rTempExt = MAX6639_TEMP_EXT_CH1;
+    } else {
+      rTemp = MAX6639_TEMP_CH2;
+      rTempExt = MAX6639_TEMP_EXT_CH2;
+    }
+    rval = get_max6639_reg(rTemp, &vTemp);
+    rval = get_max6639_reg(rTempExt, &vTempExt);
+    if (rval) {
+      printf("I2C fault!\r\n");
+      return;
+    }
+    temp = MAX6639_GET_TEMP_DOUBLE(vTemp, vTempExt);
+    printf("  Ch %d Temp = %.3f\n", nChan, temp);
+  }
+  // Now just dump the register contents
+  printf("MAX6639 Registers:\n");
+#define X(nReg, desc) \
+  do{ \
+    get_max6639_reg(nReg, &vTemp); \
+    printf("  %s (0x%X) = 0x%X\n", desc, nReg, vTemp); \
+  }while(0);
+  MAX6639_FOR_EACH_REGISTER();
+#undef X
+  return;
+}
 
 /************
 * LM75 Register interface

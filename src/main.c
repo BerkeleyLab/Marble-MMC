@@ -56,12 +56,12 @@ static void print_mac_ip(unsigned char mac_ip_data[10])
    }
    printf("%x", mac_ip_data[ix]);
 
-   printf("\n\rIP: ");
+   printf("\r\nIP: ");
    for (ix++; ix<9; ix++) {
       printf("%d.", mac_ip_data[ix]);
    }
    printf("%d", mac_ip_data[ix]);
-   printf("\n\r");
+   printf("\r\n");
 }
 
 static void ina219_test(void)
@@ -232,7 +232,8 @@ static console_state_e console_top(char rx_ch)
             break;
          case '7':
             printf("Start\r\n");
-            print_max6639();
+            //print_max6639();
+            print_max6639_decoded();
             break;
          case '8':
             // Demonstrate setting over-temperature register and Interrupt mode
@@ -255,7 +256,7 @@ static console_state_e console_top(char rx_ch)
 #ifdef MARBLEM_V1
             PRINT_NA;
 #elif MARBLE_V2
-            //adn4600_init();
+            adn4600_init();
             adn4600_printStatus();
 #endif
             break;

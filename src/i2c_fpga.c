@@ -5,6 +5,8 @@
 #include "i2c_fpga.h"
 #include <math.h>
 
+extern I2C_BUS I2C_FPGA;
+
 void I2C_FPGA_scan(void)
 {
    printf("Scanning I2C_FPGA bus:\r\n");
@@ -379,7 +381,12 @@ void pca9555_config()
    // LEDs have reverse polarity
    data[2] = 0x04; // Write zero to P1_7 and one to P1_3
    marble_I2C_send(I2C_FPGA, 0x42, data, 3);
+   // Deassert CLKMUX_RST
+   data[0] = 0x3; // P1
+   data[1] = 0x0; // Write zeros to P1_7 and P1_3
+   marble_I2C_send(I2C_FPGA, 0x42, data, 2);
 
+   // Reassert CLKMUX_RST
    marble_SLEEP_ms(1000);
    data[0] = 0x2; // P0
    data[1] = 0x00; // Write zero to P0_0, thereby enabling SI570
