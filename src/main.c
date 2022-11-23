@@ -42,8 +42,7 @@ const char menu_str[] = "\r\n"
 	"j) Read SPI mailbox\r\n"
 	"k) PCA9555 status\r\n"
 	"l) Config PCA9555\r\n"
-	"m) SI570 status\r\n"
-	"n) Config SI570\r\n";
+	"m) SI570 status\r\n";
 
 const char unk_str[] = "> Unknown option\r\n";
 
@@ -305,9 +304,6 @@ static console_state_e console_top(char rx_ch)
             break;
          case 'm':
             si570_status();
-            break;
-         case 'n':
-            si570_config();
             break;
          default:
             printf(unk_str);

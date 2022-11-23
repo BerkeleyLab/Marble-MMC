@@ -441,21 +441,4 @@ void si570_status()
    printf("> RFREQ: %lf\r\n", rfreq);
    printf("> assume fxtal: %f MHz\r\n", fxtal*0.000001);
    printf("> guess SI570 output: %f MHz\r\n", fout*0.000001);
-
-  // return hs_div, n1, rfreq, fout;
 }
-
-
-void si570_config()
-{
-   printf("Doing nothing now");
-}
-
-// Change the SI570 based on the input given
-//void si570_config(freq_n)
-//{
-//   switch_i2c_bus(6);
-   // first get the current frequency values
-//   hs_div_c, n1_c, rfreq_c, fout_c = si570_status();
-//   fxtal = (fout_c * hs_div_c * n1) / rfreq_c
-//   //}

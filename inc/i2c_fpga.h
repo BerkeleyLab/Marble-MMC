@@ -34,7 +34,6 @@ float getCurrentAmps(uint8_t);
 void pca9555_status(void);
 void pca9555_config(void);
 void si570_status(void);
-void si570_config(void);
 
 /************
 * INA219
