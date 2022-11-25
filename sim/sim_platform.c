@@ -12,6 +12,7 @@
 #include "sim_platform.h"
 #include "console.h"
 #include "uart_fifo.h"
+#include "flash.h"
 
 /*
  * On the simulated platform, the "UART" console process will be the following:

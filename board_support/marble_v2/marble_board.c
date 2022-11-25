@@ -61,7 +61,7 @@ I2C_BUS I2C_PM;
 
 
 /* Private function prototypes -----------------------------------------------*/
-void SystemClock_Config(void);
+static void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_ETH_Init(void);
 static void MX_I2C1_Init(void);
@@ -87,7 +87,7 @@ void marble_UART_init(void)
 int marble_UART_send(const char *str, int size)
 {
   //HAL_UART_Transmit(&huart1, (const uint8_t *) str, size, 1000);
-  USART_Tx_LL_Queue(str, size);
+  USART_Tx_LL_Queue((char *)str, size);
   // TODO HACK! Enable RxNE interrupt again. Remove now?
   //SET_BIT(huart1.Instance->CR1, USART_CR1_PEIE | USART_CR1_RXNEIE);
   return 1;
@@ -508,7 +508,7 @@ uint32_t marble_init(bool use_xtal)
    return 0;
 }
 
-void SystemClock_Config(void)
+static void SystemClock_Config(void)
 {
    RCC_OscInitTypeDef RCC_OscInitStruct = {0};
    RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};

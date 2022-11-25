@@ -18,29 +18,15 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include "flash.h"
 
 #ifdef SIMULATION
 #include "sim_platform.h"
 
-#define printk printf
-
 #else /* ndef SIMULATION */
-// TODO - Implement methods in sim_flash.c for actual hardware
-/*
-#include <bsp.h>
-#include <bsp/fmc.h>
-#include <bsp/flash.h>
-
-#include <rtems.h>
-#include <rtems/bspIo.h>
-
-#include "stm.h"
-*/
-
 // assigned in linker script
 // symbol value (address) is really a size in bytes
-extern
-const char eeprom_size;
+extern const char eeprom_size;
 
 #define EEPROM_COUNT ((size_t)&eeprom_size/sizeof(ee_frame))
 
@@ -227,7 +213,7 @@ int ee_migrate(ee_frame* __restrict__ dst, const ee_frame* __restrict__ src)
     }
 
     if(ret)
-        printk("ERROR: migrating %p <- %p : %d\n", (void *)dst, (void *)src, ret);
+        printf("ERROR: migrating %p <- %p : %d\n", (void *)dst, (void *)src, ret);
 
     return ret;
 }
@@ -264,7 +250,7 @@ int eeprom_init(void)
 
     } else {
         if(!(e0==ee_erased && e1==ee_erased)) {
-            printk("ERROR: EEFLASH invalid!  Reformatting...\n");
+            printf("ERROR: EEFLASH invalid!  Reformatting...\n");
 
             ret = fmc_flash_erase_sector(eeprom0_sector);
             ret |= fmc_flash_erase_sector(eeprom1_sector);

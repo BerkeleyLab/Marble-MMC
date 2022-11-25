@@ -11,19 +11,36 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "common.h"
 
 #ifdef MARBLEM_V1
-# define DEMO_STRING      "Marble Mini v1 UART DEMO\r\n"
+# define DEMO_STRING          "Marble Mini v1 UART DEMO\r\n"
 #else
 # ifdef MARBLE_V2
-#  define DEMO_STRING           "Marble v2 UART DEMO\r\n"
+#  define DEMO_STRING              "Marble v2 UART DEMO\r\n"
 # endif /* MARBLE_V2 */
 #endif /* MARBLEM_V1 */
 
-#define WRITE_BIT(REG, BIT, VAL) ((REG & ~(1<<BIT)) | (VAL<<BIT))
-#define TEST_BIT(REG, BIT) (REG & (1<<BIT))
+#define FLASH_VOLTAGE_MV                              (3300)
 
-#define UART_MSG_TERMINATOR                     ('\n')
+#ifdef RTEMS_SUPPORT
+#include <rtems.h>
+// Optionally be more specific and only include the file where these are defined
+//#include <rtems/rtems/intr.h>
+#define INTERRUPTS_DISABLE()  do { \
+  rtems_interrupt_level level; \
+  rtems_interrupt_disable(level); \
+} while (0)
+#define INTERRUPTS_ENABLE()   do { \
+  rtems_interrupt_enable(level); \
+} while (0)
+#else
+//#include <cmsis_gcc.h>
+#define INTERRUPTS_DISABLE                     __disable_irq
+#define INTERRUPTS_ENABLE                       __enable_irq
+#endif
+
+#define UART_MSG_TERMINATOR                           ('\n')
 
 /* Initialize uC and peripherals before main code can run. */
 uint32_t marble_init(bool use_xtal);

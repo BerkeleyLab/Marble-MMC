@@ -89,10 +89,12 @@ int marble_I2C_cmdsend_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *
 int marble_I2C_cmdrecv_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *data, int size);
 
 // ========= sim_flash.c =============
+/* Moved to flash.h
 int fmc_flash_init(bool initFlash);
 int fmc_flash_program(void *addr, const void* value, size_t count);
 int fmc_flash_erase_sector(unsigned sectorn);
 int fmc_flash_cache_flush_all(void);
+*/
 
 // ==== Hack to get around strerrorname_np not found on libc 2.35 ====
 // Returns string of errno name given an errno int

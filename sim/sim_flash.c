@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "sim_platform.h"
+#include "flash.h"
 #include "st-eeprom.h"
 
 #define FLASH_SECTOR_SIZE_WORDS         (FLASH_SECTOR_SIZE/4)
@@ -33,9 +34,9 @@ int fmc_flash_init(bool initFlash) {
   return 0;
 }
 
-int fmc_flash_program(void *addr, const void* value, size_t count)
+int fmc_flash_program(void *paddr, const void *pvalue, size_t count)
 {
-  memcpy(addr, value, count);
+  memcpy(paddr, pvalue, count);
   store_flash();
   return 0;
 }
@@ -54,10 +55,10 @@ int fmc_flash_erase_sector(unsigned sectorn)
   return 0;
 }
 
-int fmc_flash_cache_flush_all(void)
+void fmc_flash_cache_flush_all(void)
 {
   need_flush = false;
-  return 0;
+  return;
 }
 
 static int store_flash(void) {
