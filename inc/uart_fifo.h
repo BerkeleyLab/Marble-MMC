@@ -22,7 +22,7 @@ extern "C" {
 #define UART_DATA_NOT_LOST                            (0)
 #define UART_DATA_LOST                                (1)
 
-#define UARTTX_QUEUE_ITEMS                            (8)
+#define UARTTX_QUEUE_ITEMS                          (256)
 #define UARTTX_QUEUE_OK                            (0x00)
 #define UARTTX_QUEUE_FULL                          (0x01)
 #define UARTTX_QUEUE_EMPTY                         (0x02)

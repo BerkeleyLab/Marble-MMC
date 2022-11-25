@@ -30,10 +30,13 @@ on `/dev/ttyUSB1`.
   * Connect Segger j-link mini to J14
   * Download MMC firmware: `make download`
   * Connect to Marble-Mini USB port and enter serial terminal:
-    `miniterm /dev/ttyUSB3 115200`
-  * The menu should be printed on key press
-  * Push `f` for `f) XRP7724 flash`
-  * Push `g` for `g) XRP7724 go`
+    `miniterm -e /dev/ttyUSB3 115200`
+    (alternatively)
+    `python3 -m serial.tools.miniterm -e /dev/ttyUSB3 115200`
+  * Line-based communication. Hit enter/return to begin message parse/handling
+  * Type `?<enter>` to print help menu
+  * Push `f<enter>` for `f : XRP7724 flash`
+  * Push `g<enter>` for `g : XRP7724 go`
   * All power LEDs (close to J12) should be on
   * Current consumption should be around 200 mA
 

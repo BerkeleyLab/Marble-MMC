@@ -12,6 +12,14 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#ifdef MARBLEM_V1
+# define DEMO_STRING      "Marble Mini v1 UART DEMO\r\n"
+#else
+# ifdef MARBLE_V2
+#  define DEMO_STRING           "Marble v2 UART DEMO\r\n"
+# endif /* MARBLE_V2 */
+#endif /* MARBLEM_V1 */
+
 #define WRITE_BIT(REG, BIT, VAL) ((REG & ~(1<<BIT)) | (VAL<<BIT))
 #define TEST_BIT(REG, BIT) (REG & (1<<BIT))
 
@@ -27,7 +35,7 @@ void print_status_counters(void);
 * UART
 ****/
 void marble_UART_init(void);
-
+ 
 int marble_UART_send(const char *str, int size);
 
 int marble_UART_recv(char *str, int size);

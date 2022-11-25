@@ -17,6 +17,7 @@
 #include "i2c_pm.h"
 #include "i2c_fpga.h"
 #include "uart_fifo.h"
+#include "st-eeprom.h"
 
 const char lb_str[] = "Loopback... ESC to exit\r\n";
 const char unk_str[] = "> Unknown option\r\n";
@@ -73,13 +74,14 @@ static void print_mac(mac_ip_data_t *pmac_ip_data);
 static void print_ip(mac_ip_data_t *pmac_ip_data);
 static int sscanfIP(char *s, uint8_t *data, int len);
 static int sscanfMAC(char *s, uint8_t *data, int len);
-
+static int xatoi(char c);
+static int htoi(char c);
 // TODO - fix encapsulation
 // Static for now; eventually needs to be read from EEPROM
 static mac_ip_data_t mac_ip_data;
 
-const uint8_t mac_id_default[6] = {18, 85, 85, 0, 1, 46};
-const uint8_t ip_addr_default[4] = {192, 168, 19, 31};
+const uint8_t mac_id_default[MAC_LENGTH] = {18, 85, 85, 0, 1, 46};
+const uint8_t ip_addr_default[IP_LENGTH] = {192, 168, 19, 31};
 
 unsigned char OLDmac_ip_data[10] = {
    18, 85, 85, 0, 1, 46,  // MAC (locally managed)
@@ -88,6 +90,7 @@ unsigned char OLDmac_ip_data[10] = {
 
 int console_init(void) {
   UARTQUEUE_Init();
+  /*  // TODO - Remove these after restoreIPAddr tested
   int n;
   for (n = 0; n < MAC_LENGTH; n++) {
     mac_ip_data.mac[n] = mac_id_default[n];
@@ -95,6 +98,7 @@ int console_init(void) {
   for (n = 0; n < IP_LENGTH; n++) {
     mac_ip_data.ip[n] = ip_addr_default[n];
   }
+  */
   _msgReady = 0;
   console_mode = CONSOLE_TOP;
   return 0;
@@ -144,7 +148,7 @@ static int console_handle_msg(char *rx_msg, int len)
            break;
         case '6':
            print_mac_ip(&mac_ip_data);
-           push_fpga_mac_ip(&mac_ip_data);
+           console_push_fpga_mac_ip();
            printf("DONE\r\n");
            break;
         case '7':
@@ -171,7 +175,7 @@ static int console_handle_msg(char *rx_msg, int len)
         case 'b':
            printf("ADN4600\r\n");
 #ifdef MARBLEM_V1
-           PRINT_NA;
+           PRINT_NA();
 #else
 #ifdef MARBLE_V2
            adn4600_init();
@@ -186,7 +190,7 @@ static int console_handle_msg(char *rx_msg, int len)
         case 'd':
            printf("Switch MGT to QSFP 2\r\n");
 #ifdef MARBLEM_V1
-           PRINT_NA;
+           PRINT_NA();
 #else
 #ifdef MARBLE_V2
            marble_MGTMUX_set(3, true);
@@ -253,6 +257,10 @@ static int handle_msg_IP(char *rx_msg, int len) {
     mac_ip_data.ip[n] = ip[n];
   }
   print_ip(&mac_ip_data);
+  eeprom_store_ip(mac_ip_data.ip, IP_LENGTH);
+#ifdef AUTOPUSH
+  console_push_fpga_mac_ip();
+#endif
   return 0;
 }
 
@@ -267,6 +275,10 @@ static int handle_msg_MAC(char *rx_msg, int len) {
     mac_ip_data.mac[n] = mac[n];
   }
   print_mac(&mac_ip_data);
+  eeprom_store_mac(mac_ip_data.mac, MAC_LENGTH);
+#ifdef AUTOPUSH
+  console_push_fpga_mac_ip();
+#endif
   return 0;
 }
 
@@ -359,7 +371,6 @@ int console_service(void) {
   int len = console_shift_all(msg);
   _msgReady = 0;
   if (len != 0) {
-    printf("len = %d\r\n", len);
     return console_handle_msg((char *)msg, len);
   }
   return 0;
@@ -375,7 +386,7 @@ static int console_shift_all(uint8_t *pData) {
   return UARTQUEUE_ShiftOut(pData, CONSOLE_MAX_MESSAGE_LENGTH);
 }
 
-static int atoi(char c) {
+static int xatoi(char c) {
   if ((c >= '0') && (c <= '9')) {
     return (int)(c - '0');
   }
@@ -412,7 +423,7 @@ static int sscanfIP(char *s, uint8_t *data, int len) {
       data[ndig++] = (uint8_t)(sum & 0xff);
       sum = 0;
     } else {
-      r = atoi(c);
+      r = xatoi(c);
       if (r >= 0) {
         sum = (sum * 10) + r;
       }
@@ -467,6 +478,31 @@ static int sscanfMAC(char *s, uint8_t *data, int len) {
   return -1;
 }
 
+int restoreIPAddr(void) {
+  uint8_t ipAddr[IP_LENGTH];
+  int rval = eeprom_read_ip(ipAddr, IP_LENGTH);
+  if (!rval) {
+    // Success; use read value
+    memcpy(mac_ip_data.ip, ipAddr, IP_LENGTH);
+  } else {
+    // Fail; use default value
+    memcpy(mac_ip_data.ip, ip_addr_default, IP_LENGTH);
+  }
+  return rval;
+}
+
+int restoreMACAddr(void) {
+  uint8_t macAddr[MAC_LENGTH];
+  int rval = eeprom_read_mac(macAddr, MAC_LENGTH);
+  if (!rval) {
+    // Success; use read value
+    memcpy(mac_ip_data.mac, macAddr, MAC_LENGTH);
+  } else {
+    // Fail; use default value
+    memcpy(mac_ip_data.mac, mac_id_default, MAC_LENGTH);
+  }
+  return rval;
+}
 
 
 

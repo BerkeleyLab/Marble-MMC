@@ -55,7 +55,7 @@ int sim_platform_service(void) {
 }
 
 static void _sigHandler(int c) {
-  printf("sigint!\r\n");
+  printf("Exiting...\r\n");
   sim_console_state.toExit = 1;
   return;
 }
@@ -68,8 +68,8 @@ static int shiftMessage(void) {
   FD_ZERO(&rset);     // Initialize the data to 0s
   FD_SET(STDIN_FILENO, &rset);    // Add STDIN to the read set
   // NOTE: select() MODIFIES TIMEOUT!!!   Need to reinitialize every time.
-  timeout.tv_sec = 1;
-  timeout.tv_usec = 0;  // 1-s timeout
+  timeout.tv_sec = 0;
+  timeout.tv_usec = 1000;  // 1ms timeout
   rval = select(STDIN_FILENO+1, &rset, NULL, NULL, &timeout);
   int n = UART_QUEUE_ITEMS;
   if (rval) {
@@ -91,10 +91,14 @@ static int shiftMessage(void) {
   return 0;
 }
 
-uint32_t marble_init(bool use_xtal) {
+uint32_t marble_init(bool initFlash) {
   signal(SIGINT, _sigHandler);
+  fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK);
   sim_console_state.toExit = 0;
   sim_console_state.msgReady = 0;
+  fmc_flash_init(initFlash);
+  restoreIPAddr();
+  restoreMACAddr();
   return 0;
 }
 
@@ -232,4 +236,21 @@ void marble_SLEEP_us(uint32_t delay) {
   return;
 }
 
+#define X(en)   const char s_ ## en[] = #en;
+FOR_ALL_ERRNOS()
+#undef X
 
+char s_OK[] = "Success";
+char s_DEFAULT[] = "Unknown";
+
+const char *decode_errno(int err) {
+  switch (err) {
+    case 0: 
+      return s_OK;
+#define X(en)   case en: return s_ ## en;
+    FOR_ALL_ERRNOS();
+#undef X
+    default:
+      return s_DEFAULT;
+  }
+}

@@ -7,3 +7,4 @@ $(SOURCE_DIR)/syscalls.c \
 $(SOURCE_DIR)/main.c \
 $(SOURCE_DIR)/uart_fifo.c \
 $(SOURCE_DIR)/console.c \
+$(SOURCE_DIR)/st-eeprom.c \

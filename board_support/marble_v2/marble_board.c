@@ -139,7 +139,7 @@ void USART_TXE_ISR(void) {
   // If char queue not empty
   if (UARTTXQUEUE_Get(&outByte) != UARTTX_QUEUE_EMPTY) {
     // Write new char to DR
-    *(huart1.Instance->DR) = (uint32_t)outByte;
+    huart1.Instance->DR = (uint32_t)outByte;
   }
   return;
 }

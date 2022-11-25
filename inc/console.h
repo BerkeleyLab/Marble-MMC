@@ -25,6 +25,7 @@ extern "C" {
  */
 
 #define CONSOLE_MAX_MESSAGE_LENGTH          (32)
+#define PRINT_NA() printf("Function not available on this board.\r\n")
 
 #define MAC_LENGTH    (6)
 #define IP_LENGTH     (4)
@@ -42,6 +43,9 @@ int console_push_fpga_mac_ip(void);
 void console_print_mac_ip(void);
 
 void UARTTXQUEUE_Init(void);
+
+int restoreIPAddr(void);
+int restoreMACAddr(void);
 
 #ifdef __cplusplus
 }

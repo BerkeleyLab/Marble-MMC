@@ -125,7 +125,7 @@ uint8_t UARTTXQUEUE_Add(uint8_t *item) {
     return UARTTX_QUEUE_FULL;
   }
   // Copy item into queue
-  for (int n = 0; n < sizeof(uint8_t); n++) {
+  for (unsigned int n = 0; n < sizeof(uint8_t); n++) {
     *((uint8_t *)&(UARTTX_queue.queue[UARTTX_queue.pIn]) + n) = *((uint8_t *)item + n);
   }
   // Wrap pIn at boundary
@@ -147,7 +147,7 @@ uint8_t UARTTXQUEUE_Get(volatile uint8_t *item) {
     return UARTTX_QUEUE_EMPTY;
   }
   // Copy next data from the queue to item
-  for (int n = 0; n < sizeof(uint8_t); n++) {
+  for (unsigned int n = 0; n < sizeof(uint8_t); n++) {
     *((uint8_t *)item + n) = *((uint8_t *)&(UARTTX_queue.queue[UARTTX_queue.pOut]) + n);
   }
   // Wrap pOut at boundary

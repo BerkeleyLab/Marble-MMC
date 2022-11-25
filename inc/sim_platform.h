@@ -13,13 +13,21 @@ extern "C" {
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stddef.h>
+#include <errno.h>
 
-#define UART_QUEUE_ITEMS                         (100)
-#define UART_MSG_TERMINATOR                     ('\n')
+#define UART_QUEUE_ITEMS                                   (100)
+#define UART_MSG_TERMINATOR                               ('\n')
+
+#define SIM_FLASH_FILENAME                           "flash.bin"
+#define FLASH_SECTOR_SIZE                                  (256)
+#define EEPROM_COUNT        ((size_t)FLASH_SECTOR_SIZE/sizeof(ee_frame))
+
+#define DEMO_STRING                 "Marble UART Simulation\r\n"
 
 // ========= sim_platform.c ============
 int sim_platform_service(void);
-uint32_t marble_init(bool use_xtal);
+uint32_t marble_init(bool initFlash);
 void print_status_counters(void);
 void marble_UART_init(void);
 
@@ -79,6 +87,68 @@ int marble_I2C_recv(I2C_BUS I2C_bus, uint8_t addr, uint8_t *data, int size);
 int marble_I2C_cmdrecv(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size);
 int marble_I2C_cmdsend_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *data, int size);
 int marble_I2C_cmdrecv_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *data, int size);
+
+// ========= sim_flash.c =============
+int fmc_flash_init(bool initFlash);
+int fmc_flash_program(void *addr, const void* value, size_t count);
+int fmc_flash_erase_sector(unsigned sectorn);
+int fmc_flash_cache_flush_all(void);
+
+// ==== Hack to get around strerrorname_np not found on libc 2.35 ====
+// Returns string of errno name given an errno int
+// E.g. decode_errno(EIO) return pointer to string "EIO"
+const char *decode_errno(int err);
+#define FOR_ALL_ERRNOS() \
+  X(EPERM) \
+  X(ENOENT) \
+  X(ESRCH) \
+  X(E2BIG) \
+  X(ENOEXEC) \
+  X(EBADF) \
+  X(ECHILD) \
+  X(EDEADLK) \
+  X(ENOMEM) \
+  X(EACCES) \
+  X(EFAULT) \
+  X(ENOTBLK) \
+  X(EBUSY) \
+  X(EEXIST) \
+  X(EXDEV) \
+  X(ENODEV) \
+  X(ENOTDIR) \
+  X(EISDIR) \
+  X(EMFILE) \
+  X(ENFILE) \
+  X(ENOTTY) \
+  X(ETXTBSY) \
+  X(EFBIG) \
+  X(ENOSPC) \
+  X(ESPIPE) \
+  X(EROFS) \
+  X(EMLINK) \
+  X(EPIPE) \
+  X(EDOM) \
+  X(EAGAIN) \
+  X(EINPROGRESS) \
+  X(EALREADY) \
+  X(ENOTSOCK) \
+  X(EMSGSIZE) \
+  X(EPROTOTYPE) \
+  X(ENOPROTOOPT) \
+  X(EPROTONOSUPPORT) \
+  X(EOPNOTSUPP) \
+  X(EAFNOSUPPORT) \
+  X(EADDRINUSE) \
+  X(EADDRNOTAVAIL) \
+  X(ENETDOWN) \
+  X(ENETUNREACH) \
+  X(ENETRESET) \
+  X(ECONNABORTED) \
+  X(ENXIO) \
+  X(EINTR) \
+  X(EIO) \
+  X(EINVAL)
+// I'm not going to do the rest... there are too many
 
 
 #ifdef __cplusplus

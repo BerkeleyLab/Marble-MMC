@@ -10,21 +10,6 @@
 #include "console.h"
 #include "uart_fifo.h"
 
-// Setup UART strings
-#ifdef MARBLEM_V1
-const char demo_str[] = "Marble Mini v1 UART DEMO\r\n";
-#else
-#ifdef MARBLE_V2
-const char demo_str[] = "Marble v2 UART DEMO\r\n";
-#else
-#ifdef SIMULATION
-const char demo_str[] = "Marble UART Simulation\r\n";
-#endif
-#endif /* MARBLE_V2 */
-#endif /* MARBLEM_V1 */
-
-#define PRINT_NA printf("Function not available on this board.\r\n")
-
 #ifdef MARBLE_V2
 static void mgtclk_xpoint_en(void)
 {
@@ -35,20 +20,16 @@ static void mgtclk_xpoint_en(void)
 #endif
 
 unsigned int live_cnt=0;
-
 unsigned int fpga_prog_cnt=0;
-
 unsigned int fpga_net_prog_pend=0;
+static volatile bool spi_update = false;
+static uint32_t systimer_ms=1; // System timer interrupt period
 
 static void fpga_done_handler(void)
 {
    fpga_prog_cnt++;
    fpga_net_prog_pend=1;
 }
-
-static volatile bool spi_update = false;
-
-static uint32_t systimer_ms=1; // System timer interrupt period
 
 static void timer_int_handler(void)
 {
@@ -87,8 +68,17 @@ void print_status_counters(void) {
   return;
 }
 
-int main(void)
-{
+#ifdef SIMULATION
+int main(int argc, char *argv[]) {
+  bool initialize = false;
+  for (int n = 1; n < argc; n++) {
+    if ((argv[n][0] == '-') && (argv[n][1] == 'i')) {
+      initialize = true;
+    }
+  }
+#else
+int main(void) {
+#endif
 #ifdef MARBLEM_V1
    // Initialize Marble(mini) board with IRC, so it works even when
    // the XRP7724 isn't running, keeping the final 25 MHz source away.
@@ -101,8 +91,19 @@ int main(void)
    marble_init(0);
 #endif
 #endif
+
+#ifdef SIMULATION
+   console_init();
+   if (initialize) {
+     printf("Initializing flash\r\n");
+   } else {
+     printf("Restoring flash\r\n");
+   }
+   marble_init(initialize);
+#else
    // UART console service
    console_init();
+#endif
 
    /* Turn on LEDs */
    marble_LED_set(0, false);
@@ -139,7 +140,8 @@ int main(void)
    }
 
    // Send demo string over UART at 115200 BAUD
-   marble_UART_send(demo_str, strlen(demo_str));
+   marble_UART_send(DEMO_STRING, strlen(DEMO_STRING));
+   //printf("%s", DEMO_STRING);
 
    while (1) {
       // Run all system update/monitoring tasks and only then handle console
