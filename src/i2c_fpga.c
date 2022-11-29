@@ -427,13 +427,14 @@ void si570_status()
       printf("> Reg: %x: Value: %2.2x\r\n", reg, val[ix]);
    }
 
-   uint8_t hs_div = val[0] >> 5;
-   uint8_t n1 = (((val[0] & 0x1f) << 2) | (val[1] >> 6));
+   uint8_t hs_div = (val[0] >> 5) + 4;
+   uint8_t n1 = (((val[0] & 0x1f) << 2) | (val[1] >> 6)) + 1;
    double rfreq = (((val[1] & 0x3f) << 8) | (val[2])) * pow(2.0, -4.0);
    rfreq += ((val[3] << 16) | (val[4] << 8) | val[5]) * pow(2.0, -28.0);
    // Nominal internal crystal frequency
+   // from datasheet, typically 114.285 MHz +/- 2000 ppm, see page 12
    // In the future, maybe this could this come from a non-volatile mmc parameter
-   float fxtal = 20.000e6;
+   float fxtal = 114.286e6;
    float fout = (fxtal * rfreq)/(hs_div*n1);
 
    printf("> HS_DIV: %x\r\n", hs_div);
