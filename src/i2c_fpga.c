@@ -383,10 +383,6 @@ void pca9555_config()
    // LEDs have reverse polarity
    data[2] = 0x04; // Write zero to P1_7 and one to P1_3
    marble_I2C_send(I2C_FPGA, 0x42, data, 3);
-   // Deassert CLKMUX_RST
-   data[0] = 0x3; // P1
-   data[1] = 0x0; // Write zeros to P1_7 and P1_3
-   marble_I2C_send(I2C_FPGA, 0x42, data, 2);
 
    // Reassert CLKMUX_RST
    marble_SLEEP_ms(1000);
