@@ -231,7 +231,8 @@ static console_state_e console_top(char rx_ch)
             break;
          case '7':
             printf("Start\r\n");
-            print_max6639();
+            //print_max6639();
+            print_max6639_decoded();
             break;
          case '8':
             // Demonstrate setting over-temperature register and Interrupt mode

@@ -1,0 +1,8 @@
+Notes on potential improvements/fixes for marble_mmc firmware
+
+1) UART activity is blocking - switch to DMA
+  1a) Uses stack memory for write space. Needs linear allocator non-blocking calls
+2) I2C uses shared write space between calls
+  2a) Linear allocator again
+3) General encapsulation issues - main.c is dumping ground for all kinds of functions/variables
+4) Convert from single-character user input to \n-terminated strings
