@@ -5,6 +5,14 @@
 #include "mailbox.h"
 #include "rev.h"
 
+// Define SPI_SWITCH to re-route SPI bound for FPGA to PMOD for debugging
+//#define SPI_SWITCH
+#ifdef SPI_SWITCH
+#define SSP_TARGET        SSP_PMOD
+#else
+#define SSP_TARGET        SSP_FPGA
+#endif
+
 extern SSP_PORT SSP_FPGA;
 extern SSP_PORT SSP_PMOD;
 
@@ -152,25 +160,25 @@ int push_fpga_mac_ip(mac_ip_data_t *pmac_ip_data)
    ssp_buf = 0x2000 | test_only; // disable FPGA Ethernet
 
    ssp_expect += 2;
-   ssp_cnt += marble_SSP_write16(SSP_FPGA, &ssp_buf, 1);
+   ssp_cnt += marble_SSP_write16(SSP_TARGET, &ssp_buf, 1);
 
    // MAC first
    for (unsigned ix = 0; ix < MAC_LENGTH; ix++) {
       ssp_buf = pmac_ip_data->mac[ix] | (ix<<8) | 0x1000 | test_only;
       ssp_expect += 2;
-      ssp_cnt += marble_SSP_write16(SSP_FPGA, &ssp_buf, 1);
+      ssp_cnt += marble_SSP_write16(SSP_TARGET, &ssp_buf, 1);
    }
 
    // IP second
    for (unsigned ix = 0; ix < IP_LENGTH; ix++) {
-      ssp_buf = pmac_ip_data->mac[ix] | ((ix+MAC_LENGTH)<<8) | 0x1000 | test_only;
+      ssp_buf = pmac_ip_data->ip[ix] | ((ix+MAC_LENGTH)<<8) | 0x1000 | test_only;
       ssp_expect += 2;
-      ssp_cnt += marble_SSP_write16(SSP_FPGA, &ssp_buf, 1);
+      ssp_cnt += marble_SSP_write16(SSP_TARGET, &ssp_buf, 1);
    }
 
    ssp_buf = 0x2001 | test_only;  // enable FPGA Ethernet
    ssp_expect += 2;
-   ssp_cnt += marble_SSP_write16(SSP_FPGA, &ssp_buf, 1);
+   ssp_cnt += marble_SSP_write16(SSP_TARGET, &ssp_buf, 1);
 
    return (ssp_cnt == ssp_expect);
 }
