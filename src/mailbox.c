@@ -4,6 +4,9 @@
 #include "mailbox.h"
 #include "rev.h"
 
+extern SSP_PORT SSP_FPGA;
+extern SSP_PORT SSP_PMOD;
+
 static void mbox_set_page(uint8_t page_no)
 {
    uint16_t ssp_buf;

@@ -4,6 +4,8 @@
 #include <string.h>
 #include "i2c_fpga.h"
 
+extern I2C_BUS I2C_FPGA;
+
 void I2C_FPGA_scan(void)
 {
    printf("Scanning I2C_FPGA bus:\r\n");
@@ -364,11 +366,13 @@ void pca9555_config()
    printf("> reg: %x: value: %x\r\n", data[0], data[1]);
    marble_SLEEP_ms(100);
 
+   // Deassert CLKMUX_RST
    data[0] = 0x3; // P1
    data[1] = 0x0; // Write zeros to P1_7 and P1_3
    marble_I2C_send(I2C_FPGA, 0x42, data, 2);
    printf("> reg: %x: value: %x\r\n", data[0], data[1]);
 
+   // Reassert CLKMUX_RST
    marble_SLEEP_ms(1000);
    data[0] = 0x3; // P1
    data[1] = 0x88;// Write ones to P1_7 and P1_3
