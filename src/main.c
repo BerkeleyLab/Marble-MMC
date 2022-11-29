@@ -17,32 +17,32 @@ const char demo_str[] = "Marble v2 UART DEMO\r\n";
 #define PRINT_NA printf("Function not available on this board.\r\n")
 
 const char lb_str[] = "Loopback... ESC to exit\r\n";
-const char *menu_str[] = {"\r\n",
-	"Build based on git commit " GIT_REV "\r\n",
-	"Menu:\r\n",
-	"0) Loopback\r\n",
-	"1) MDIO/PHY\r\n",
-	"2) I2C monitor\r\n",
-	"3) Status & counters\r\n",
-	"4) GPIO control\r\n",
-	"5) Reset FPGA\r\n",
-	"6) Push IP&MAC\r\n",
-	"7) MAX6639\r\n",
-	"8) LM75_0\r\n",
-	"9) LM75_1\r\n",
-	"a) I2C scan all ports\r\n",
-	"b) Config ADN4600\r\n",
-	"c) INA219 Main power supply\r\n",
-	"d) MGT MUX - switch to QSFP 2\r\n",
-	"e) PM bus display\r\n",
-	"f) XRP7724 flash\r\n",
-	"g) XRP7724 go\r\n",
-	"h) XRP7724 hex input\r\n",
-	"i) timer check/cal\r\n",
-	"j) Read SPI mailbox\r\n",
-	"k) PCA9555 status\r\n",
-	"l) Config PCA9555\r\n"};
-#define MENU_LEN (sizeof(menu_str)/sizeof(*menu_str))
+const char menu_str[] = "\r\n"
+	"Build based on git commit " GIT_REV "\r\n"
+	"Menu:\r\n"
+	"0) Loopback\r\n"
+	"1) MDIO/PHY\r\n"
+	"2) I2C monitor\r\n"
+	"3) Status & counters\r\n"
+	"4) GPIO control\r\n"
+	"5) Reset FPGA\r\n"
+	"6) Push IP&MAC\r\n"
+	"7) MAX6639\r\n"
+	"8) LM75_0\r\n"
+	"9) LM75_1\r\n"
+	"a) I2C scan all ports\r\n"
+	"b) Config ADN4600\r\n"
+	"c) INA219 Main power supply\r\n"
+	"d) MGT MUX - switch to QSFP 2\r\n"
+	"e) PM bus display\r\n"
+	"f) XRP7724 flash\r\n"
+	"g) XRP7724 go\r\n"
+	"h) XRP7724 hex input\r\n"
+	"i) timer check/cal\r\n"
+	"j) Read SPI mailbox\r\n"
+	"k) PCA9555 status\r\n"
+	"l) Config PCA9555\r\n"
+	"m) SI570 status\r\n";
 
 const char unk_str[] = "> Unknown option\r\n";
 
@@ -90,6 +90,8 @@ static void mgtclk_xpoint_en(void)
 {
    if (xrp_ch_status(XRP7724, 1)) { // CH1: 3.3V
       adn4600_init();
+   } else {
+      printf("Skipping adn4600_init\r\n");
    }
 }
 #endif
@@ -195,9 +197,7 @@ static console_state_e console_top(char rx_ch)
    console_state_e rc = CONSOLE_TOP;
    switch (rx_ch) {
          case '?':
-            for (unsigned kx=0; kx<MENU_LEN; kx++) {
-                printf(menu_str[kx]);
-            }
+            printf(menu_str);
             break;
          case '0':
             printf(lb_str);
@@ -301,6 +301,9 @@ static console_state_e console_top(char rx_ch)
             break;
          case 'l':
             pca9555_config();
+            break;
+         case 'm':
+            si570_status();
             break;
          default:
             printf(unk_str);
