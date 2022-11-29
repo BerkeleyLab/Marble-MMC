@@ -7,8 +7,6 @@
 
 extern I2C_BUS I2C_FPGA;
 
-extern I2C_BUS I2C_FPGA;
-
 void I2C_FPGA_scan(void)
 {
    printf("Scanning I2C_FPGA bus:\r\n");
