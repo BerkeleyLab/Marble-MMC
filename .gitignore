@@ -10,3 +10,4 @@ inc/.*.swp
 sim/.*.swp
 tags
 flash.bin
+reset

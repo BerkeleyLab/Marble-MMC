@@ -237,21 +237,3 @@ void marble_SLEEP_us(uint32_t delay) {
   return;
 }
 
-#define X(en)   const char s_ ## en[] = #en;
-FOR_ALL_ERRNOS()
-#undef X
-
-char s_OK[] = "Success";
-char s_DEFAULT[] = "Unknown";
-
-const char *decode_errno(int err) {
-  switch (err) {
-    case 0: 
-      return s_OK;
-#define X(en)   case en: return s_ ## en;
-    FOR_ALL_ERRNOS();
-#undef X
-    default:
-      return s_DEFAULT;
-  }
-}

@@ -36,7 +36,7 @@ extern "C" {
 #define FLASH_CR_SNB_Msk_Fix                  (0xFU << FLASH_CR_SNB_Pos)
 
 // Convenience function
-#define FLASH_CR_PSIZE_SET(reg, val)          SET_FIELD_MASK(reg, val, FLASH_CR_PSIZE_Msk)
+#define FLASH_CR_PSIZE_SET(reg, val)          SET_FIELD_MASK(reg, val << FLASH_CR_PSIZE_Pos, FLASH_CR_PSIZE_Msk)
 #define FLASH_CR_SNB_SET(reg, val)            SET_FIELD_MASK(reg, val, FLASH_CR_SNB_Msk_Fix)
 #define FLASH_CR_SNB_GET(val)                 EXTRACT_FIELD(val, FLASH_CR_SNB_Pos, FLASH_CR_SNB_Pos + 3)
 

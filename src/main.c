@@ -10,6 +10,8 @@
 #include "console.h"
 #include "uart_fifo.h"
 
+//#define LED_SNAKE
+
 #ifdef MARBLE_V2
 static void mgtclk_xpoint_en(void)
 {
@@ -42,7 +44,7 @@ static void timer_int_handler(void)
       spi_update = true;
       spi_ms_cnt = 0;
       // Use LED2 for SPI heartbeat
-      //marble_LED_toggle(2); // TODO RE-ENABLE
+      marble_LED_toggle(2);
    }
 
    // Snake-pattern LEDs on two LEDs
@@ -79,6 +81,7 @@ int main(int argc, char *argv[]) {
 #else
 int main(void) {
 #endif
+   UARTQUEUE_Init();
 #ifdef MARBLEM_V1
    // Initialize Marble(mini) board with IRC, so it works even when
    // the XRP7724 isn't running, keeping the final 25 MHz source away.
@@ -106,9 +109,9 @@ int main(void) {
 #endif
 
    /* Turn on LEDs */
-   marble_LED_set(0, false);
-   marble_LED_set(1, true);
-   marble_LED_set(2, true);
+   marble_LED_set(0, true);   // LD15
+   marble_LED_set(1, true);   // LD11
+   marble_LED_set(2, true);   // LD12
 
    // Register GPIO interrupt handlers
    marble_GPIOint_handlers(fpga_done_handler);
@@ -169,7 +172,6 @@ int main(void) {
 int __io_putchar(int ch);
 int __io_putchar(int ch)
 {
-  //marble_UART_send((const char *)&ch, 1);
-  USART_Tx_LL_Queue((char *)&ch, 1);
+  marble_UART_send((const char *)&ch, 1);
   return ch;
 }

@@ -33,6 +33,7 @@
 #include "string.h"
 #include "uart_fifo.h"
 #include "console.h"
+#include "flash.h"
 
 void Error_Handler(void) {}
 #ifdef  USE_FULL_ASSERT
@@ -70,7 +71,8 @@ static void MX_SPI1_Init(void);
 static void MX_SPI2_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_USART2_UART_Init(void);
-
+static void USART_RXNE_ISR(void);
+static void USART_TXE_ISR(void);
 
 /* Initialize UART pins */
 void marble_UART_init(void)
@@ -87,10 +89,13 @@ void marble_UART_init(void)
 int marble_UART_send(const char *str, int size)
 {
   //HAL_UART_Transmit(&huart1, (const uint8_t *) str, size, 1000);
-  USART_Tx_LL_Queue((char *)str, size);
-  // TODO HACK! Enable RxNE interrupt again. Remove now?
-  //SET_BIT(huart1.Instance->CR1, USART_CR1_PEIE | USART_CR1_RXNEIE);
-  return 1;
+  int txnum = USART_Tx_LL_Queue((char *)str, size);
+  // Kick off the transmission if the TX buffer is empty
+  if ((USART1->SR) & USART_SR_TXE) {
+    SET_BIT(huart1.Instance->CR1, USART_CR1_TXEIE);
+    USART_TXE_ISR();
+  }
+  return txnum;
 }
 
 /* Read at most size-1 bytes (due to \0) from UART. Returns bytes read */
@@ -108,19 +113,24 @@ int marble_UART_recv(char *str, int size)
 */
 
 int marble_UART_recv(char *str, int size) {
-  return USART_Tx_LL_Queue(str, size);
+  return USART_Rx_LL_Queue((volatile char *)str, size);
+}
+
+void USART1_ISR(void) {
+  USART_RXNE_ISR();   // Handle RX interrupts first
+  USART_TXE_ISR();  // Then handle TX interrupts
+  return;
 }
 
 /*
- * void UART_RXNE_ISR(void);
+ * void USART_RXNE_ISR(void);
  *  A low-level ISR to pre-empt the STM32_HAL handler to catch
  *  received bytes (TxE IRQ passes to HAL handler)
  */
-void UART_RXNE_ISR(void) {
+void USART_RXNE_ISR(void) {
   uint8_t c = 0;
   if (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_RXNE) == SET) {
-    // Clear the Rx not empty flag only
-    CLEAR_BIT(huart1.Instance->CR1, USART_CR1_RXNEIE);
+    // Don't clear flags; the RXNE flag is cleared automatically by read from DR
     c = (uint8_t)(huart1.Instance->DR & (uint8_t)0x00FF);
     if (UARTQUEUE_Add(&c) == UART_QUEUE_FULL) {
       UARTQUEUE_SetDataLost(UART_DATA_LOST);
@@ -137,9 +147,14 @@ void UART_RXNE_ISR(void) {
 void USART_TXE_ISR(void) {
   uint8_t outByte;
   // If char queue not empty
-  if (UARTTXQUEUE_Get(&outByte) != UARTTX_QUEUE_EMPTY) {
-    // Write new char to DR
-    huart1.Instance->DR = (uint32_t)outByte;
+  if (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_TXE) == SET) {
+    if (UARTTXQUEUE_Get(&outByte) != UARTTX_QUEUE_EMPTY) {
+      // Write new char to DR
+      huart1.Instance->DR = (uint32_t)outByte;
+    } else {
+      // If the queue is empty, disable the TXE interrupt
+      CLEAR_BIT(huart1.Instance->CR1, USART_CR1_TXEIE);
+    }
   }
   return;
 }
@@ -151,6 +166,9 @@ void USART_TXE_ISR(void) {
 
 #define MAXLEDS 3
 static const uint8_t ledpins[MAXLEDS] = {GPIO_PIN_0, GPIO_PIN_1, GPIO_PIN_2};
+// NOTE:  ledpins[0] = PE0 = "LD15"
+//        ledpins[1] = PE1 = "LD11"
+//        ledpins[2] = PE2 = "LD12"
 
 /* Initializes board LED(s) */
 static void marble_LED_init(void)
@@ -476,36 +494,40 @@ void marble_SLEEP_us(uint32_t delay)
 
 uint32_t marble_init(bool use_xtal)
 {
-   (void) use_xtal;  // feature not yet supported with this chip
+  (void) use_xtal;  // feature not yet supported with this chip
 
-   // Must happen before any other clock manipulations:
-   HAL_Init();
-   SystemClock_Config_HSI();
+  // Must happen before any other clock manipulations:
+  HAL_Init();
+  SystemClock_Config_HSI();
 
-   MX_GPIO_Init();
+  MX_GPIO_Init();
 
-   // Configure GPIO interrupts
-   marble_GPIOint_init();
+  // Configure GPIO interrupts
+  marble_GPIOint_init();
 
-   marble_PSU_pwr(true);
-   MX_ETH_Init();
-   MX_I2C1_Init();
-   MX_I2C3_Init();
-   MX_SPI1_Init();
-   MX_SPI2_Init();
+  marble_PSU_pwr(true);
+  MX_ETH_Init();
+  MX_I2C1_Init();
+  MX_I2C3_Init();
+  MX_SPI1_Init();
+  MX_SPI2_Init();
 
-   marble_LED_init();
-   marble_SW_init();
-   marble_UART_init();
+  marble_LED_init();
+  marble_SW_init();
+  marble_UART_init();
 
-   printf("** Marble init done **\r\n");
+  fmc_flash_init(0);
+  restoreIPAddr();
+  restoreMACAddr();
 
-   // Init SSP busses
-   //marble_SSP_init(LPC_SSP0);
-   //marble_SSP_init(LPC_SSP1);
+  printf("** Marble init done **\r\n");
 
-   //marble_MDIO_init();
-   return 0;
+  // Init SSP busses
+  //marble_SSP_init(LPC_SSP0);
+  //marble_SSP_init(LPC_SSP1);
+
+  //marble_MDIO_init();
+  return 0;
 }
 
 static void SystemClock_Config(void)
@@ -697,8 +719,8 @@ static void MX_USART1_UART_Init(void)
    {
       Error_Handler();
    }
-   // Enable RxNE interrupt
-   SET_BIT(huart1.Instance->CR1, USART_CR1_PEIE | USART_CR1_RXNEIE);
+   // Enable RXNE, TXE interrupts
+   SET_BIT(huart1.Instance->CR1, USART_CR1_RXNEIE);
 }
 
 static void MX_USART2_UART_Init(void)

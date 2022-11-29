@@ -19,6 +19,11 @@
 #include <string.h>
 #include <errno.h>
 #include "flash.h"
+#include "common.h"
+
+//#define DEBUG_PRINT
+#include "dbg.h"
+#undef DEBUG_PRINT
 
 #ifdef SIMULATION
 #include "sim_platform.h"
@@ -110,10 +115,9 @@ static
 int ee_page_set_state(void *raw, ee_state_t state)
 {
     uint8_t hdr_valid[sizeof(ee_frame)];
-
-    for(size_t i=0u; i<sizeof(hdr_valid); i++)
+    for(size_t i=0u; i<sizeof(hdr_valid); i++) {
         hdr_valid[i] = (uint8_t)state;
-
+    }
     return fmc_flash_program(raw, hdr_valid, sizeof(hdr_valid));
 }
 
@@ -140,21 +144,20 @@ const ee_frame* ee_find(const ee_frame* bank,
                         ee_tag_t tag)
 {
     const ee_frame* found = NULL;
-
-    if(tag==0 || tag==0xff)
+    if(tag==0 || tag==0xff) {
         return found;
-
+    }
     size_t i;
     for(i=1u; i<EEPROM_COUNT; i++) {
-        if(bank[i].tag==0xff)
+        if(bank[i].tag==0xff) {
+            printd("Empty\r\n");
             break;
-
-        if(bank[i].tag!=tag || !ee_frame_check(&bank[i]))
+        }
+        if(bank[i].tag!=tag || !ee_frame_check(&bank[i])) {
             continue;
-
+        }
         found = &bank[i];
     }
-
     return found;
 }
 
@@ -212,9 +215,9 @@ int ee_migrate(ee_frame* __restrict__ dst, const ee_frame* __restrict__ src)
         }
     }
 
-    if(ret)
+    if(ret) {
         printf("ERROR: migrating %p <- %p : %d\n", (void *)dst, (void *)src, ret);
-
+    }
     return ret;
 }
 
@@ -227,7 +230,9 @@ int eeprom_init(void)
     ee_state_t e1 = ee_page_state(&eeprom1_base);
 
     if((e0==ee_valid) ^ (e1==ee_valid)) { // one bank valid
+        printd("obv\r\n");
         if(e0==ee_valid) {
+            printd("e0v\r\n");
             if(e1==ee_moving) {// need to finish migrating bank1
                 ret = ee_migrate(&eeprom0_base, &eeprom1_base);
                 if(!ret)
@@ -238,6 +243,7 @@ int eeprom_init(void)
                 ee_active = &eeprom0_base;
 
         } else { // e1==ee_valid
+            printd("e1v\r\n");
             if(e0==ee_moving) {// need to finish migrating bank0
                 ret = ee_migrate(&eeprom1_base, &eeprom0_base);
                 if(!ret)
@@ -249,6 +255,7 @@ int eeprom_init(void)
         }
 
     } else {
+        printd("nov\r\n");
         if(!(e0==ee_erased && e1==ee_erased)) {
             printf("ERROR: EEFLASH invalid!  Reformatting...\n");
 
@@ -257,8 +264,14 @@ int eeprom_init(void)
             fmc_flash_cache_flush_all();
         }
         ret = ee_page_set_state(&eeprom0_base, ee_valid);
-        if(!ret)
+        if(!ret) {
+            printd("e0 active\r\n");
             ee_active = &eeprom0_base;
+            e0 = ee_page_state(&eeprom0_base);
+            printd("e0 page_state = %d\r\n", e0);
+        } else {
+            printd("no active\r\n");
+        }
     }
     return ret;
 }
@@ -280,14 +293,14 @@ int fmc_ee_reset(void)
 int fmc_ee_read(ee_tag_t tag, ee_val_t val)
 {
     const ee_frame* bank = ee_active;
-    if(!bank)
+    if(!bank) {
         return -EIO;
-
+    }
     const ee_frame* f = ee_find(bank, tag);
+    printd("ee_find(eeprom0_base, %d) = %p\r\n", tag, (void *)f);
     if(f) {
         memcpy(val, f->val, sizeof(f->val));
         return 0;
-
     } else {
         return -ENOENT;
     }
@@ -327,13 +340,24 @@ int ee_is_full(const ee_frame* bank)
 
 int fmc_ee_write(ee_tag_t tag, const ee_val_t val)
 {
-    if(tag==0 || tag==0xff)
+    if(tag==0 || tag==0xff) {
         return -EINVAL;
-
+    }
     const ee_frame* active = ee_active;
-    if(!active)
+
+    if (active == &eeprom0_base) {
+      printd("e0 active\r\n");
+    } else if (active == &eeprom1_base) {
+      printd("e1 active\r\n");
+    } else {
+      printd("active is %p\r\n", (void *)active);
+    }
+
+    if(!active) {
         return -EIO;
+    }
     int ret = ee_write(active, tag, val);
+    printd("ee_write ret = %d\r\n", ret);
 
     if(ret==-ENOSPC && !ee_is_full(active)) { // Try migration
         ee_frame* alt;
@@ -341,28 +365,25 @@ int fmc_ee_write(ee_tag_t tag, const ee_val_t val)
         if(active==&eeprom0_base) {
             alt = &eeprom1_base;
             activen = eeprom0_sector;
-
         } else if(active==&eeprom1_base) {
             alt = &eeprom0_base;
             activen = eeprom1_sector;
-
         } else {
             return -EINVAL;
         }
-
-        if(ee_page_state(alt)!=ee_erased)
+        if(ee_page_state(alt)!=ee_erased) {
             return -EINVAL;
-
+        }
         ret = ee_page_set_state((ee_frame*)active, ee_moving);
-
-        if(!ret)
+        if(!ret) {
             ret = ee_migrate(alt, active);
-
-        if(!ret)
+        }
+        if(!ret) {
             ret = ee_page_set_state(alt, ee_valid);
-
-        if(!ret)
+        }
+        if(!ret) {
             ret = fmc_flash_erase_sector(activen); // sets active = ee_erased
+        }
         fmc_flash_cache_flush_all();
 
         if(!ret) {
@@ -389,8 +410,16 @@ int eeprom_store_ip(uint8_t *paddr, int len) {
     ipAddr[n] = paddr[n];
   }
   int rval = fmc_ee_write(ee_ip_addr, ipAddr);
-  //const char *errname = decode_errno(-rval);
-  //printf("eeprom_store_ip: rval = %d (%s)\r\n", rval, errname);
+  if (!rval) {
+    printf("Success\r\n");
+  } else {
+#ifdef DEBUG_ENABLE_ERRNO_DECODE
+    const char *errname = decode_errno(-rval);
+    printf("eeprom_store_ip: rval = %d (%s)\r\n", rval, errname);
+#else
+    printf("eeprom_store_ip: rval = %d\r\n", rval);
+#endif
+  }
   return rval;
 }
 
@@ -402,10 +431,14 @@ int eeprom_read_ip(uint8_t *paddr, int len) {
     for (int n = 0; n < len; n++) {
       paddr[n] = ipAddr[n];
     }
-  }/* else {
+  } else {
+#ifdef DEBUG_ENABLE_ERRNO_DECODE
     const char *errname = decode_errno(-rval);
     printf("eeprom_read_ip: rval = %d (%s)\r\n", rval, errname);
-  }*/
+#else
+    printf("eeprom_read_ip: rval = %d\r\n", rval);
+#endif
+  }
   return rval;
 }
 
@@ -421,8 +454,16 @@ int eeprom_store_mac(uint8_t *paddr, int len) {
     macAddr[n] = paddr[n];
   }
   int rval = fmc_ee_write(ee_mac_addr, macAddr);
-  //const char *errname = decode_errno(-rval);
-  //printf("eeprom_store_mac: rval = %d (%s)\r\n", rval, errname);
+  if (!rval) {
+    printf("Success\r\n");
+  } else {
+#ifdef DEBUG_ENABLE_ERRNO_DECODE
+    const char *errname = decode_errno(-rval);
+    printf("eeprom_store_mac: rval = %d (%s)\r\n", rval, errname);
+#else
+    printf("eeprom_store_mac: rval = %d\r\n", rval);
+#endif
+  }
   return rval;
 }
 
@@ -434,10 +475,14 @@ int eeprom_read_mac(uint8_t *paddr, int len) {
     for (int n = 0; n < len; n++) {
       paddr[n] = macAddr[n];
     }
-  }/* else {
+  } else {
+#ifdef DEBUG_ENABLE_ERRNO_DECODE
     const char *errname = decode_errno(-rval);
     printf("eeprom_read_mac: rval = %d (%s)\r\n", rval, errname);
-  }*/
+#else
+    printf("eeprom_read_mac: rval = %d\r\n", rval);
+#endif
+  }
   return rval;
 }
 

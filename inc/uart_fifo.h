@@ -22,7 +22,7 @@ extern "C" {
 #define UART_DATA_NOT_LOST                            (0)
 #define UART_DATA_LOST                                (1)
 
-#define UARTTX_QUEUE_ITEMS                          (256)
+#define UARTTX_QUEUE_ITEMS                         (1024)
 #define UARTTX_QUEUE_OK                            (0x00)
 #define UARTTX_QUEUE_FULL                          (0x01)
 #define UARTTX_QUEUE_EMPTY                         (0x02)
@@ -41,6 +41,7 @@ uint8_t UARTTXQUEUE_Add(uint8_t *item);
 uint8_t UARTTXQUEUE_Get(volatile uint8_t *item);
 uint8_t UARTTXQUEUE_Status(void);
 int USART_Tx_LL_Queue(char *msg, int len);
+int USART_Rx_LL_Queue(volatile char *msg, int len);
 
 
 #ifdef __cplusplus

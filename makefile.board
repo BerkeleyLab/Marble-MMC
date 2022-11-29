@@ -188,7 +188,7 @@ download: all
 #
 gdbscript:
 	@$(ECHO) "# Load our .elf file into GDB" >> gdbscript
-	@$(ECHO) "file" > gdbscript
+	@$(ECHO) "file" >> gdbscript
 	@$(ECHO) "# Define a target description to override the lpc-link default" >> gdbscript
 	@$(ECHO) "set tdesc filename arm-core.xml" >> gdbscript
 	@$(ECHO) "# Required for semihosting" >> gdbscript
@@ -198,6 +198,9 @@ gdbscript:
 	@$(ECHO) "# Enable semihosting" >> gdbscript
 	@$(ECHO) "monitor semihosting enable" >> gdbscript
 
+GDB=gdb-multiarch
+.PHONY: gdb
+	$(GDB) -x gdbscript
 
 # Removes everything in the output directory
 #

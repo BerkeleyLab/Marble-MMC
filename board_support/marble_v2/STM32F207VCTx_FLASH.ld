@@ -63,10 +63,13 @@ MEMORY
 {
 RAM (xrw)      : ORIGIN = 0x20000000, LENGTH = 128K
 /*FLASH (rx)     : ORIGIN = 0x08000000, LENGTH = 256K */
+
 ROM_START (rx) : ORIGIN = 0x08000000, LENGTH = 16K
 EEPROM0 (rx)   : ORIGIN = 0x08004000, LENGTH = 16K
 EEPROM1 (rx)   : ORIGIN = 0x08008000, LENGTH = 16K
 ROM_INT (rx)   : ORIGIN = 0x0800c000, LENGTH = 16K+64K+128K
+
+/*ROM_INT (rx)   : ORIGIN = 0x08000000, LENGTH = 256K */
 }
 
 /* Define output sections */
@@ -79,6 +82,7 @@ SECTIONS
     KEEP(*(.isr_vector)) /* Startup code */
     . = ALIGN(4);
   } >ROM_START
+  /*} >ROM_INT */
 
   /* The program code and other data goes into FLASH */
   .text :
@@ -192,3 +196,8 @@ eeprom_size = LENGTH(EEPROM0);
 eeprom0_base = ORIGIN(EEPROM0);
 eeprom1_base = ORIGIN(EEPROM1);
 
+/*
+eeprom_size = 16384;
+eeprom0_base = 0x08004000;
+eeprom1_base = 0x08008000;
+*/

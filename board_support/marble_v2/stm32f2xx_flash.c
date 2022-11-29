@@ -10,14 +10,21 @@
 #include "marble_api.h"
 #include "flash.h"
 #include "stm32f2xx_hal.h"
+#include "st-eeprom.h"
+
+//#define DEBUG_PRINT
+#include "dbg.h"
+#undef DEBUG_PRINT
 
 static int fmc_flash_unlock(volatile FLASH_TypeDef * const hw);
 static void fmc_flash_lock(volatile FLASH_TypeDef * const hw);
 static int fmc_flash_wait_idle(volatile FLASH_TypeDef * const hw);
 
 int fmc_flash_init(bool initFlash) {
-  // TODO anything?
   _UNUSED(initFlash);
+  FLASH->SR = FLASH_SR_PGPERR;  // Clear the PGPERR bit
+  int rval = eeprom_init();  // TODO I think this is an inversion of hierarchy; make eeprom_init call fmc_flash_init() instead
+  printf("eeprom_init rval = %d\r\n", rval);
   return 0;
 }
 
@@ -26,11 +33,11 @@ static int fmc_flash_unlock(volatile FLASH_TypeDef * const hw)
   int ret = 0;
   INTERRUPTS_DISABLE();
 
-  if(hw->CR & FLASH_CR_LOCK) {
+  if((hw->CR) & FLASH_CR_LOCK) {
     hw->KEYR = FLASH_KEY1; //0x45670123;
     hw->KEYR = FLASH_KEY2; //0xcdef89ab;
 
-    if(hw->CR & FLASH_CR_LOCK)
+    if((hw->CR) & FLASH_CR_LOCK)
       ret = -EIO;
 
   } else {
@@ -62,10 +69,12 @@ static int fmc_flash_wait_idle(volatile FLASH_TypeDef * const hw)
    */
   while(hw->SR & FLASH_SR_BSY) {}
 
+  FLASH->SR |= FLASH_SR_PGPERR;  // Clear the PGPERR bit
   if(hw->SR & (FLASH_SR_OPERR|FLASH_SR_PGAERR
                |FLASH_SR_PGPERR|FLASH_SR_PGSERR
                |FLASH_SR_WRPERR))
   {
+    printd("FLASH_SR ERR 0x%lx\r\n", hw->SR);
     return -EIO;
   }
   return 0;
@@ -90,6 +99,7 @@ int fmc_flash_program(void *paddr, const void *pvalue, size_t count)
   uint8_t progwidth = 1u<<psize;
 
   int ret = fmc_flash_unlock(hw);
+  printd("unlock? ret = %d\r\n", ret);
   if(ret) {
     return ret;
   }
@@ -102,6 +112,7 @@ int fmc_flash_program(void *paddr, const void *pvalue, size_t count)
 
   hw->SR |= FLASH_SR_OPERR|FLASH_SR_PGAERR|FLASH_SR_PGPERR|FLASH_SR_PGSERR;
 
+  //printf("count = %d; addr= %p\r\n", count, addr);
   for(; count; count -= progwidth, value += progwidth, addr += progwidth) {
     uint32_t cr = hw->CR;
     cr  = FLASH_CR_PSIZE_SET(cr, psize);
@@ -120,8 +131,10 @@ int fmc_flash_program(void *paddr, const void *pvalue, size_t count)
       goto done;
     }
   }
-
 done:
+  //printf("count = %d; addr= %p\r\n", count, addr);
+  printf("psize = %d, FLASH_CR PSIZE = 0x%x\r\n", psize, FLASH_CR_PSIZE_SET(0, psize));
+  printf("FLASH_SR = 0x%lx\r\n", FLASH->SR);
   fmc_flash_lock(hw);
   return ret;
 }

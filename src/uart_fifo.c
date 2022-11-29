@@ -13,8 +13,8 @@ typedef struct {
 } UART_queue_t;
 
 typedef struct {
-  uint8_t pIn;
-  uint8_t pOut;
+  uint32_t pIn;
+  uint32_t pOut;
   uint8_t full;
   uint8_t queue[UARTTX_QUEUE_ITEMS];
 } UARTTX_queue_t;
@@ -174,14 +174,35 @@ uint8_t UARTTXQUEUE_Status(void) {
 
 // ========================== Non- Blocking API ===============================
 
+/*
+ * int USART_Tx_LL_Queue(char *msg, int len);
+ *    Returns number of bytes added to queue
+ *    Returns -1 on full
+ */
 int USART_Tx_LL_Queue(char *msg, int len) {
   // Add to byte queue
   uint8_t rval;
-  for (int n = 0; n < len; n++) {
+  int n = 0;
+  for (n = 0; n < len; n++) {
     rval = UARTTXQUEUE_Add((uint8_t *)(msg + n)); // Type uint8_t* (not char*)
     if (rval == UARTTX_QUEUE_FULL) {
       return -1;
     }
   }
-  return 0;
+  return n;
+}
+
+/*
+ * int USART_Rx_LL_Queue(volatile char *msg, int len);
+ *    Attempt to read 'len' characters from Rx queue into 'msg'
+ *    Returns number of chars read from queue.
+ */
+int USART_Rx_LL_Queue(volatile char *msg, int len) {
+  int n = 0;
+  while (UARTQUEUE_Get((uint8_t *)(msg + n)) != UART_QUEUE_EMPTY) {
+    if (n++ >= len) {
+      break;
+    }
+  }
+  return n;
 }

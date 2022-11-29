@@ -96,63 +96,6 @@ int fmc_flash_erase_sector(unsigned sectorn);
 int fmc_flash_cache_flush_all(void);
 */
 
-// ==== Hack to get around strerrorname_np not found on libc 2.35 ====
-// Returns string of errno name given an errno int
-// E.g. decode_errno(EIO) return pointer to string "EIO"
-const char *decode_errno(int err);
-#define FOR_ALL_ERRNOS() \
-  X(EPERM) \
-  X(ENOENT) \
-  X(ESRCH) \
-  X(E2BIG) \
-  X(ENOEXEC) \
-  X(EBADF) \
-  X(ECHILD) \
-  X(EDEADLK) \
-  X(ENOMEM) \
-  X(EACCES) \
-  X(EFAULT) \
-  X(ENOTBLK) \
-  X(EBUSY) \
-  X(EEXIST) \
-  X(EXDEV) \
-  X(ENODEV) \
-  X(ENOTDIR) \
-  X(EISDIR) \
-  X(EMFILE) \
-  X(ENFILE) \
-  X(ENOTTY) \
-  X(ETXTBSY) \
-  X(EFBIG) \
-  X(ENOSPC) \
-  X(ESPIPE) \
-  X(EROFS) \
-  X(EMLINK) \
-  X(EPIPE) \
-  X(EDOM) \
-  X(EAGAIN) \
-  X(EINPROGRESS) \
-  X(EALREADY) \
-  X(ENOTSOCK) \
-  X(EMSGSIZE) \
-  X(EPROTOTYPE) \
-  X(ENOPROTOOPT) \
-  X(EPROTONOSUPPORT) \
-  X(EOPNOTSUPP) \
-  X(EAFNOSUPPORT) \
-  X(EADDRINUSE) \
-  X(EADDRNOTAVAIL) \
-  X(ENETDOWN) \
-  X(ENETUNREACH) \
-  X(ENETRESET) \
-  X(ECONNABORTED) \
-  X(ENXIO) \
-  X(EINTR) \
-  X(EIO) \
-  X(EINVAL)
-// I'm not going to do the rest... there are too many
-
-
 #ifdef __cplusplus
 }
 #endif

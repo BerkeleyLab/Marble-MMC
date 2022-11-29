@@ -19,6 +19,8 @@
 #include "uart_fifo.h"
 #include "st-eeprom.h"
 
+#define AUTOPUSH
+
 const char lb_str[] = "Loopback... ESC to exit\r\n";
 const char unk_str[] = "> Unknown option\r\n";
 
@@ -77,28 +79,13 @@ static int sscanfMAC(char *s, uint8_t *data, int len);
 static int xatoi(char c);
 static int htoi(char c);
 // TODO - fix encapsulation
-// Static for now; eventually needs to be read from EEPROM
+// Read from EEPROM at startup
 static mac_ip_data_t mac_ip_data;
 
 const uint8_t mac_id_default[MAC_LENGTH] = {18, 85, 85, 0, 1, 46};
 const uint8_t ip_addr_default[IP_LENGTH] = {192, 168, 19, 31};
 
-unsigned char OLDmac_ip_data[10] = {
-   18, 85, 85, 0, 1, 46,  // MAC (locally managed)
-   192, 168, 19, 31   // IP
-};
-
 int console_init(void) {
-  UARTQUEUE_Init();
-  /*  // TODO - Remove these after restoreIPAddr tested
-  int n;
-  for (n = 0; n < MAC_LENGTH; n++) {
-    mac_ip_data.mac[n] = mac_id_default[n];
-  }
-  for (n = 0; n < IP_LENGTH; n++) {
-    mac_ip_data.ip[n] = ip_addr_default[n];
-  }
-  */
   _msgReady = 0;
   console_mode = CONSOLE_TOP;
   return 0;
@@ -244,12 +231,14 @@ static int console_handle_msg(char *rx_msg, int len)
 static int handle_msg_IP(char *rx_msg, int len) {
   assert(IP_LENGTH==4);
   uint8_t ip[IP_LENGTH];
+  /*
   char pMsg[len+1];
   for (int n = 0; n < len; n++) {
     pMsg[n] = rx_msg[n];
   }
   pMsg[len] = '\0';
   printf("ipmsg: %s\r\n", pMsg);
+  */
   // TODO - It seems like sscanf doesn't work so well in newlib-nano
   sscanfIP(rx_msg, ip, len);
   //sscanf(rx_msg, "%*c %hhu.%hhu.%hhu.%hhu", &ip[0], &ip[1], &ip[2], &ip[3]);
@@ -504,5 +493,23 @@ int restoreMACAddr(void) {
   return rval;
 }
 
+#ifdef DEBUG_ENABLE_ERRNO_DECODE
+#define X(en)   const char s_ ## en[] = #en;
+FOR_ALL_ERRNOS()
+#undef X
 
+char s_OK[] = "Success";
+char s_DEFAULT[] = "Unknown";
 
+const char *decode_errno(int err) {
+  switch (err) {
+    case 0: 
+      return s_OK;
+#define X(en)   case en: return s_ ## en;
+    FOR_ALL_ERRNOS();
+#undef X
+    default:
+      return s_DEFAULT;
+  }
+}
+#endif

@@ -86,11 +86,14 @@ void NMI_Handler(void)
 void HardFault_Handler(void)
 {
   /* USER CODE BEGIN HardFault_IRQn 0 */
-
+  int n = 0;
   /* USER CODE END HardFault_IRQn 0 */
   while (1)
   {
     /* USER CODE BEGIN W1_HardFault_IRQn 0 */
+    while (n++ < 10000000);// 10M
+    marble_LED_toggle(0);
+    n = 0;
     /* USER CODE END W1_HardFault_IRQn 0 */
   }
 }
@@ -101,11 +104,14 @@ void HardFault_Handler(void)
 void MemManage_Handler(void)
 {
   /* USER CODE BEGIN MemoryManagement_IRQn 0 */
-
+  int n = 0;
   /* USER CODE END MemoryManagement_IRQn 0 */
   while (1)
   {
     /* USER CODE BEGIN W1_MemoryManagement_IRQn 0 */
+    while (n++ < 10000000);// 10M
+    marble_LED_toggle(1);
+    n = 0;
     /* USER CODE END W1_MemoryManagement_IRQn 0 */
   }
 }
@@ -131,11 +137,15 @@ void BusFault_Handler(void)
 void UsageFault_Handler(void)
 {
   /* USER CODE BEGIN UsageFault_IRQn 0 */
+  int n = 0;
 
   /* USER CODE END UsageFault_IRQn 0 */
   while (1)
   {
     /* USER CODE BEGIN W1_UsageFault_IRQn 0 */
+    while (n++ < 10000000);// 10M
+    marble_LED_toggle(2);
+    n = 0;
     /* USER CODE END W1_UsageFault_IRQn 0 */
   }
 }
@@ -194,12 +204,9 @@ void USART1_IRQHandler(void)
   /* USER CODE BEGIN USART1_IRQn 0 */
 
   /* USER CODE END USART1_IRQn 0 */
-  marble_LED_toggle(0);
-  UART_RXNE_ISR();   // Handle RX interrupts first
-  USART_TXE_ISR();  // Then handle TX interrupts
+  USART1_ISR();
+  // Clear parity error if set USART_SR_PE?
   //HAL_UART_IRQHandler(&huart1);
-  // TODO HACK! Get around HAL tools. Remove now?
-  //SET_BIT(huart1.Instance->CR1, USART_CR1_PEIE | USART_CR1_RXNEIE);
   /* USER CODE BEGIN USART1_IRQn 1 */
 
   /* USER CODE END USART1_IRQn 1 */
@@ -213,7 +220,6 @@ void USART2_IRQHandler(void)
   /* USER CODE BEGIN USART2_IRQn 0 */
 
   /* USER CODE END USART2_IRQn 0 */
-  marble_LED_toggle(1);
   HAL_UART_IRQHandler(&huart2);
   /* USER CODE BEGIN USART2_IRQn 1 */
 
@@ -228,7 +234,6 @@ void USART3_IRQHandler(void)
   /* USER CODE BEGIN USART3_IRQn 0 */
 
   /* USER CODE END USART3_IRQn 0 */
-  marble_LED_toggle(2);
   HAL_UART_IRQHandler(&huart3);
   /* USER CODE BEGIN USART3_IRQn 1 */
 
