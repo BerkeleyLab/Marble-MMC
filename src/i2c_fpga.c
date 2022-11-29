@@ -422,7 +422,7 @@ void si570_status()
    // marble_I2C_cmdsend(I2C_FPGA, 0xee, 0x87, 128, 1);
    // marble_SLEEP_ms(100);
    for (unsigned ix = 0; ix < 6; ix++) {
-      uint8_t reg = 0x07 + ix;
+      uint8_t reg = 0x0d + ix;
       marble_I2C_cmdrecv(I2C_FPGA, 0xee, reg, &val[ix], 1);
       printf("> Reg: %x: Value: %2.2x\r\n", reg, val[ix]);
    }
