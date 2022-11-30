@@ -11,7 +11,6 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include "stm32f2xx_hal.h"
 #include "common.h"
 
 #ifdef MARBLEM_V1
@@ -39,7 +38,7 @@
 #else
 #define INTERRUPTS_DISABLE                     __disable_irq
 #define INTERRUPTS_ENABLE                       __enable_irq
-#define BSP_GET_SYSTICK()                      HAL_GetTick()
+#define BSP_GET_SYSTICK()                      marble_get_tick()
 #endif
 
 #define UART_MSG_TERMINATOR                           ('\n')
@@ -52,6 +51,8 @@ uint32_t marble_init(bool use_xtal);
 
 // TODO - Move these for encapsulation
 void print_status_counters(void);
+
+uint32_t marble_get_tick(void);
 
 /****
 * UART

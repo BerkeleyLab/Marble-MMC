@@ -31,9 +31,14 @@
 #else /* ndef SIMULATION */
 // assigned in linker script
 // symbol value (address) is really a size in bytes
+#ifdef MARBLE_V2
 extern const char eeprom_size;
 
 #define EEPROM_COUNT ((size_t)&eeprom_size/sizeof(ee_frame))
+#else
+// FIXME - Need to implement eeprom/flash in marble_mini
+#define EEPROM_COUNT                                (1)
+#endif
 
 #endif  /* SIMULATION */
 

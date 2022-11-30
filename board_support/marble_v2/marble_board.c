@@ -513,6 +513,10 @@ void SysTick_Handler(void)
       marble_SysTick_Handler();
 }
 
+uint32_t marble_get_tick(void) {
+  return (uint32_t)HAL_GetTick();
+}
+
 /* Register user-defined interrupt handlers */
 void marble_SYSTIMER_handler(void (*handler)(void)) {
    marble_SysTick_Handler = handler;

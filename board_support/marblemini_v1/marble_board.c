@@ -43,6 +43,7 @@
 /* System oscillator rate and RTC oscillator rate */
 const uint32_t OscRateIn = 25000000;
 const uint32_t RTCOscRateIn = 32768;
+static uint32_t _systick = 0;
 
 // Moved here from marble_api.h
 SSP_PORT SSP_FPGA;
@@ -168,6 +169,13 @@ void marble_LED_toggle(uint8_t led_num)
    if (led_num < MAXLEDS) {
       Chip_GPIO_SetPinToggle(LPC_GPIO, ledports[led_num], ledpins[led_num]);
    }
+}
+
+/* Debug purposes */
+void marble_Pmod3_5_write(bool on) {
+  // TODO
+  _UNUSED(on);
+  return;
 }
 
 /************
@@ -527,8 +535,13 @@ void (*volatile marble_SysTick_Handler)(void) = SysTick_Handler_dummy;
 // Override default (weak) SysTick_Handler
 void SysTick_Handler(void)
 {
+   ++_systick;
    if (marble_SysTick_Handler)
       marble_SysTick_Handler();
+}
+
+uint32_t marble_get_tick(void) {
+  return _systick;
 }
 
 /* Register user-defined interrupt handlers */
