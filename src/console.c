@@ -54,6 +54,7 @@ const char *menu_str[] = {"\r\n",
   "l - Config PCA9555\r\n",
   "m d.d.d.d - Set IP Addres\r\n",
   "n d:d:d:d:d:d - Set MAC Addres\r\n",
+  "o - SI570 status\r\n"
 };
 #define MENU_LEN (sizeof(menu_str)/sizeof(*menu_str))
 
@@ -219,6 +220,9 @@ static int console_handle_msg(char *rx_msg, int len)
            break;
         case 'n':
            handle_msg_MAC(rx_msg, len);
+           break;
+        case 'o':
+           si570_status();
            break;
         default:
            printf(unk_str);
