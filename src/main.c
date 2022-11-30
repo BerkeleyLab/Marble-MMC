@@ -11,12 +11,13 @@
 #include "uart_fifo.h"
 
 //#define LED_SNAKE
-
 #ifdef MARBLE_V2
 static void mgtclk_xpoint_en(void)
 {
    if (xrp_ch_status(XRP7724, 1)) { // CH1: 3.3V
       adn4600_init();
+   } else {
+      printf("Skipping adn4600_init\r\n");
    }
 }
 #endif

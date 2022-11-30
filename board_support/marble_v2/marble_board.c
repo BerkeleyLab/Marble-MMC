@@ -60,7 +60,6 @@ SSP_PORT SSP_PMOD;
 I2C_BUS I2C_FPGA;
 I2C_BUS I2C_PM;
 
-
 /* Private function prototypes -----------------------------------------------*/
 static void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
