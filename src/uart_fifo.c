@@ -65,6 +65,55 @@ uint8_t UARTQUEUE_Add(uint8_t *item) {
   return UART_QUEUE_OK;
 }
 
+/*
+ * Like _Get but removes the newest (last-added) item rather than the oldest item
+ */
+uint8_t UARTQUEUE_Pop(uint8_t *item) {
+  // Check for empty queue
+  if ((UART_queue.pIn == UART_queue.pOut) && (UART_queue.full == 0)) {
+    return UART_QUEUE_EMPTY;
+  }
+  // Rewind pIn and wrap at boundary
+  if (UART_queue.pIn == 0) {
+    UART_queue.pIn = UART_QUEUE_ITEMS - 1;
+  } else {
+    UART_queue.pIn--;
+  }
+  // Copy newest data from the queue to item
+  for (unsigned int n = 0; n < sizeof(uint8_t); n++) {
+    *((uint8_t *)item + n) = *((uint8_t *)&(UART_queue.queue[UART_queue.pIn]) + n);
+  }
+  // Clear full condition
+  UART_queue.full = 0;
+  return UART_QUEUE_OK;
+}
+
+/*
+ * Pop and discard the newest 'n' entries
+ */
+uint8_t UARTQUEUE_Rewind(int n) {
+  // No-op if n=0
+  if (n == 0) {
+    return UART_QUEUE_OK;
+  }
+  // Check for empty queue
+  if ((UART_queue.pIn == UART_queue.pOut) && (UART_queue.full == 0)) {
+    return UART_QUEUE_EMPTY;
+  }
+  // n = min(n, fill-level)
+  int fill = UARTQUEUE_FillLevel();
+  n = n > fill ? fill : n;
+  // Rewind pIn and wrap at boundary
+  if ((uint8_t)n > UART_queue.pIn) {
+    UART_queue.pIn = UART_QUEUE_ITEMS - ((uint8_t)n - UART_queue.pIn);
+  } else {
+    UART_queue.pIn -= (uint8_t)n;
+  }
+  // Clear full condition
+  UART_queue.full = 0;
+  return UART_QUEUE_OK;
+}
+
 uint8_t UARTQUEUE_Get(volatile uint8_t *item) {
   // Check for empty queue
   if ((UART_queue.pIn == UART_queue.pOut) && (UART_queue.full == 0)) {
@@ -124,6 +173,22 @@ void UARTQUEUE_SetDataLost(uint8_t lost) {
 
 uint8_t UARTQUEUE_IsDataLost(void) {
   return _dataLost;
+}
+
+/*
+ * int UARTQUEUE_FillLevel(void);
+ *    Return the number of items currently in the queue.
+ */
+int UARTQUEUE_FillLevel(void) {
+  if (UART_queue.full) {
+    return UART_QUEUE_ITEMS;
+  } else if (UART_queue.pIn == UART_queue.pOut) {
+    return 0;
+  } else if (UART_queue.pIn > UART_queue.pOut) {
+    return (int)(UART_queue.pIn - UART_queue.pOut);
+  } else {
+    return (int)(UART_QUEUE_ITEMS + UART_queue.pIn - UART_queue.pOut);
+  }
 }
 
 uint8_t UARTTXQUEUE_Add(uint8_t *item) {

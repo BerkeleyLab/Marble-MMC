@@ -44,6 +44,8 @@
 
 #define UART_MSG_TERMINATOR                           ('\n')
 #define UART_MSG_ABORT                                (27)  // esc
+#define UART_MSG_BKSP                                 (8)   // backspace
+#define UART_MSG_DEL                                  (128) // del
 
 /* Initialize uC and peripherals before main code can run. */
 uint32_t marble_init(bool use_xtal);

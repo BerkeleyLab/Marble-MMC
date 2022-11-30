@@ -35,6 +35,8 @@
 #include "console.h"
 #include "st-eeprom.h"
 
+#define UART_ECHO
+
 void Error_Handler(void) {}
 #ifdef  USE_FULL_ASSERT
 void assert_failed(uint8_t *file, uint32_t line) {}
@@ -72,6 +74,8 @@ static void MX_USART1_UART_Init(void);
 static void MX_USART2_UART_Init(void);
 static void USART_RXNE_ISR(void);
 static void USART_TXE_ISR(void);
+static void USART_Erase_Echo(void);
+static void USART_Erase(int n);
 
 /* Initialize UART pins */
 void marble_UART_init(void)
@@ -131,18 +135,67 @@ void USART_RXNE_ISR(void) {
   if (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_RXNE) == SET) {
     // Don't clear flags; the RXNE flag is cleared automatically by read from DR
     c = (uint8_t)(huart1.Instance->DR & (uint8_t)0x00FF);
-    if (UARTQUEUE_Add(&c) == UART_QUEUE_FULL) {
-      UARTQUEUE_SetDataLost(UART_DATA_LOST);
-      // Clear QUEUE at this point?
+    // Look for control characters first
+    if (c == UART_MSG_TERMINATOR) {
+      console_pend_msg();
+    } else if (c == UART_MSG_ABORT) {
+#ifdef UART_ECHO
+      USART_Erase_Echo();
+#endif
+      // clear queue
+      UARTQUEUE_Clear();
+    } else if (c == UART_MSG_BKSP) {
+#ifdef UART_ECHO
+      USART_Erase(1);
+#endif
+      UARTQUEUE_Rewind(1);
     } else {
-      if (c == UART_MSG_TERMINATOR) {
-        console_pend_msg();
-      } else if (c == UART_MSG_ABORT) {
-        // clear queue
-        UARTQUEUE_Clear();
-      }
+      if (UARTQUEUE_Add(&c) == UART_QUEUE_FULL) {
+        UARTQUEUE_SetDataLost(UART_DATA_LOST);
+        // Clear QUEUE at this point?
+      } 
+#ifdef UART_ECHO
+      marble_UART_send((const char *)&c, 1);
+#endif
     }
   }
+  return;
+}
+
+/*
+ * void USART_Erase_Echo(void);
+ *  Print 1 backspace for every char in the queue
+ */
+static void USART_Erase_Echo(void) {
+  USART_Erase(0);
+  return;
+}
+
+static void USART_Erase(int n) {
+  int fill = UARTQUEUE_FillLevel();
+  // If n = 0, erase all in queue
+  if (n == 0) {
+    n = fill;
+  } else {
+    // n = min(n, fill)
+    n = n > fill ? fill : n;
+  }
+  // First issue backspaces
+  char bksps[n];
+  for (int m = 0; m < n; m++) {
+    bksps[m] = UART_MSG_BKSP;
+  }
+  marble_UART_send((const char *)bksps, n);
+  // Then overwrite with spaces
+  for (int m = 0; m < n; m++) {
+    bksps[m] = ' ';
+  }
+  marble_UART_send((const char *)bksps, n);
+  // Then issue backspaces again
+  for (int m = 0; m < n; m++) {
+    bksps[m] = UART_MSG_BKSP;
+  }
+  marble_UART_send((const char *)bksps, n);
   return;
 }
 
