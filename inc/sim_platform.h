@@ -15,15 +15,19 @@ extern "C" {
 #include <stdint.h>
 #include <stddef.h>
 #include <errno.h>
+#include <time.h>
+#include "common.h"
 
 #define UART_QUEUE_ITEMS                                   (100)
 #define UART_MSG_TERMINATOR                               ('\n')
+#define UART_MSG_ABORT                                (27)  // esc
 
 #define SIM_FLASH_FILENAME                           "flash.bin"
 #define FLASH_SECTOR_SIZE                                  (256)
 #define EEPROM_COUNT        ((size_t)FLASH_SECTOR_SIZE/sizeof(ee_frame))
 
 #define DEMO_STRING                 "Marble UART Simulation\r\n"
+#define BSP_GET_SYSTICK()     (uint32_t)((uint64_t)clock()/1000)
 
 // ========= sim_platform.c ============
 int sim_platform_service(void);
@@ -42,6 +46,8 @@ void marble_LED_set(uint8_t led_num, bool on);
 bool marble_LED_get(uint8_t led_num);
 
 void marble_LED_toggle(uint8_t led_num);
+
+void marble_Pmod3_5_write(bool on);
 
 bool marble_SW_get(void);
 

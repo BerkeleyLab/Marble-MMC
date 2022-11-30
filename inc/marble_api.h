@@ -11,6 +11,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "stm32f2xx_hal.h"
 #include "common.h"
 
 #ifdef MARBLEM_V1
@@ -34,13 +35,15 @@
 #define INTERRUPTS_ENABLE()   do { \
   rtems_interrupt_enable(level); \
 } while (0)
+#define BSP_GET_SYSTICK()       (0) // TODO
 #else
-//#include <cmsis_gcc.h>
 #define INTERRUPTS_DISABLE                     __disable_irq
 #define INTERRUPTS_ENABLE                       __enable_irq
+#define BSP_GET_SYSTICK()                      HAL_GetTick()
 #endif
 
 #define UART_MSG_TERMINATOR                           ('\n')
+#define UART_MSG_ABORT                                (27)  // esc
 
 /* Initialize uC and peripherals before main code can run. */
 uint32_t marble_init(bool use_xtal);
@@ -68,6 +71,7 @@ bool marble_LED_get(uint8_t led_num);
 
 void marble_LED_toggle(uint8_t led_num);
 
+void marble_Pmod3_5_write(bool on);
 /****
 * Push-Buttons
 ****/

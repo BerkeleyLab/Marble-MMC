@@ -34,6 +34,7 @@ const char *menu_str[] = {"\r\n",
   "4 gpio - GPIO control\r\n",
   "  a/A: FMC power OFF/ON\r\n",
   "  b/B: EN_PSU_CH OFF/ON\r\n",
+  "  c/C: PB15 J16[4]\r\n",
   "5 - Reset FPGA\r\n",
   "6 - Push IP&MAC\r\n",
   "7 - MAX6639\r\n",
@@ -69,6 +70,8 @@ static void pm_bus_display(void);
 static int console_handle_msg(char *rx_msg, int len);
 static int console_shift_all(uint8_t *pData);
 static void ina219_test(void);
+static void handle_gpio(const char *msg, int len);
+static int toggle_gpio(char c);
 static int handle_msg_IP(char *rx_msg, int len);
 static int handle_msg_MAC(char *rx_msg, int len);
 static void print_mac_ip(mac_ip_data_t *pmac_ip_data);
@@ -125,10 +128,7 @@ static int console_handle_msg(char *rx_msg, int len)
            print_status_counters();
            break;
         case '4':
-           //rc = CONSOLE_GPIO;
-           printf("GPIO pins, caps for on, lower case for off\r\n"
-                  "a) FMC power\r\n"
-                  "b) EN_PSU_CH\r\n");
+           handle_gpio(rx_msg, len);
            break;
         case '5':
            reset_fpga();
@@ -140,7 +140,6 @@ static int console_handle_msg(char *rx_msg, int len)
            break;
         case '7':
            printf("Start\r\n");
-           //print_max6639();
            print_max6639_decoded();
            break;
         case '8':
@@ -269,6 +268,57 @@ static int handle_msg_MAC(char *rx_msg, int len) {
   console_push_fpga_mac_ip();
 #endif
   return 0;
+}
+
+static void handle_gpio(const char *msg, int len) {
+  char c = 0;
+  int found = 0;
+  printf("len = %d\r\n", len);
+  // Look for alphabetic characters and respond accordingly
+  // (skips the first char which is the command char)
+  for (int n = 1; n < len; n++) {
+    c = *(msg + n);
+    if (c >= 'A') {
+      found |= toggle_gpio(c);
+    }
+  }
+  if (!found) {
+    printf("GPIO pins, caps for on, lower case for off\r\n"
+           "a) FMC power\r\n"
+           "b) EN_PSU_CH\r\n"
+           "c) PB15 J16[4]\r\n");
+  }
+  return;
+}
+
+static int toggle_gpio(char c) {
+  // TODO - Add additional GPIO and test on scope
+  int found = 1;
+  switch (c) {
+    case 'a':
+      marble_FMC_pwr(0);
+      break;
+    case 'A':
+      marble_FMC_pwr(1);
+      break;
+    case 'b':
+      marble_PSU_pwr(0);
+      break;
+    case 'B':
+      marble_PSU_pwr(1);
+      break;
+    case 'c':
+      // PMOD3_5 J16[4]
+      marble_Pmod3_5_write(0);
+      break;
+    case 'C':
+      marble_Pmod3_5_write(1);
+      break;
+    default:
+      found = 0;
+      break;
+  }
+  return found;
 }
 
 int console_push_fpga_mac_ip(void) {

@@ -33,7 +33,7 @@
 #include "string.h"
 #include "uart_fifo.h"
 #include "console.h"
-#include "flash.h"
+#include "st-eeprom.h"
 
 void Error_Handler(void) {}
 #ifdef  USE_FULL_ASSERT
@@ -138,6 +138,9 @@ void USART_RXNE_ISR(void) {
     } else {
       if (c == UART_MSG_TERMINATOR) {
         console_pend_msg();
+      } else if (c == UART_MSG_ABORT) {
+        // clear queue
+        UARTQUEUE_Clear();
       }
     }
   }
@@ -205,6 +208,12 @@ void marble_LED_toggle(uint8_t led_num)
    if (led_num < MAXLEDS) {
       HAL_GPIO_TogglePin(GPIOE, ledpins[led_num]);
    }
+}
+
+/* Debug purposes */
+void marble_Pmod3_5_write(bool on) {
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_15, on ? GPIO_PIN_SET : GPIO_PIN_RESET);
+  return;
 }
 
 /************
@@ -516,7 +525,7 @@ uint32_t marble_init(bool use_xtal)
   marble_SW_init();
   marble_UART_init();
 
-  fmc_flash_init(0);
+  eeprom_init(0);
   restoreIPAddr();
   restoreMACAddr();
 
@@ -830,7 +839,7 @@ static void MX_GPIO_Init(void)
 
    /*Configure GPIO pin : PB15 */
    GPIO_InitStruct.Pin = GPIO_PIN_15;
-   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;  // TEST
    GPIO_InitStruct.Pull = GPIO_NOPULL;
    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 

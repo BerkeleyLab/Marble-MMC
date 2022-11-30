@@ -10,7 +10,6 @@
 #include "marble_api.h"
 #include "flash.h"
 #include "stm32f2xx_hal.h"
-#include "st-eeprom.h"
 
 //#define DEBUG_PRINT
 #include "dbg.h"
@@ -20,11 +19,8 @@ static int fmc_flash_unlock(volatile FLASH_TypeDef * const hw);
 static void fmc_flash_lock(volatile FLASH_TypeDef * const hw);
 static int fmc_flash_wait_idle(volatile FLASH_TypeDef * const hw);
 
-int fmc_flash_init(bool initFlash) {
-  _UNUSED(initFlash);
-  FLASH->SR = FLASH_SR_PGPERR;  // Clear the PGPERR bit
-  int rval = eeprom_init();  // TODO I think this is an inversion of hierarchy; make eeprom_init call fmc_flash_init() instead
-  printf("eeprom_init rval = %d\r\n", rval);
+int fmc_flash_init(void) {
+  // TODO anything?
   return 0;
 }
 
@@ -203,5 +199,10 @@ void fmc_flash_cache_flush_all(void)
   /* (maybe) re-enable */
   hw->CR = cr;
   return;
+}
+
+int restore_flash(void) {
+  // no-op (used in simulation)
+  return 0;
 }
 

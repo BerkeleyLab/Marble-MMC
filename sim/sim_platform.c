@@ -12,7 +12,7 @@
 #include "sim_platform.h"
 #include "console.h"
 #include "uart_fifo.h"
-#include "flash.h"
+#include "st-eeprom.h"
 
 /*
  * On the simulated platform, the "UART" console process will be the following:
@@ -24,6 +24,7 @@
  */
 
 #define DEBUG_TX_OUT
+#define SIM_FPGA_DONE_DELAY_MS        (2)
 
 typedef struct {
   int toExit;
@@ -32,11 +33,14 @@ typedef struct {
 
 // GLOBALS
 SSP_PORT SSP_FPGA;
+uint32_t _timeStart;
+int _fpgaDonePend;
+static sim_console_state_t sim_console_state;
+void FPGA_DONE_dummy(void) {}
+void (*volatile marble_FPGA_DONE_handler)(void) = FPGA_DONE_dummy;
 
 static int shiftMessage(void);
 static void _sigHandler(int c);
-
-static sim_console_state_t sim_console_state;
 
 // Emulate UART_RXNE_ISR() from marble_board.c but with keyboard input from stdin
 // Also emulate USART_TXE_ISR() for printf()
@@ -51,6 +55,13 @@ int sim_platform_service(void) {
   if (UARTTXQUEUE_Get(&outByte) != UARTTX_QUEUE_EMPTY) {
     // Write new char to DR
     putchar((char)outByte);
+  }
+  // If enough time has elapsed, simulate the FPGA_DONE signal arrival
+  if (_fpgaDonePend) {
+    if (BSP_GET_SYSTICK() - _timeStart > SIM_FPGA_DONE_DELAY_MS) {
+      marble_FPGA_DONE_handler();
+      _fpgaDonePend = 0;
+    }
   }
   return sim_console_state.toExit;
 }
@@ -85,19 +96,23 @@ static int shiftMessage(void) {
         sim_console_state.msgReady = 1;
         //sim_console_state.inputMsg[sim_console_state.mPtr++] = '\0';
         break;
+      } else if (rc == UART_MSG_ABORT) {
+        UARTQUEUE_Clear();
+        break;
       }
-      //printf("rc = %c; mPtr = %d\r\n", rc, mPtr);
     }
   }
   return 0;
 }
 
 uint32_t marble_init(bool initFlash) {
+  _timeStart = BSP_GET_SYSTICK();
+  _fpgaDonePend = 1;
   signal(SIGINT, _sigHandler);
   fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK);
   sim_console_state.toExit = 0;
   sim_console_state.msgReady = 0;
-  fmc_flash_init(initFlash);
+  eeprom_init(initFlash);
   restoreIPAddr();
   restoreMACAddr();
   return 0;
@@ -156,6 +171,11 @@ void marble_LED_toggle(uint8_t led_num) {
   return;
 }
 
+void marble_Pmod3_5_write(bool on) {
+  _UNUSED(on);
+  return;
+}
+
 bool marble_SW_get(void) {
   return 0;
 }
@@ -200,6 +220,7 @@ int marble_SSP_exch16(SSP_PORT ssp, uint16_t *tx_buf, uint16_t *rx_buf, unsigned
 }
 
 void marble_GPIOint_handlers(void (*FPGA_DONE_handler)(void)) {
+  marble_FPGA_DONE_handler = FPGA_DONE_handler;
   return;
 }
 

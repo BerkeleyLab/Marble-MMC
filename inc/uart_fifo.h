@@ -31,6 +31,7 @@ extern "C" {
 
 // ======================= Exported Function Prototypes ========================
 void UARTQUEUE_Init(void);
+void UARTQUEUE_Clear(void);
 uint8_t UARTQUEUE_Add(uint8_t *item);
 uint8_t UARTQUEUE_Get(volatile uint8_t *item);
 uint8_t UARTQUEUE_Status(void);

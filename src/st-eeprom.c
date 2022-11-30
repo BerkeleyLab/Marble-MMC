@@ -221,8 +221,21 @@ int ee_migrate(ee_frame* __restrict__ dst, const ee_frame* __restrict__ src)
     return ret;
 }
 
-int eeprom_init(void)
+int eeprom_init(bool initFlash)
 {
+    // NOTE! initFlash should only be used for simulation
+#ifdef SIMULATION
+    if (initFlash) {
+      fmc_flash_erase_sector(1);
+      fmc_flash_erase_sector(2);
+    } else {
+      restore_flash();
+    }
+#else
+    _UNUSED(initFlash);
+#endif  /* SIMULATION */
+
+    fmc_flash_init();
     ee_active = NULL;
 
     int ret = 0;
@@ -273,6 +286,7 @@ int eeprom_init(void)
             printd("no active\r\n");
         }
     }
+    printd("eeprom_init (%d)\r\n", ret);
     return ret;
 }
 
@@ -285,7 +299,7 @@ int fmc_ee_reset(void)
     ret |= fmc_flash_erase_sector(eeprom0_sector);
     ret |= fmc_flash_erase_sector(eeprom1_sector);
     fmc_flash_cache_flush_all();
-    ret |= eeprom_init();
+    ret |= eeprom_init(0);
 
     return ret;
 }

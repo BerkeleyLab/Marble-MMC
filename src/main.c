@@ -21,9 +21,11 @@ static void mgtclk_xpoint_en(void)
 }
 #endif
 
+#define FPGA_PUSH_DELAY_MS              (2)
 unsigned int live_cnt=0;
 unsigned int fpga_prog_cnt=0;
 unsigned int fpga_net_prog_pend=0;
+unsigned int fpga_done_tickval=0;
 static volatile bool spi_update = false;
 static uint32_t systimer_ms=1; // System timer interrupt period
 
@@ -31,6 +33,8 @@ static void fpga_done_handler(void)
 {
    fpga_prog_cnt++;
    fpga_net_prog_pend=1;
+   fpga_done_tickval = BSP_GET_SYSTICK();
+   return;
 }
 
 static void timer_int_handler(void)
@@ -154,10 +158,12 @@ int main(void) {
       }
       // TODO - fix encapsulation here
       if (fpga_net_prog_pend) {
-         console_print_mac_ip();
-         console_push_fpga_mac_ip();
-         printf("DONE\r\n");
-         fpga_net_prog_pend=0;
+        if (BSP_GET_SYSTICK() > fpga_done_tickval + FPGA_PUSH_DELAY_MS) {
+          console_print_mac_ip();
+          console_push_fpga_mac_ip();
+          printf("DONE\r\n");
+          fpga_net_prog_pend=0;
+        }
       }
 #ifdef SIMULATION
       if (sim_platform_service()) {

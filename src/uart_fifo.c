@@ -36,6 +36,13 @@ void UARTQUEUE_Init(void) {
   return;
 }
 
+void UARTQUEUE_Clear(void) {
+  UART_queue.pIn = 0;
+  UART_queue.pOut = 0;
+  UART_queue.full = 0;
+  return;
+}
+
 uint8_t UARTQUEUE_Add(uint8_t *item) {
   // If full, return error
   if (UART_queue.full) {

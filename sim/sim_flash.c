@@ -12,9 +12,7 @@
 #define FLASH_SECTOR_SIZE_WORDS         (FLASH_SECTOR_SIZE/4)
 #define FLASH_SECTOR_SIZE_STRAY_BYTES   (FLASH_SECTOR_SIZE%4)
 
-static int restore_flash(void);
 static int store_flash(void);
-
 
 size_t eeprom_count = EEPROM_COUNT;
 ee_frame eeprom0_base[EEPROM_COUNT];
@@ -22,14 +20,7 @@ ee_frame eeprom1_base[EEPROM_COUNT];
 
 bool need_flush = false;
 
-int fmc_flash_init(bool initFlash) {
-  if (initFlash) {
-    fmc_flash_erase_sector(1);
-    fmc_flash_erase_sector(2);
-  } else {
-    restore_flash();
-  }
-  eeprom_init();
+int fmc_flash_init(void) {
   need_flush = false;
   return 0;
 }
@@ -78,7 +69,7 @@ static int store_flash(void) {
   return 0;
 }
 
-static int restore_flash(void) {
+int restore_flash(void) {
   //printf("Reading...\r\n");
   FILE *pFile = fopen(SIM_FLASH_FILENAME, "rb");
   if (!pFile) {

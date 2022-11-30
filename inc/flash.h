@@ -50,7 +50,7 @@ extern "C" {
 /**
  * @brief Currently no-op on hardware. Used for sim mode.
  */
-int fmc_flash_init(bool initFlash);
+int fmc_flash_init(void);
 
 /** @brief Write to FLASH
  * @param addr Address of first byte to be written
@@ -81,6 +81,8 @@ int fmc_flash_erase_sector(unsigned sectorn);
  * @return
  */
 void fmc_flash_cache_flush_all(void);
+
+int restore_flash(void);
 
 #ifdef __cplusplus
 }
