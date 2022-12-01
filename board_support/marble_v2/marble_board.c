@@ -153,7 +153,7 @@ void USART_RXNE_ISR(void) {
       if (UARTQUEUE_Add(&c) == UART_QUEUE_FULL) {
         UARTQUEUE_SetDataLost(UART_DATA_LOST);
         // Clear QUEUE at this point?
-      } 
+      }
 #ifdef UART_ECHO
       marble_UART_send((const char *)&c, 1);
 #endif

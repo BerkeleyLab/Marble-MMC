@@ -78,9 +78,9 @@ int restore_flash(void) {
   }
   // Read by ee_frame
   // First eeprom0
-  size_t rval = fread((void *)eeprom0_base, sizeof(ee_frame), EEPROM_COUNT, pFile); 
+  size_t rval = fread((void *)eeprom0_base, sizeof(ee_frame), EEPROM_COUNT, pFile);
   // Then eeprom1
-  rval += fread((void *)eeprom1_base, sizeof(ee_frame), EEPROM_COUNT, pFile); 
+  rval += fread((void *)eeprom1_base, sizeof(ee_frame), EEPROM_COUNT, pFile);
   fclose(pFile);
   //printf("Num reads = %ld\r\n", rval);
   return 0;

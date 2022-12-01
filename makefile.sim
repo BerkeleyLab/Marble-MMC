@@ -58,7 +58,7 @@ SED	:= sed
 SHUF	:= shuf
 
 # Native GNU GCC
-TARGET  := 
+TARGET  :=
 AS	:= as
 CC	:= gcc
 CXX	:= g++

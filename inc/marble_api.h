@@ -58,7 +58,7 @@ uint32_t marble_get_tick(void);
 * UART
 ****/
 void marble_UART_init(void);
- 
+
 int marble_UART_send(const char *str, int size);
 
 int marble_UART_recv(char *str, int size);

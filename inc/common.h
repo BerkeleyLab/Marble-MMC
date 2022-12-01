@@ -24,7 +24,7 @@ extern "C" {
 // ======================= Generic Register Utilities =========================
 #define WRITE_BIT(REG, BIT, VAL)  ((REG & ~(1<<BIT)) | (VAL<<BIT))
 #define TEST_BIT(REG, BIT)        (REG & (1<<BIT))
-#define BIT_MASK(START, END)      (((1 << (END+1)) - 1) ^ ((1 << (START)) -1)) 
+#define BIT_MASK(START, END)      (((1 << (END+1)) - 1) ^ ((1 << (START)) -1))
 #define SET_FIELD_MASK(REG, VAL, MASK)    ((REG & ~MASK) | (VAL & MASK))
 #define SET_FIELD(REG, VAL, START, END)   SET_FIELD_MASK(REG, VAL, BIT_MASK(START, END))
 #define EXTRACT_FIELD(VAL, START, END)      ((VAL & BIT_MASK(START, END)) >> START)
