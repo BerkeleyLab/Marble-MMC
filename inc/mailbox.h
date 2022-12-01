@@ -25,6 +25,20 @@ typedef enum {
 } PAGE3_ENUM;
 
 typedef enum {
+   MB4_MAX_T1_HI,
+   MB4_MAX_T1_LO,
+   MB4_MAX_T2_HI,
+   MB4_MAX_T2_LO,
+   MB4_MAX_F1_TACH,
+   MB4_MAX_F2_TACH,
+   MB4_MAX_F1_DUTY,
+   MB4_MAX_F2_DUTY,
+   MB4_COUNT_HI,
+   MB4_COUNT_LO,
+   MB4_SIZE
+} PAGE4_ENUM;
+
+typedef enum {
    MB2_FMC_MGT_CTL = 0,
    MB2_SIZE
 } PAGE2_ENUM;

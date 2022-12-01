@@ -16,6 +16,7 @@ void I2C_PM_scan(void);
 void I2C_PM_probe(void);
 void print_max6639(void);
 void print_max6639_decoded(void);
+int get_max6639_reg(int regno, int *value);
 
 typedef enum {
    LM75_TEMP = 0,

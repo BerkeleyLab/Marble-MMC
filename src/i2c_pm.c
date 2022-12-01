@@ -38,7 +38,7 @@ static int set_max6639_reg(int regno, int value)
    return rc;
 }
 
-static int get_max6639_reg(int regno, int *value)
+int get_max6639_reg(int regno, int *value)
 {
    uint8_t i2c_dat[4];
    uint8_t addr = MAX6639;
