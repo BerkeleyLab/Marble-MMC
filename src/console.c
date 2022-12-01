@@ -416,7 +416,6 @@ int console_service(void) {
   if (len != 0) {
     return console_handle_msg((char *)msg, len);
   }
-  marble_UART_service();
   return 0;
 }
 
