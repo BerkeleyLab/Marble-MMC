@@ -61,6 +61,10 @@ void marble_UART_init(void);
 
 int marble_UART_send(const char *str, int size);
 
+int marble_UART_send_irq(const char *str, int size);
+
+void marble_UART_service(void);
+
 int marble_UART_recv(char *str, int size);
 
 void USART1_ISR(void);

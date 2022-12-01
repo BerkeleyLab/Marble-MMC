@@ -61,7 +61,7 @@ SSP_PORT SSP_FPGA;
 SSP_PORT SSP_PMOD;
 I2C_BUS I2C_FPGA;
 I2C_BUS I2C_PM;
-
+static bool set_txeie;
 /* Private function prototypes -----------------------------------------------*/
 static void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
@@ -85,7 +85,12 @@ void marble_UART_init(void)
 
    /* PD5, PD6 - UART4 (Pmod3_7/3_6) */
    MX_USART2_UART_Init();
+
+  set_txeie = 0;
+  return;
 }
+
+#define MARBLE_UART_SEND      marble_UART_send
 
 /* Send \0 terminated string over UART. Returns number of bytes sent */
 // TODO - need to HAL-ectomy because it keeps disabling the RxNE interrupt
@@ -96,24 +101,34 @@ int marble_UART_send(const char *str, int size)
   // Kick off the transmission if the TX buffer is empty
   if ((USART1->SR) & USART_SR_TXE) {
     SET_BIT(huart1.Instance->CR1, USART_CR1_TXEIE);
-    USART_TXE_ISR();
+    //USART_TXE_ISR();
   }
   return txnum;
 }
 
-/* Read at most size-1 bytes (due to \0) from UART. Returns bytes read */
-// TODO: Should return bytes read
 /*
-int marble_UART_recv(char *str, int size)
+ * Version safe to call within ISR
+ */
+int marble_UART_send_irq(const char *str, int size)
 {
-   if (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_RXNE) == SET) {
-      HAL_UART_Receive(&huart1, (uint8_t *) str, size, 100);
-      return 1;
-   } else {
-      return 0;
-   }
+  //HAL_UART_Transmit(&huart1, (const uint8_t *) str, size, 1000);
+  int txnum = USART_Tx_LL_Queue((char *)str, size);
+  // Kick off the transmission if the TX buffer is empty
+  set_txeie = 1;
+  return txnum;
 }
-*/
+
+/*
+ * Set TXEIE (Tx Empty Interrupt Enable) in thread mode
+ * when requested.
+ */
+void marble_UART_service(void) {
+  if (set_txeie) {
+    SET_BIT(huart1.Instance->CR1, USART_CR1_TXEIE);
+  }
+  set_txeie = 0;
+  return;
+}
 
 int marble_UART_recv(char *str, int size) {
   return USART_Rx_LL_Queue((volatile char *)str, size);
@@ -155,7 +170,7 @@ void USART_RXNE_ISR(void) {
         // Clear QUEUE at this point?
       }
 #ifdef UART_ECHO
-      marble_UART_send((const char *)&c, 1);
+      MARBLE_UART_SEND((const char *)&c, 1);
 #endif
     }
   }
@@ -185,17 +200,17 @@ static void USART_Erase(int n) {
   for (int m = 0; m < n; m++) {
     bksps[m] = UART_MSG_BKSP;
   }
-  marble_UART_send((const char *)bksps, n);
+  MARBLE_UART_SEND((const char *)bksps, n);
   // Then overwrite with spaces
   for (int m = 0; m < n; m++) {
     bksps[m] = ' ';
   }
-  marble_UART_send((const char *)bksps, n);
+  MARBLE_UART_SEND((const char *)bksps, n);
   // Then issue backspaces again
   for (int m = 0; m < n; m++) {
     bksps[m] = UART_MSG_BKSP;
   }
-  marble_UART_send((const char *)bksps, n);
+  MARBLE_UART_SEND((const char *)bksps, n);
   return;
 }
 

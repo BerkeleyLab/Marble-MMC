@@ -115,6 +115,16 @@ int marble_UART_send(const char *str, int size)
    return sent;
 }
 
+int marble_UART_send_irq(const char *str, int size) {
+  // IRQ safe?
+  return marble_UART_send(str, size);
+}
+
+void marble_UART_service(void) {
+  // Use if needed
+  return;
+}
+
 /* Read at most size-1 bytes (due to \0) from UART. Returns bytes read */
 int marble_UART_recv(char *str, int size)
 {
