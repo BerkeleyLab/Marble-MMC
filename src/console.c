@@ -52,8 +52,8 @@ const char *menu_str[] = {"\r\n",
   "j - Read SPI mailbox\r\n",
   "k - PCA9555 status\r\n",
   "l - Config PCA9555\r\n",
-  "m d.d.d.d - Set IP Addres\r\n",
-  "n d:d:d:d:d:d - Set MAC Addres\r\n",
+  "m d.d.d.d - Set IP Address\r\n",
+  "n d:d:d:d:d:d - Set MAC Address\r\n",
   "o - SI570 status\r\n"
 };
 #define MENU_LEN (sizeof(menu_str)/sizeof(*menu_str))
@@ -495,6 +495,9 @@ static int sscanfMAC(char *s, uint8_t *data, int len) {
   int r;
   int sum = 0;
   bool dataStart = false;
+  // TODO - We don't need to wait for whitespace for dataStart,
+  //        We can instead just ignore non-hex chars and start
+  //        parsing on char 1 (skip 0)
   for (int n = 0; n < len; n++) {
     c = s[n];
     if (c == ' ') {
