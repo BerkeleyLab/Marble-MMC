@@ -1,0 +1,6 @@
+#GDB Command File for quickly connecting to a running OpenOCD server
+#Run on startup with:
+#   gdb -ix gdbocd debug/mytarget.elf
+load
+target remote localhost:3333
+monitor reset init

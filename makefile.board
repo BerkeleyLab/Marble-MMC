@@ -198,9 +198,14 @@ gdbscript:
 	@$(ECHO) "# Enable semihosting" >> gdbscript
 	@$(ECHO) "monitor semihosting enable" >> gdbscript
 
+.PHONY: openocd
+openocd:
+	$(OPENOCD) -f prog_support/ocd/$(OCD_CONF)
+
 GDB=gdb-multiarch
 .PHONY: gdb
-	$(GDB) -x gdbscript
+gdb:
+	$(GDB) -ix prog_support/gdbscript_stm32 $(OUTPUT_DIR)/$(PROJECT_NAME).elf
 
 # Removes everything in the output directory
 #

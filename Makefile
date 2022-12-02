@@ -16,6 +16,9 @@ marble_mini_download:
 marble_mini_clean:
 	make -f makefile.board BOARD=marble_mini clean
 
+marble_ocd:
+	make -f makefile.board BOARD=marble openocd
+
 marble_gdb:
 	make -f makefile.board BOARD=marble gdb
 
