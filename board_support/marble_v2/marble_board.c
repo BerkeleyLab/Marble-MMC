@@ -121,6 +121,9 @@ void USART_RXNE_ISR(void) {
     // Look for control characters first
     if (c == UART_MSG_TERMINATOR) {
       console_pend_msg();
+#ifdef UART_ECHO
+      marble_UART_send((const char *)&c, 1);
+#endif
     } else if (c == UART_MSG_ABORT) {
 #ifdef UART_ECHO
       USART_Erase_Echo();

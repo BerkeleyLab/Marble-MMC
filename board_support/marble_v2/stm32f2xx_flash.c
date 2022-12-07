@@ -15,6 +15,8 @@
 #include "dbg.h"
 #undef DEBUG_PRINT
 
+#define FLASH_ERROR_TIMEOUT       0xFFFFFF
+
 static int fmc_flash_unlock(volatile FLASH_TypeDef * const hw);
 static void fmc_flash_lock(volatile FLASH_TypeDef * const hw);
 static int fmc_flash_wait_idle(volatile FLASH_TypeDef * const hw);
@@ -63,7 +65,12 @@ static int fmc_flash_wait_idle(volatile FLASH_TypeDef * const hw)
    * normal execution.
    * TODO: Does sleeping vs. spinning have a practical benefit?
    */
-  while(hw->SR & FLASH_SR_BSY) {}
+  int cnt = 0;
+  while(hw->SR & FLASH_SR_BSY) {
+    if (cnt++ > FLASH_ERROR_TIMEOUT) {
+      return -EDEADLK;
+    }
+  }
 
   FLASH->SR |= FLASH_SR_PGPERR;  // Clear the PGPERR bit
   if(hw->SR & (FLASH_SR_OPERR|FLASH_SR_PGAERR
