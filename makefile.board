@@ -31,7 +31,6 @@
 #
 # This makefile is intended to be run from the root of the project.
 #
-
 # Directories
 #
 # These define the locations of the source and output trees.
@@ -68,6 +67,8 @@ CC	:= $(TARGET)-gcc
 CXX	:= $(TARGET)-g++
 OBJCOPY	:= $(TARGET)-objcopy
 SIZE	:= $(TARGET)-size
+# An alternative to gdb-multiarch is arm-none-eabi-gdb distributed with gcc-arm-none-eabi-xxxx
+GDB=gdb-multiarch
 
 # Download Tools
 #
@@ -198,14 +199,10 @@ gdbscript:
 	@$(ECHO) "# Enable semihosting" >> gdbscript
 	@$(ECHO) "monitor semihosting enable" >> gdbscript
 
-.PHONY: openocd
-openocd:
-	$(OPENOCD) -f prog_support/ocd/$(OCD_CONF)
-
-GDB=gdb-multiarch
 .PHONY: gdb
 gdb:
-	$(GDB) -ix prog_support/gdbscript_stm32 $(OUTPUT_DIR)/$(PROJECT_NAME).elf
+	$(GDB) -ex "target remote | $(OPENOCD) -f prog_support/ocd/$(OCD_CONF) -c 'gdb_port pipe; log_output openocd.log'" \
+				 -x prog_support/gdbscript_stm32 $(OUTPUT_DIR)/$(PROJECT_NAME).elf
 
 # Removes everything in the output directory
 #

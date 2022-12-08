@@ -12,3 +12,4 @@ tags
 flash.bin
 reset
 tags
+openocd.log
