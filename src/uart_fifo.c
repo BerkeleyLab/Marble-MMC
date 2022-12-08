@@ -3,6 +3,10 @@
  */
 
 #include "uart_fifo.h"
+#include "marble_api.h"
+
+#define BLOCK_TX_ON_FULL
+#define USART_TX_RETRY_TIMEOUT_MS   (1000)
 
 // ============================= Private Typedefs ==============================
 typedef struct {
@@ -18,6 +22,9 @@ typedef struct {
   uint8_t full;
   uint8_t queue[UARTTX_QUEUE_ITEMS];
 } UARTTX_queue_t;
+
+// ============================ Private Prototypes =============================
+static int _USART_Tx_RetryOnEmpty(uint8_t *c);
 
 // ============================= Private Variables =============================
 static UART_queue_t UART_queue;
@@ -258,10 +265,35 @@ int USART_Tx_LL_Queue(char *msg, int len) {
   for (n = 0; n < len; n++) {
     rval = UARTTXQUEUE_Add((uint8_t *)(msg + n)); // Type uint8_t* (not char*)
     if (rval == UARTTX_QUEUE_FULL) {
+#ifdef BLOCK_TX_ON_FULL
+      // Wait for empty and attempt again
+      if (_USART_Tx_RetryOnEmpty((uint8_t *)(msg + n)) == UARTTX_QUEUE_FULL) {
+        // If still full after timeout, abort
+        return -1;
+      }
+#else
       return -1;
+#endif
     }
   }
   return n;
+}
+
+/*
+ * static int _USART_Tx_RetryOnEmpty(uint8_t *c);
+ *    Wait up to USART_TX_RETRY_TIMEOUT attempts for UARTTX_QUEUE to become
+ *    non-full, then attempt to add 'c' to the queue.  Returns UARTTX_QUEUE_OK
+ *    on success, UARTTX_QUEUE_FULL on failure.
+ */
+static int _USART_Tx_RetryOnEmpty(uint8_t *c) {
+  uint32_t start = marble_get_tick();
+  while ((marble_get_tick() - start) < USART_TX_RETRY_TIMEOUT_MS) {
+    if (UARTTXQUEUE_Status() != UARTTX_QUEUE_FULL) {
+      break;
+    }
+  }
+  // If timeout expired, this should return UARTTX_QUEUE_FULL
+  return UARTTXQUEUE_Add(c);
 }
 
 /*
