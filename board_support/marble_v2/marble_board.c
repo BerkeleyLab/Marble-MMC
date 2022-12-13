@@ -37,6 +37,11 @@
 
 #define UART_ECHO
 
+#define PRINT_POWER_STATE(subs, on) do {\
+   char s[3] = {'f', 'f', '\0'}; \
+   if (on) {s[0] = 'n'; s[1] = '\0';} \
+   printf(subs " Power O%s\r\n", s); } while (0)
+
 void Error_Handler(void) {}
 #ifdef  USE_FULL_ASSERT
 void assert_failed(uint8_t *file, uint32_t line) {}
@@ -263,6 +268,7 @@ void marble_FMC_pwr(bool on)
 {
    HAL_GPIO_WritePin(GPIOD, GPIO_PIN_9, on);
    HAL_GPIO_WritePin(GPIOD, GPIO_PIN_10, on);
+   return;
 }
 
 uint8_t marble_FMC_status(void)
@@ -285,6 +291,7 @@ void marble_PSU_pwr(bool on)
       HAL_GPIO_WritePin(GPIOD, GPIO_PIN_11, on);
       SystemClock_Config(); // switch back to external clock source
    }
+   return;
 }
 
 uint8_t marble_PWR_status(void)

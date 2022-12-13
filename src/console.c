@@ -277,7 +277,7 @@ static int handle_msg_MAC(char *rx_msg, int len) {
 static void handle_gpio(const char *msg, int len) {
   char c = 0;
   int found = 0;
-  printf("len = %d\r\n", len);
+  //printf("len = %d\r\n", len);
   // Look for alphabetic characters and respond accordingly
   // (skips the first char which is the command char)
   for (int n = 1; n < len; n++) {
@@ -301,15 +301,19 @@ static int toggle_gpio(char c) {
   switch (c) {
     case 'a':
       marble_FMC_pwr(0);
+      printf("FMC Power Off\r\n");
       break;
     case 'A':
       marble_FMC_pwr(1);
+      printf("FMC Power On\r\n");
       break;
     case 'b':
       marble_PSU_pwr(0);
+      printf("PSU Power Off\r\n");
       break;
     case 'B':
       marble_PSU_pwr(1);
+      printf("PSU Power On\r\n");
       break;
     case 'c':
       // PMOD3_5 J16[4]

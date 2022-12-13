@@ -66,8 +66,9 @@ static int fmc_flash_wait_idle(volatile FLASH_TypeDef * const hw)
    * TODO: Does sleeping vs. spinning have a practical benefit?
    */
   int cnt = 0;
+  int to = FLASH_ERROR_TIMEOUT; // IMPORTANT! We need this value in RAM not flash
   while(hw->SR & FLASH_SR_BSY) {
-    if (cnt++ > FLASH_ERROR_TIMEOUT) {
+    if (cnt++ > to) { // If we read from flash here, we stall the bus
       return -EDEADLK;
     }
   }
@@ -136,8 +137,8 @@ int fmc_flash_program(void *paddr, const void *pvalue, size_t count)
   }
 done:
   //printf("count = %d; addr= %p\r\n", count, addr);
-  printf("psize = %d, FLASH_CR PSIZE = 0x%x\r\n", psize, FLASH_CR_PSIZE_SET(0, psize));
-  printf("FLASH_SR = 0x%lx\r\n", FLASH->SR);
+  //printf("psize = %d, FLASH_CR PSIZE = 0x%x\r\n", psize, FLASH_CR_PSIZE_SET(0, psize));
+  //printf("FLASH_SR = 0x%lx\r\n", FLASH->SR);
   fmc_flash_lock(hw);
   return ret;
 }
