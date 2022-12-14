@@ -275,8 +275,6 @@ int eeprom_init(bool initFlash)
     } else {
         printd("nov\r\n");
         if(!(e0==ee_erased && e1==ee_erased)) {
-            // XXX Firmware seems to stall whenever it hits this
-            // conditional branch. TODO - figure out why.
             printf("ERROR: EEFLASH invalid!  Reformatting...\n");
             ret = fmc_flash_erase_sector(eeprom0_sector);
             ret |= fmc_flash_erase_sector(eeprom1_sector);

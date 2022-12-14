@@ -117,7 +117,7 @@ int fmc_flash_program(void *paddr, const void *pvalue, size_t count)
 
   hw->SR |= FLASH_SR_OPERR|FLASH_SR_PGAERR|FLASH_SR_PGPERR|FLASH_SR_PGSERR;
 
-  //printf("count = %d; addr= %p\r\n", count, addr);
+  INTERRUPTS_DISABLE();
   for(; count; count -= progwidth, value += progwidth, addr += progwidth) {
     uint32_t cr = hw->CR;
     cr  = FLASH_CR_PSIZE_SET(cr, psize);
@@ -137,10 +137,7 @@ int fmc_flash_program(void *paddr, const void *pvalue, size_t count)
     }
   }
 done:
-  //printf("count = %d; addr= %p\r\n", count, addr);
-  //printf("psize = %d, FLASH_CR PSIZE = 0x%x\r\n", psize, FLASH_CR_PSIZE_SET(0, psize));
-  //printf("FLASH_SR = 0x%lx\r\n", FLASH->SR);
-  fmc_flash_lock(hw);
+  fmc_flash_lock(hw);  //calls INTERRUPTS_ENABLE();
   return ret;
 }
 
@@ -178,12 +175,13 @@ int fmc_flash_erase_sector(unsigned sectorn)
   cr |= FLASH_CR_SER;
   cr &= ~(FLASH_CR_PG|FLASH_CR_MER);
   hw->CR = cr;
+  INTERRUPTS_DISABLE();
   hw->CR |= FLASH_CR_STRT;
 
   ret = fmc_flash_wait_idle(hw);
 
 done:
-  fmc_flash_lock(hw);
+  fmc_flash_lock(hw);  // calls INTERRUPTS_ENABLE();
   return ret;
 }
 

@@ -36,8 +36,10 @@
 } while (0)
 #define BSP_GET_SYSTICK()       (0) // TODO
 #else
-#define INTERRUPTS_DISABLE                     __disable_irq
-#define INTERRUPTS_ENABLE                       __enable_irq
+//#define INTERRUPTS_DISABLE                     __disable_irq
+#define INTERRUPTS_DISABLE()                    __set_PRIMASK(1)
+//#define INTERRUPTS_ENABLE                       __enable_irq
+#define INTERRUPTS_ENABLE()                     __set_PRIMASK(0)
 #define BSP_GET_SYSTICK()                      marble_get_tick()
 #endif
 
