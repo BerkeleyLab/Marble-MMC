@@ -183,6 +183,10 @@ sources:
 download: all
 	$(OPENOCD) -f prog_support/ocd/$(OCD_CONF) -c "program $(OUTPUT_DIR)/$(PROJECT_NAME).elf reset exit"
 
+.PHONY: recover
+recover:
+	$(OPENOCD) -f prog_support/ocd/$(OCD_CONF) -c "init" -c "reset halt" -c "flash erase_address 0x08004000 0x4000" -c "exit"
+
 # Creates a gdb script if required
 #
 #

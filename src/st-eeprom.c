@@ -21,7 +21,7 @@
 #include "flash.h"
 #include "common.h"
 
-//#define DEBUG_PRINT
+#define DEBUG_PRINT
 #include "dbg.h"
 #undef DEBUG_PRINT
 
@@ -83,7 +83,7 @@ int bit_check(uint8_t cnt)
 
     if(cnt <= nbits/4u)
         return 0;
-    else if(cnt >= nbits/4u*3u)
+    else if(cnt >= (nbits/4u)*3u)
         return 1;
     else
         return -1;
