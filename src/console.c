@@ -248,7 +248,7 @@ static int handle_msg_IP(char *rx_msg, int len) {
   // NOTE: It seems like sscanf doesn't work so well in newlib-nano
   int rval = sscanfIP(rx_msg, ip, len);
   if (rval) {
-    printf("Did not scan all IP digits. Fail.\r\n");
+    printf("Malformed IP address. Fail.\r\n");
     return rval;
   }
   print_ip(ip);
@@ -263,7 +263,7 @@ static int handle_msg_MAC(char *rx_msg, int len) {
   uint8_t mac[MAC_LENGTH];
   int rval = sscanfMAC(rx_msg, mac, len);
   if (rval) {
-    printf("Did not scan all MAC digits. Fail.\r\n");
+    printf("Malformed MAC address. Fail.\r\n");
     return rval;
   }
   print_mac(mac);
@@ -538,7 +538,7 @@ static int sscanfIP(const char *s, volatile uint8_t *data, int len) {
   if (ndig == IP_LENGTH - 1) {
     return 0;
   }
-  // Error - not all digits decoded
+  // Error - too many or not all digits decoded
   return -1;
 }
 
@@ -573,7 +573,7 @@ static int sscanfMAC(const char *s, volatile uint8_t *data, int len) {
   if (ndig == MAC_LENGTH - 1) {
     return 0;
   }
-  // Error - not all digits decoded
+  // Error - too many or not all digits decoded
   return -1;
 }
 
@@ -588,7 +588,7 @@ static int sscanfMAC(const char *s, volatile uint8_t *data, int len) {
 static int sscanfFanSpeed(const char *s, int len) {
   char c;
   int r;
-  int sum = 0;
+  unsigned int sum = 0;
   bool toScale = false;
   bool digitsFound = false;
   for (int n = 1; n < len; n++) {
@@ -616,7 +616,7 @@ static int sscanfFanSpeed(const char *s, int len) {
     // Peg at FAN_SPEED_MAX
     sum = sum > FAN_SPEED_MAX ? FAN_SPEED_MAX : sum;
   }
-  return sum;
+  return (int)sum;
 }
 
 int restoreIPAddr(void) {

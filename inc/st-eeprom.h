@@ -17,16 +17,44 @@ typedef struct {
     uint8_t crc;
 } ee_frame;
 
-/* This X-macro enumerates all EEPROM tags, with mappings to
- * a symbolic name, and type code.
+// ==================== Non-Volatile Parameter Management =====================
+/* Usage Instructions:
+ *    NOTE: Don't touch any of the X-macros unless you have a good reason.
+ *    To add a new item to non-volatile memory, simply add it to the macro
+ *    definition FOR_ALL_EETAGS() below.  Each entry should be:
+ *      X(enumval, name, type, size, default)
+ *    Where:
+ *      enumval = integer (must be unique! Just increment the last number)
+ *      name = name of tag (must be unique!)
+ *      type = (currently unused; came from MDS's RTEMS version)
+ *      size = size of datum in bytes (must be <= 6).
+ *      default = default value as array literal
  *
- * Type codes:
+ *    The expansion of the X-macro here and in st-eeprom.c creates the support
+ *    code needed to automatically handle read/store of the variable to/from
+ *    non-volatile memory.  At startup, it will automatically search for each
+ *    item in flash.  If not found, it will store the value provided as "default"
+ *    in the declaration (entry in FOR_ALL_EETAGS).
+ *
+ *    Two functions are automatically generated for reading/storing.  For a
+ *    tag called "my_tag", the signatures would be:
+ *      int eeprom_store_my_tag(const uint8_t *pdata, int len);
+ *      int eeprom_read_my_tag(volatile uint8_t *pdata, int len);
+ *
+ *    Their function is fairly self-explanatory.  Note: the explicit 'len'
+ *    parameter is included mostly to prevent usage errors.  Fundamentally the
+ *    length is intrinsically tied to the tag type (as defined in FOR_ALL_EETAGS)
+ *    so we could just assume 'pdata' has size >= that defined for the tag, but
+ *    this could lead to less obvious runtime errors.  Requiring the length be
+ *    passed at call time could still result in a runtime error but the source
+ *    of the problem would be more obvious.
+ *
+ * Type codes (currently unused - came from MDS's RTEMS version):
  *   raw - Between 0 -> 6 space separated hex digits
  *   mac - 6 semi-colon separated hex digits
  *   ip4 - 4 dot separated decimal digits
  */
-// X(enumval, name, type, size_in_bytes, default_value)
-// 'type' is currently unused
+
 // TODO - consolidate IP_LENGTH and MAC_LENGTH from console.h here
 #define FOR_ALL_EETAGS() \
   X(1, boot_mode, raw, 1, {0}) \
