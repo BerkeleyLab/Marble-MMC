@@ -34,6 +34,7 @@
 #include "uart_fifo.h"
 #include "console.h"
 #include "st-eeprom.h"
+#include "i2c_pm.h"
 
 #define UART_ECHO
 
@@ -80,6 +81,7 @@ static void USART_RXNE_ISR(void);
 static void USART_TXE_ISR(void);
 static void USART_Erase_Echo(void);
 static void USART_Erase(int n);
+static void marble_set_params(void);
 
 /* Initialize UART pins */
 void marble_UART_init(void)
@@ -575,6 +577,7 @@ uint32_t marble_init(bool use_xtal)
   marble_UART_init();
 
   eeprom_init(0);
+  marble_set_params();
 
   printf("** Marble init done **\r\n");
 
@@ -584,6 +587,21 @@ uint32_t marble_init(bool use_xtal)
 
   //marble_MDIO_init();
   return 0;
+}
+
+/*
+ * static void marble_set_params(void);
+ *    Apply parameters stored in non-volatile memory.
+ */
+static void marble_set_params(void) {
+  // Fan speed
+  uint8_t fan_speed;
+  if (eeprom_read_fan_speed(&fan_speed, 1)) {
+    printf("Could not read current fan speed\r\n");
+  } else {
+    max6639_set_fans((int)fan_speed);
+  }
+  return;
 }
 
 static void SystemClock_Config(void)
