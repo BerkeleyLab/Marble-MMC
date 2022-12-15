@@ -20,6 +20,8 @@
 #include "st-eeprom.h"
 
 #define AUTOPUSH
+// TODO - Put this in a better place
+#define FAN_SPEED_MAX       (120)
 
 const char lb_str[] = "Loopback... ESC to exit\r\n";
 const char unk_str[] = "> Unknown option\r\n";
@@ -54,7 +56,8 @@ const char *menu_str[] = {"\r\n",
   "l - Config PCA9555\r\n",
   "m d.d.d.d - Set IP Address\r\n",
   "n d:d:d:d:d:d - Set MAC Address\r\n",
-  "o - SI570 status\r\n"
+  "o - SI570 status\r\n",
+  "p speed[%] - Set fan speed (0-120 or 0%-100%)\r\n"
 };
 #define MENU_LEN (sizeof(menu_str)/sizeof(*menu_str))
 
@@ -75,11 +78,15 @@ static void handle_gpio(const char *msg, int len);
 static int toggle_gpio(char c);
 static int handle_msg_IP(char *rx_msg, int len);
 static int handle_msg_MAC(char *rx_msg, int len);
-static void print_mac_ip(mac_ip_data_t *pmac_ip_data);
-static void print_mac(mac_ip_data_t *pmac_ip_data);
-static void print_ip(mac_ip_data_t *pmac_ip_data);
-static int sscanfIP(char *s, uint8_t *data, int len);
-static int sscanfMAC(char *s, uint8_t *data, int len);
+static int handle_msg_fan_speed(char *rx_msg, int len);
+//static void print_mac_ip(mac_ip_data_t *pmac_ip_data);
+static void print_mac(uint8_t *pdata);
+static void print_ip(uint8_t *pdata);
+static void print_this_ip(void);
+static void print_this_mac(void);
+static int sscanfIP(const char *s, volatile uint8_t *data, int len);
+static int sscanfMAC(const char *s, volatile uint8_t *data, int len);
+static int sscanfFanSpeed(const char *s, int len);
 static int xatoi(char c);
 static int htoi(char c);
 // TODO - fix encapsulation
@@ -135,7 +142,9 @@ static int console_handle_msg(char *rx_msg, int len)
            reset_fpga();
            break;
         case '6':
-           print_mac_ip(&mac_ip_data);
+           //print_mac_ip(&mac_ip_data);
+           print_this_ip();
+           print_this_mac();
            console_push_fpga_mac_ip();
            printf("DONE\r\n");
            break;
@@ -224,6 +233,9 @@ static int console_handle_msg(char *rx_msg, int len)
         case 'o':
            si570_status();
            break;
+        case 'p':
+           handle_msg_fan_speed(rx_msg, len);
+           break;
         default:
            printf(unk_str);
            break;
@@ -232,24 +244,15 @@ static int console_handle_msg(char *rx_msg, int len)
 }
 
 static int handle_msg_IP(char *rx_msg, int len) {
-  assert(IP_LENGTH==4);
   uint8_t ip[IP_LENGTH];
-  /*
-  char pMsg[len+1];
-  for (int n = 0; n < len; n++) {
-    pMsg[n] = rx_msg[n];
+  // NOTE: It seems like sscanf doesn't work so well in newlib-nano
+  int rval = sscanfIP(rx_msg, ip, len);
+  if (rval) {
+    printf("Did not scan all IP digits. Fail.\r\n");
+    return rval;
   }
-  pMsg[len] = '\0';
-  printf("ipmsg: %s\r\n", pMsg);
-  */
-  // TODO - It seems like sscanf doesn't work so well in newlib-nano
-  sscanfIP(rx_msg, ip, len);
-  //sscanf(rx_msg, "%*c %hhu.%hhu.%hhu.%hhu", &ip[0], &ip[1], &ip[2], &ip[3]);
-  for (int n = 0; n < IP_LENGTH; n++) {
-    mac_ip_data.ip[n] = ip[n];
-  }
-  print_ip(&mac_ip_data);
-  eeprom_store_ip(mac_ip_data.ip, IP_LENGTH);
+  print_ip(ip);
+  eeprom_store_ip_addr(ip, IP_LENGTH);
 #ifdef AUTOPUSH
   console_push_fpga_mac_ip();
 #endif
@@ -257,20 +260,42 @@ static int handle_msg_IP(char *rx_msg, int len) {
 }
 
 static int handle_msg_MAC(char *rx_msg, int len) {
-  assert(MAC_LENGTH==6);
   uint8_t mac[MAC_LENGTH];
-  // TODO - is it safe to call sscanf here?  What if rx_msg not null-terminated?
-  sscanfMAC(rx_msg, mac, len);
-  //sscanf(rx_msg, "%*c %hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]);
-  //printf("Got: %x:%x:%x:%x:%x:%x\r\n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-  for (int n = 0; n < MAC_LENGTH; n++) {
-    mac_ip_data.mac[n] = mac[n];
+  int rval = sscanfMAC(rx_msg, mac, len);
+  if (rval) {
+    printf("Did not scan all MAC digits. Fail.\r\n");
+    return rval;
   }
-  print_mac(&mac_ip_data);
-  eeprom_store_mac(mac_ip_data.mac, MAC_LENGTH);
+  print_mac(mac);
+  eeprom_store_mac_addr(mac, MAC_LENGTH);
 #ifdef AUTOPUSH
   console_push_fpga_mac_ip();
 #endif
+  return 0;
+}
+
+static int handle_msg_fan_speed(char *rx_msg, int len) {
+  int speed, speedPercent;
+  uint8_t readSpeed;
+  if (len < 3) {
+    // Print the current value
+    if (eeprom_read_fan_speed(&readSpeed, 1)) {
+      printf("Could not read current fan speed\r\n");
+    } else {
+      speedPercent = (100 * readSpeed)/FAN_SPEED_MAX;
+      printf("Current fan speed: %d (%d%%)\r\n", readSpeed, speedPercent);
+    }
+    return 0;
+  }
+  speed = sscanfFanSpeed(rx_msg, len);
+  if (speed < 0) {
+    printf("Could not interpret input. Fail.\r\n");
+    return -1;
+  }
+  speedPercent = (100 * speed)/FAN_SPEED_MAX;
+  printf("Setting fan speed to %d (%d%%)\r\n", speed, speedPercent);
+  max6639_set_fans(speed);
+  eeprom_store_fan_speed((uint8_t *)&speed, 1);
   return 0;
 }
 
@@ -330,11 +355,20 @@ static int toggle_gpio(char c) {
 }
 
 int console_push_fpga_mac_ip(void) {
-  return push_fpga_mac_ip(&mac_ip_data);
+  mac_ip_data_t pdata;
+  int rval = eeprom_read_ip_addr(pdata.ip, IP_LENGTH);
+  rval |= eeprom_read_mac_addr(pdata.mac, MAC_LENGTH);
+  if (rval) {
+    printf("Could not find one of IP or MAC address\r\n");
+    return rval;
+  }
+  return push_fpga_mac_ip(&pdata);
 }
 
 void console_print_mac_ip(void) {
-  print_mac_ip(&mac_ip_data);
+  //print_mac_ip(&mac_ip_data); // XXX
+  print_this_ip();
+  print_this_mac();
   return;
 }
 
@@ -374,31 +408,53 @@ void xrp_boot(void)
    }
 }
 
-static void print_mac(mac_ip_data_t *pmac_ip_data) {
-  int ix;
+static void print_mac(uint8_t *pdata) {
   printf("MAC: ");
-  for (ix=0; ix<MAC_LENGTH-1; ix++) {
-    printf("%x:", pmac_ip_data->mac[ix]);
-  }
-  printf("%x\r\n", pmac_ip_data->mac[ix]);
+  PRINT_MULTIBYTE_HEX(pdata, 6, :); // Note the unquoted colon :
   return;
 }
 
-static void print_ip(mac_ip_data_t *pmac_ip_data) {
-  int ix;
+//static void print_ip(mac_ip_data_t *pmac_ip_data) {
+static void print_ip(uint8_t *pdata) {
   printf("IP: ");
-  for (ix=0; ix<IP_LENGTH-1; ix++) {
-    printf("%d.", pmac_ip_data->ip[ix]);
-  }
-  printf("%d\r\n", pmac_ip_data->ip[ix]);
+  PRINT_MULTIBYTE_DEC(pdata, 4, .);  // Note the unquoted period .
   return;
 }
 
-void print_mac_ip(mac_ip_data_t *pmac_ip_data) {
-  print_mac(pmac_ip_data);
-  print_ip(pmac_ip_data);
+static void print_this_mac(void) {
+  uint8_t mac[MAC_LENGTH];
+  int rval = eeprom_read_mac_addr(mac, MAC_LENGTH);
+  if (rval) {
+    printf("Could not find MAC address\r\n");
+    return;
+  }
+  print_mac(mac);
   return;
 }
+
+#define PRINT_MULTIBYTE(pdata, len, div) do { \
+  for (int ix=0; ix<len-1; ix++) { printf("%d" ## div, pdata[ix]); } \
+  printf("%d\r\n", pdata[len-1]); \
+} while (0);
+
+static void print_this_ip(void) {
+  uint8_t ip[IP_LENGTH];
+  int rval = eeprom_read_ip_addr(ip, IP_LENGTH);
+  if (rval) {
+    printf("Could not find IP address\r\n");
+    return;
+  }
+  print_ip(ip);
+  return;
+}
+
+/*
+static void print_mac_ip(mac_ip_data_t *pmac_ip_data) {
+  print_mac(pmac_ip_data->mac);
+  print_ip(pmac_ip_data->ip);
+  return;
+}
+*/
 
 void console_pend_msg(void) {
   _msgReady = 1;
@@ -453,18 +509,19 @@ static int htoi(char c) {
 }
 
 /*
- * static int sscanfIP(char *s, uint8_t *data, int len);
+ * static int sscanfIP(const char *s, volatile uint8_t *data, int len);
  *    This hackery is needed because it seems newlib-nano's version of sscanf is
  *    not fully functional.  This function skips any non-numeric characters (0-9
  *    only, no hex) and looks for periods '.' to define number boundaries.
  *    Returns -1 if not all IP ADDR digits were encountered.
  */
-static int sscanfIP(char *s, uint8_t *data, int len) {
+static int sscanfIP(const char *s, volatile uint8_t *data, int len) {
   int ndig = 0;
   char c;
   int r;
   int sum = 0;
-  for (int n = 0; n < len; n++) {
+  // Start scan on char 1
+  for (int n = 1; n < len; n++) {
     c = s[n];
     if (c == '.') {
       data[ndig++] = (uint8_t)(sum & 0xff);
@@ -486,36 +543,28 @@ static int sscanfIP(char *s, uint8_t *data, int len) {
 }
 
 /*
- * static int sscanfMAC(char *s, uint8_t *data, int len);
+ * static int sscanfMAC(const char *s, volatile uint8_t *data, int len);
  *    This hackery is needed because it seems newlib-nano's version of sscanf is
  *    not fully functional.  This function ignores anything before the first space
  *    character) and ignores any non-hex characters.
  *    It looks for semicolons ':' to define number boundaries.
  *    Returns -1 if not all MAC ADDR digits were encountered.
  */
-static int sscanfMAC(char *s, uint8_t *data, int len) {
+static int sscanfMAC(const char *s, volatile uint8_t *data, int len) {
   int ndig = 0;
   char c;
   int r;
   int sum = 0;
-  bool dataStart = false;
-  // TODO - We don't need to wait for whitespace for dataStart,
-  //        We can instead just ignore non-hex chars and start
-  //        parsing on char 1 (skip 0)
-  for (int n = 0; n < len; n++) {
+  // Start scan on char 1
+  for (int n = 1; n < len; n++) {
     c = s[n];
-    if (c == ' ') {
-      dataStart = true;
-    }
-    if (dataStart) {
-      if (c == ':') {
-        data[ndig++] = (uint8_t)(sum & 0xff);
-        sum = 0;
-      } else {
-        r = htoi(c);
-        if (r >= 0) {
-          sum = (sum << 4) | r;
-        }
+    if (c == ':') {
+      data[ndig++] = (uint8_t)(sum & 0xff);
+      sum = 0;
+    } else {
+      r = htoi(c);
+      if (r >= 0) {
+        sum = (sum << 4) | r;
       }
     }
   }
@@ -528,9 +577,51 @@ static int sscanfMAC(char *s, uint8_t *data, int len) {
   return -1;
 }
 
+/*
+ * static int sscanfFanSpeed(const char *s, int len);
+ *    This hackery is needed because it seems newlib-nano's version of sscanf is
+ *    not fully functional.  This function skips any non-numeric characters (0-9
+ *    only, no hex) and looks for percent sign '%' and terminates.
+ *    Returns -1 if no digit is found.
+ *    Returns scanned value otherwise.
+ */
+static int sscanfFanSpeed(const char *s, int len) {
+  char c;
+  int r;
+  int sum = 0;
+  bool toScale = false;
+  bool digitsFound = false;
+  for (int n = 1; n < len; n++) {
+    c = s[n];
+    if (c == '%') {
+      toScale = true;
+      break;
+    } else {
+      r = xatoi(c);
+      if (r >= 0) {
+        sum = (sum * 10) + r;
+        digitsFound = true;
+      }
+    }
+  }
+  if (!digitsFound) {
+    return -1;
+  }
+  sum = sum > FAN_SPEED_MAX ? FAN_SPEED_MAX : sum;
+  if (toScale) {
+    // Peg at 100%
+    sum = sum > 100? 100: sum;
+    sum = (sum * FAN_SPEED_MAX)/100;
+  } else {
+    // Peg at FAN_SPEED_MAX
+    sum = sum > FAN_SPEED_MAX ? FAN_SPEED_MAX : sum;
+  }
+  return sum;
+}
+
 int restoreIPAddr(void) {
   uint8_t ipAddr[IP_LENGTH];
-  int rval = eeprom_read_ip(ipAddr, IP_LENGTH);
+  int rval = eeprom_read_ip_addr(ipAddr, IP_LENGTH);
   if (!rval) {
     // Success; use read value
     memcpy(mac_ip_data.ip, ipAddr, IP_LENGTH);
@@ -543,7 +634,7 @@ int restoreIPAddr(void) {
 
 int restoreMACAddr(void) {
   uint8_t macAddr[MAC_LENGTH];
-  int rval = eeprom_read_mac(macAddr, MAC_LENGTH);
+  int rval = eeprom_read_mac_addr(macAddr, MAC_LENGTH);
   if (!rval) {
     // Success; use read value
     memcpy(mac_ip_data.mac, macAddr, MAC_LENGTH);

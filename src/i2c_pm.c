@@ -47,12 +47,12 @@ int get_max6639_reg(int regno, int *value)
    return rc;
 }
 
-static void set_fans(int speed[2])
+void max6639_set_fans(int speed)
 {
     set_max6639_reg(0x11, 2);  // Fan 1 PWM sign = 1
     set_max6639_reg(0x15, 2);  // Fan 2 PWM sign = 1
-    set_max6639_reg(0x26, speed[0]);
-    set_max6639_reg(0x27, speed[1]);
+    set_max6639_reg(0x26, speed);
+    set_max6639_reg(0x27, speed);
 }
 
 void print_max6639(void)
@@ -70,12 +70,12 @@ void print_max6639(void)
       if ((ix&0x3) == 0x3) marble_UART_send("\r\n", 2);
    }
    if (0) {
-      int fan_speed[2];
+      //int fan_speed[2];
       // update fan speed to 83%, max is 120
       // see page 9 in datasheet
-      fan_speed[0] = 100;
-      fan_speed[1] = 100;
-      set_fans(fan_speed);
+      //fan_speed[0] = 100;
+      //fan_speed[1] = 100;
+      max6639_set_fans(100);
    }
 }
 

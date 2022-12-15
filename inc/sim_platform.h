@@ -83,6 +83,7 @@ void marble_SYSTIMER_handler(void (*handler)(void));
 void marble_SLEEP_ms(uint32_t delay);
 void marble_SLEEP_us(uint32_t delay);
 
+uint32_t marble_get_tick(void);
 
 // ========= sim_i2c.c ============
 typedef void *I2C_BUS;

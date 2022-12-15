@@ -25,16 +25,36 @@ typedef struct {
  *   mac - 6 semi-colon separated hex digits
  *   ip4 - 4 dot separated decimal digits
  */
+// X(enumval, name, type, size_in_bytes, default_value)
+// 'type' is currently unused
+// TODO - consolidate IP_LENGTH and MAC_LENGTH from console.h here
 #define FOR_ALL_EETAGS() \
-  X(1, boot_mode, raw) \
-  X(2, mac_addr, mac) \
-  X(3, ip_addr, ip4)
+  X(1, boot_mode, raw, 1, {0}) \
+  X(2, mac_addr,  mac, 6, {18, 85, 85, 0, 1, 46}) \
+  X(3, ip_addr,   ip4, 4, {192, 168, 19, 31}) \
+  X(4, fan_speed, raw, 1, {100})
 
 typedef enum {
-#define X(N, NAME, TYPE)  ee_ ## NAME = N,
+#define X(N, NAME, TYPE, SIZE, ...)  ee_ ## NAME = N,
   FOR_ALL_EETAGS()
 #undef X
 } ee_tags_t;
+
+/*
+ * int eeprom_store_NAME(const uint8_t *pdata, int len);
+ * int eeprom_read_NAME(volatile uint8_t *pdata, int len);
+ *    Read and write functions auto-generated for all ee_tag_*
+ *    entries.  The "NAME" in the function name is the second
+ *    arg passed to 'X' in the definition of FOR_ALL_EETAGS()
+ *    above.
+ *    pdata is assumed to be at least 'len' bytes in length
+ *    Return values come from fmc_ee_read() and fmc_ee_write().
+ */
+#define X(N, NAME, TYPE, SIZE, ...) \
+int eeprom_store_ ## NAME(const uint8_t *pdata, int len); \
+int eeprom_read_ ## NAME(volatile uint8_t *pdata, int len);
+FOR_ALL_EETAGS()
+#undef X
 
 /** @brief Initialize EEPROM interface to Flash memory
  *  @param initFlash Erases 'flash' memory (in simulation mode only)
@@ -52,32 +72,14 @@ int fmc_ee_reset(void);
  * @param val Read buffer
  * @return 0 on Success, -ENOENT if not found, other negative errno on error
  */
-int fmc_ee_read(ee_tag_t tag, ee_val_t val);
+int fmc_ee_read(ee_tags_t tag, ee_val_t val);
 
 /** @brief Write to EEPROM
  * @param tag Tag ID.  in range [1, 0xff] inclusive
  * @param val Write buffer
  * @return 0 on Success, negative errno on error
  */
-int fmc_ee_write(ee_tag_t tag, const ee_val_t val);
-
-/*
- * @brief Store IP address in eeprom (flash).
- * @param paddr IP Address. Assumed to be at least 'len' bytes in length.
- * @return 0 on Success, negative errno on error
- */
-int eeprom_store_ip(uint8_t *paddr, int len);
-
-int eeprom_read_ip(uint8_t *paddr, int len);
-
-/*
- * @brief Store MAC address in eeprom (flash).
- * @param paddr MAC Address. Assumed to be at least 'len' bytes in length.
- * @return 0 on Success, negative errno on error
- */
-int eeprom_store_mac(uint8_t *paddr, int len);
-
-int eeprom_read_mac(uint8_t *paddr, int len);
+int fmc_ee_write(ee_tags_t tag, const ee_val_t val);
 
 #ifdef __cplusplus
 }

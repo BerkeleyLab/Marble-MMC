@@ -575,8 +575,6 @@ uint32_t marble_init(bool use_xtal)
   marble_UART_init();
 
   eeprom_init(0);
-  restoreIPAddr();
-  restoreMACAddr();
 
   printf("** Marble init done **\r\n");
 

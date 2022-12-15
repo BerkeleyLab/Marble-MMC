@@ -151,11 +151,6 @@ int marble_UART_recv(char *str, int size) {
   return 0;
 }
 
-// TODO DELETEME I think
-void UART_FIFO_ISR(void) {
-  return;
-}
-
 void marble_LED_set(uint8_t led_num, bool on) {
   // TODO - Do I want fake LEDs?
   return;
@@ -256,5 +251,9 @@ void marble_SLEEP_ms(uint32_t delay) {
 void marble_SLEEP_us(uint32_t delay) {
   // TODO - Implement sleep function?
   return;
+}
+
+uint32_t marble_get_tick(void) {
+  return BSP_GET_SYSTICK();
 }
 

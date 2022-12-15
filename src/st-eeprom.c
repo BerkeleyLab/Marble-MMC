@@ -53,6 +53,11 @@ typedef enum {
     ee_invalid,
 } ee_state_t;
 
+static int eeprom_read_val(ee_tags_t tag, volatile uint8_t *paddr, int len);
+static int eeprom_store_val(ee_tags_t tag, const uint8_t *paddr, int len);
+static int eeprom_populate_val(ee_tags_t tag, const uint8_t *paddr, int len);
+static int eeprom_restore_all(void);
+
 // number of bits to encode a state
 static const size_t ee_state_bits = 2u;
 
@@ -145,8 +150,7 @@ int ee_frame_check(const ee_frame* frame)
 
 // search bank for last valid tag.
 static
-const ee_frame* ee_find(const ee_frame* bank,
-                        ee_tag_t tag)
+const ee_frame* ee_find(const ee_frame* bank, ee_tags_t tag)
 {
     const ee_frame* found = NULL;
     if(tag==0 || tag==0xff) {
@@ -167,9 +171,7 @@ const ee_frame* ee_find(const ee_frame* bank,
 }
 
 static
-int ee_write(const ee_frame* bank,
-             ee_tag_t tag,
-             const ee_val_t val)
+int ee_write(const ee_frame* bank, ee_tags_t tag, const ee_val_t val)
 {
     const ee_frame* prev = NULL;
 
@@ -290,6 +292,8 @@ int eeprom_init(bool initFlash)
             printd("no active\r\n");
         }
     }
+    // Write default values of all missing tags
+    eeprom_restore_all();
     printd("eeprom_init (%d)\r\n", ret);
     return ret;
 }
@@ -308,7 +312,7 @@ int fmc_ee_reset(void)
     return ret;
 }
 
-int fmc_ee_read(ee_tag_t tag, ee_val_t val)
+int fmc_ee_read(ee_tags_t tag, ee_val_t val)
 {
     const ee_frame* bank = ee_active;
     if(!bank) {
@@ -317,7 +321,7 @@ int fmc_ee_read(ee_tag_t tag, ee_val_t val)
     const ee_frame* f = ee_find(bank, tag);
     printd("ee_find(eeprom0_base, %d) = %p\r\n", tag, (void *)f);
     if(f) {
-        memcpy(val, f->val, sizeof(f->val));
+        memcpy(val, f->val, sizeof(f->val)/sizeof(uint8_t));
         return 0;
     } else {
         return -ENOENT;
@@ -332,7 +336,7 @@ int ee_is_full(const ee_frame* bank)
 {
     uint32_t found[1u+sizeof(ee_tag_t)*8u/32u];
 
-    memset(found, 0, sizeof(found));
+    memset(found, 0, sizeof(found)/sizeof(uint8_t));
 
     for(size_t n=1u; n<EEPROM_COUNT; n++) {
         const ee_frame* f = &bank[n];
@@ -356,7 +360,7 @@ int ee_is_full(const ee_frame* bank)
     return 1;
 }
 
-int fmc_ee_write(ee_tag_t tag, const ee_val_t val)
+int fmc_ee_write(ee_tags_t tag, const ee_val_t val)
 {
     if(tag==0 || tag==0xff) {
         return -EINVAL;
@@ -416,91 +420,93 @@ int fmc_ee_write(ee_tag_t tag, const ee_val_t val)
     return ret;
 }
 
-/*
- * int eeprom_store_ip(uint8_t *paddr, int len);
- *    paddr is assumed to be at least 'len' bytes in length
- *    Store IP address in eeprom (flash).
- */
-int eeprom_store_ip(uint8_t *paddr, int len) {
-  ee_val_t ipAddr;
+static int eeprom_read_val(ee_tags_t tag, volatile uint8_t *paddr, int len) {
+  ee_val_t eeval;
   len = MIN(len, (int)(sizeof(ee_val_t)/sizeof(uint8_t)));
-  for (int n = 0; n < len; n++) {
-    ipAddr[n] = paddr[n];
-  }
-  int rval = fmc_ee_write(ee_ip_addr, ipAddr);
+  int rval = fmc_ee_read(tag, eeval);
   if (!rval) {
-    printf("Success\r\n");
+    for (int n = 0; n < len; n++) {
+      paddr[n] = eeval[n];
+    }
   } else {
 #ifdef DEBUG_ENABLE_ERRNO_DECODE
     const char *errname = decode_errno(-rval);
-    printf("eeprom_store_ip: rval = %d (%s)\r\n", rval, errname);
+    printf("eeprom_read_val: rval = %d (%s)\r\n", rval, errname);
 #else
-    printf("eeprom_store_ip: rval = %d\r\n", rval);
+    printf("eeprom_read_val: rval = %d\r\n", rval);
 #endif
   }
   return rval;
 }
 
-int eeprom_read_ip(uint8_t *paddr, int len) {
-  ee_val_t ipAddr;
+static int eeprom_store_val(ee_tags_t tag, const uint8_t *paddr, int len) {
+  ee_val_t eeval;
   len = MIN(len, (int)(sizeof(ee_val_t)/sizeof(uint8_t)));
-  int rval = fmc_ee_read(ee_ip_addr, ipAddr);
+  for (int n = 0; n < len; n++) {
+    eeval[n] = paddr[n];
+  }
+  int rval = fmc_ee_write(tag, eeval);
   if (!rval) {
-    for (int n = 0; n < len; n++) {
-      paddr[n] = ipAddr[n];
-    }
+    printf("Success\r\n");
   } else {
 #ifdef DEBUG_ENABLE_ERRNO_DECODE
     const char *errname = decode_errno(-rval);
-    printf("eeprom_read_ip: rval = %d (%s)\r\n", rval, errname);
+    printf("eeprom_store_val: rval = %d (%s)\r\n", rval, errname);
 #else
-    printf("eeprom_read_ip: rval = %d\r\n", rval);
+    printf("eeprom_store_val: rval = %d\r\n", rval);
 #endif
   }
   return rval;
 }
 
 /*
- * int eeprom_store_mac(uint8_t *paddr, int len);
- *    paddr is assumed to be at least 'len' bytes in length
- *    Store MAC address in eeprom (flash).
+ * static int eeprom_populate_val(ee_tags_t tag, const uint8_t *paddr, int len);
+ *    Ensure a given tag is present in nonvolatile memory.  If the tag is not
+ *    found, a new copy is stored.
  */
-int eeprom_store_mac(uint8_t *paddr, int len) {
-  ee_val_t macAddr;
+static int eeprom_populate_val(ee_tags_t tag, const uint8_t *paddr, int len) {
+  ee_val_t eeval;
   len = MIN(len, (int)(sizeof(ee_val_t)/sizeof(uint8_t)));
-  for (int n = 0; n < len; n++) {
-    macAddr[n] = paddr[n];
-  }
-  int rval = fmc_ee_write(ee_mac_addr, macAddr);
-  if (!rval) {
-    printf("Success\r\n");
-  } else {
-#ifdef DEBUG_ENABLE_ERRNO_DECODE
-    const char *errname = decode_errno(-rval);
-    printf("eeprom_store_mac: rval = %d (%s)\r\n", rval, errname);
-#else
-    printf("eeprom_store_mac: rval = %d\r\n", rval);
-#endif
-  }
-  return rval;
-}
-
-int eeprom_read_mac(uint8_t *paddr, int len) {
-  ee_val_t macAddr;
-  len = MIN(len, (int)(sizeof(ee_val_t)/sizeof(uint8_t)));
-  int rval = fmc_ee_read(ee_mac_addr, macAddr);
-  if (!rval) {
+  // Note: fmc_ee_read() wastes a bit of ops compared to ee_find(), but I like the
+  // encapsulation, plus stack var eeval would need to exist for fmc_ee_write() anyhow
+  int rval = fmc_ee_read(tag, eeval);
+  if (rval) {
     for (int n = 0; n < len; n++) {
-      paddr[n] = macAddr[n];
+      eeval[n] = paddr[n];
+    }
+    rval = fmc_ee_write(tag, eeval);
+    if (!rval) {
+      printf("Default stored\r\n");
+      return 1;
+    } else {
+      printf("Failed to store default\r\n");
+      return rval;
     }
   } else {
-#ifdef DEBUG_ENABLE_ERRNO_DECODE
-    const char *errname = decode_errno(-rval);
-    printf("eeprom_read_mac: rval = %d (%s)\r\n", rval, errname);
-#else
-    printf("eeprom_read_mac: rval = %d\r\n", rval);
-#endif
+    printf("Found\r\n");
   }
-  return rval;
+  return 0;
 }
+
+/*
+ * static int eeprom_restore_all(void);
+ *    Write default values for all missing tags in non-volatile memory.
+ */
+static int eeprom_restore_all(void) {
+#define X(N, NAME, TYPE, SIZE, ...) \
+  uint8_t pdata_ ## NAME[SIZE] = __VA_ARGS__; \
+  eeprom_populate_val(ee_ ## NAME, pdata_ ## NAME, SIZE);
+  FOR_ALL_EETAGS()
+#undef X
+  return 0;
+}
+
+/* (see st-eeprom.h)
+ */
+#define X(N, NAME, TYPE, SIZE, ...) \
+int eeprom_store_ ## NAME(const uint8_t *pdata, int len) { return eeprom_store_val(ee_ ## NAME, pdata, len); } \
+int eeprom_read_ ## NAME(volatile uint8_t *pdata, int len) { return eeprom_read_val(ee_ ## NAME, pdata, len); }
+FOR_ALL_EETAGS()
+#undef X
+
 

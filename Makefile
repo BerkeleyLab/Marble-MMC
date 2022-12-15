@@ -22,11 +22,8 @@ marble_mini_clean:
 marble_gdb:
 	make -f makefile.board BOARD=marble gdb
 
-# This command can be used to erase the flash memory
-# associated with the 'EEPROM0' sector and hopefully
-# unstall the firmware.
-marble_recover:
-	make -f makefile.board BOARD=marble recover download
+marble_reset:
+	make -f makefile.board BOARD=marble reset
 
 .PHONY: sim
 sim:
