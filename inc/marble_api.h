@@ -22,6 +22,7 @@
 #endif /* MARBLEM_V1 */
 
 #define FLASH_VOLTAGE_MV                              (3300)
+#define FPGA_WATCHDOG_CLK_FREQ                        (3276)
 
 #ifdef RTEMS_SUPPORT
 #include <rtems.h>
@@ -117,6 +118,8 @@ uint8_t marble_PWR_status(void);
 ****/
 void reset_fpga(void);
 
+void enable_fpga(void);
+
 /****
 * SPI/SSP
 ****/
@@ -189,6 +192,16 @@ void marble_SYSTIMER_handler(void (*handler)(void));
 
 void marble_SLEEP_ms(uint32_t delay);
 void marble_SLEEP_us(uint32_t delay);
+
+/************
+* FPGA Software/Hardware Watchdog
+************/
+// Set period to 0 to disable
+void FPGAWD_set_period(uint16_t preload);
+// Software pet
+void FPGAWD_pet(void);
+// ISR pends FPGA reset
+void FPGAWD_ISR(void);
 
 #endif /* SIMULATION */
 #endif /* _MARBLE_API_H_ */

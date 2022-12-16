@@ -199,6 +199,10 @@ void reset_fpga(void) {
   return;
 }
 
+void enable_fpga(void) {
+  return;
+}
+
 typedef void *SSP_PORT;
 
 int marble_SSP_write16(SSP_PORT ssp, uint16_t *buffer, unsigned size) {
@@ -255,5 +259,18 @@ void marble_SLEEP_us(uint32_t delay) {
 
 uint32_t marble_get_tick(void) {
   return BSP_GET_SYSTICK();
+}
+
+void FPGAWD_set_period(uint16_t preload) {
+  _UNUSED(preload);
+  return;
+}
+
+void FPGAWD_pet(void) {
+  return;
+}
+
+void FPGAWD_ISR(void) {
+  return;
 }
 

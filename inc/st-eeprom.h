@@ -60,7 +60,7 @@ typedef struct {
   X(1, boot_mode, raw, 1, {0}) \
   X(2, mac_addr,  mac, 6, {18, 85, 85, 0, 1, 46}) \
   X(3, ip_addr,   ip4, 4, {192, 168, 19, 31}) \
-  X(4, fan_speed, raw, 1, {100})
+  X(4, fan_speed, raw, 1, {102})
 
 typedef enum {
 #define X(N, NAME, TYPE, SIZE, ...)  ee_ ## NAME = N,

@@ -41,6 +41,7 @@ int console_service(void);
 void console_pend_msg(void);
 int console_push_fpga_mac_ip(void);
 void console_print_mac_ip(void);
+void console_pend_FPGA_enable(void);
 
 void UARTTXQUEUE_Init(void);
 

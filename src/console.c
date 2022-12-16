@@ -49,7 +49,7 @@ const char *menu_str[] = {"\r\n",
   "e - PM bus display\r\n",
   "f - XRP7724 flash\r\n",
   "g - XRP7724 go\r\n",
-  "h - XRP7724 hex input\r\n",
+  //"h - XRP7724 hex input\r\n",
   "i - timer check/cal\r\n",
   "j - Read SPI mailbox\r\n",
   "k - PCA9555 status\r\n",
@@ -68,6 +68,7 @@ typedef enum {
 
 static console_mode_e console_mode;
 static uint8_t _msgReady;
+static uint8_t _fpgaEnable;
 
 // TODO - find a better home for these
 static void pm_bus_display(void);
@@ -91,7 +92,6 @@ static int xatoi(char c);
 static int htoi(char c);
 // TODO - fix encapsulation
 // Read from EEPROM at startup
-static mac_ip_data_t mac_ip_data;
 
 const uint8_t mac_id_default[MAC_LENGTH] = {18, 85, 85, 0, 1, 46};
 const uint8_t ip_addr_default[IP_LENGTH] = {192, 168, 19, 31};
@@ -142,7 +142,6 @@ static int console_handle_msg(char *rx_msg, int len)
            reset_fpga();
            break;
         case '6':
-           //print_mac_ip(&mac_ip_data);
            print_this_ip();
            print_this_mac();
            console_push_fpga_mac_ip();
@@ -205,10 +204,12 @@ static int console_handle_msg(char *rx_msg, int len)
            printf("XRP go\r\n");
            xrp_boot();
            break;
+           /*
         case 'h':
            printf("XRP hex input\r\n");
            xrp_hex_in(XRP7724);
            break;
+           */
         case 'i':
            for (unsigned ix=0; ix<10; ix++) {
               printf("%d\r\n", ix);
@@ -366,7 +367,6 @@ int console_push_fpga_mac_ip(void) {
 }
 
 void console_print_mac_ip(void) {
-  //print_mac_ip(&mac_ip_data); // XXX
   print_this_ip();
   print_this_mac();
   return;
@@ -467,14 +467,18 @@ void console_pend_msg(void) {
  *  This should run periodically in thread mode (i.e. in the main loop).
  */
 int console_service(void) {
-  if (!_msgReady) {
-    return 0;
-  }
   uint8_t msg[CONSOLE_MAX_MESSAGE_LENGTH];
-  int len = console_shift_all(msg);
-  _msgReady = 0;
-  if (len != 0) {
-    return console_handle_msg((char *)msg, len);
+  int len;
+  if (_msgReady) {
+    _msgReady = 0;
+    len = console_shift_all(msg);
+    if (len != 0) {
+      return console_handle_msg((char *)msg, len);
+    }
+  }
+  if (_fpgaEnable) {
+    enable_fpga();
+    _fpgaEnable = 0;
   }
   return 0;
 }
@@ -619,30 +623,15 @@ static int sscanfFanSpeed(const char *s, int len) {
   return (int)sum;
 }
 
-int restoreIPAddr(void) {
-  uint8_t ipAddr[IP_LENGTH];
-  int rval = eeprom_read_ip_addr(ipAddr, IP_LENGTH);
-  if (!rval) {
-    // Success; use read value
-    memcpy(mac_ip_data.ip, ipAddr, IP_LENGTH);
-  } else {
-    // Fail; use default value
-    memcpy(mac_ip_data.ip, ip_addr_default, IP_LENGTH);
-  }
-  return rval;
-}
-
-int restoreMACAddr(void) {
-  uint8_t macAddr[MAC_LENGTH];
-  int rval = eeprom_read_mac_addr(macAddr, MAC_LENGTH);
-  if (!rval) {
-    // Success; use read value
-    memcpy(mac_ip_data.mac, macAddr, MAC_LENGTH);
-  } else {
-    // Fail; use default value
-    memcpy(mac_ip_data.mac, mac_id_default, MAC_LENGTH);
-  }
-  return rval;
+/*
+ * void console_pend_FPGA_enable(void);
+ *    NOTE! This is called from an ISR.
+ *    FPGA will be re-enabled in the main loop in console_service().
+ *    TODO - Should I count to ensure enough time has passed since reset?
+ */
+void console_pend_FPGA_enable(void) {
+  _fpgaEnable = 1;
+  return;
 }
 
 #ifdef DEBUG_ENABLE_ERRNO_DECODE

@@ -60,7 +60,7 @@ SPI_HandleTypeDef hspi2;
 
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
-UART_HandleTypeDef huart3;
+UART_HandleTypeDef huart3;  // Unused, yes?
 
 // Moved here from marble_api.h
 SSP_PORT SSP_FPGA;
@@ -81,7 +81,8 @@ static void USART_RXNE_ISR(void);
 static void USART_TXE_ISR(void);
 static void USART_Erase_Echo(void);
 static void USART_Erase(int n);
-static void marble_set_params(void);
+static void TIM9_Init(void);
+static void marble_apply_params(void);
 
 /* Initialize UART pins */
 void marble_UART_init(void)
@@ -340,6 +341,11 @@ void reset_fpga(void)
    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, true);
 }
 
+void enable_fpga(void) {
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, true);
+  return;
+}
+
 /************
 * GPIO interrupt setup and user-defined handlers
 ************/
@@ -577,7 +583,7 @@ uint32_t marble_init(bool use_xtal)
   marble_UART_init();
 
   eeprom_init(0);
-  marble_set_params();
+  marble_apply_params();
 
   printf("** Marble init done **\r\n");
 
@@ -590,10 +596,10 @@ uint32_t marble_init(bool use_xtal)
 }
 
 /*
- * static void marble_set_params(void);
+ * static void marble_apply_params(void);
  *    Apply parameters stored in non-volatile memory.
  */
-static void marble_set_params(void) {
+static void marble_apply_params(void) {
   // Fan speed
   uint8_t fan_speed;
   if (eeprom_read_fan_speed(&fan_speed, 1)) {
@@ -930,6 +936,86 @@ static void MX_GPIO_Init(void)
    GPIO_InitStruct.Pull = GPIO_NOPULL;
    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+}
+
+static void TIM9_Init(void) {
+  // Only one general-purpose FPGA input: PA3
+  // Using TIM9 Ch2 automatic timer reset on input trigger
+  // Enable clock to TIM9 via RCC APB2 clock enable register (APB2ENR)
+  RCC->APB2ENR |= RCC_APB2ENR_TIM9EN;
+  // GOTCHA! There's a sneaky /2 prescaler enabled whenever PCLK2 prescaler
+  // is not /1 (as it is in this case).  So the input to TIM9 is probably
+  // pclk2_freq_hz/2
+  uint32_t psc = HAL_RCC_GetPCLK2Freq();  // Get PCLK2 freq
+  psc = (psc/FPGA_WATCHDOG_CLK_FREQ) - 1; // Compute prescaler value
+  TIM9->PSC = (uint16_t)(psc & 0xFFFF);
+  TIM9->ARR = 0xFFFF;               // Max ARR for init; is configurable
+  TIM9->CR1 &= ~TIM_CR1_CEN;        // counter disable
+
+  TIM9->CCER &= ~TIM_CCER_CC2E_Msk; // disable ch2
+  // SMCR
+  uint32_t reg = TIM9->SMCR;
+  reg = SET_FIELD_MASK(reg, 0 << TIM_SMCR_MSM_Pos, TIM_SMCR_MSM_Msk); // no synchronization needed
+  reg = SET_FIELD_MASK(reg, 5 << TIM_SMCR_TS_Pos, TIM_SMCR_TS_Msk);   // Filtered Timer Input 2 (TI2FP2)
+  reg = SET_FIELD_MASK(reg, 4 << TIM_SMCR_SMS_Pos, TIM_SMCR_SMS_Msk); // reset mode
+  TIM9->SMCR = reg;
+
+  // CR1
+  reg = TIM9->CR1 | TIM_CR1_ARPE_Msk | TIM_CR1_URS_Msk; // Auto-reload preload enable and prevent 
+  TIM9->CR1 = reg;                                      // IRQ on setting of UG bit (software pet)
+
+  // DIER
+  TIM9->DIER |= TIM_DIER_UIE_Msk;   // Enable update interrupt?
+
+  // CCMR1
+  reg = TIM9->CCMR1;
+  reg = SET_FIELD_MASK(reg, 0xF << TIM_CCMR1_IC2F_Pos, TIM_CCMR1_IC2F_Msk); // f_sample = f_dts/32; N = 8
+  reg = SET_FIELD_MASK(reg, 0 << TIM_CCMR1_IC2PSC_Pos, TIM_CCMR1_IC2PSC_Msk); // capture on every edge
+  reg = SET_FIELD_MASK(reg, 1 << TIM_CCMR1_CC2S_Pos, TIM_CCMR1_CC2S_Msk); // ch2 input -> TI2
+  TIM9->CCMR1 = reg;
+
+  // CCER
+  reg = TIM9->CCER;
+  reg = SET_FIELD_MASK(reg, 0 << TIM_CCER_CC2P_Pos, TIM_CCER_CC2P_Msk); // non-inverted input, reset on rising edge
+  reg = SET_FIELD_MASK(reg, 1 << TIM_CCER_CC2E_Pos, TIM_CCER_CC2E_Msk); // enable ch2
+  TIM9->CCER = reg;
+
+  //TIM9->CR1 |= TIM_CR1_CEN;         // counter enable. Do not enable at startup for now.
+
+  // Enable TIM1_BRK_TIM9_IRQn;
+  HAL_NVIC_SetPriority(TIM1_BRK_TIM9_IRQn, 7, 7);
+  HAL_NVIC_EnableIRQ(TIM1_BRK_TIM9_IRQn);
+  return;
+}
+
+void FPGAWD_set_period(uint16_t preload) {
+  if (preload) {
+  // disable timer, set preload, and restart timer
+    TIM9->CR1 &= ~TIM_CR1_CEN; // disable counter
+    TIM9->ARR = preload;
+    TIM9->CR1 |= TIM_CR1_CEN;  // enable counter
+    HAL_NVIC_EnableIRQ(TIM1_BRK_TIM9_IRQn);
+  } else {
+  // If preload == 0, disable timer and interrupt
+    TIM9->ARR = 0xFFFF;
+    TIM9->CR1 &= ~TIM_CR1_CEN; // disable counter
+    HAL_NVIC_DisableIRQ(TIM1_BRK_TIM9_IRQn);
+  }
+  return;
+}
+
+void FPGAWD_pet(void) {
+  // Software pet the watchdog
+  TIM9->EGR |= TIM_EGR_UG;
+  return;
+}
+
+void FPGAWD_ISR(void) {
+  // Reset the FPGA (if preload == 0, this should never fire)
+  /* Pull the PROGRAM_B pin low; it's spelled PROG_B on schematic */
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, false);
+  console_pend_FPGA_enable();
+  return;
 }
 
 /**
