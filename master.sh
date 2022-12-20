@@ -15,13 +15,25 @@
 #   Connect Ethernet (J4) and configure adapter
 #     sudo ifconfig $ADAPTERNAME 192.168.19.10 netmask 255.255.224.0
 
-# Paths
+# ============================= NOTE! ==================================
+# == This script is currently brittly dependent on the assignment of  ==
+# == the ttyUSB device names.  Please ensure the following before     ==
+# == executing:                                                       ==
+# ==  /dev/ttyUSB0 -> JTAG to FPGA                                    ==
+# ==  /dev/ttyUSB1 -> Reset control                                   ==
+# ==  /dev/ttyUSB2 -> UART to/from FPGA                               ==
+# ==  /dev/ttyUSB3 -> UART to/from MMC                                ==
+# ======================================================================
+
+# Paths. Modify according to your filesystem
 BEDROCK_PATH=~/repos/bedrock
 MMC_PATH=~/repos/marble_mmc
 BITFILE=~/hardwareBin/marble2.c0222ba4.bit
 UDPRTX=~/bin/udprtx
 
-# Config params
+# =========== Nothing below here should need to be modified ===========
+
+# Handy Params
 SERIAL_NUM=$1
 IP=192.168.19.$SERIAL_NUM
 
