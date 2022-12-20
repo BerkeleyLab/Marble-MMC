@@ -67,13 +67,14 @@ typedef enum {
 } console_mode_e;
 
 static console_mode_e console_mode;
-static uint8_t _msgReady;
+static uint8_t _msgCount;
 static uint8_t _fpgaEnable;
 
 // TODO - find a better home for these
 static void pm_bus_display(void);
 static int console_handle_msg(char *rx_msg, int len);
 static int console_shift_all(uint8_t *pData);
+static int console_shift_msg(uint8_t *pData);
 static void ina219_test(void);
 static void handle_gpio(const char *msg, int len);
 static int toggle_gpio(char c);
@@ -97,7 +98,7 @@ const uint8_t mac_id_default[MAC_LENGTH] = {18, 85, 85, 0, 1, 46};
 const uint8_t ip_addr_default[IP_LENGTH] = {192, 168, 19, 31};
 
 int console_init(void) {
-  _msgReady = 0;
+  _msgCount = 0;
   console_mode = CONSOLE_TOP;
   return 0;
 }
@@ -278,7 +279,7 @@ static int handle_msg_MAC(char *rx_msg, int len) {
 static int handle_msg_fan_speed(char *rx_msg, int len) {
   int speed, speedPercent;
   uint8_t readSpeed;
-  if (len < 3) {
+  if (len < 4) {
     // Print the current value
     if (eeprom_read_fan_speed(&readSpeed, 1)) {
       printf("Could not read current fan speed\r\n");
@@ -457,7 +458,7 @@ static void print_mac_ip(mac_ip_data_t *pmac_ip_data) {
 */
 
 void console_pend_msg(void) {
-  _msgReady = 1;
+  _msgCount++;
   return;
 }
 
@@ -469,10 +470,11 @@ void console_pend_msg(void) {
 int console_service(void) {
   uint8_t msg[CONSOLE_MAX_MESSAGE_LENGTH];
   int len;
-  if (_msgReady) {
-    _msgReady = 0;
-    len = console_shift_all(msg);
-    if (len != 0) {
+  if (_msgCount) {
+    len = console_shift_msg(msg);
+    //len = console_shift_all(msg);
+    _msgCount--;
+    if (len) {
       return console_handle_msg((char *)msg, len);
     }
   }
@@ -491,6 +493,21 @@ int console_service(void) {
  */
 static int console_shift_all(uint8_t *pData) {
   return UARTQUEUE_ShiftOut(pData, CONSOLE_MAX_MESSAGE_LENGTH);
+}
+
+/*
+ * static int console_shift_msg(uint8_t *pData);
+ *  Shift up to CONSOLE_MAX_MESSAGE_LENGTH bytes into 'pData', breaking
+ *  at any of:
+ *    UART_MSG_TERMINATOR found
+ *    FIFO empty
+ *    CONSOLE_MAX_MESSAGE_LENGTH bytes shifted
+ *  'pData' must be at least CONSOLE_MAX_MESSAGE_LENGTH in length
+ *  Returns the number of bytes shifted out.
+ */
+static int console_shift_msg(uint8_t *pData) {
+  //UARTQUEUE_ShiftOut(pData, CONSOLE_MAX_MESSAGE_LENGTH);
+  return UARTQUEUE_ShiftUntil(pData, UART_MSG_TERMINATOR, CONSOLE_MAX_MESSAGE_LENGTH);
 }
 
 static int xatoi(char c) {

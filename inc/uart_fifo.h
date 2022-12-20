@@ -38,6 +38,7 @@ uint8_t UARTQUEUE_Pop(uint8_t *item);
 uint8_t UARTQUEUE_Rewind(int n);
 uint8_t UARTQUEUE_Status(void);
 int UARTQUEUE_ShiftOut(uint8_t *pData, int len);
+int UARTQUEUE_ShiftUntil(uint8_t *pData, uint8_t target, int len);
 void UARTQUEUE_SetDataLost(uint8_t lost);
 uint8_t UARTQUEUE_IsDataLost(void);
 int UARTQUEUE_FillLevel(void);

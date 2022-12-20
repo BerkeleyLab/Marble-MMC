@@ -1,0 +1,5 @@
+# Single-line comments supported with '#'
+# But only for the complete line!
+p 50%
+m 192.168.19.40
+n 12:55:55:0:1:22

@@ -127,12 +127,7 @@ void USART_RXNE_ISR(void) {
     // Don't clear flags; the RXNE flag is cleared automatically by read from DR
     c = (uint8_t)(huart1.Instance->DR & (uint8_t)0x00FF);
     // Look for control characters first
-    if (c == UART_MSG_TERMINATOR) {
-      console_pend_msg();
-#ifdef UART_ECHO
-      marble_UART_send((const char *)&c, 1);
-#endif
-    } else if (c == UART_MSG_ABORT) {
+    if (c == UART_MSG_ABORT) {
 #ifdef UART_ECHO
       USART_Erase_Echo();
 #endif
@@ -147,6 +142,9 @@ void USART_RXNE_ISR(void) {
       if (UARTQUEUE_Add(&c) == UART_QUEUE_FULL) {
         UARTQUEUE_SetDataLost(UART_DATA_LOST);
         // Clear QUEUE at this point?
+      }
+      if (c == UART_MSG_TERMINATOR) {
+        console_pend_msg();
       }
 #ifdef UART_ECHO
       marble_UART_send((const char *)&c, 1);
