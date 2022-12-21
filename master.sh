@@ -87,7 +87,7 @@ fi
 
 # 1. Program FTDI serial number if needed
 echo "Checking FTDI Configuration..."
-if $MMC_PATH/ftdi/verifyid.sh "$SERIAL_NUM"; then
+if ! $MMC_PATH/ftdi/verifyid.sh "$SERIAL_NUM"; then
   echo "Programming FTDI..."
   $MMC_PATH/ftdi/prog_marble.sh "$SERIAL_NUM" && echo "Success" || echo "Failed"
   if ! $MMC_PATH/ftdi/verifyid.sh "$SERIAL_NUM"; then
