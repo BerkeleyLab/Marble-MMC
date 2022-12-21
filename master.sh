@@ -25,11 +25,14 @@
 # ==  /dev/ttyUSB3 -> UART to/from MMC                                ==
 # ======================================================================
 
+# Turn on exit on failure
+set -e
+
 # Paths. Modify according to your filesystem
 BEDROCK_PATH=~/repos/bedrock
 MMC_PATH=~/repos/marble_mmc
 BITFILE=~/hardwareBin/marble2.c0222ba4.bit
-UDPRTX=~/bin/udprtx
+UDPRTX=udprtx
 
 # =========== Nothing below here should need to be modified ===========
 
@@ -39,7 +42,7 @@ IP=192.168.19.$SERIAL_NUM
 
 if [ $# -lt 1 ]; then
   echo "Usage: master.sh \$SERIAL_NUMBER"
-  exit -1
+  exit 2
 fi
 
 # Test for exist
@@ -63,13 +66,20 @@ if [[ ! ( -d $MMC_PATH ) ]]; then
   exit 1
 fi
 
-if [[ ! ( -e $BITFILE ) ]]; then
-  echo "$BITFILE does not exist"
+if [[ ! ( -r $BITFILE ) ]]; then
+  echo "$BITFILE does not exist or is not readable"
   exit 1
 fi
 
-if [[ ! ( -f $BITFILE ) ]]; then
-  echo "$BITFILE exists but is not a file (is it a directory or symlink?)"
+if [[ -d $BITFILE ]]; then
+  echo "$BITFILE appears to be a directory"
+  exit 1
+fi
+
+if [[ -z `which $UDPRTX` ]]; then
+  echo "$UDPRTX cannot be found.  Build with:"
+  echo "  $ cd bedrock/badger/tests"
+  echo "  $ make $UDPRTX"
   exit 1
 fi
 
@@ -126,13 +136,17 @@ fi
 
 # 6. UDP Stress test
 # TODO - Time these out?
+
 echo "Testing UDP with 100k packets"
-if [ $UDPRTX $IP 100000 8 ]; then
+$UDPRTX $IP 100000 8
+if [ $? != 0 ]; then
   echo "UDP test failed"
   exit 1
 fi
+
 echo "Testing UDP with 1M packets"
-if [ $UDPRTX $IP 100000 8 ]; then
+$UDPRTX $IP 1000000 8
+if [ $? != 0 ]; then
   echo "UDP test failed"
   exit 1
 fi
