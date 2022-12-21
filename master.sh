@@ -76,7 +76,7 @@ if [[ -d $BITFILE ]]; then
   exit 1
 fi
 
-if [[ -z `which $UDPRTX` ]]; then
+if [[ -z $(command -v $UDPRTX) ]]; then
   echo "$UDPRTX cannot be found.  Build with:"
   echo "  $ cd bedrock/badger/tests"
   echo "  $ make $UDPRTX"
@@ -87,12 +87,10 @@ fi
 
 # 1. Program FTDI serial number if needed
 echo "Checking FTDI Configuration..."
-$MMC_PATH/ftdi/verifyid.sh $SERIAL_NUM
-if [ $? != 0 ]; then
+if $MMC_PATH/ftdi/verifyid.sh "$SERIAL_NUM"; then
   echo "Programming FTDI..."
-  $MMC_PATH/ftdi/prog_marble.sh $SERIAL_NUM && echo "Success" || echo "Failed"
-  $MMC_PATH/ftdi/verifyid.sh $SERIAL_NUM
-  if [ $? != 0 ]; then
+  $MMC_PATH/ftdi/prog_marble.sh "$SERIAL_NUM" && echo "Success" || echo "Failed"
+  if $MMC_PATH/ftdi/verifyid.sh "$SERIAL_NUM"; then
     echo "Could not verify FTDI configuration. Aborting."
     exit 1
   fi
@@ -101,8 +99,7 @@ fi
 # 2. Program MMC
 echo "Programming MMC"
 cd $MMC_PATH
-make marble_download
-if [ $? != 0 ]; then
+if make marble_download; then
   echo "Could not program marble_mmc. Is Segger J-Link attached? Is board powered?"
   exit 1
 fi
@@ -112,12 +109,11 @@ sleep 5
 
 # 3. Write IP and MAC addresses to marble_mmc based on serial number
 # TODO - Hard-coded /dev/ttyUSB3 needs to be handled somehow
-./config.sh $SERIAL_NUM
+./config.sh "$SERIAL_NUM"
 
 # 4. Load bitfile to FPGA
 cd $BEDROCK_PATH/projects/test_marble_family
-BITFILE=$BITFILE ./mutil usb
-if [ $? != 0 ]; then
+if BITFILE=$BITFILE ./mutil usb; then
   echo "Could not write bitfile to FPGA. Is USB FTDI (J10) connected? Is board powered?"
   exit 1
 fi
@@ -126,8 +122,7 @@ fi
 sleep 2
 
 # 5. Ping IP 3 times
-ping -c3 $IP
-if [ $? != 0 ]; then
+if ping -c3 "$IP"; then
   echo "No ping response received from IP $IP"
   exit 1
 else
@@ -138,15 +133,13 @@ fi
 # TODO - Time these out?
 
 echo "Testing UDP with 100k packets"
-$UDPRTX $IP 100000 8
-if [ $? != 0 ]; then
+if $UDPRTX "$IP" 100000 8; then
   echo "UDP test failed"
   exit 1
 fi
 
 echo "Testing UDP with 1M packets"
-$UDPRTX $IP 1000000 8
-if [ $? != 0 ]; then
+if $UDPRTX "$IP" 1000000 8; then
   echo "UDP test failed"
   exit 1
 fi

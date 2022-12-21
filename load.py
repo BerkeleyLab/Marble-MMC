@@ -28,6 +28,9 @@ class StreamSerial():
         except Exception as e:
             print(e)
 
+    def failed(self):
+        return not self._ready
+
     def writeline(self, line):
         line = line.encode('ascii')
         #print(f"writing {line}")
@@ -139,17 +142,19 @@ def doLoad(argv):
     args = parser.parse_args()
     if args.filename is None and len(args.commands) == 0:
         print("Missing mandatory filename or ordered args")
-        return False
+        return 1
     sdev = StreamSerial(args.dev, args.baud)
+    if sdev.failed():
+        return 1
     executor = Executor(max_workers = 2)
     if args.filename is not None:
         task1 = executor.submit(serveFile, sdev, args.filename)
     else:
         task1 = executor.submit(serveCommands, sdev, *args.commands)
     task2 = executor.submit(readDevice, sdev, task1)
-    return True
+    return 0
 
 if __name__ == "__main__":
     import sys
-    doLoad(sys.argv)
+    sys.exit(doLoad(sys.argv))
     #testReadLines(sys.argv)
