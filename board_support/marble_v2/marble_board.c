@@ -641,9 +641,17 @@ Marble_PCB_Rev_t marble_get_pcb_rev(void) {
 #define MARBLE_PCB_REV_XFORM(gpio_idr)    ((__RBIT(gpio_idr) >> 16) & 0xF)
 static void marble_read_pcb_rev(void) {
   uint32_t pcbid = MARBLE_PCB_REV_XFORM(GPIOD->IDR);
+  // Explicit case check rather than simple cast to catch unenumerated values
+  // in 'default'
   switch ((Marble_PCB_Rev_t)pcbid) {
     case Marble_v1_3:
       marble_pcb_rev = Marble_v1_3;
+      break;
+    case Marble_v1_4: // Future support
+      marble_pcb_rev = Marble_v1_4;
+      break;
+    case Marble_v1_5: // Future support
+      marble_pcb_rev = Marble_v1_5;
       break;
     default:
       marble_pcb_rev = Marble_v1_2;

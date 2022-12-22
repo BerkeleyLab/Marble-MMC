@@ -52,7 +52,10 @@
 // Enum for identifying Marble PCB revisions
 typedef enum {
   Marble_v1_2 = 0,
-  Marble_v1_3
+  Marble_v1_3,
+  Marble_v1_4,  // Future support
+  Marble_v1_5,  // Future support
+  Marble_Simulator
 } Marble_PCB_Rev_t;
 
 /* Initialize uC and peripherals before main code can run. */

@@ -20,7 +20,7 @@ extern "C" {
 
 #define UART_QUEUE_ITEMS                                   (100)
 #define UART_MSG_TERMINATOR                               ('\n')
-#define UART_MSG_ABORT                                (27)  // esc
+#define UART_MSG_ABORT                                      (27)  // esc
 
 #define SIM_FLASH_FILENAME                           "flash.bin"
 #define FLASH_SECTOR_SIZE                                  (256)
@@ -30,9 +30,26 @@ extern "C" {
 #define BSP_GET_SYSTICK()     (uint32_t)((uint64_t)clock()/1000)
 
 // ========= sim_platform.c ============
+
+// Enum for identifying Marble PCB revisions
+typedef enum {
+  Marble_v1_2 = 0,
+  Marble_v1_3,
+  Marble_v1_4,  // Future support
+  Marble_v1_5,  // Future support
+  Marble_Simulator
+} Marble_PCB_Rev_t;
+
 int sim_platform_service(void);
+
 uint32_t marble_init(bool initFlash);
+
+Marble_PCB_Rev_t marble_get_pcb_rev(void);
+
+void marble_print_pcb_rev(void);
+
 void print_status_counters(void);
+
 void marble_UART_init(void);
 
 int marble_UART_send(const char *str, int size);
@@ -62,6 +79,8 @@ void marble_PSU_pwr(bool on);
 uint8_t marble_PWR_status(void);
 
 void reset_fpga(void);
+
+void enable_fpga(void);
 
 typedef void *SSP_PORT;
 

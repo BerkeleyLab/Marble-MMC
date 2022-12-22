@@ -113,10 +113,18 @@ uint32_t marble_init(bool initFlash) {
   sim_console_state.toExit = 0;
   sim_console_state.msgReady = 0;
   eeprom_init(initFlash);
-  restoreIPAddr();
-  restoreMACAddr();
   return 0;
 }
+
+Marble_PCB_Rev_t marble_get_pcb_rev(void) {
+  return Marble_Simulator;
+}
+
+void marble_print_pcb_rev(void) {
+  printf("PCB Rev: Marble Simulator\r\n");
+  return;
+}
+
 
 /*
 void print_status_counters(void) {
