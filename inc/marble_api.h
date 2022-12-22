@@ -75,6 +75,7 @@ typedef enum {
   Marble_v1_3,
   Marble_v1_4,  // Future support
   Marble_v1_5,  // Future support
+  Marble_Nucleo,  // Nucleo-F207ZG dev board
   Marble_Simulator
 } Marble_PCB_Rev_t;
 
