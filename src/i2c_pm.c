@@ -144,7 +144,6 @@ static int LM75_readwrite(uint8_t dev, LM75_REG reg, int *data, bool rnw)
       case LM75_TEMP:
       case LM75_HYST:
       case LM75_OS:
-
          if (rnw) {
             i2c_stat = marble_I2C_recv(I2C_PM, dev, i2c_buf, 2);
             // Signed Q7.1, i.e. resolution of 0.5 deg
@@ -200,6 +199,52 @@ void LM75_print(uint8_t dev)
       }
       marble_UART_send(p_buf, strlen(p_buf));
    }
+}
+
+void LM75_print_decoded(uint8_t dev)
+{
+  int vTemp;
+  if (dev == LM75_0) {
+    printf("LM75_0 (U29) Registers:\n");
+  } else {
+    printf("LM75_1 (U28) Registers:\n");
+  }
+#define X(name, val) \
+  do{ \
+    LM75_read(dev, val, &vTemp); \
+    printf("  %s (0x%X) = %d\n", #name, val, vTemp); \
+  }while(0);
+  LM75_FOR_EACH_REGISTER()
+#undef X
+  return;
+}
+
+/*
+ */
+void LM75_Init(void) {
+  LM75_write(LM75_0, LM75_CFG, LM75_CFG_DEFAULT);
+  LM75_write(LM75_1, LM75_CFG, LM75_CFG_DEFAULT);
+  return;
+}
+
+
+/*
+ * int LM75_set_overtemp(int ot);
+ *  Helper function to set the overtemperature (OS) threshold of both LM75 chips
+ *  and set the hysteresis threshold to be T_hyst = (t_os - TEMPERATURE_HYST_DEGC)
+ */
+int LM75_set_overtemp(int ot) {
+  // Peg ot on lower end at 0degC even though LM75 allows down to -55C
+  ot = ot > 0 ? ot : 0; 
+  // Peg ot on higher end at 125degC
+  ot = ot > 125 ? 125 : ot; 
+  // Peg thyst on the lower end at 0degC, otherwise thyst = ot - TEMPERATURE_HYST_DEGC
+  int thyst = ot > TEMPERATURE_HYST_DEGC ? ot - TEMPERATURE_HYST_DEGC : 0;
+  int rc = LM75_write(LM75_0, LM75_OS, ot);
+  rc |= LM75_write(LM75_0, LM75_HYST, thyst);
+  rc |= LM75_write(LM75_1, LM75_OS, ot);
+  rc |= LM75_write(LM75_1, LM75_HYST, thyst);
+  return rc;
 }
 
 static const uint8_t i2c_list[I2C_NUM] = {LM75_0, LM75_1, MAX6639, XRP7724};

@@ -160,14 +160,16 @@ static int console_handle_msg(char *rx_msg, int len)
            break;
         case '8':
            // Demonstrate setting over-temperature register and Interrupt mode
-           LM75_write(LM75_0, LM75_OS, 100*2);
-           LM75_write(LM75_0, LM75_CFG, LM75_CFG_COMP_INT);
-           LM75_print(LM75_0);
+           //LM75_write(LM75_0, LM75_OS, 100*2);
+           //LM75_write(LM75_0, LM75_CFG, LM75_CFG_COMP_INT);
+           //LM75_print(LM75_0);
+           LM75_print_decoded(LM75_0);
            break;
         case '9':
            // Demonstrate setting over-temperature register
-           LM75_write(LM75_1, LM75_OS, 100*2);
-           LM75_print(LM75_1);
+           //LM75_write(LM75_1, LM75_OS, 100*2);
+           LM75_print_decoded(LM75_1);
+           //LM75_print(LM75_1);
            break;
         case 'a':
            printf("I2C scanner\r\n");
@@ -332,6 +334,7 @@ static int handle_msg_overtemp(char *rx_msg, int len) {
   otbyte = (uint8_t)(overtemp & 0xFF);
   //int rval = max6639_set_overtemp(otbyte);
   max6639_set_overtemp(otbyte); // Discarding return value for now
+  LM75_set_overtemp((int)otbyte);
   //int rval = eeprom_store_overtemp(&otbyte, 1);
   eeprom_store_overtemp(&otbyte, 1); // Discarding return value for now
   // int eeprom_read_overtemp(volatile uint8_t *pdata, int len);

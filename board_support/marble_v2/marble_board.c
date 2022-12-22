@@ -580,6 +580,7 @@ uint32_t marble_init(bool use_xtal)
   marble_SW_init();
   marble_UART_init();
 
+  LM75_Init();
   eeprom_init(0);
   marble_apply_params();
 
@@ -610,6 +611,7 @@ static void marble_apply_params(void) {
     printf("Could not read over-temperature threshold.\r\n");
   } else {
     max6639_set_overtemp(val);
+    LM75_set_overtemp((int)val);
   }
   return;
 }
