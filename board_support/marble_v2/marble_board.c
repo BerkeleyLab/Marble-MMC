@@ -62,6 +62,8 @@ UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
 UART_HandleTypeDef huart3;  // Unused, yes?
 
+static Marble_PCB_Rev_t marble_pcb_rev;
+
 // Moved here from marble_api.h
 SSP_PORT SSP_FPGA;
 SSP_PORT SSP_PMOD;
@@ -83,6 +85,7 @@ static void USART_Erase_Echo(void);
 static void USART_Erase(int n);
 static void TIM9_Init(void);
 static void marble_apply_params(void);
+static void marble_read_pcb_rev(void);
 
 /* Initialize UART pins */
 void marble_UART_init(void)
@@ -583,8 +586,10 @@ uint32_t marble_init(bool use_xtal)
   LM75_Init();
   eeprom_init(0);
   marble_apply_params();
+  marble_read_pcb_rev();
 
   printf("** Marble init done **\r\n");
+  marble_print_pcb_rev();
 
   // Init SSP busses
   //marble_SSP_init(LPC_SSP0);
@@ -612,6 +617,37 @@ static void marble_apply_params(void) {
   } else {
     max6639_set_overtemp(val);
     LM75_set_overtemp((int)val);
+  }
+  return;
+}
+
+void marble_print_pcb_rev(void) {
+  switch (marble_pcb_rev) {
+    case Marble_v1_3:
+      printf("PCB Rev: Marble v1.3\r\n");
+      break;
+    default:
+      printf("PCB Rev: Marble v1.2\r\n");
+      break;
+  }
+}
+
+Marble_PCB_Rev_t marble_get_pcb_rev(void) {
+  return marble_pcb_rev;
+}
+
+// This macro yields a number in the range 0-15 inclusive where the original
+// bits 12-15 end up reversed and shifted, as in: (MSB->LSB) |b12|b13|b14|b15|
+#define MARBLE_PCB_REV_XFORM(gpio_idr)    ((__RBIT(gpio_idr) >> 16) & 0xF)
+static void marble_read_pcb_rev(void) {
+  uint32_t pcbid = MARBLE_PCB_REV_XFORM(GPIOD->IDR);
+  switch ((Marble_PCB_Rev_t)pcbid) {
+    case Marble_v1_3:
+      marble_pcb_rev = Marble_v1_3;
+      break;
+    default:
+      marble_pcb_rev = Marble_v1_2;
+      break;
   }
   return;
 }
@@ -929,9 +965,14 @@ static void MX_GPIO_Init(void)
    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
    HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
-   /* Configure GPIO pins : PD12 PD13 PD14 PD15 PD0 PD3 PD4 */
-   GPIO_InitStruct.Pin = GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15
-                           |GPIO_PIN_3|GPIO_PIN_4;
+   /* Configure GPIO pins : Marble PCB Rev ID (PD12 PD13 PD14 PD15) */
+   GPIO_InitStruct.Pin = GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15;
+   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+   GPIO_InitStruct.Pull = GPIO_PULLUP;
+   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+
+   /* Configure GPIO pins : PD3 PD4 */
+   GPIO_InitStruct.Pin = GPIO_PIN_3|GPIO_PIN_4;
    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
    GPIO_InitStruct.Pull = GPIO_NOPULL;
    HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);

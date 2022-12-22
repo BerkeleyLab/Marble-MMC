@@ -49,8 +49,18 @@
 #define UART_MSG_BKSP                                 (8)   // backspace
 #define UART_MSG_DEL                                  (128) // del
 
+// Enum for identifying Marble PCB revisions
+typedef enum {
+  Marble_v1_2 = 0,
+  Marble_v1_3
+} Marble_PCB_Rev_t;
+
 /* Initialize uC and peripherals before main code can run. */
 uint32_t marble_init(bool use_xtal);
+
+Marble_PCB_Rev_t marble_get_pcb_rev(void);
+
+void marble_print_pcb_rev(void);
 
 // TODO - Move these for encapsulation
 void print_status_counters(void);
