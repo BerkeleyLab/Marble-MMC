@@ -204,7 +204,9 @@ void USART1_IRQHandler(void)
   /* USER CODE BEGIN USART1_IRQn 0 */
 
   /* USER CODE END USART1_IRQn 0 */
-  USART1_ISR();
+#ifndef NUCLEO
+  CONSOLE_USART_ISR();
+#endif
   // Clear parity error if set USART_SR_PE?
   //HAL_UART_IRQHandler(&huart1);
   /* USER CODE BEGIN USART1_IRQn 1 */
@@ -234,7 +236,11 @@ void USART3_IRQHandler(void)
   /* USER CODE BEGIN USART3_IRQn 0 */
 
   /* USER CODE END USART3_IRQn 0 */
+#ifdef NUCLEO
+  CONSOLE_USART_ISR();
+#else
   HAL_UART_IRQHandler(&huart3);
+#endif
   /* USER CODE BEGIN USART3_IRQn 1 */
 
   /* USER CODE END USART3_IRQn 1 */

@@ -39,8 +39,14 @@ include dir_list.mk
 # External makefile.conf
 #
 # Edit the project name, chip, includes directories and so on in this file.
-#
+
+# Nucleo build uses 'marble' settings but with NUCLEO macro defined
+ifeq ($(BOARD), nucleo)
+include $(BUILD_DIR)/marble.conf
+USR_CFLAGS += -DNUCLEO
+else
 include $(BUILD_DIR)/$(BOARD).conf
+endif
 OUTPUT_DIR := out_$(BOARD)
 
 # Shell Commands
@@ -75,6 +81,7 @@ GDB=gdb-multiarch
 # Binaries supplied with LPCXpresso used for downloading.
 #
 OPENOCD         = openocd
+
 
 # Compilation Flags
 #

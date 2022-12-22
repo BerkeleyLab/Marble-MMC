@@ -23,7 +23,7 @@ extern "C" {
 
 #define SIM_FLASH_FILENAME                           "flash.bin"
 #define FLASH_SECTOR_SIZE                                  (256)
-#define EEPROM_COUNT        ((size_t)FLASH_SECTOR_SIZE/sizeof(ee_frame))
+#define EEPROM_COUNT ((size_t)FLASH_SECTOR_SIZE/sizeof(ee_frame))
 
 #define DEMO_STRING                 "Marble UART Simulation\r\n"
 #define BSP_GET_SYSTICK()     (uint32_t)((uint64_t)clock()/1000)
@@ -31,12 +31,18 @@ extern "C" {
 #else
 
 #ifdef MARBLEM_V1
-# define DEMO_STRING          "Marble Mini v1 UART DEMO\r\n"
+# define DEMO_STRING              "Marble Mini v1 UART DEMO\r\n"
 #else
 # ifdef MARBLE_V2
-#  define DEMO_STRING              "Marble v2 UART DEMO\r\n"
+#  define DEMO_STRING                  "Marble v2 UART DEMO\r\n"
 # endif /* MARBLE_V2 */
 #endif /* MARBLEM_V1 */
+
+#ifdef NUCLEO
+#define CONSOLE_USART                                    USART3
+#else
+#define CONSOLE_USART                                    USART1
+#endif
 
 #ifdef RTEMS_SUPPORT
 #include <rtems.h>
@@ -63,6 +69,19 @@ extern "C" {
 #define FLASH_VOLTAGE_MV                              (3300)
 #define FPGA_WATCHDOG_CLK_FREQ                        (3276)
 
+/* = = = = System Clock Configuration = = = = */
+// System Clock Frequency = 120 MHz
+#ifdef NUCLEO
+// HSE input is 8 MHz from onboard ST-Link MCO
+#define CONFIG_CLK_PLLM              (8)
+#define CONFIG_CLK_PLLN            (240)
+#define CONFIG_CLK_PLLP    RCC_PLLP_DIV2
+#else
+// HSE input on Marble is 25 MHz from WhiteRabbit module
+#define CONFIG_CLK_PLLM             (20)
+#define CONFIG_CLK_PLLN            (192)
+#define CONFIG_CLK_PLLP    RCC_PLLP_DIV2
+#endif
 
 #define UART_MSG_TERMINATOR                           ('\n')
 #define UART_MSG_ABORT                                (27)  // esc
@@ -105,7 +124,7 @@ int marble_UART_send(const char *str, int size);
 
 int marble_UART_recv(char *str, int size);
 
-void USART1_ISR(void);
+void CONSOLE_USART_ISR(void);
 
 /****
 * LED

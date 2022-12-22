@@ -25,6 +25,15 @@ marble_gdb:
 marble_reset:
 	make -f makefile.board BOARD=marble reset
 
+nucleo:
+	make -f makefile.board BOARD=nucleo all
+
+nucleo_download:
+	make -f makefile.board BOARD=nucleo download
+
+nucleo_gdb:
+	make -f makefile.board BOARD=nucleo gdb
+
 .PHONY: sim
 sim:
 	make -f makefile.sim BOARD=sim all
