@@ -3,6 +3,7 @@ out/*
 out_marble/*
 out_marble_mini/*
 out_sim/*
+out_nucleo/*
 src/rev.h
 .*.swp
 src/.*.swp
