@@ -267,6 +267,11 @@ void reset_fpga(void)
    Chip_GPIO_WriteDirBit(LPC_GPIO, rst_port, rst_pin, false);
 }
 
+void enable_fpga(void) {
+  // XXX What goes here?  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, true) on Marble
+  return;
+}
+
 /************
 * GPIO interrupt setup and user-defined handlers
 ************/

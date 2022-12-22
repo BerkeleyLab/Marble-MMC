@@ -234,9 +234,9 @@ void LM75_Init(void) {
  */
 int LM75_set_overtemp(int ot) {
   // Peg ot on lower end at 0degC even though LM75 allows down to -55C
-  ot = ot > 0 ? ot : 0; 
+  ot = ot > 0 ? ot : 0;
   // Peg ot on higher end at 125degC
-  ot = ot > 125 ? 125 : ot; 
+  ot = ot > 125 ? 125 : ot;
   // Peg thyst on the lower end at 0degC, otherwise thyst = ot - TEMPERATURE_HYST_DEGC
   int thyst = ot > TEMPERATURE_HYST_DEGC ? ot - TEMPERATURE_HYST_DEGC : 0;
   int rc = LM75_write(LM75_0, LM75_OS, ot);
@@ -599,7 +599,7 @@ void xrp_flash(uint8_t dev)
 
 #ifdef MARBLEM_V1
    // Data originally based on python hex2c.py < MarbleMini.hex
-   // Pure copy of 7 x 64-byte pages, spannning addresses 0x0000 to 0x01bf
+   // Pure copy of 7 x 64-byte pages, spanning addresses 0x0000 to 0x01bf
    uint8_t dd[] = {
       "\xFF\xC5\x00\x0A\x03\x41\x00\xFA\x02\xDA\x20\x27\xE1\x28\x33\x0D"
       "\x00\x00\x03\x00\x56\x00\x12\x02\x69\x97\x4A\x26\x28\x3C\x20\x01"
@@ -633,7 +633,7 @@ void xrp_flash(uint8_t dev)
 #else
 #ifdef MARBLE_V2
    // Data based on python hex2c_linear.py < Marble_flash.hex
-   // Pure copy of 7 x 64-byte pages, spannning addresses 0x0000 to 0x01bf
+   // Pure copy of 7 x 64-byte pages, spanning addresses 0x0000 to 0x01bf
    uint8_t dd[] = {
       "\xFF\xC5\x00\x0A\x03\x41\x00\xFA\x02\xDA\x20\x13\xE1\x14\x33\x0D"
       "\x00\x00\x03\x00\x50\x00\x11\x02\x15\xEB\x4E\x29\x2B\x3C\x14\x01"

@@ -23,11 +23,11 @@
 #
 # The primary targets in this file are:
 #
-# [none]	Compiles the source to create an .elf in the output directory
-# sources	Creates sources.mk from all the .c files in the src directory
-# download	Compiles and downloads over lpc-link
-# lpc-link 	Blocking - Initialises an lpc-link device and acts as a debug server
-# clean		Removes generated files
+# [none]        Compiles the source to create an .elf in the output directory
+# sources       Creates sources.mk from all the .c files in the src directory
+# download      Compiles and downloads over lpc-link
+# lpc-link      Blocking - Initialises an lpc-link device and acts as a debug server
+# clean         Removes generated files
 #
 # This makefile is intended to be run from the root of the project.
 #
@@ -58,7 +58,7 @@ SED	:= sed
 SHUF	:= shuf
 
 # Native GNU GCC
-TARGET  :=
+TARGET	:=
 AS	:= as
 CC	:= gcc
 CXX	:= g++
@@ -70,12 +70,12 @@ SIZE	:= size
 # Display all warnings. Compile functions and data into their own sections so
 # they can be discarded if unused.  The linker performs garbage collection of
 # unused input sections.
-CFLAGS	= $(FLAGS) -Os -std=c11 -ffunction-sections -fdata-sections $(ARCH_FLAGS) $(USR_CFLAGS)
+CFLAGS = $(FLAGS) -Os -std=c11 -ffunction-sections -fdata-sections $(ARCH_FLAGS) $(USR_CFLAGS)
 CFLAGS += -Wall -Wextra -Wundef -Wshadow -Wstrict-prototypes -Wwrite-strings -pedantic
 CFLAGS += -Wpointer-arith -Wredundant-decls -Wunreachable-code -Wno-unused-parameter
 # to do:  -Wcast-align -Wcast-qual
 
-ASFLAGS	= $(FLAGS) $(ARCH_FLAGS)
+ASFLAGS = $(FLAGS) $(ARCH_FLAGS)
 LDFLAGS = $(FLAGS) $(LINKER_FLAGS) -Wextra $(ARCH_FLAGS)
 
 # Default target

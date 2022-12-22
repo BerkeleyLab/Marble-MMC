@@ -212,12 +212,12 @@ static int console_handle_msg(char *rx_msg, int len)
            printf("XRP go\r\n");
            xrp_boot();
            break;
-           /*
+#if 0
         case 'h':
            printf("XRP hex input\r\n");
            xrp_hex_in(XRP7724);
            break;
-           */
+#endif
         case 'i':
            for (unsigned ix=0; ix<10; ix++) {
               printf("%d\r\n", ix);

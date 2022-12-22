@@ -213,6 +213,7 @@ int push_fpga_mac_ip(mac_ip_data_t *pmac_ip_data)
    return (ssp_cnt == ssp_expect);
 }
 
+#if 0
 int OLDpush_fpga_mac_ip(unsigned char data[10])
 {
    uint16_t ssp_buf;
@@ -237,3 +238,4 @@ int OLDpush_fpga_mac_ip(unsigned char data[10])
 
    return (ssp_cnt == ssp_expect);
 }
+#endif

@@ -41,7 +41,7 @@ extern "C" {
   printf("%d\r\n", pdata[len-1]); \
 } while (0);
 
-/* Usage Example: 
+/* Usage Example:
   uint8_t ip[4] = {192, 168, 10, 0};
   PRINT_MULTIBYTE_DEC(ip, 4, .);  // Note the unquoted period .
   uint8_t mac[6] = {0x19, 0x69, 0xDE, 0xAF, 0xBE, 0xEF};

@@ -83,7 +83,6 @@ static void USART_RXNE_ISR(void);
 static void USART_TXE_ISR(void);
 static void USART_Erase_Echo(void);
 static void USART_Erase(int n);
-static void TIM9_Init(void);
 static void marble_apply_params(void);
 static void marble_read_pcb_rev(void);
 
@@ -993,6 +992,7 @@ static void MX_GPIO_Init(void)
    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 }
 
+#if 0
 static void TIM9_Init(void) {
   // Only one general-purpose FPGA input: PA3
   // Using TIM9 Ch2 automatic timer reset on input trigger
@@ -1016,7 +1016,7 @@ static void TIM9_Init(void) {
   TIM9->SMCR = reg;
 
   // CR1
-  reg = TIM9->CR1 | TIM_CR1_ARPE_Msk | TIM_CR1_URS_Msk; // Auto-reload preload enable and prevent 
+  reg = TIM9->CR1 | TIM_CR1_ARPE_Msk | TIM_CR1_URS_Msk; // Auto-reload preload enable and prevent
   TIM9->CR1 = reg;                                      // IRQ on setting of UG bit (software pet)
 
   // DIER
@@ -1042,6 +1042,7 @@ static void TIM9_Init(void) {
   HAL_NVIC_EnableIRQ(TIM1_BRK_TIM9_IRQn);
   return;
 }
+#endif
 
 void FPGAWD_set_period(uint16_t preload) {
   if (preload) {
