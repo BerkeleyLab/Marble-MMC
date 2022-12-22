@@ -21,7 +21,8 @@
 
 #define AUTOPUSH
 // TODO - Put this in a better place
-#define FAN_SPEED_MAX       (120)
+#define FAN_SPEED_MAX           (120)
+#define OVERTEMP_HARD_MAXIMUM   (125)
 
 const char lb_str[] = "Loopback... ESC to exit\r\n";
 const char unk_str[] = "> Unknown option\r\n";
@@ -57,7 +58,8 @@ const char *menu_str[] = {"\r\n",
   "m d.d.d.d - Set IP Address\r\n",
   "n d:d:d:d:d:d - Set MAC Address\r\n",
   "o - SI570 status\r\n",
-  "p speed[%] - Set fan speed (0-120 or 0%-100%)\r\n"
+  "p speed[%] - Set fan speed (0-120 or 0%-100%)\r\n",
+  "q otemp - Set overtemperature threshold (degC)\r\n"
 };
 #define MENU_LEN (sizeof(menu_str)/sizeof(*menu_str))
 
@@ -73,7 +75,7 @@ static uint8_t _fpgaEnable;
 // TODO - find a better home for these
 static void pm_bus_display(void);
 static int console_handle_msg(char *rx_msg, int len);
-static int console_shift_all(uint8_t *pData);
+//static int console_shift_all(uint8_t *pData);
 static int console_shift_msg(uint8_t *pData);
 static void ina219_test(void);
 static void handle_gpio(const char *msg, int len);
@@ -81,6 +83,7 @@ static int toggle_gpio(char c);
 static int handle_msg_IP(char *rx_msg, int len);
 static int handle_msg_MAC(char *rx_msg, int len);
 static int handle_msg_fan_speed(char *rx_msg, int len);
+static int handle_msg_overtemp(char *rx_msg, int len);
 //static void print_mac_ip(mac_ip_data_t *pmac_ip_data);
 static void print_mac(uint8_t *pdata);
 static void print_ip(uint8_t *pdata);
@@ -89,8 +92,11 @@ static void print_this_mac(void);
 static int sscanfIP(const char *s, volatile uint8_t *data, int len);
 static int sscanfMAC(const char *s, volatile uint8_t *data, int len);
 static int sscanfFanSpeed(const char *s, int len);
+static int sscanfUnsignedDecimal(const char *s, int len);
 static int xatoi(char c);
 static int htoi(char c);
+
+
 // TODO - fix encapsulation
 // Read from EEPROM at startup
 
@@ -238,6 +244,9 @@ static int console_handle_msg(char *rx_msg, int len)
         case 'p':
            handle_msg_fan_speed(rx_msg, len);
            break;
+        case 'q':
+           handle_msg_overtemp(rx_msg, len);
+           break;
         default:
            printf(unk_str);
            break;
@@ -282,7 +291,7 @@ static int handle_msg_fan_speed(char *rx_msg, int len) {
   if (len < 4) {
     // Print the current value
     if (eeprom_read_fan_speed(&readSpeed, 1)) {
-      printf("Could not read current fan speed\r\n");
+      printf("Could not read current fan speed.\r\n");
     } else {
       speedPercent = (100 * readSpeed)/FAN_SPEED_MAX;
       printf("Current fan speed: %d (%d%%)\r\n", readSpeed, speedPercent);
@@ -298,6 +307,34 @@ static int handle_msg_fan_speed(char *rx_msg, int len) {
   printf("Setting fan speed to %d (%d%%)\r\n", speed, speedPercent);
   max6639_set_fans(speed);
   eeprom_store_fan_speed((uint8_t *)&speed, 1);
+  return 0;
+}
+
+static int handle_msg_overtemp(char *rx_msg, int len) {
+  // Overtemp is stored in MAX6639 as degrees C
+  uint8_t otbyte;
+  if (len < 4) {
+    if (eeprom_read_overtemp(&otbyte, 1)) {
+      printf("Could not read current over-temperature threshold.\r\n");
+    } else {
+      printf("Current over-temperature threshold: %d degC\r\n", otbyte);
+    }
+    return 0;
+  }
+  int overtemp = sscanfUnsignedDecimal(rx_msg, len);
+  if (overtemp < 0) {
+    printf("Could not interpret input. Fail.\r\n");
+    return -1;
+  }
+  // Peg at hard max
+  overtemp = overtemp > OVERTEMP_HARD_MAXIMUM ? OVERTEMP_HARD_MAXIMUM : overtemp;
+  printf("Setting over-temperature threshold to %d degC\r\n", overtemp);
+  otbyte = (uint8_t)(overtemp & 0xFF);
+  //int rval = max6639_set_overtemp(otbyte);
+  max6639_set_overtemp(otbyte); // Discarding return value for now
+  //int rval = eeprom_store_overtemp(&otbyte, 1);
+  eeprom_store_overtemp(&otbyte, 1); // Discarding return value for now
+  // int eeprom_read_overtemp(volatile uint8_t *pdata, int len);
   return 0;
 }
 
@@ -490,10 +527,10 @@ int console_service(void) {
  *  Shift up to CONSOLE_MAX_MESSAGE_LENGTH bytes into 'pData'
  *  'pData' must be at least CONSOLE_MAX_MESSAGE_LENGTH in length
  *  Returns the number of bytes shifted out.
- */
 static int console_shift_all(uint8_t *pData) {
   return UARTQUEUE_ShiftOut(pData, CONSOLE_MAX_MESSAGE_LENGTH);
 }
+*/
 
 /*
  * static int console_shift_msg(uint8_t *pData);
@@ -636,6 +673,37 @@ static int sscanfFanSpeed(const char *s, int len) {
   } else {
     // Peg at FAN_SPEED_MAX
     sum = sum > FAN_SPEED_MAX ? FAN_SPEED_MAX : sum;
+  }
+  return (int)sum;
+}
+
+/*
+ * static int sscanfUnsignedDecimal(const char *s, int len);
+ *    This hackery is needed because it seems newlib-nano's version of sscanf is
+ *    not fully functional.  This function skips any non-numeric characters (0-9
+ *    only, no hex) until a numeric character is found, then shifts/sums any
+ *    numeric characters until 'len' or until a non-numeric character is found.
+ *    Returns -1 if no digit is found.
+ *    Returns scanned value otherwise.
+ */
+static int sscanfUnsignedDecimal(const char *s, int len) {
+  char c;
+  int r;
+  unsigned int sum = 0;
+  bool digitsFound = false;
+  for (int n = 1; n < len; n++) {
+    c = s[n];
+    r = xatoi(c);
+    if (r >= 0) {
+      sum = (sum * 10) + r;
+      digitsFound = true;
+    } else if (digitsFound) {
+      // If digits have been found, break on first non-numeric character
+      break;
+    }
+  }
+  if (!digitsFound) {
+    return -1;
   }
   return (int)sum;
 }

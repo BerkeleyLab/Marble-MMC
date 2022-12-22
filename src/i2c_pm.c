@@ -10,9 +10,13 @@
 #define MAX6639_GET_TEMP_DOUBLE(rTemp, rTempExt) \
    ((double)(((uint16_t)rTemp << 3) | (uint16_t)rTempExt >> 5)/8)
 
-// Moved from marble_api.h, declared in marble_board.c
+/* ======================= ==== Static Variables ============================ */
 extern I2C_BUS I2C_PM;
 
+/* =========================== Static Prototypes ============================ */
+static int set_max6639_reg(int regno, int value);
+
+/* ========================== Function Definitions ========================== */
 void I2C_PM_scan(void)
 {
    printf("Scanning I2C_PM bus:\r\n");
@@ -26,6 +30,12 @@ void I2C_PM_scan(void)
       }
    }
    printf("\r\n");
+}
+
+int max6639_set_overtemp(uint8_t ot) {
+  int rc = set_max6639_reg(MAX6639_NOT_LIM_CH1, ot);
+  rc |= set_max6639_reg(MAX6639_NOT_LIM_CH2, ot);
+  return rc;
 }
 
 static int set_max6639_reg(int regno, int value)
@@ -47,12 +57,13 @@ int get_max6639_reg(int regno, int *value)
    return rc;
 }
 
-void max6639_set_fans(int speed)
+int max6639_set_fans(int speed)
 {
-    set_max6639_reg(0x11, 2);  // Fan 1 PWM sign = 1
-    set_max6639_reg(0x15, 2);  // Fan 2 PWM sign = 1
-    set_max6639_reg(0x26, speed);
-    set_max6639_reg(0x27, speed);
+  int rc = set_max6639_reg(MAX6639_FAN1_CONFIG2A, 2);  // Fan 1 PWM sign = 1
+  rc |= set_max6639_reg(MAX6639_FAN2_CONFIG2A, 2);  // Fan 2 PWM sign = 1
+  rc |= set_max6639_reg(MAX6639_FAN1_DUTY, speed);
+  rc |= set_max6639_reg(MAX6639_FAN2_DUTY, speed);
+  return rc;
 }
 
 void print_max6639(void)

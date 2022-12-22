@@ -44,7 +44,9 @@ void xrp_flash(uint8_t dev);
 void xrp_go(uint8_t dev);
 void xrp_hex_in(uint8_t dev);
 
-void max6639_set_fans(int speed);
+// Helper functions
+int max6639_set_fans(int speed);
+int max6639_set_overtemp(uint8_t ot);
 
 /* communication between i2c_pm and hexrec */
 int xrp_push_low(uint8_t dev, uint16_t addr, const uint8_t data[], unsigned len);

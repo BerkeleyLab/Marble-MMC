@@ -599,11 +599,17 @@ uint32_t marble_init(bool use_xtal)
  */
 static void marble_apply_params(void) {
   // Fan speed
-  uint8_t fan_speed;
-  if (eeprom_read_fan_speed(&fan_speed, 1)) {
-    printf("Could not read current fan speed\r\n");
+  uint8_t val;
+  if (eeprom_read_fan_speed(&val, 1)) {
+    printf("Could not read current fan speed.\r\n");
   } else {
-    max6639_set_fans((int)fan_speed);
+    max6639_set_fans((int)val);
+  }
+  // Over-temperature threshold
+  if (eeprom_read_overtemp(&val, 1)) {
+    printf("Could not read over-temperature threshold.\r\n");
+  } else {
+    max6639_set_overtemp(val);
   }
   return;
 }
