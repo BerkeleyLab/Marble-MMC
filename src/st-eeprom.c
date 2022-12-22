@@ -20,15 +20,13 @@
 #include <errno.h>
 #include "flash.h"
 #include "common.h"
+#include "marble_api.h"
 
 //#define DEBUG_PRINT
 #include "dbg.h"
 #undef DEBUG_PRINT
 
-#ifdef SIMULATION
-#include "sim_platform.h"
-
-#else /* ndef SIMULATION */
+#ifndef SIMULATION
 // assigned in linker script
 // symbol value (address) is really a size in bytes
 #ifdef MARBLE_V2

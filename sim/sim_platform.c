@@ -9,7 +9,7 @@
 #include <sys/time.h> // Needed for struct timeval
 #include <unistd.h>   // For STDIN_FILENO
 #include <fcntl.h>    // For fcntl()
-#include "sim_platform.h"
+#include "marble_api.h"
 #include "console.h"
 #include "uart_fifo.h"
 #include "st-eeprom.h"
@@ -124,15 +124,6 @@ void marble_print_pcb_rev(void) {
   printf("PCB Rev: Marble Simulator\r\n");
   return;
 }
-
-
-/*
-void print_status_counters(void) {
-  // TODO
-  printf("TODO - print_status_counters\r\n");
-  return;
-}
-*/
 
 void marble_UART_init(void) {
   return;

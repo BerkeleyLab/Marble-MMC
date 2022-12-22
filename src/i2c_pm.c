@@ -1,5 +1,4 @@
 #include "marble_api.h"
-#include "sim_platform.h"
 #define HAL_OK (0U)
 #include <stdio.h>
 #include <string.h>

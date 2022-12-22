@@ -5,7 +5,7 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "sim_platform.h"
+#include "marble_api.h"
 #include "flash.h"
 #include "st-eeprom.h"
 

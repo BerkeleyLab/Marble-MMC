@@ -12,7 +12,6 @@
 #include "console.h"
 #include "phy_mdio.h"
 #include "marble_api.h"
-#include "sim_platform.h"
 #include "mailbox.h"
 #include "i2c_pm.h"
 #include "i2c_fpga.h"

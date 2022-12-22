@@ -1,7 +1,6 @@
 #include <string.h>
 #include <stdio.h>
 #include "marble_api.h"
-#include "sim_platform.h"
 #include "i2c_pm.h"
 #include "i2c_fpga.h"
 #include "mailbox.h"

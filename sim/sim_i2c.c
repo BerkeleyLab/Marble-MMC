@@ -2,7 +2,7 @@
  * Simulated I2C bus
  *
  */
-#include "sim_platform.h"
+#include "marble_api.h"
 
 I2C_BUS I2C_PM;
 I2C_BUS I2C_FPGA;

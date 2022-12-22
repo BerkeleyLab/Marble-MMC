@@ -7,11 +7,28 @@
 
 #ifndef _MARBLE_API_H_
 #define _MARBLE_API_H_
-#ifndef SIMULATION
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include <stdbool.h>
 #include <stdint.h>
 #include "common.h"
+
+#ifdef SIMULATION
+#include <stddef.h>
+#include <errno.h>
+#include <time.h>
+
+#define SIM_FLASH_FILENAME                           "flash.bin"
+#define FLASH_SECTOR_SIZE                                  (256)
+#define EEPROM_COUNT        ((size_t)FLASH_SECTOR_SIZE/sizeof(ee_frame))
+
+#define DEMO_STRING                 "Marble UART Simulation\r\n"
+#define BSP_GET_SYSTICK()     (uint32_t)((uint64_t)clock()/1000)
+
+#else
 
 #ifdef MARBLEM_V1
 # define DEMO_STRING          "Marble Mini v1 UART DEMO\r\n"
@@ -20,9 +37,6 @@
 #  define DEMO_STRING              "Marble v2 UART DEMO\r\n"
 # endif /* MARBLE_V2 */
 #endif /* MARBLEM_V1 */
-
-#define FLASH_VOLTAGE_MV                              (3300)
-#define FPGA_WATCHDOG_CLK_FREQ                        (3276)
 
 #ifdef RTEMS_SUPPORT
 #include <rtems.h>
@@ -36,13 +50,19 @@
   rtems_interrupt_enable(level); \
 } while (0)
 #define BSP_GET_SYSTICK()       (0) // TODO
-#else
+#else /* ndef RTEMS_SUPPORT */
 //#define INTERRUPTS_DISABLE                     __disable_irq
 #define INTERRUPTS_DISABLE()                    __set_PRIMASK(1)
 //#define INTERRUPTS_ENABLE                       __enable_irq
 #define INTERRUPTS_ENABLE()                     __set_PRIMASK(0)
 #define BSP_GET_SYSTICK()                      marble_get_tick()
-#endif
+#endif  /* RTEMS_SUPPORT */
+
+#endif /* SIMULATION */
+
+#define FLASH_VOLTAGE_MV                              (3300)
+#define FPGA_WATCHDOG_CLK_FREQ                        (3276)
+
 
 #define UART_MSG_TERMINATOR                           ('\n')
 #define UART_MSG_ABORT                                (27)  // esc
@@ -59,7 +79,12 @@ typedef enum {
 } Marble_PCB_Rev_t;
 
 /* Initialize uC and peripherals before main code can run. */
+#ifndef SIMULATION
 uint32_t marble_init(bool use_xtal);
+#else
+uint32_t marble_init(bool initFlash);
+int sim_platform_service(void);
+#endif
 
 Marble_PCB_Rev_t marble_get_pcb_rev(void);
 
@@ -91,6 +116,7 @@ bool marble_LED_get(uint8_t led_num);
 void marble_LED_toggle(uint8_t led_num);
 
 void marble_Pmod3_5_write(bool on);
+
 /****
 * Push-Buttons
 ****/
@@ -137,13 +163,6 @@ void enable_fpga(void);
 * SPI/SSP
 ****/
 typedef void *SSP_PORT;
-//SSP_PORT SSP_FPGA;  // points to hspi1 after init of marble_v2 or LPC_SSP0 after init of marblemini_v1
-                    // Used in: marble_board.c, mailbox.c
-                    // Solution: Declare in to marble_board.c, extern in mailbox.c
-
-//SSP_PORT SSP_PMOD;  // points to hspi2 after init of marble_v2 or LPC_SSP1 after init of marblemini_v1
-                    // Used in: marble_board.c
-                    // Solution: Declare in to marble_board.c
 
 int marble_SSP_write16(SSP_PORT ssp, uint16_t *buffer, unsigned size);
 int marble_SSP_read16(SSP_PORT ssp, uint16_t *buffer, unsigned size);
@@ -168,20 +187,15 @@ uint8_t marble_MGTMUX_status(void);
 ****/
 #ifdef MARBLE_LPC1776
 typedef int I2C_BUS;
-#elif MARBLE_STM32F207
+#elif defined MARBLE_STM32F207
+typedef void *I2C_BUS;
+#else
+#ifdef SIMULATION
 typedef void *I2C_BUS;
 #else
 #error Marble microcontroller API not defined!
+#endif /* SIMULATION */
 #endif
-
-// These also need to move to prevent multiple global variable definitions of same name
-//I2C_BUS I2C_PM; // Points to hi2c3 for marble_v2 or I2C1 for marblemini_v1
-                // Used in: marble_board.c, i2c_pm.c
-                // Solution: Declare in marble_board.c, extern in i2c_pm.c
-//I2C_BUS I2C_IPMB; // Used only in marble_board.c -> move there
-//I2C_BUS I2C_FPGA; // Points to hi2c1 after init of marble_v2 or I2C2 after init of marblemini_v1
-                  // Used in: marble_board.c, i2c_fpga.c
-                  // Solution: Declare in marble_board.c, extern in i2c_fpga.c
 
 int marble_I2C_probe(I2C_BUS I2C_bus, uint8_t addr);
 int marble_I2C_send(I2C_BUS I2C_bus, uint8_t addr, const uint8_t *data, int size);
@@ -216,5 +230,8 @@ void FPGAWD_pet(void);
 // ISR pends FPGA reset
 void FPGAWD_ISR(void);
 
-#endif /* SIMULATION */
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* _MARBLE_API_H_ */

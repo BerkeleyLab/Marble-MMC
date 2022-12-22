@@ -12,7 +12,6 @@ int xrp_file(uint8_t dev);
 int marble_UART_recv(char *str, int size);
 #else
 #include "marble_api.h"
-#include "sim_platform.h"
 #include "i2c_pm.h"
 #endif
 
