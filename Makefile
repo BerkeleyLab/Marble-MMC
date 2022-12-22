@@ -34,6 +34,9 @@ nucleo_download:
 nucleo_gdb:
 	make -f makefile.board BOARD=nucleo gdb
 
+nucleo_clean:
+	make -f makefile.board BOARD=nucleo clean
+
 .PHONY: sim
 sim:
 	make -f makefile.sim BOARD=sim all
@@ -45,4 +48,4 @@ sim_clean:
 run:
 	make -f makefile.sim BOARD=sim run
 
-clean: marble_mini_clean marble_clean sim_clean
+clean: marble_mini_clean marble_clean sim_clean nucleo_clean
