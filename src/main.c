@@ -9,7 +9,7 @@
 #include "console.h"
 #include "uart_fifo.h"
 
-//#define LED_SNAKE
+#define LED_SNAKE
 #ifdef MARBLE_V2
 static void mgtclk_xpoint_en(void)
 {
@@ -126,11 +126,13 @@ int main(void) {
    // Register System Timer interrupt handler
    marble_SYSTIMER_handler(timer_int_handler);
 
+#ifndef NUCLEO
 #ifdef XRP_AUTOBOOT
    printf("XRP_AUTOBOOT\r\n");
    marble_SLEEP_ms(300);
    xrp_boot();
-#endif
+#endif /* XRP_AUTOBOOT */
+#endif /* NUCLEO */
 
 #ifdef MARBLE_V2
    // Enable MGT clock cross-point switch if 3.3V rail is ON

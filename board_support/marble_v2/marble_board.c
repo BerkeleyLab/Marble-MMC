@@ -58,9 +58,9 @@ I2C_HandleTypeDef hi2c3;
 SPI_HandleTypeDef hspi1;
 SPI_HandleTypeDef hspi2;
 
-UART_HandleTypeDef huart1;
+UART_HandleTypeDef huart_console;
 UART_HandleTypeDef huart2;
-UART_HandleTypeDef huart3;  // Unused, yes?
+UART_HandleTypeDef huart3;  // Used for nucleo
 
 static Marble_PCB_Rev_t marble_pcb_rev;
 
@@ -77,7 +77,8 @@ static void MX_I2C1_Init(void);
 static void MX_I2C3_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_SPI2_Init(void);
-static void MX_USART1_UART_Init(void);
+//static void MX_USART1_UART_Init(void);
+static void CONSOLE_USART_Init(void);
 static void MX_USART2_UART_Init(void);
 static void USART_RXNE_ISR(void);
 static void USART_TXE_ISR(void);
@@ -90,8 +91,8 @@ static void marble_read_pcb_rev(void);
 void marble_UART_init(void)
 {
    /* PA9, PA10 - MMC_CONS_PROG */
-   MX_USART1_UART_Init();
-
+   //MX_USART1_UART_Init();
+   CONSOLE_USART_Init();
    /* PD5, PD6 - UART4 (Pmod3_7/3_6) */
    MX_USART2_UART_Init();
 }
@@ -99,11 +100,11 @@ void marble_UART_init(void)
 /* Send string over UART. Returns number of bytes sent */
 int marble_UART_send(const char *str, int size)
 {
-  //HAL_UART_Transmit(&huart1, (const uint8_t *) str, size, 1000);
+  //HAL_UART_Transmit(&huart_console, (const uint8_t *) str, size, 1000);
   int txnum = USART_Tx_LL_Queue((char *)str, size);
   // Kick off the transmission if the TX buffer is empty
-  if ((USART1->SR) & USART_SR_TXE) {
-    SET_BIT(huart1.Instance->CR1, USART_CR1_TXEIE);
+  if ((CONSOLE_USART->SR) & USART_SR_TXE) {
+    SET_BIT(CONSOLE_USART->CR1, USART_CR1_TXEIE);
   }
   return txnum;
 }
@@ -112,7 +113,7 @@ int marble_UART_recv(char *str, int size) {
   return USART_Rx_LL_Queue((volatile char *)str, size);
 }
 
-void USART1_ISR(void) {
+void CONSOLE_USART_ISR(void) {
   USART_RXNE_ISR();   // Handle RX interrupts first
   USART_TXE_ISR();  // Then handle TX interrupts
   return;
@@ -125,9 +126,11 @@ void USART1_ISR(void) {
  */
 void USART_RXNE_ISR(void) {
   uint8_t c = 0;
-  if (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_RXNE) == SET) {
+  //if (__HAL_UART_GET_FLAG(&huart_console, UART_FLAG_RXNE) == SET) {
+  if ((CONSOLE_USART->SR & USART_SR_RXNE) == USART_SR_RXNE) {
     // Don't clear flags; the RXNE flag is cleared automatically by read from DR
-    c = (uint8_t)(huart1.Instance->DR & (uint8_t)0x00FF);
+    //c = (uint8_t)(huart_console.Instance->DR & (uint8_t)0x00FF);
+    c = (uint8_t)(CONSOLE_USART->DR & (uint8_t)0x00FF);
     // Look for control characters first
     if (c == UART_MSG_ABORT) {
 #ifdef UART_ECHO
@@ -196,13 +199,15 @@ static void USART_Erase(int n) {
 void USART_TXE_ISR(void) {
   uint8_t outByte;
   // If char queue not empty
-  if (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_TXE) == SET) {
+  //if (__HAL_UART_GET_FLAG(&huart_console, UART_FLAG_TXE) == SET) {
+  if ((CONSOLE_USART->SR & USART_SR_TXE) == USART_SR_TXE) {
     if (UARTTXQUEUE_Get(&outByte) != UARTTX_QUEUE_EMPTY) {
       // Write new char to DR
-      huart1.Instance->DR = (uint32_t)outByte;
+      //huart_console.Instance->DR = (uint32_t)outByte;
+      CONSOLE_USART->DR = (uint32_t)outByte;
     } else {
       // If the queue is empty, disable the TXE interrupt
-      CLEAR_BIT(huart1.Instance->CR1, USART_CR1_TXEIE);
+      CLEAR_BIT(CONSOLE_USART->CR1, USART_CR1_TXEIE);
     }
   }
   return;
@@ -214,7 +219,13 @@ void USART_TXE_ISR(void) {
 ************/
 
 #define MAXLEDS 3
-static const uint8_t ledpins[MAXLEDS] = {GPIO_PIN_0, GPIO_PIN_1, GPIO_PIN_2};
+#ifdef NUCLEO
+#define LED_GPIO  GPIOB
+static const uint16_t ledpins[MAXLEDS] = {GPIO_PIN_0, GPIO_PIN_7, GPIO_PIN_14};
+#else
+static const uint16_t ledpins[MAXLEDS] = {GPIO_PIN_0, GPIO_PIN_1, GPIO_PIN_2};
+#define LED_GPIO  GPIOE
+#endif
 // NOTE:  ledpins[0] = PE0 = "LD15"
 //        ledpins[1] = PE1 = "LD11"
 //        ledpins[2] = PE2 = "LD12"
@@ -229,9 +240,16 @@ static void marble_LED_init(void)
 /* Sets the state of a board LED to on or off */
 void marble_LED_set(uint8_t led_num, bool on)
 {
+  bool state;
+#ifdef NUCLEO
+  /* On Nucleo, GPIO low is off, high is on */
+  state = on;
+#else
+  /* On Marble, GPIO low is on, high is off */
+  state = !on;
+#endif
    if (led_num < MAXLEDS) {
-      /* Set state, low is on, high is off */
-      HAL_GPIO_WritePin(GPIOE, ledpins[led_num], !on);
+      HAL_GPIO_WritePin(LED_GPIO, ledpins[led_num], state);
    }
 }
 
@@ -241,7 +259,7 @@ bool marble_LED_get(uint8_t led_num)
    bool state = false;
 
    if (led_num < MAXLEDS) {
-      state = HAL_GPIO_ReadPin(GPIOE, ledpins[led_num]);
+      state = HAL_GPIO_ReadPin(LED_GPIO, ledpins[led_num]);
    }
 
    /* These LEDs are reverse logic. */
@@ -252,7 +270,7 @@ bool marble_LED_get(uint8_t led_num)
 void marble_LED_toggle(uint8_t led_num)
 {
    if (led_num < MAXLEDS) {
-      HAL_GPIO_TogglePin(GPIOE, ledpins[led_num]);
+      HAL_GPIO_TogglePin(LED_GPIO, ledpins[led_num]);
    }
 }
 
@@ -621,6 +639,9 @@ static void marble_apply_params(void) {
 }
 
 void marble_print_pcb_rev(void) {
+#ifdef NUCLEO
+  printf("PCB Rev: Nucleo\r\n");
+#else
   switch (marble_pcb_rev) {
     case Marble_v1_3:
       printf("PCB Rev: Marble v1.3\r\n");
@@ -629,6 +650,7 @@ void marble_print_pcb_rev(void) {
       printf("PCB Rev: Marble v1.2\r\n");
       break;
   }
+#endif
 }
 
 Marble_PCB_Rev_t marble_get_pcb_rev(void) {
@@ -669,9 +691,9 @@ static void SystemClock_Config(void)
    RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
    RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
    RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-   RCC_OscInitStruct.PLL.PLLM = 20;
-   RCC_OscInitStruct.PLL.PLLN = 192;
-   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+   RCC_OscInitStruct.PLL.PLLM = CONFIG_CLK_PLLM;
+   RCC_OscInitStruct.PLL.PLLN = CONFIG_CLK_PLLN;
+   RCC_OscInitStruct.PLL.PLLP = CONFIG_CLK_PLLP;
    RCC_OscInitStruct.PLL.PLLQ = 4;
    if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
    {
@@ -834,22 +856,46 @@ static void SPI_CSB_SET(SSP_PORT ssp, bool set)
    }
 }
 
+/*
 static void MX_USART1_UART_Init(void)
 {
-   huart1.Instance = USART1;
-   huart1.Init.BaudRate = 115200;
-   huart1.Init.WordLength = UART_WORDLENGTH_8B;
-   huart1.Init.StopBits = UART_STOPBITS_1;
-   huart1.Init.Parity = UART_PARITY_NONE;
-   huart1.Init.Mode = UART_MODE_TX_RX;
-   huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-   huart1.Init.OverSampling = UART_OVERSAMPLING_16;
-   if (HAL_UART_Init(&huart1) != HAL_OK)
+   huart_console.Instance = USART1;
+   huart_console.Init.BaudRate = 115200;
+   huart_console.Init.WordLength = UART_WORDLENGTH_8B;
+   huart_console.Init.StopBits = UART_STOPBITS_1;
+   huart_console.Init.Parity = UART_PARITY_NONE;
+   huart_console.Init.Mode = UART_MODE_TX_RX;
+   huart_console.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+   huart_console.Init.OverSampling = UART_OVERSAMPLING_16;
+   if (HAL_UART_Init(&huart_console) != HAL_OK)
    {
       Error_Handler();
    }
    // Enable RXNE, TXE interrupts
-   SET_BIT(huart1.Instance->CR1, USART_CR1_RXNEIE);
+   SET_BIT(huart_console.Instance->CR1, USART_CR1_RXNEIE);
+}
+*/
+
+static void CONSOLE_USART_Init(void) {
+#ifdef NUCLEO
+  huart_console.Instance = USART3;
+#else
+  huart_console.Instance = USART1;
+#endif
+  huart_console.Init.BaudRate = 115200;
+  huart_console.Init.WordLength = UART_WORDLENGTH_8B;
+  huart_console.Init.StopBits = UART_STOPBITS_1;
+  huart_console.Init.Parity = UART_PARITY_NONE;
+  huart_console.Init.Mode = UART_MODE_TX_RX;
+  huart_console.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart_console.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart_console) != HAL_OK)
+  {
+     Error_Handler();
+  }
+  // Enable RXNE, TXE interrupts
+  SET_BIT(CONSOLE_USART->CR1, USART_CR1_RXNEIE);
+  return;
 }
 
 static void MX_USART2_UART_Init(void)
