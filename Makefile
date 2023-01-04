@@ -1,5 +1,5 @@
 # Identify the debug probe used
-export DEBUG_ADAPTER=$(shell ./id_probe.sh)
+export DEBUG_ADAPTER=$(shell ./scripts/id_probe.sh)
 
 marble:
 	make -f makefile.board BOARD=marble all
