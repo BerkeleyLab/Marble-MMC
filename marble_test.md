@@ -22,7 +22,7 @@
    - Configure host adapter settings as needed
 
 ## Program and Validate
-### 1. Configure and run bringup script
+### 1. Configure environment
 Set paths as environment variables. E.g.:
 ```sh
 # Mandatory
@@ -34,12 +34,13 @@ export UDPRTX=~/bin/udprtx
 Optionally define the TTY device identifiers for both the marble MMC and the FPGA.
 Each marble board enumerates as 4 ttyUSB devices.  With no other ttyUSB devices
 connected, these will be the following:
-    Device  | Function
-    --------|---------
-    /dev/ttyUSB0 | JTAG programmer to FPGA
-    /dev/ttyUSB1 | Reset channel. Connect and disconnect to reset the MMC.
-    /dev/ttyUSB2 | UART channel to/from FPGA (default 9600 baud)
-    /dev/ttyUSB3 | UART channel to/from MMC (default 115200 baud)
+Device  | Function
+--------|---------
+/dev/ttyUSB0 | JTAG programmer to FPGA
+/dev/ttyUSB1 | Reset channel. Connect and disconnect to reset the MMC.
+/dev/ttyUSB2 | UART channel to/from FPGA (default 9600 baud)
+/dev/ttyUSB3 | UART channel to/from MMC (default 115200 baud)
+
 For example, if you have another device connected which enumerated as /dev/ttyUSB0,
 the marble device handle assignments would be in the same order, but likely incremented
 by one.  In this case, you can simply define two additional environment variables.
@@ -49,6 +50,7 @@ export TTY_FPGA=/dev/ttyUSB3
 export TTY_MMC=/dev/ttyUSB4
 ```
 
+### 2. Run bringup script
 Run bringup.sh, passing the serial number for this marble board.
 ```sh
 ./bringup.sh $SERIAL_NUMBER
@@ -60,20 +62,20 @@ This script does the following
 - Assigns IP and MAC addresses based on serial number
 - Verifies ping and udprtx tests
 
-### 2. Confirm frequency monitor output on FPGA UART (ttyUSB2)
+### 3. Confirm frequency monitor output on FPGA UART (ttyUSB2)
 - channel 0 (Ethernet Rx - 125 MHz)
 - channel 1 (20 MHz)
 - channel 2 (SI570 - 125 MHz)
 - channel 3 (unused)
 
-### 3. Record various device readouts and save it to a file
+### 4. Record various device readouts and save it to a file
 Three INA219 Voltage + current, SI570 output frequency
 ```sh
 cd bedrock/projects/test_marble_family
 sh first_readout.sh $IP 2>&1 | tee first_readout_$IP
 ```
 
-### 4. Set FPGA boot flash OTP bits
+### 5. Set FPGA boot flash OTP bits
 See instructions in bedrock/badger/flash.md
 ```sh
 python3 spi_test.py --ip $IP --id
@@ -83,18 +85,20 @@ Note that we don't yet have enough features implemented
 to claim unbrickability: need watchdog on MMC and FREEZE bit setting
 by FPGA when write-protect switch enabled.
 
-### 5. Power cycle, and send bitfile to FPGA over USB again
+### 6. Power cycle, and send bitfile to FPGA over USB again
 ```sh
+cd $BEDROCK_PATH/projects/test_marble_family
 BITFILE=$BITFILE ./mutil usb
 ```
 
-### 6. Burn bitfile into address 0
+### 7. Burn bitfile into address 0
 ```sh
+cd $BEDROCK_PATH/badger/tests
 python3 spi_test.py --ip $IP --add 0 --program $BITFILE --force_write_enable
 ```
 takes about 146 seconds
 
-### 7. Cycle power and confirm FPGA image loads
+### 8. Cycle power and confirm FPGA image loads
 See FPGA DONE LED turn on after ~2 sec, and ping again
 ```sh
 ping $IP
