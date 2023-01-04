@@ -14,3 +14,5 @@ flash.bin
 reset
 tags
 openocd.log
+prog_support/openocd.log
+myenv.sh

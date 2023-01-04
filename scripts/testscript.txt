@@ -1,3 +1,4 @@
+# Test script to be passed to load.py
 # Single-line comments supported with '#'
 # But only for the complete line!
 p 50%

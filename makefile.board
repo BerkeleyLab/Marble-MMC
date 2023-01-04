@@ -188,11 +188,11 @@ sources:
 #
 .PHONY: download
 download: all
-	$(OPENOCD) -f prog_support/ocd/$(OCD_CONF) -c "program $(OUTPUT_DIR)/$(PROJECT_NAME).elf reset exit"
+	$(OPENOCD) -f $(PROG_DIR)/ocd/$(OCD_CONF) -c "program $(OUTPUT_DIR)/$(PROJECT_NAME).elf reset exit"
 
 .PHONY: reset
 reset:
-	$(OPENOCD) -f prog_support/ocd/$(OCD_CONF) -c "init" -c "reset" -c "exit"
+	$(OPENOCD) -f $(PROG_DIR)/ocd/$(OCD_CONF) -c "init" -c "reset" -c "exit"
 
 # Creates a gdb script if required
 #
@@ -212,8 +212,8 @@ gdbscript:
 
 .PHONY: gdb
 gdb:
-	$(GDB) -ex "target remote | $(OPENOCD) -f prog_support/ocd/$(OCD_CONF) -c 'gdb_port pipe; log_output openocd.log'" \
-				 -x prog_support/gdbscript_stm32 $(OUTPUT_DIR)/$(PROJECT_NAME).elf
+	$(GDB) -ex "target remote | $(OPENOCD) -f $(PROG_DIR)/ocd/$(OCD_CONF) -c 'gdb_port pipe; log_output $(PROG_DIR)/openocd.log'" \
+				 -x $(PROG_DIR)/gdbscript_stm32 $(OUTPUT_DIR)/$(PROJECT_NAME).elf
 
 # Removes everything in the output directory
 #
@@ -222,4 +222,4 @@ gdb:
 .PHONY: clean
 clean:
 	$(RM) $(OUTPUT_DIR)/*
-	$(RM) gdbscript src/rev.h
+	$(RM) gdbscript $(SOURCE_DIR/rev.h

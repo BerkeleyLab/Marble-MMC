@@ -18,6 +18,8 @@ for arg in "$@"; do
   fi
 done
 
+SCRIPT_DIR=$( dirname -- "$0"; )
+
 if [ -z "$snum" ]; then
   if [ -n "$IP" ]; then
     # TODO - This only extracts 2-digit numbers!!! Need to use sed to extract everything after last '.'
@@ -42,6 +44,6 @@ ip=$(printf "192.168.19.%s" "$snum")
 
 echo "ip = $ip; mac = $mac; dev = $dev"
 
-python3 load.py -d "$dev" "m $ip" "n $mac"
+python3 $SCRIPT_DIR/load.py -d "$dev" "m $ip" "n $mac"
 
 exit 0

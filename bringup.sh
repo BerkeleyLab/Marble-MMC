@@ -1,5 +1,10 @@
 #!/bin/sh
 
+# TODO:
+#   1. Should I support a LOGFILE environment variable or just make
+#      the user pipe to a log file themselves? I.e.
+#       ./bringup.sh | tee -a myLogFile
+
 # Master script automating as much marble board bringup as possible
 # Requires:
 #   ftdi_eeprom
@@ -50,7 +55,7 @@
 set -e
 
 if [ $# -lt 1 ]; then
-  echo "Usage: master.sh \$SERIAL_NUMBER"
+  echo "Usage: bringup.sh \$SERIAL_NUMBER"
   exit 2
 fi
 
@@ -85,6 +90,8 @@ fi
 UDPRTX=udprtx
 SERIAL_NUM=$1
 IP=192.168.19.$SERIAL_NUM
+SCRIPTS_PATH=$MMC_PATH/scripts
+FTDI_PATH=$MMC_PATH/ftdi
 
 # Test for exist
 if [ ! -e $BEDROCK_PATH ]; then
@@ -128,10 +135,10 @@ fi
 
 # 1. Program FTDI serial number if needed
 echo "Checking FTDI Configuration..."
-if ! $MMC_PATH/ftdi/verifyid.sh "$SERIAL_NUM"; then
+if ! $FTDI_PATH/verifyid.sh "$SERIAL_NUM"; then
   echo "Programming FTDI..."
-  $MMC_PATH/ftdi/prog_marble.sh "$SERIAL_NUM" && echo "Success" || echo "Failed"
-  if ! $MMC_PATH/ftdi/verifyid.sh "$SERIAL_NUM"; then
+  $FTDI_PATH/prog_marble.sh "$SERIAL_NUM" && echo "Success" || echo "Failed"
+  if ! $FTDI_PATH/verifyid.sh "$SERIAL_NUM"; then
     echo "Could not verify FTDI configuration. Aborting."
     exit 1
   fi
@@ -149,7 +156,7 @@ fi
 sleep 5
 
 # 3. Write IP and MAC addresses to marble_mmc based on serial number
-./config.sh -d "$TTY_MMC" "$SERIAL_NUM"
+$SCRIPTS_PATH/config.sh -d "$TTY_MMC" "$SERIAL_NUM"
 
 # 4. Load bitfile to FPGA
 cd $BEDROCK_PATH/projects/test_marble_family
@@ -160,6 +167,10 @@ fi
 
 # Sleep for a few seconds to give the FPGA time to reconfigure with new IP/MAC
 sleep 3
+
+# Read 4 lines from FPGA frequency counter output
+echo "Reading 4 lines from FPGA frequency counter..."
+python3 $SCRIPTS_PATH/readfromtty.py -d $TTY_FPGA -b 9600 4 -m 24 | tee -a $LOGFILE
 
 # Cross check that the test packets can get _out_ of this workstation
 if ! ip route get "$IP" | grep -E "eth|enp|enx"; then
