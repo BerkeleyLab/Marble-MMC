@@ -136,6 +136,9 @@ $(OUTPUT_DIR)/%.o: %.c
 #
 -include $(OBJECTS:.o=.d)
 
+$(INCLUDE_DIR)/mailbox_def.h: $(INCLUDE_DIR)/mbox.def
+	python3 scripts/mkmbox.py -i $^ -o $@
+
 # Rule for generating object files from assembler files
 #
 # Creates a directory in the output tree if nessesary. The file is only
@@ -222,4 +225,4 @@ gdb:
 .PHONY: clean
 clean:
 	$(RM) $(OUTPUT_DIR)/*
-	$(RM) gdbscript $(SOURCE_DIR/rev.h
+	$(RM) gdbscript $(SOURCE_DIR)/rev.h

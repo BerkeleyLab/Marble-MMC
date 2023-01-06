@@ -1,0 +1,87 @@
+# Bespoke-syntax mailbox definition file (JSON with comments)
+# Each page is a key-value pair where the key is 'pageN' where 1 <= N <= 128
+# The value of the key-value pair is a list of dicts where each dict represents
+# an entry in the mailbox whose address/index is inferred from its position in
+# the list. Note that this requires dummy entries for unused addresses.
+# The names of these entries can be empty strings.
+#
+# Mailbox Element Dict Structure:
+# -------------------------------
+#   Mandatory Parameters:
+#     Name      Type    Valid values        Desc
+#     ------------------------------------------
+#     name      string  *                   Mandatory name of mailbox entry
+#     origin    string  ???                 Need some way to generate macros/function calls to actually retrieve the data
+#
+#   Optional Parameters:
+#     Name      Type    Valid values        Desc
+#     ------------------------------------------
+#     type      string  "int", "float"      Data type to assist in interpreting the contents of the member
+#     fmt       string  printf fmt string   Format string for data formatting/presentation
+#     desc      string  *                   Human-readable description of the data member
+#     continue  bool    true, false         For long values. Value should be concatenated with the value of the next
+#                                           member (next-highest in address). Defaults to false
+{
+  "page2" : [
+    { "name" : "FMC_MGT_CTL",
+      "type" : "int",
+      "fmt"  : "",
+      "desc" : ""
+      }
+    ],
+  "page3" : [
+    { "name" : "COUNT_HI",
+      "type" : "int",
+      "fmt"  : ""
+      },
+    { "name" : "COUNT_LO",
+      "type" : "int",
+      "fmt"  : ""
+      },
+    { "name" : "PAD1"},
+    { "name" : "PAD2"},
+    { "name" : "LM75_0_HI",
+      "type" : "float",
+      "continue" : true
+      },
+    { "name" : "LM75_0_LO" },
+    { "name" : "LM75_1_HI",
+      "type" : "float",
+      "continue" : true
+      },
+    { "name" : "LM75_1_LO" },
+    { "name" : "FMC_ST",
+      "type" : "int",
+      "fmt"  : ""
+      },
+    { "name" : "PWR_ST",
+      "type" : "int",
+      "fmt"  : ""
+      },
+    { "name" : "MGTMUX_ST",
+      "type" : "int",
+      "fmt"  : ""
+      },
+    { "name" : "PAD3" },
+    { "name" : "GIT32_4" },
+    { "name" : "GIT32_3" },
+    { "name" : "GIT32_2" },
+    { "name" : "GIT32_1" }
+    ],
+  "page4" : [
+    { "name" : "MAX_T1_HI" },
+    { "name" : "MAX_T1_LO" },
+    { "name" : "MAX_T2_HI" },
+    { "name" : "MAX_T2_LO" },
+    { "name" : "MAX_F1_TACH" },
+    { "name" : "MAX_F2_TACH" },
+    { "name" : "MAX_F1_DUTY" },
+    { "name" : "MAX_F2_DUTY" },
+    { "name" : "COUNT_HI" },
+    { "name" : "COUNT_LO" }
+    ]
+}
+
+
+
+
