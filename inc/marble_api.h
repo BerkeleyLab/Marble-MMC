@@ -196,11 +196,9 @@ void marble_GPIOint_handlers(void (*FPGA_DONE_handler)(void));
 /************
 * MGT Multiplexer
 ************/
-#ifdef MARBLE_V2
 void marble_MGTMUX_set(uint8_t mgt_num, bool on);
 
 uint8_t marble_MGTMUX_status(void);
-#endif
 
 /****
 * I2C

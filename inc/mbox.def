@@ -1,4 +1,9 @@
 # Bespoke-syntax mailbox definition file (JSON with comments)
+# To generate #include statements in the source file, there should be one special
+# key-value pair named "include" whose value is a list of file names to include
+# (as strings).
+#
+# Every other key-value pair represents a page of the mailbox.
 # Each page is a key-value pair where the key is 'pageN' where 1 <= N <= 128
 # The value of the key-value pair is a list of dicts where each dict represents
 # an entry in the mailbox whose address/index is inferred from its position in
@@ -11,75 +16,120 @@
 #     Name      Type    Valid values        Desc
 #     ------------------------------------------
 #     name      string  *                   Mandatory name of mailbox entry
-#     origin    string  ???                 Need some way to generate macros/function calls to actually retrieve the data
 #
 #   Optional Parameters:
 #     Name      Type    Valid values        Desc
 #     ------------------------------------------
 #     type      string  "int", "float"      Data type to assist in interpreting the contents of the member
+#     size      int     1,2,3,4             Number of bytes that make up element
+#     output    string  *                   How to write the value to the mailbox (where does it come from)
+#     input     string  *                   How to read the value from the mailbox (where does it go)
 #     fmt       string  printf fmt string   Format string for data formatting/presentation
 #     desc      string  *                   Human-readable description of the data member
-#     continue  bool    true, false         For long values. Value should be concatenated with the value of the next
-#                                           member (next-highest in address). Defaults to false
+#
+#   Note: if 'size' param is >1, adjacent entries will be created with names 0 to size-1 (in MSB-to-LSB order)
+#
+#   input param:
+#     The special character '@' will be replaced with the value read from the mailbox (and is thus an r-value).
+#     Thus, to pass the value to function 'foo' as the first parameter, simply use "foo(@)".  To assign the
+#     value to a global variable 'bar', use "bar = @"
+#
+#   output param:
+#     The special character '@' will be replaced with the destination in the mailbox (and is thus an l-value).
+#     If the value comes from the return value of function 'foo', use "@ = foo()"
+#     If the value is read via a volatile argument to function bar, use "bar(&@)"
+#
+
 {
+#  "include" : [
+#    "marble_api.h",
+#    "i2c_pm.h",
+#    "mailbox.h",
+#    "rev.h",
+#    "max6639.h"
+#  ],
   "page2" : [
     { "name" : "FMC_MGT_CTL",
       "type" : "int",
       "fmt"  : "",
-      "desc" : ""
-      }
-    ],
+      "desc" : "",
+      "input" : "mbox_handle_fmc_mgt_ctl(@)"
+    }
+  ],
   "page3" : [
-    { "name" : "COUNT_HI",
+    { "name" : "COUNT",
+      "size" : 2,
       "type" : "int",
-      "fmt"  : ""
-      },
-    { "name" : "COUNT_LO",
-      "type" : "int",
-      "fmt"  : ""
-      },
+      "fmt"  : "",
+      "output" : "@ = mbox_get_update_count()"
+    },
     { "name" : "PAD1"},
     { "name" : "PAD2"},
-    { "name" : "LM75_0_HI",
+    { "name" : "LM75_0",
+      "size" : 2,
       "type" : "float",
-      "continue" : true
-      },
-    { "name" : "LM75_0_LO" },
-    { "name" : "LM75_1_HI",
+      "output" : "LM75_read(LM75_0, LM75_TEMP, (int *)&@)"
+    },
+    { "name" : "LM75_1",
+      "size" : 2,
       "type" : "float",
-      "continue" : true
-      },
-    { "name" : "LM75_1_LO" },
+      "output" : "LM75_read(LM75_1, LM75_TEMP, (int *)&@)"
+    },
     { "name" : "FMC_ST",
       "type" : "int",
-      "fmt"  : ""
-      },
+      "fmt"  : "",
+      "output"  : "@ = marble_FMC_status()"
+    },
     { "name" : "PWR_ST",
       "type" : "int",
-      "fmt"  : ""
-      },
+      "fmt"  : "",
+      "output"  : "@ = marble_PWR_status()"
+    },
     { "name" : "MGTMUX_ST",
       "type" : "int",
-      "fmt"  : ""
-      },
-    { "name" : "PAD3" },
-    { "name" : "GIT32_4" },
-    { "name" : "GIT32_3" },
-    { "name" : "GIT32_2" },
-    { "name" : "GIT32_1" }
-    ],
+      "fmt"  : "",
+      "output"  : "@ = marble_MGTMUX_status()"
+    },
+    { "name" : "PAD3"
+    },
+    { "name" : "GIT32",
+      "type" : "int",
+      "size" : 4,
+      "output" : "@ = GIT_REV_32BIT"
+    }
+  ],
   "page4" : [
-    { "name" : "MAX_T1_HI" },
-    { "name" : "MAX_T1_LO" },
-    { "name" : "MAX_T2_HI" },
-    { "name" : "MAX_T2_LO" },
-    { "name" : "MAX_F1_TACH" },
-    { "name" : "MAX_F2_TACH" },
-    { "name" : "MAX_F1_DUTY" },
-    { "name" : "MAX_F2_DUTY" },
-    { "name" : "COUNT_HI" },
-    { "name" : "COUNT_LO" }
-    ]
+    { "name" : "MAX_T1_HI",
+      "output" : "@ = return_max6639_reg(MAX6639_TEMP_CH1)"
+    },
+    { "name" : "MAX_T1_LO",
+      "output" : "@ = return_max6639_reg(MAX6639_TEMP_EXT_CH1)"
+    },
+    { "name" : "MAX_T2_HI",
+      "output" : "@ = return_max6639_reg(MAX6639_TEMP_CH2)"
+    },
+    { "name" : "MAX_T2_LO",
+      "output" : "@ = return_max6639_reg(MAX6639_TEMP_EXT_CH2)"
+    },
+    { "name" : "MAX_F1_TACH",
+      "output" : "@ = return_max6639_reg(MAX6639_FAN1_TACH_CNT)"
+    },
+    { "name" : "MAX_F2_TACH",
+      "output" : "@ = return_max6639_reg(MAX6639_FAN2_TACH_CNT)"
+    },
+    { "name" : "MAX_F1_DUTY",
+      "output" : "@ = return_max6639_reg(MAX6639_FAN1_DUTY)"
+    },
+    { "name" : "MAX_F2_DUTY",
+      "output" : "@ = return_max6639_reg(MAX6639_FAN2_DUTY)"
+    },
+    { "name" : "COUNT",
+      "size" : 2,
+      "type" : "int",
+      "fmt"  : "",
+      "output" : "@ = mbox_get_update_count()"
+    }
+  ]
 }
 
 

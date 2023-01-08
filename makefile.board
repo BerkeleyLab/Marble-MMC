@@ -136,7 +136,14 @@ $(OUTPUT_DIR)/%.o: %.c
 #
 -include $(OBJECTS:.o=.d)
 
-$(INCLUDE_DIR)/mailbox_def.h: $(INCLUDE_DIR)/mbox.def
+# =============== Auto-Generated Mailbox Interface ================
+MBOX_DEF=mailbox_def
+$(SOURCE_DIR)/mailbox.c : $(SOURCE_DIR)/$(MBOX_DEF).c
+
+$(INCLUDE_DIR)/$(MBOX_DEF).h: $(INCLUDE_DIR)/mbox.def
+	python3 scripts/mkmbox.py -i $^ -o $@
+
+$(SOURCE_DIR)/$(MBOX_DEF).c: $(INCLUDE_DIR)/mbox.def
 	python3 scripts/mkmbox.py -i $^ -o $@
 
 # Rule for generating object files from assembler files

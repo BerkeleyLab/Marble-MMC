@@ -9,8 +9,9 @@
 #define MAX6639_GET_TEMP_DOUBLE(rTemp, rTempExt) \
    ((double)(((uint16_t)rTemp << 3) | (uint16_t)rTempExt >> 5)/8)
 
-/* ======================= ==== Static Variables ============================ */
+/* ============================ Static Variables ============================ */
 extern I2C_BUS I2C_PM;
+static int i2cBusStatus = 0;
 
 /* =========================== Static Prototypes ============================ */
 static int set_max6639_reg(int regno, int value);
@@ -54,6 +55,23 @@ int get_max6639_reg(int regno, int *value)
    int rc = marble_I2C_cmdrecv(I2C_PM, addr, regno, i2c_dat, 1);
    if ((rc==0) && value) *value = i2c_dat[0];
    return rc;
+}
+
+// TODO - Test me!
+int return_max6639_reg(int regno) {
+  uint8_t i2c_dat[4];
+  int rc = marble_I2C_cmdrecv(I2C_PM, MAX6639, regno, i2c_dat, 1);
+  i2cBusStatus |= rc;
+  return (int)*i2c_dat;
+}
+
+int getI2CBusStatus(void) {
+  return i2cBusStatus;
+}
+
+void resetI2CBusStatus(void) {
+  i2cBusStatus = 0;
+  return;
 }
 
 int max6639_set_fans(int speed)

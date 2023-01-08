@@ -2,8 +2,13 @@
 #include <stdio.h>
 #include "i2c_pm.h"
 #include "mailbox.h"
+#include "max6639.h"
 #include "rev.h"
 
+// XXX Including auto-generated source file! This is atypical, but works nicely.
+#include "mailbox_def.c"
+
+/* ============================= Helper Macros ============================== */
 // Define SPI_SWITCH to re-route SPI bound for FPGA to PMOD for debugging
 //#define SPI_SWITCH
 #ifdef SPI_SWITCH
@@ -12,9 +17,14 @@
 #define SSP_TARGET        SSP_FPGA
 #endif
 
+/* ============================ Static Variables ============================ */
 extern SSP_PORT SSP_FPGA;
 extern SSP_PORT SSP_PMOD;
+uint16_t update_count = 0;
 
+/* =========================== Static Prototypes ============================ */
+
+/* ========================== Function Definitions ========================== */
 static void mbox_set_page(uint8_t page_no)
 {
    uint16_t ssp_buf;
@@ -33,7 +43,7 @@ static uint8_t mbox_read_entry(uint8_t entry_no) {
    return (ssp_recv & 0xff);
 }
 
-static void mbox_write_page(uint8_t page_no, uint8_t page_sz, const uint8_t page[]) {
+void mbox_write_page(uint8_t page_no, uint8_t page_sz, const uint8_t page[]) {
    // Write at most 16 bytes to page
    if (page_sz > 16) page_sz = 16;
    mbox_set_page(page_no);
@@ -42,7 +52,7 @@ static void mbox_write_page(uint8_t page_no, uint8_t page_sz, const uint8_t page
    }
 }
 
-static void mbox_read_page(uint8_t page_no, uint8_t page_sz, uint8_t *page) {
+void mbox_read_page(uint8_t page_no, uint8_t page_sz, uint8_t *page) {
    // Write at most 16 bytes to page
    if (page_sz > 16) page_sz = 16;
    mbox_set_page(page_no);
@@ -51,8 +61,37 @@ static void mbox_read_page(uint8_t page_no, uint8_t page_sz, uint8_t *page) {
    }
 }
 
+void mbox_handle_fmc_mgt_ctl(uint8_t fmc_mgt_cmd) {
+  // Control of FMC power and MGT mux based on mailbox entry MB2_FMC_MGT_CTL
+  // Currently addressed as 0x200020 = 2097184 in test_marble_family
+  // [1] - FMC_SEL,      [0] - ON/OFF
+  // [3] - MGT_MUX0_SEL, [2] - ON/OFF
+  // [5] - MGT_MUX1_SEL, [4] - ON/OFF
+  // [7] - MGT_MUX2_SEL, [6] - ON/OFF
+  //if (verbose) printf("FMC/MGT command 0x%2.2x\r\n", fmc_mgt_cmd);
+
+  if (fmc_mgt_cmd != 0) {  // clear mailbox entry
+    mbox_set_page(2);
+    mbox_write_entry(MB2_FMC_MGT_CTL, 0x00);
+  }
+  if (fmc_mgt_cmd & 2) {
+    marble_FMC_pwr(fmc_mgt_cmd & 1);
+  }
+  unsigned v = fmc_mgt_cmd;
+  for (unsigned kx=1; kx<4; kx++) {
+    v = v >> 2;
+    if (v & 2) {
+      marble_MGTMUX_set(kx, v & 1);
+    }
+  }
+  return;
+}
+
 void mbox_update(bool verbose)
 {
+  mailbox_update_output();
+  mailbox_update_input();
+#if 0
    // --------
    // Push data to remote mailbox
    // --------
@@ -117,7 +156,7 @@ void mbox_update(bool verbose)
          printf("\r\n");
       }
       // Write page
-      mbox_write_page(4, MB3_SIZE, page4);
+      mbox_write_page(4, MB4_SIZE, page4);
    }
 
    // --------
@@ -161,6 +200,7 @@ void mbox_update(bool verbose)
          }
       }
    }
+#endif
 }
 
 void mbox_peek(void)
@@ -211,6 +251,15 @@ int push_fpga_mac_ip(mac_ip_data_t *pmac_ip_data)
    ssp_cnt += marble_SSP_write16(SSP_TARGET, &ssp_buf, 1);
 
    return (ssp_cnt == ssp_expect);
+}
+
+uint16_t mbox_get_update_count(void) {
+  return update_count;
+}
+
+void mbox_reset_update_count(void) {
+  update_count = 0;
+  return;
 }
 
 #if 0

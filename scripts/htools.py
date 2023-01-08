@@ -3,12 +3,14 @@
 # A bunch of common tools for formatting output for C header files
 
 import time
+import os
 
-def makeFileName(s):
+def makeFileName(s, ext = '.h'):
     s = str(s).lower()
-    return "{}.h".format(s)
+    return "{}{}".format(s, ext)
 
 def makeHDef(s):
+    s = os.path.split(s)[1]
     return "__{}_H_".format(s.upper())
 
 def sectionLine(s, width = 80):
