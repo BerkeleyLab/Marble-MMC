@@ -72,6 +72,7 @@ def decodeMbox(argv):
     parser = argparse.ArgumentParser(description="Mailbox Reader/Parser")
     parser.add_argument('-d', '--def_file', default=None, help='File name for mailbox definition file to be loaded')
     parser.add_argument('-s', '--store_file', default=None, help='File name to store binary data read from mailbox')
+    parser.add_argument('-r', '--raw', action='store_true', default=False, help='Print the raw contents of the mailbox memory.')
     inputHelp = "Can be IP address to read device via LEEP or file name to read mailbox data from a binary file"
     parser.add_argument('-i', '--input', default=None, help=inputHelp)
     args = parser.parse_args()
@@ -92,17 +93,23 @@ def decodeMbox(argv):
         print("Storing raw data to {}".format(args.store_file))
         _storeToFile(args.store_file, mboxContents)
     if args.def_file is None:
-        if os.path.exists(defaultDefFile):
+        if not args.raw and os.path.exists(defaultDefFile):
             print("Found default mailbox definition file {}".format(defaultDefFile))
             args.def_file = defaultDefFile
     if args.def_file is None:
         if args.store_file is None:
-            print("No mailbox definition file; cannot interpret meaning of data. Raw data:")
+            if not args.raw:
+                print("No mailbox definition file; cannot interpret meaning of data. ", end="")
+            print("Raw data:")
             printDump(mboxContents, 16)
     else:
-        mi = mkmbox.MailboxInterface(inFilename=args.def_file)
-        mi.interpret()
-        decoded = mi.decode(mboxContents)
+        if args.raw:
+            print("Raw data:")
+            printDump(mboxContents, 16)
+        else:
+            mi = mkmbox.MailboxInterface(inFilename=args.def_file)
+            mi.interpret()
+            decoded = mi.decode(mboxContents)
     return 0
 
 if __name__ == "__main__":
