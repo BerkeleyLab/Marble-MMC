@@ -249,18 +249,21 @@ void LM75_Init(void) {
  * int LM75_set_overtemp(int ot);
  *  Helper function to set the overtemperature (OS) threshold of both LM75 chips
  *  and set the hysteresis threshold to be T_hyst = (t_os - TEMPERATURE_HYST_DEGC)
+ *  Note! 'ot' is temperature in degrees C but the LM75 register stores in units
+ *  of 0.5 degC
  */
 int LM75_set_overtemp(int ot) {
   // Peg ot on lower end at 0degC even though LM75 allows down to -55C
   ot = ot > 0 ? ot : 0;
-  // Peg ot on higher end at 125degC
+  // Peg ot on higher end at 125degC (250*0.5 degC)
   ot = ot > 125 ? 125 : ot;
   // Peg thyst on the lower end at 0degC, otherwise thyst = ot - TEMPERATURE_HYST_DEGC
   int thyst = ot > TEMPERATURE_HYST_DEGC ? ot - TEMPERATURE_HYST_DEGC : 0;
-  int rc = LM75_write(LM75_0, LM75_OS, ot);
-  rc |= LM75_write(LM75_0, LM75_HYST, thyst);
-  rc |= LM75_write(LM75_1, LM75_OS, ot);
-  rc |= LM75_write(LM75_1, LM75_HYST, thyst);
+  // Note all the 2x multipliers for 0.5degC units
+  int rc = LM75_write(LM75_0, LM75_OS, 2*ot);
+  rc |= LM75_write(LM75_0, LM75_HYST, 2*thyst);
+  rc |= LM75_write(LM75_1, LM75_OS, 2*ot);
+  rc |= LM75_write(LM75_1, LM75_HYST, 2*thyst);
   return rc;
 }
 

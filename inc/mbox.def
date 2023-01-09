@@ -1,4 +1,5 @@
 # Bespoke-syntax mailbox definition file (JSON with comments)
+#
 # To generate #include statements in the source file, there should be one special
 # key-value pair named "include" whose value is a list of file names to include
 # (as strings).
@@ -24,8 +25,12 @@
 #     size      int     1,2,3,4             Number of bytes that make up element
 #     output    string  *                   How to write the value to the mailbox (where does it come from)
 #     input     string  *                   How to read the value from the mailbox (where does it go)
-#     fmt       string  printf fmt string   Format string for data formatting/presentation
+#     fmt       string  printf fmt string   Format string for data formatting/presentation.
+#                                           Accepts both printf-style (e.g. '%x') and new Python format
+#                                           strings (e.g. '{:x}')
 #     desc      string  *                   Human-readable description of the data member
+#     scale     float   *                   Multiply the value read from the mailbox by 'scale' to get
+#                                           physical units (before handed to 'fmt')
 #
 #   Note: if 'size' param is >1, adjacent entries will be created with names 0 to size-1 (in MSB-to-LSB order)
 #
@@ -38,7 +43,6 @@
 #     The special character '@' will be replaced with the destination in the mailbox (and is thus an l-value).
 #     If the value comes from the return value of function 'foo', use "@ = foo()"
 #     If the value is read via a volatile argument to function bar, use "bar(&@)"
-#
 
 {
 #  "include" : [
@@ -51,7 +55,7 @@
   "page2" : [
     { "name" : "FMC_MGT_CTL",
       "type" : "int",
-      "fmt"  : "",
+      "fmt"  : "0x{:x}",
       "desc" : "",
       "input" : "mbox_handle_fmc_mgt_ctl(@)"
     }
@@ -60,7 +64,8 @@
     { "name" : "COUNT",
       "size" : 2,
       "type" : "int",
-      "fmt"  : "",
+      "desc" : "Mailbox update counter",
+      "fmt"  : "%d",
       "output" : "@ = mbox_get_update_count()"
     },
     { "name" : "PAD1"},
@@ -68,11 +73,15 @@
     { "name" : "LM75_0",
       "size" : 2,
       "type" : "float",
+      "fmt"  : "{:.1f} degC",
+      "scale": 0.5,
       "output" : "LM75_read(LM75_0, LM75_TEMP, (int *)&@)"
     },
     { "name" : "LM75_1",
       "size" : 2,
       "type" : "float",
+      "fmt"  : "{:.1f} degC",
+      "scale": 0.5,
       "output" : "LM75_read(LM75_1, LM75_TEMP, (int *)&@)"
     },
     { "name" : "FMC_ST",
@@ -95,6 +104,7 @@
     { "name" : "GIT32",
       "type" : "int",
       "size" : 4,
+      "fmt"  : "{:08X}",
       "output" : "@ = GIT_REV_32BIT"
     }
   ],
@@ -118,15 +128,20 @@
       "output" : "@ = return_max6639_reg(MAX6639_FAN2_TACH_CNT)"
     },
     { "name" : "MAX_F1_DUTY",
-      "output" : "@ = return_max6639_reg(MAX6639_FAN1_DUTY)"
+      "output" : "@ = return_max6639_reg(MAX6639_FAN1_DUTY)",
+      "scale": 0.833333,
+      "fmt"  : "{:.1f} %"
     },
     { "name" : "MAX_F2_DUTY",
-      "output" : "@ = return_max6639_reg(MAX6639_FAN2_DUTY)"
+      "output" : "@ = return_max6639_reg(MAX6639_FAN2_DUTY)",
+      "scale"  : 0.833333,
+      "fmt"  : "{:.1f} %"
     },
     { "name" : "COUNT",
       "size" : 2,
       "type" : "int",
-      "fmt"  : "",
+      "desc" : "Mailbox update counter",
+      "fmt"  : "%d",
       "output" : "@ = mbox_get_update_count()"
     }
   ]

@@ -141,10 +141,10 @@ MBOX_DEF=mailbox_def
 $(SOURCE_DIR)/mailbox.c : $(SOURCE_DIR)/$(MBOX_DEF).c
 
 $(INCLUDE_DIR)/$(MBOX_DEF).h: $(INCLUDE_DIR)/mbox.def
-	python3 scripts/mkmbox.py -i $^ -o $@
+	python3 scripts/mkmbox.py -d $^ -o $@
 
 $(SOURCE_DIR)/$(MBOX_DEF).c: $(INCLUDE_DIR)/mbox.def
-	python3 scripts/mkmbox.py -i $^ -o $@
+	python3 scripts/mkmbox.py -d $^ -o $@
 
 # Rule for generating object files from assembler files
 #

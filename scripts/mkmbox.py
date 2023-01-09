@@ -15,6 +15,10 @@ import sys
 
 import htools
 
+PAGE_SIZE=16
+NPAGES=128
+MAILBOX_SIZE = PAGE_SIZE * NPAGES
+
 class JSONHack():
     """A hack to allow an arbitrary number of comment lines within an otherwise JSON-compliant file.
     The comments are ignored.  Every other line in the file is passed to the JSON interpreter.
@@ -110,21 +114,111 @@ class MailboxInterface():
                 continue
             self._pageNumbers.append(npage)
             elementList = []
+            elementIndex = 0
             for nelement in range(len(mlist)):
                 element = mlist[nelement]
-                paramDict = {}
+                paramDict = self._getDefaultParams()
                 name = None
                 for param, val in element.items():
                     if param.lower() == "name":
                         name = val
                     else:
                         paramDict[param] = val
+                size = self._vetSize(paramDict.get('size', None))
+                paramDict['index'] = elementIndex
+                elementIndex += size
                 if name == None:
                     raise MailboxError("Encountered mailbox page element {} which has no 'name' entry.".format(nelement))
                 elementList.append((name, paramDict))
             self._pageList.append((npage, elementList))
         self._ready = True
         return
+
+    def _vetSize(self, size):
+        size = int(size)
+        if size > 4 or size < 1:
+            print("Invalid size {}".format(size))
+            return None
+        return size
+
+    def _getDefaultParams(self):
+        d = {
+            'size' : 1,
+            'type' : 'int',
+            'desc' : '',
+            'fmt'  : None
+            }
+        return d
+
+    def decode(self, contents = []):
+        """'contents' is a list of bytes (length <= 2048) which is all pages concatenated."""
+        nbytes = len(contents)
+        decoded = []
+        for npage, elementList in self._pageList: # Each entry is (npage, [(name, paramDict),...])
+            indexStart = npage*PAGE_SIZE
+            indexEnd = indexStart + PAGE_SIZE
+            pageList = []
+            print("Page{}".format(npage))
+            if indexEnd <= nbytes:
+                #pageData = contents[indexStart:indexEnd]
+                for n in range(len(elementList)):
+                    name, paramDict = elementList[n]
+                    desc = paramDict.get('desc', "")
+                    size = paramDict.get('size', 1)
+                    elementIndex = paramDict.get('index', None)
+                    parts = []
+                    index = indexStart + elementIndex
+                    for nPart in range(size):
+                        # Append in LSB-to-MSB order
+                        parts.append(contents[index+size-1-nPart])
+                    val = self._combine(*parts)
+                    fmt = paramDict.get('fmt', '0x{:x}')
+                    if fmt in (None, ''):
+                        fmt = '0x{:x}'
+                    l = [f"[{elementIndex}]", f"{name}"]
+                    if desc not in (None, ''):
+                        l.append(f"({desc})")
+                    scale = paramDict.get('scale', 1)
+                    if scale in (None, ''):
+                        scale = 1
+                    valString = self._format(fmt, val*scale)
+                    print("  {} = {}".format(' '.join(l), valString))
+                    pageList.append((index, name, val))
+            decoded.append((npage, pageList))
+        return decoded
+
+    @staticmethod
+    def _format(fmt, val):
+        """Allow for both old-style (printf) and newstyle format strings."""
+        if '%' in fmt:
+            try:
+                s = fmt % val
+                return s
+            except:
+                pass
+        return fmt.format(val)
+
+    @staticmethod
+    def _combine(*args):
+        """Combine the bytes in 'args' into a single integer by shifting and OR'ing.
+        Assumes args come in LSB-to-MSB."""
+        s = 0
+        for n in range(len(args)):
+            byte = int(args[n])
+            s |= byte << 8*n
+        return s
+
+    def _hasPage(self, nPage):
+        for npage, elementList in self._pageList: # Each entry is (npage, [(name, paramDict),...])
+            if npage == nPage:
+                return True
+        return False
+
+    def _getElementList(self, nPage):
+        for npage, elementList in self._pageList: # Each entry is (npage, [(name, paramDict),...])
+            if npage == nPage:
+                return elementList
+        return None
 
     def __repr__(self):
         if not self._ready:
@@ -360,18 +454,22 @@ def test_getShiftOR(argv):
     return 0
 
 def makeHeader(argv):
-    parser = argparse.ArgumentParser(description="JSON-ish mailbox defintion reader")
-    parser.add_argument('-i', '--input_filename', default=None, help='File name for command script to be loaded')
-    parser.add_argument('-o', '--output_filename', default=None, help='File name for generated header file')
+    parser = argparse.ArgumentParser(description="JSON-ish mailbox defintion interface")
+    parser.add_argument('-d', '--def_file', default=None, help='File name for mailbox definition file to be loaded')
+    ofilehelp = ("File name for generated header file. If filename ends in '.h', generates a header file only. "
+                 "If filename ends in '.c', generates a source file only. "
+                 "If filename has no extension (or any other extension), generates both header and source file "
+                 "by appending .h/.c to the filename.")
+    parser.add_argument('-o', '--output_file', default=None, help=ofilehelp)
     args = parser.parse_args()
     makeh = False
     makes = False
-    if args.output_filename is None:
-        prefix = args.input_filename
+    if args.output_file is None:
+        prefix = args.def_file
         makeh = True
         makes = True
     else:
-        prefix, ext = os.path.splitext(args.output_filename)
+        prefix, ext = os.path.splitext(args.output_file)
         if ext == "":
             makeh = True
             makes = True
@@ -382,7 +480,7 @@ def makeHeader(argv):
         else:
             print("Cannot interpret desired file type based on extension '{}'".format(ext))
             return 1
-    mbox = MailboxInterface(inFilename=args.input_filename, prefix=prefix)
+    mbox = MailboxInterface(inFilename=args.def_file, prefix=prefix)
     mbox.interpret()
     print(mbox)
     if makeh:
