@@ -159,7 +159,7 @@
       "type" : "int",
       "fmt"  : "0b{:b}",
       "output": "@ = (uint8_t)getI2CBusStatus()",
-      "input" : "handleI2CBusStatusMsg(@)"
+      "input" : "mbox_handleI2CBusStatusMsg(@)"
     }
   ]
 }

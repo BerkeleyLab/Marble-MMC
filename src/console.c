@@ -29,7 +29,6 @@ const char unk_str[] = "> Unknown option\r\n";
 const char *menu_str[] = {"\r\n",
   "Build based on git commit " GIT_REV "\r\n",
   "Menu:\r\n",
-  "0 - Loopback\r\n",
   "1 - MDIO/PHY\r\n",
   "2 - I2C monitor\r\n",
   "3 - Status & counters\r\n",
@@ -64,7 +63,6 @@ const char *menu_str[] = {"\r\n",
 
 typedef enum {
    CONSOLE_TOP,
-   CONSOLE_LOOP
 } console_mode_e;
 
 static console_mode_e console_mode;
@@ -110,27 +108,12 @@ int console_init(void) {
 
 static int console_handle_msg(char *rx_msg, int len)
 {
-  // If we're in console loop mode, just echo the string
-  if (console_mode == CONSOLE_LOOP) {
-    for (int n = 0; n < len; n++) {
-      marble_UART_send((rx_msg + n), 1);
-      if (*(rx_msg + n) == 27) {
-        console_mode = CONSOLE_TOP;
-      }
-    }
-    printf("\r\n");
-    return 0;
-  }
   // Switch behavior based on first char
   switch (*rx_msg) {
         case '?':
            for (unsigned kx=0; kx<MENU_LEN; kx++) {
                printf("%s", menu_str[kx]);
            }
-           break;
-        case '0':
-           printf(lb_str);
-           console_mode = CONSOLE_LOOP;
            break;
         case '1':
            phy_print();

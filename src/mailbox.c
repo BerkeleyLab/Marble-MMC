@@ -20,7 +20,7 @@ extern SSP_PORT SSP_PMOD;
 uint16_t update_count = 0;
 
 /* =========================== Static Prototypes ============================ */
-static void handleI2CBusStatusMsg(uint8_t msg);
+static void mbox_handleI2CBusStatusMsg(uint8_t msg);
 
 // XXX Including auto-generated source file! This is atypical, but works nicely.
 #include "mailbox_def.c"
@@ -91,8 +91,8 @@ void mbox_handle_fmc_mgt_ctl(uint8_t fmc_mgt_cmd) {
 void mbox_update(bool verbose)
 {
   update_count++;
-  mailbox_update_output();
-  mailbox_update_input();
+  mailbox_update_output();  // This function is auto-generated in src/mailbox_def.c
+  mailbox_update_input();   // This function is auto-generated in src/mailbox_def.c
 #if 0
    // --------
    // Push data to remote mailbox
@@ -266,8 +266,9 @@ void mbox_reset_update_count(void) {
 
 // Handle input from FPGA across mailbox interface
 // A '1' in bit position 0 clears the I2C bus status register
-static void handleI2CBusStatusMsg(uint8_t msg) {
+static void mbox_handleI2CBusStatusMsg(uint8_t msg) {
   if (msg & 0x01) {
+    printf("Resetting I2C bus status\r\n");
     resetI2CBusStatus();
   }
   return;
