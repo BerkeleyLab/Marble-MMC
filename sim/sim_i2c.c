@@ -36,4 +36,10 @@ int marble_I2C_cmdrecv_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *
   return 0;
 }
 
+int getI2CBusStatus(void) {
+  return 0;
+}
 
+void resetI2CBusStatus(void) {
+  return;
+}

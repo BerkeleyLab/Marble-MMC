@@ -125,6 +125,10 @@ void marble_print_pcb_rev(void) {
   return;
 }
 
+uint8_t marble_get_board_id(void) {
+  return (uint8_t)BOARD_TYPE_SIMULATION;
+}
+
 void marble_UART_init(void) {
   return;
 }

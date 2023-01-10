@@ -88,6 +88,11 @@ extern "C" {
 #define UART_MSG_BKSP                                 (8)   // backspace
 #define UART_MSG_DEL                                  (128) // del
 
+// OR'd with PCB revision to fully identify hardware
+#define BOARD_TYPE_SIMULATION       (0x00)
+#define BOARD_TYPE_MARBLE           (0x10)
+#define BOARD_TYPE_MARBLE_MINI      (0x20)
+
 // Enum for identifying Marble PCB revisions
 typedef enum {
   Marble_v1_2 = 0,
@@ -109,6 +114,9 @@ int sim_platform_service(void);
 Marble_PCB_Rev_t marble_get_pcb_rev(void);
 
 void marble_print_pcb_rev(void);
+
+// The Board ID is (PCB revision) | (BOARD_TYPE_...)
+uint8_t marble_get_board_id(void);
 
 // TODO - Move these for encapsulation
 void print_status_counters(void);
@@ -222,6 +230,8 @@ int marble_I2C_recv(I2C_BUS I2C_bus, uint8_t addr, uint8_t *data, int size);
 int marble_I2C_cmdrecv(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size);
 int marble_I2C_cmdsend_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *data, int size);
 int marble_I2C_cmdrecv_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *data, int size);
+int getI2CBusStatus(void);
+void resetI2CBusStatus(void);
 
 /************
 * MDIO to PHY

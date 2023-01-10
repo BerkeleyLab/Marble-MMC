@@ -24,8 +24,6 @@ void print_max6639(void);
 void print_max6639_decoded(void);
 int get_max6639_reg(int regno, int *value);
 int return_max6639_reg(int regno);
-int getI2CBusStatus(void);
-void resetI2CBusStatus(void);
 
 #define LM75_FOR_EACH_REGISTER() \
   X(LM75_TEMP, 0) \

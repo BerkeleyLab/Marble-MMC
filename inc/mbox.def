@@ -52,6 +52,7 @@
 #    "rev.h",
 #    "max6639.h"
 #  ],
+# Page 2 contains only inputs (MMC <= FPGA)
   "page2" : [
     { "name" : "FMC_MGT_CTL",
       "type" : "int",
@@ -60,6 +61,7 @@
       "input" : "mbox_handle_fmc_mgt_ctl(@)"
     }
   ],
+# Page 3 contains only outputs (MMC => FPGA)
   "page3" : [
     { "name" : "COUNT",
       "size" : 2,
@@ -108,6 +110,7 @@
       "output" : "@ = GIT_REV_32BIT"
     }
   ],
+# Page 4 contains only outputs (MMC => FPGA)
   "page4" : [
     { "name" : "MAX_T1_HI",
       "output" : "@ = return_max6639_reg(MAX6639_TEMP_CH1)"
@@ -137,12 +140,26 @@
       "scale"  : 0.833333,
       "fmt"  : "{:.1f} %"
     },
+    {
+      "name" : "PCB_REV",
+      "output" : "@ = marble_get_board_id()",
+      "fmt"  : "0x{:x}"
+    },
     { "name" : "COUNT",
       "size" : 2,
       "type" : "int",
       "desc" : "Mailbox update counter",
       "fmt"  : "%d",
       "output" : "@ = mbox_get_update_count()"
+    }
+  ],
+# Page 5 contains both inputs and outputs (MMC <=> FPGA)
+  "page5" : [
+    { "name" : "I2C_BUS_STATUS",
+      "type" : "int",
+      "fmt"  : "0b{:b}",
+      "output": "@ = (uint8_t)getI2CBusStatus()",
+      "input" : "handleI2CBusStatusMsg(@)"
     }
   ]
 }

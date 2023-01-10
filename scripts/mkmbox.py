@@ -124,9 +124,11 @@ class MailboxInterface():
                         name = val
                     else:
                         paramDict[param] = val
-                size = self._vetSize(paramDict.get('size', None))
+                size = self._vetSize(paramDict.get('size', 1))
                 paramDict['index'] = elementIndex
                 elementIndex += size
+                if elementIndex > PAGE_SIZE:
+                    raise MailboxError("Maximum size ({} bytes) exceeded for page {}.".format(PAGE_SIZE, npage))
                 if name == None:
                     raise MailboxError("Encountered mailbox page element {} which has no 'name' entry.".format(nelement))
                 elementList.append((name, paramDict))
@@ -135,7 +137,10 @@ class MailboxInterface():
         return
 
     def _vetSize(self, size):
-        size = int(size)
+        if size == "":
+            size = 1
+        else:
+            size = int(size)
         if size > 4 or size < 1:
             print("Invalid size {}".format(size))
             return None
@@ -262,15 +267,18 @@ class MailboxInterface():
         for npage, elementList in self._pageList: # Each entry is (npage, [(name, paramDict),...])
             self._fp("typedef enum {")
             mbprefix = f"  MB{npage}_"
+            index = 0
+            size = 1
             for n in range(len(elementList)):
                 name, paramDict = elementList[n]
                 size = paramDict.get('size', 1)
+                index = paramDict.get('index', None)
                 if size > 1:
                     for m in range(size):
                         self._fp("{}{}_{},".format(mbprefix, name, size-m-1))
                 else:
                     self._fp(f"{mbprefix}{name},")
-            self._fp(f"{mbprefix}SIZE")
+            self._fp(f"{mbprefix}SIZE // {index + size}")
             self._fp(f"}} PAGE{npage}_ENUM;\n");
         return
 
@@ -335,6 +343,7 @@ class MailboxInterface():
         self._fp("void mailbox_update_output(void) {")
         for npage, elementList in self._pageList: # Each entry is (npage, [(name, paramDict),...])
             hasOutputs = False
+            hasBigval = False
             mbprefix = f"MB{npage}_"
             for n in range(len(elementList)):
                 name, paramDict = elementList[n]
@@ -345,7 +354,6 @@ class MailboxInterface():
                         # If the page doesn't have outputs, will not generate the block
                         self._fp(f"  {{\n    // Page {npage}")
                         self._fp(f"    uint8_t page[MB{npage}_SIZE];")
-                        self._fp(f"    int val;")
                     hasOutputs = True
                     if not hasattr(output, 'replace'):
                         print("{} is not a valid string")
@@ -353,6 +361,10 @@ class MailboxInterface():
                     enumName = f"{mbprefix}{name}"
                     size = paramDict.get('size', 1)
                     if size > 1:
+                        if not hasBigval:
+                            # We need to instantiate an int
+                            self._fp(f"    int val;")
+                            hasBigval = True
                         # Break up into bytes
                         # First, get value
                         self._fp("    {};".format(output.replace('@', 'val')))

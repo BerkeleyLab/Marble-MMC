@@ -64,6 +64,7 @@ UART_HandleTypeDef huart3;  // Used for nucleo
 
 static Marble_PCB_Rev_t marble_pcb_rev;
 
+static int i2cBusStatus = 0;
 // Moved here from marble_api.h
 SSP_PORT SSP_FPGA;
 SSP_PORT SSP_PMOD;
@@ -95,6 +96,7 @@ void marble_UART_init(void)
    CONSOLE_USART_Init();
    /* PD5, PD6 - UART4 (Pmod3_7/3_6) */
    MX_USART2_UART_Init();
+   i2cBusStatus = 0;
 }
 
 /* Send string over UART. Returns number of bytes sent */
@@ -435,33 +437,47 @@ uint8_t marble_MGTMUX_status()
 
 /* Non-destructive I2C probe function based on empty data command, i.e. S+[A,RW]+P */
 int marble_I2C_probe(I2C_BUS I2C_bus, uint8_t addr) {
-   return HAL_I2C_IsDeviceReady(I2C_bus, addr, 2, 2);
+   int rc = HAL_I2C_IsDeviceReady(I2C_bus, addr, 2, 2);
+   i2cBusStatus |= rc;
+   return rc;
 }
 
 /* Generic I2C send function with selectable I2C bus and 8-bit I2C addresses (R/W bit = 0) */
 /* 1-byte register addresses */
 int marble_I2C_send(I2C_BUS I2C_bus, uint8_t addr, const uint8_t *data, int size) {
-   return HAL_I2C_Master_Transmit(I2C_bus, (uint16_t)addr, data, size, HAL_MAX_DELAY);
+   int rc = HAL_I2C_Master_Transmit(I2C_bus, (uint16_t)addr, data, size, HAL_MAX_DELAY);
+   i2cBusStatus |= rc;
+   return rc;
 }
 
 int marble_I2C_cmdsend(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size) {
-   return HAL_I2C_Mem_Write(I2C_bus, (uint16_t)addr, cmd, 1, data, size, HAL_MAX_DELAY);
+   int rc = HAL_I2C_Mem_Write(I2C_bus, (uint16_t)addr, cmd, 1, data, size, HAL_MAX_DELAY);
+   i2cBusStatus |= rc;
+   return rc;
 }
 
 int marble_I2C_recv(I2C_BUS I2C_bus, uint8_t addr, uint8_t *data, int size) {
-   return HAL_I2C_Master_Receive(I2C_bus, (uint16_t)addr, data, size, HAL_MAX_DELAY);
+   int rc = HAL_I2C_Master_Receive(I2C_bus, (uint16_t)addr, data, size, HAL_MAX_DELAY);
+   i2cBusStatus |= rc;
+   return rc;
 }
 
 int marble_I2C_cmdrecv(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size) {
-   return HAL_I2C_Mem_Read(I2C_bus, (uint16_t)addr, cmd, 1, data, size, HAL_MAX_DELAY);
+   int rc = HAL_I2C_Mem_Read(I2C_bus, (uint16_t)addr, cmd, 1, data, size, HAL_MAX_DELAY);
+   i2cBusStatus |= rc;
+   return rc;
 }
 
 /* Same but 2-byte register addresses */
 int marble_I2C_cmdsend_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *data, int size) {
-   return HAL_I2C_Mem_Write(I2C_bus, (uint16_t)addr, cmd, 2, data, size, HAL_MAX_DELAY);
+   int rc = HAL_I2C_Mem_Write(I2C_bus, (uint16_t)addr, cmd, 2, data, size, HAL_MAX_DELAY);
+   i2cBusStatus |= rc;
+   return rc;
 }
 int marble_I2C_cmdrecv_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *data, int size) {
-   return HAL_I2C_Mem_Read(I2C_bus, (uint16_t)addr, cmd, 2, data, size, HAL_MAX_DELAY);
+   int rc = HAL_I2C_Mem_Read(I2C_bus, (uint16_t)addr, cmd, 2, data, size, HAL_MAX_DELAY);
+   i2cBusStatus |= rc;
+   return rc;
 }
 
 /************
@@ -655,6 +671,10 @@ void marble_print_pcb_rev(void) {
 
 Marble_PCB_Rev_t marble_get_pcb_rev(void) {
   return marble_pcb_rev;
+}
+
+uint8_t marble_get_board_id(void) {
+  return ((uint8_t)(marble_pcb_rev & 0x0F) | BOARD_TYPE_MARBLE);
 }
 
 // This macro yields a number in the range 0-15 inclusive where the original
@@ -1117,6 +1137,15 @@ void FPGAWD_ISR(void) {
   /* Pull the PROGRAM_B pin low; it's spelled PROG_B on schematic */
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, false);
   console_pend_FPGA_enable();
+  return;
+}
+
+int getI2CBusStatus(void) {
+  return i2cBusStatus;
+}
+
+void resetI2CBusStatus(void) {
+  i2cBusStatus = 0;
   return;
 }
 

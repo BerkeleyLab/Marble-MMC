@@ -11,7 +11,6 @@
 
 /* ============================ Static Variables ============================ */
 extern I2C_BUS I2C_PM;
-static int i2cBusStatus = 0;
 
 /* =========================== Static Prototypes ============================ */
 static int set_max6639_reg(int regno, int value);
@@ -60,18 +59,8 @@ int get_max6639_reg(int regno, int *value)
 // TODO - Test me!
 int return_max6639_reg(int regno) {
   uint8_t i2c_dat[4];
-  int rc = marble_I2C_cmdrecv(I2C_PM, MAX6639, regno, i2c_dat, 1);
-  i2cBusStatus |= rc;
+  marble_I2C_cmdrecv(I2C_PM, MAX6639, regno, i2c_dat, 1);
   return (int)*i2c_dat;
-}
-
-int getI2CBusStatus(void) {
-  return i2cBusStatus;
-}
-
-void resetI2CBusStatus(void) {
-  i2cBusStatus = 0;
-  return;
 }
 
 int max6639_set_fans(int speed)
@@ -306,6 +295,7 @@ void I2C_PM_probe(void)
       snprintf(p_buf, 40, i2c_ret, *i2c_dat);
       marble_UART_send(p_buf, strlen(p_buf));
    }
+   return;
 }
 
 /* XPR7724 is special

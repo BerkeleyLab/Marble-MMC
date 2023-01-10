@@ -460,6 +460,16 @@ int marble_I2C_cmdrecv_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *
    return xfer.rxSz != 0;
 }
 
+int getI2CBusStatus(void) {
+  // TODO - Implement
+  return 0;
+}
+
+void resetI2CBusStatus(void) {
+  // TODO - Implement
+  return;
+}
+
 /************
 * SSP/SPI
 ************/
@@ -591,6 +601,17 @@ void marble_SLEEP_ms(uint32_t delay)
 void marble_SLEEP_us(uint32_t delay)
 {
    StopWatch_DelayUs(delay);
+}
+
+Marble_PCB_Rev_t marble_get_pcb_rev(void) {
+  // TODO - How is Marble mini PCB revision ID'd?
+  return Marble_v1_2;
+}
+
+uint8_t marble_get_board_id(void) {
+  // TODO - How is Marble mini PCB revision ID'd?
+  //return ((uint8_t)(marble_pcb_rev & 0x0F) | BOARD_TYPE_MARBLE_MINI);
+  return (uint8_t)BOARD_TYPE_MARBLE_MINI;
 }
 
 /************

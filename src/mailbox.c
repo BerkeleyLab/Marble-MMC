@@ -5,9 +5,6 @@
 #include "max6639.h"
 #include "rev.h"
 
-// XXX Including auto-generated source file! This is atypical, but works nicely.
-#include "mailbox_def.c"
-
 /* ============================= Helper Macros ============================== */
 // Define SPI_SWITCH to re-route SPI bound for FPGA to PMOD for debugging
 //#define SPI_SWITCH
@@ -23,6 +20,10 @@ extern SSP_PORT SSP_PMOD;
 uint16_t update_count = 0;
 
 /* =========================== Static Prototypes ============================ */
+static void handleI2CBusStatusMsg(uint8_t msg);
+
+// XXX Including auto-generated source file! This is atypical, but works nicely.
+#include "mailbox_def.c"
 
 /* ========================== Function Definitions ========================== */
 static void mbox_set_page(uint8_t page_no)
@@ -260,6 +261,15 @@ uint16_t mbox_get_update_count(void) {
 
 void mbox_reset_update_count(void) {
   update_count = 0;
+  return;
+}
+
+// Handle input from FPGA across mailbox interface
+// A '1' in bit position 0 clears the I2C bus status register
+static void handleI2CBusStatusMsg(uint8_t msg) {
+  if (msg & 0x01) {
+    resetI2CBusStatus();
+  }
   return;
 }
 
