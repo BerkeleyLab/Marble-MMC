@@ -92,7 +92,9 @@ void mbox_update(bool verbose)
   update_count++;
   mailbox_update_output();
   mailbox_update_input();
-#if 0
+#if 1
+  (void) verbose;  // not used
+#else
    // --------
    // Push data to remote mailbox
    // --------
