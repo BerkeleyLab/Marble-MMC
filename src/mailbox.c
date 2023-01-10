@@ -91,9 +91,17 @@ void mbox_handle_fmc_mgt_ctl(uint8_t fmc_mgt_cmd) {
 void mbox_update(bool verbose)
 {
   update_count++;
+<<<<<<< HEAD
   mailbox_update_output();  // This function is auto-generated in src/mailbox_def.c
   mailbox_update_input();   // This function is auto-generated in src/mailbox_def.c
 #if 0
+=======
+  mailbox_update_output();
+  mailbox_update_input();
+#if 1
+  (void) verbose;  // not used
+#else
+>>>>>>> 05e2e1feb07d5ddd0974e61da76d80c0dc92e4fc
    // --------
    // Push data to remote mailbox
    // --------
