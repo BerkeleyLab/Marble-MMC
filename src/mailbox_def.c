@@ -76,3 +76,31 @@ void mailbox_update_input(void) {
   }
   return;
 }
+
+void mailbox_read_print_all(void) {
+  {
+    // Page 2
+    uint8_t page[MB2_SIZE];
+    mbox_read_page(2, MB2_SIZE, page);
+    MBOX_PRINT_PAGE(2);
+  }
+  {
+    // Page 3
+    uint8_t page[MB3_SIZE];
+    mbox_read_page(3, MB3_SIZE, page);
+    MBOX_PRINT_PAGE(3);
+  }
+  {
+    // Page 4
+    uint8_t page[MB4_SIZE];
+    mbox_read_page(4, MB4_SIZE, page);
+    MBOX_PRINT_PAGE(4);
+  }
+  {
+    // Page 5
+    uint8_t page[MB5_SIZE];
+    mbox_read_page(5, MB5_SIZE, page);
+    MBOX_PRINT_PAGE(5);
+  }
+  return;
+}

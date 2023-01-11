@@ -204,7 +204,11 @@ void marble_GPIOint_handlers(void (*FPGA_DONE_handler)(void));
 /************
 * MGT Multiplexer
 ************/
+// Set each MGTMUX pin individually
 void marble_MGTMUX_set(uint8_t mgt_num, bool on);
+
+// Set all MGTMUX pins simultaneously
+void marble_MGTMUX_config(uint8_t mgt_cfg);
 
 uint8_t marble_MGTMUX_status(void);
 

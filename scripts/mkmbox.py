@@ -305,6 +305,7 @@ class MailboxInterface():
     def makeProtos(self):
         self._fp("void mailbox_update_input(void);")
         self._fp("void mailbox_update_output(void);")
+        self._fp("void mailbox_read_print_all(void);")
         return
 
     def makeIncludes(self):
@@ -403,6 +404,17 @@ class MailboxInterface():
                 self._fp("  }")
         self._fp("  return;\n}")
 
+    def makePrintAll(self):
+        self._fp("void mailbox_read_print_all(void) {")
+        for npage, elementList in self._pageList: # Each entry is (npage, [(name, paramDict),...])
+            mbsize = f"MB{npage}_SIZE"
+            self._fp(f"  {{\n    // Page {npage}")
+            self._fp(f"    uint8_t page[{mbsize}];")
+            self._fp(f"    mbox_read_page({npage}, {mbsize}, page);")
+            self._fp(f"    MBOX_PRINT_PAGE({npage});")
+            self._fp("  }");
+        self._fp("  return;\n}")
+
     def makeHeader(self):
         try:
             self._fd = open(self._hfilename, 'w')
@@ -440,6 +452,8 @@ class MailboxInterface():
         self.makeUpdateOutput()
         self._fp("")
         self.makeUpdateInput()
+        self._fp("")
+        self.makePrintAll()
         if self._fd is not None:
             self._fd.close()
         return

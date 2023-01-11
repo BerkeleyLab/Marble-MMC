@@ -61,6 +61,7 @@ typedef enum {
 
 void mailbox_update_input(void);
 void mailbox_update_output(void);
+void mailbox_read_print_all(void);
 
 
 #ifdef __cplusplus

@@ -8,6 +8,14 @@
 #include "console.h"
 #include "mailbox_def.h"
 
+#define MBOX_PRINT_PAGE(npage) do { \
+  printf("Page %d\r\n", npage); \
+  for (int n = 0; n < MB ## npage ## _SIZE; n++) { \
+    printf("0x%x ", page[n]); \
+  } \
+  printf("\r\n"); \
+} while (0);
+
 void mbox_update(bool verbose);
 void mbox_peek(void);
 uint16_t mbox_get_update_count(void);

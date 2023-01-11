@@ -412,6 +412,20 @@ void marble_GPIOint_handlers(void (*FPGA_DONE_handler)(void)) {
 #define MAXMGT 3
 static const uint16_t mgtmux_pins[MAXMGT] = {GPIO_PIN_8, GPIO_PIN_9, GPIO_PIN_10};
 
+void marble_MGTMUX_config(uint8_t mgt_cfg) {
+  // Set the state of all MGT_MUX pins simultaneously.
+  // Note! Non-portable function depends on MGT_MUX pins being consecutive in the GPIO.ODR register
+  // mgt_cfg bit  Signal
+  // -------------------
+  // Bit0         MUX1
+  // Bit1         MUX2
+  // Bit2         MUX3
+  uint32_t odr = GPIOE->ODR;
+  uint32_t mask = (uint32_t)(7 << 8);
+  GPIOE->ODR = (odr & ~mask) | ((mgt_cfg << 8) & mask);
+  return;
+}
+
 void marble_MGTMUX_set(uint8_t mgt_num, bool on)
 {
    mgt_num -= 1;

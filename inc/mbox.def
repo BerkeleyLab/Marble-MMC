@@ -10,7 +10,7 @@
 # an entry in the mailbox whose address/index is inferred from its position in
 # the list. Note that this requires dummy entries for unused addresses.
 # The names of these entries can be empty strings.
-#
+
 # Mailbox Element Dict Structure:
 # -------------------------------
 #   Mandatory Parameters:

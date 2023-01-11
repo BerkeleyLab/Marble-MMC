@@ -208,7 +208,8 @@ static int console_handle_msg(char *rx_msg, int len)
            }
            break;
         case 'j':
-           mbox_peek();
+           //mbox_peek();
+           mailbox_read_print_all();
            break;
         case 'k':
            pca9555_status();

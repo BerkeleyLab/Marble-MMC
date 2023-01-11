@@ -73,6 +73,59 @@ Send commands from the command line.  NOTE THE QUOTING to keep commands together
 python3 load.py -d /dev/ttyUSB3 "p 50%" "m 192.168.19.40" "n 12:55:55:0:1:22"
 ```
 
+## mboxexchange.py
+Perform a single read from or write to an item in a mailbox page.  This script uses the lower-
+level `lbus_access.py` utility in 'bedrock/badger' rather than the LEEP protocol utility used
+by `decodembox.py` since the latter only allows for reading/writing of the entire mailbox.
+
+Read the value of entry "COUNT" from mailbox page 3.
+```sh
+cd marble_mmc
+PYTHONPATH=/path/to/bedrock/badger python3 scripts/decodembox.py -i $IP -p 3 COUNT
+```
+
+Same as above using fully-resolved name (see inc/mailbox\_def.h)
+```sh
+cd marble_mmc
+PYTHONPATH=/path/to/bedrock/badger python3 scripts/decodembox.py -i $IP MB3_COUNT
+```
+
+Same as above, but explicitly specifying the location of the mailbox definition file.
+```sh
+cd marble_mmc
+PYTHONPATH=/path/to/bedrock/badger python3 scripts/decodembox.py -i $IP -d 'inc/mbox.def' MB3_COUNT
+```
+
+Write value 255 to entry "I2C\_BUS\_STATUS" from mailbox page 5.
+```sh
+cd marble_mmc
+PYTHONPATH=/path/to/bedrock/badger python3 scripts/decodembox.py -i $IP -p 5 I2C_BUS_STATUS 255
+```
+
+## mgtmuxset.sh
+A wrapper utility around `mboxexchange.py` for setting the configuration of the MGT MUX pins.
+Because it uses `mboxexchange.py`, it also needs to be able to find the low-level `lbus_access.py`
+via `PYTHONPATH`.
+
+Print usage:
+```sh
+cd marble_mmc
+scripts/mgtmuxset.sh
+```
+
+Setting MGT MUX configuration to MUX1=MUX2=MUX3=0, FMC power ON.
+```sh
+cd marble_mmc
+PYTHONPATH=/path/to/bedrock/badger python3 scripts/mgtmuxset.sh -i $IP M0
+```
+
+Setting MGT MUX configuration to MUX1=MUX2=1, MUX3=0, FMC power OFF.  Using $IP definition from
+environment rather than explicitly passing as script arg.
+```sh
+cd marble_mmc
+PYTHONPATH=/path/to/bedrock/badger IP=192.168.19.89 python3 scripts/mgtmuxset.sh m3
+```
+
 ## mkmbox.py
 Create mailbox definition C outputs (header and/or source files) based on inc/mbox.def.  This
 is used during the build process to ensure the firmware keeps accurate track of the definition
