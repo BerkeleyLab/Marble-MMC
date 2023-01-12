@@ -23,7 +23,6 @@
 #define FAN_SPEED_MAX           (120)
 #define OVERTEMP_HARD_MAXIMUM   (125)
 
-const char lb_str[] = "Loopback... ESC to exit\r\n";
 const char unk_str[] = "> Unknown option\r\n";
 
 const char *menu_str[] = {"\r\n",
@@ -33,9 +32,6 @@ const char *menu_str[] = {"\r\n",
   "2 - I2C monitor\r\n",
   "3 - Status & counters\r\n",
   "4 gpio - GPIO control\r\n",
-  "  a/A: FMC power OFF/ON\r\n",
-  "  b/B: EN_PSU_CH OFF/ON\r\n",
-  "  c/C: PB15 J16[4]\r\n",
   "5 - Reset FPGA\r\n",
   "6 - Push IP&MAC\r\n",
   "7 - MAX6639\r\n",
@@ -49,6 +45,7 @@ const char *menu_str[] = {"\r\n",
   "f - XRP7724 flash\r\n",
   "g - XRP7724 go\r\n",
   //"h - XRP7724 hex input\r\n",
+  "h - FMC MGT MUX set\r\n",
   "i - timer check/cal\r\n",
   "j - Read SPI mailbox\r\n",
   "k - PCA9555 status\r\n",
@@ -81,6 +78,7 @@ static int handle_msg_IP(char *rx_msg, int len);
 static int handle_msg_MAC(char *rx_msg, int len);
 static int handle_msg_fan_speed(char *rx_msg, int len);
 static int handle_msg_overtemp(char *rx_msg, int len);
+static int handle_msg_MGTMUX(char *rx_msg, int len);
 //static void print_mac_ip(mac_ip_data_t *pmac_ip_data);
 static void print_mac(uint8_t *pdata);
 static void print_ip(uint8_t *pdata);
@@ -90,15 +88,9 @@ static int sscanfIP(const char *s, volatile uint8_t *data, int len);
 static int sscanfMAC(const char *s, volatile uint8_t *data, int len);
 static int sscanfFanSpeed(const char *s, int len);
 static int sscanfUnsignedDecimal(const char *s, int len);
+static int sscanfMGTMUX(const char *s, int len);
 static int xatoi(char c);
 static int htoi(char c);
-
-
-// TODO - fix encapsulation
-// Read from EEPROM at startup
-
-const uint8_t mac_id_default[MAC_LENGTH] = {18, 85, 85, 0, 1, 46};
-const uint8_t ip_addr_default[IP_LENGTH] = {192, 168, 19, 31};
 
 int console_init(void) {
   _msgCount = 0;
@@ -108,6 +100,8 @@ int console_init(void) {
 
 static int console_handle_msg(char *rx_msg, int len)
 {
+  // TODO all these should return 0 on success, 1 on failure
+  //      then we should print a simple global help string on failure
   // Switch behavior based on first char
   switch (*rx_msg) {
         case '?':
@@ -201,6 +195,9 @@ static int console_handle_msg(char *rx_msg, int len)
            xrp_hex_in(XRP7724);
            break;
 #endif
+        case 'h':
+           handle_msg_MGTMUX(rx_msg, len);
+           break;
         case 'i':
            for (unsigned ix=0; ix<10; ix++) {
               printf("%d\r\n", ix);
@@ -324,6 +321,32 @@ static int handle_msg_overtemp(char *rx_msg, int len) {
   return 0;
 }
 
+static int handle_msg_MGTMUX(char *rx_msg, int len) {
+  if (len < 4) {
+    printf("E.g. Set all MUXn pin states: h 1=1 2=0 3=0\r\n");
+    printf("E.g. Set just MUX2 pin high (ignore others): h 2=1\r\n");
+    printf("E.g. Read MGTMUX state: h ?\r\n");
+    return 1;
+  }
+  int rval = sscanfMGTMUX(rx_msg, len);
+  uint8_t rbyte = 0;
+  if (rval == -1) {
+    printf("Could not interpret assignments. Use 'h' for usage.\r\n");
+  } else if (rval == -2) {
+    // Get and print current MGT MUX state
+    rbyte = marble_MGTMUX_status();
+    printf("  ");
+    for (int n = 0; n < MGT_MAX_PINS; n++) {
+      printf("MUX%d=%d ", n+1, ((rbyte >> n) & 1));
+    }
+    printf("\r\n");
+  } else {
+    printf("  "); // Indent the line printed by the following function
+    marble_MGTMUX_config((uint8_t)rval);
+  }
+  return rval;
+}
+
 static void handle_gpio(const char *msg, int len) {
   char c = 0;
   int found = 0;
@@ -332,12 +355,24 @@ static void handle_gpio(const char *msg, int len) {
   // (skips the first char which is the command char)
   for (int n = 1; n < len; n++) {
     c = *(msg + n);
+    if (c == '?') {
+      found = -1;
+      break;
+    }
     if (c >= 'A') {
       found |= toggle_gpio(c);
+      if (found) {
+        break;
+      }
     }
   }
-  if (!found) {
+  if (found == -1) {
+    // Print state
+    marble_print_GPIO_status();
+  }
+  else if (!found) {
     printf("GPIO pins, caps for on, lower case for off\r\n"
+           "?) Print state of GPIOs\r\n"
            "a) FMC power\r\n"
            "b) EN_PSU_CH\r\n"
            "c) PB15 J16[4]\r\n");
@@ -346,7 +381,6 @@ static void handle_gpio(const char *msg, int len) {
 }
 
 static int toggle_gpio(char c) {
-  // TODO - Add additional GPIO and test on scope
   int found = 1;
   switch (c) {
     case 'a':
@@ -692,6 +726,53 @@ static int sscanfUnsignedDecimal(const char *s, int len) {
     return -1;
   }
   return (int)sum;
+}
+
+/*
+ * static int sscanfMGTMUX(const char *s, int len);
+ *    Scans for "x=y" assignments separated by whitespace where 'x' can be 1, 2, or 3
+ *    and 'y' can be 0, or 1.
+ *    Returns -1 if no valid assignment is found.
+ *    Returns -2 if a question mark ('?') is found, indicating we should return the current state.
+ *    Returns bitmask suitable to pass to marble_MGTMUX_config otherwise.
+ */
+static int sscanfMGTMUX(const char *s, int len) {
+  char c0,c1,c2;
+  int r0,r2;
+  bool assignmentFound = false;
+  int bmask = 0;
+  for (int n = 1; n < len-2; n++) {
+    // Moving window of 3 characters, starting from char 1 (skip command char)
+    c0 = s[n];
+    c1 = s[n+1];
+    c2 = s[n+2];
+    if (c0 == '?') {
+      return -2; // Requesting help
+    }
+    if (c1 == '=') {
+      r0 = xatoi(c0);
+      r2 = xatoi(c2);
+      switch (r0) {
+        case 1: // Intentional fall-through
+        case 2: // Intentional fall-through
+        case 3:
+          if (r2 == 1) {
+            bmask |= (3 << (2*r0));
+            assignmentFound = true;
+          } else if (r2 == 0) {
+            bmask |= (2 << (2*r0));
+            assignmentFound = true;
+          }
+          break;
+        default:
+          break;
+      }
+    }
+  }
+  if (!assignmentFound) {
+    return -1;
+  }
+  return bmask;
 }
 
 /*

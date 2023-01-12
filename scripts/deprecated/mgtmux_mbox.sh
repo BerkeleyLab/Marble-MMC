@@ -1,6 +1,6 @@
 #! /bin/sh
 
-# Usage: mgtmux.sh [-h | --help] [-d $TTY_MMC] [muxstate]
+# Usage: mgtmux.sh [-h | --help] [-i $IP] [muxstate]
 
 # muxstate can be single-byte integer in decimal (0-255) or hex (0x00-0xff) or one of
 #   muxstate  MUX3  MUX2  MUX1  State:
@@ -11,16 +11,16 @@
 #   "M3"      0     1     1     MGT4-MGT5 => FMC2; MGT6 => FMC1; MGT7 => FMC2
 #   "M4"      1     X     X     MGT4-MGT7 => QSFP2
 
-ttynext=0
-tty=
+ipnext=0
+ip=
 muxstate=
 help=0
 for arg in "$@"; do
-  if [ $ttynext != 0 ]; then
-    tty="-d $arg"
-    ttynext=0
-  elif [ "$arg" = "-d" ]; then
-    ttynext=1
+  if [ $ipnext != 0 ]; then
+    ip=$arg
+    ipnext=0
+  elif [ "$arg" = "-i" ]; then
+    ipnext=1
   elif [ "$arg" = "-h" ]; then
     help=1
   elif [ "$arg" = "--help" ]; then
@@ -31,10 +31,10 @@ for arg in "$@"; do
 done
 
 if [ "$help" != 0 ]; then
-  echo "Usage: PYTHONPATH=bedrock/badger $0 [-h] [-d \$TTY_MMC] muxstate"
-  echo "  If environment variable TTY_MMC is defined, it will be used as the TTY_MMC address"
-  echo "  unless overridden by '-d \$TTY_MMC' argument."
-  echo "  'muxstate' can be string of one or more assignments, 1=x 2=x 3=x (where x=1,0)"
+  echo "Usage: PYTHONPATH=bedrock/badger $0 [-h] [-i \$IP] muxstate"
+  echo "  If environment variable IP is defined, it will be used as the IP address"
+  echo "  unless overridden by '-i \$IP' argument."
+  echo "  'muxstate' can be single-byte integer in decimal (0-255) or hex (0x00-0xff)"
   echo "  or one of the following shortcut strings:"
   echo ""
   echo "  muxstate  MUX3  MUX2  MUX1  State:"
@@ -51,58 +51,54 @@ if [ "$help" != 0 ]; then
   exit 1
 fi
 
-if [ -z "$tty" ]; then
-  if [ ! -z "$TTY_MMC" ]; then
-    tty="-d $TTY_MMC"
+if [ -z "$ip" ]; then
+  if [ ! -z "$IP" ]; then
+    ip=$IP
   else
-    echo "Must specify TTY_MMC address either by defining environment variable 'TTY_MMC' or"
-    echo "with '-i \$TTY_MMC' argument."
+    echo "Must specify IP address either by defining environment variable 'IP' or"
+    echo "with '-i \$IP' argument."
     exit 1
   fi;
 fi;
 
 if [ "$muxstate" = "M0" ]; then
-  muxval="h 1=0 2=0 3=0"
-  fmcstate="4 A"
+  muxval="0xab" # 0b10101011
 elif [ "$muxstate" = "M1" ]; then
-  muxval="h 1=1 2=0 3=0"
-  fmcstate="4 A"
+  muxval="0xaf" # 0b10101111
 elif [ "$muxstate" = "M2" ]; then
-  muxval="h 1=0 2=1 3=0"
-  fmcstate="4 A"
+  muxval="0xbb" # 0b10111011
 elif [ "$muxstate" = "M3" ]; then
-  muxval="h 1=1 2=1 3=0"
-  fmcstate="4 A"
+  muxval="0xbf" # 0b10111111
 elif [ "$muxstate" = "M4" ]; then
-  muxval="h 1=0 2=0 3=1"
-  fmcstate="4 A"
+  muxval="0xeb" # 0b11101011
 elif [ "$muxstate" = "m0" ]; then
-  muxval="h 1=0 2=0 3=0"
-  fmcstate="4 a"
+  muxval="0xaa" # 0b10101010
 elif [ "$muxstate" = "m1" ]; then
-  muxval="h 1=1 2=0 3=0"
-  fmcstate="4 a"
+  muxval="0xae" # 0b10101110
 elif [ "$muxstate" = "m2" ]; then
-  muxval="h 1=0 2=1 3=0"
-  fmcstate="4 a"
+  muxval="0xba" # 0b10111010
 elif [ "$muxstate" = "m3" ]; then
-  muxval="h 1=1 2=1 3=0"
-  fmcstate="4 a"
+  muxval="0xbe" # 0b10111110
 elif [ "$muxstate" = "m4" ]; then
-  muxval="h 1=0 2=0 3=1"
-  fmcstate="4 a"
+  muxval="0xea" # 0b11101010
 else
-  muxval="h $muxstate"
+  muxval=$muxstate
 fi
 
 SCRIPT_DIR=$( dirname -- "$0"; )
 
+if [ -z "$PYTHONPATH" ]; then
+  echo "Append path to lbus_access to PYTHONPATH"
+  echo "e.g. PYTHONPATH=bedrock/badger $0 [-i \$IP] muxstate"
+  exit 1
+fi
+
 if [ -z "$muxstate" ]; then
-  # Read FMC state and MGT MUX config
-  python3 $SCRIPT_DIR/load.py $tty "4?" "h?" | grep -E "FMC|MUX"
+  # Read MGTMUX_ST from page 3
+  python3 $SCRIPT_DIR/mboxexchange.py -i "$ip" MB3_MGTMUX_ST
 else
-  # Write both FMC power and MGT MUX state
-  python3 $SCRIPT_DIR/load.py $tty "$muxval" "$fmcstate"
+  # Write to FMC_MGT_CTL in page 2
+  python3 $SCRIPT_DIR/mboxexchange.py -i "$ip" MB2_FMC_MGT_CTL $muxval
 fi
 
 exit 0

@@ -17,10 +17,8 @@
 } while (0);
 
 void mbox_update(bool verbose);
-void mbox_peek(void);
 uint16_t mbox_get_update_count(void);
 void mbox_reset_update_count(void);
-void mbox_handle_fmc_mgt_ctl(uint8_t fmc_mgt_cmd);
 void mbox_read_page(uint8_t page_no, uint8_t page_sz, uint8_t *page);
 void mbox_write_page(uint8_t page_no, uint8_t page_sz, const uint8_t page[]);
 

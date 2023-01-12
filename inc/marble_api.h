@@ -28,13 +28,16 @@ extern "C" {
 #define DEMO_STRING                 "Marble UART Simulation\r\n"
 #define BSP_GET_SYSTICK()     (uint32_t)((uint64_t)clock()/1000)
 
+# define MGT_MAX_PINS 0
 #else
 
 #ifdef MARBLEM_V1
-# define DEMO_STRING              "Marble Mini v1 UART DEMO\r\n"
+# define MGT_MAX_PINS 0
+# define DEMO_STRING           "Marble Mini v1 UART Console\r\n"
 #else
 # ifdef MARBLE_V2
-#  define DEMO_STRING                  "Marble v2 UART DEMO\r\n"
+#  define MGT_MAX_PINS 3
+#  define DEMO_STRING               "Marble v2 UART Console\r\n"
 # endif /* MARBLE_V2 */
 #endif /* MARBLEM_V1 */
 
@@ -179,6 +182,8 @@ typedef enum {
 
 uint8_t marble_PWR_status(void);
 
+void marble_print_GPIO_status(void);
+
 /****
 * FPGA reset/init control
 * Central to this whole job, may need refinement
@@ -204,13 +209,19 @@ void marble_GPIOint_handlers(void (*FPGA_DONE_handler)(void));
 /************
 * MGT Multiplexer
 ************/
-// Set each MGTMUX pin individually
+// Set one MGTMUX pin
+// Stores to EEPROM
 void marble_MGTMUX_set(uint8_t mgt_num, bool on);
 
-// Set all MGTMUX pins simultaneously
-void marble_MGTMUX_config(uint8_t mgt_cfg);
+// Set multiple MGTMUX pins
+// Stores to EEPROM
+void marble_MGTMUX_config(uint8_t mgt_msg);
 
+// Get status in same bit format as argument to marble_MGTMUX_set_all()
 uint8_t marble_MGTMUX_status(void);
+
+// Set all MGTMUX pins simultaneously using same bit format as return value of marble_MGTMUX_status()
+void marble_MGTMUX_set_all(uint8_t mgt_cfg);
 
 /****
 * I2C

@@ -62,31 +62,6 @@ void mbox_read_page(uint8_t page_no, uint8_t page_sz, uint8_t *page) {
    }
 }
 
-void mbox_handle_fmc_mgt_ctl(uint8_t fmc_mgt_cmd) {
-  // Control of FMC power and MGT mux based on mailbox entry MB2_FMC_MGT_CTL
-  // Currently addressed as 0x200020 = 2097184 in test_marble_family
-  // [1] - FMC_SEL,      [0] - ON/OFF
-  // [3] - MGT_MUX0_SEL, [2] - ON/OFF
-  // [5] - MGT_MUX1_SEL, [4] - ON/OFF
-  // [7] - MGT_MUX2_SEL, [6] - ON/OFF
-
-  if (fmc_mgt_cmd != 0) {  // clear mailbox entry
-    mbox_set_page(2);
-    mbox_write_entry(MB2_FMC_MGT_CTL, 0x00);
-  }
-  if (fmc_mgt_cmd & 2) {
-    marble_FMC_pwr(fmc_mgt_cmd & 1);
-  }
-  unsigned v = fmc_mgt_cmd;
-  for (unsigned kx=1; kx<4; kx++) {
-    v = v >> 2;
-    if (v & 2) {
-      marble_MGTMUX_set(kx, v & 1);
-    }
-  }
-  return;
-}
-
 void mbox_update(bool verbose)
 {
   _UNUSED(verbose);
@@ -96,21 +71,6 @@ void mbox_update(bool verbose)
   mailbox_update_input();   // This function is auto-generated in src/mailbox_def.c
   mailbox_update_output();  // This function is auto-generated in src/mailbox_def.c
   return;
-}
-
-void mbox_peek(void)
-{
-   uint8_t page2[MB2_SIZE];
-   mbox_read_page(2, MB2_SIZE, page2);
-   printf("Mailbox page 2:");
-   for (unsigned jx=0; jx<MB2_SIZE; jx++) printf(" %2.2x", page2[jx]);
-   printf("\r\n");
-
-   uint8_t page3[MB3_SIZE];
-   mbox_read_page(3, MB3_SIZE, page3);
-   printf("Mailbox page 3:");
-   for (unsigned jx=0; jx<MB3_SIZE; jx++) printf(" %2.2x", page3[jx]);
-   printf("\r\n");
 }
 
 // Pseudo-mailbox interaction

@@ -223,6 +223,13 @@ uint8_t marble_PWR_status(void)
 }
 
 
+void marble_print_GPIO_status(void) {
+  // TODO
+  printf("TODO Unimplemented\r\n");
+  return;
+}
+
+
 /************
 * Switches and FPGA interrupt
 ************/

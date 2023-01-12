@@ -198,6 +198,11 @@ uint8_t marble_PWR_status(void) {
   return 0;
 }
 
+void marble_print_GPIO_status(void) {
+  printf("Sim print_GPIO_status\r\n");
+  return;
+}
+
 void reset_fpga(void) {
   return;
 }

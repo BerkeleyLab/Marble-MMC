@@ -15,6 +15,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor as Executor
 
 INTERCOMMAND_SLEEP = 0.01 # seconds
+POST_SLEEP = 1.0 # seconds
 
 class StreamSerial():
     def __init__(self, port = None, baud = 115200):
@@ -114,9 +115,11 @@ def serveCommands(sdev, *commands):
     nlines = 0
     for line in commands:
         if len(line) > 0 and not line.strip().startswith('#'):
-            sdev.writeline(line + '\n')
+            print("writing {}".format(line))
+            sdev.writeline(line + '\r\n')
             nlines += 1
             time.sleep(INTERCOMMAND_SLEEP)
+    time.sleep(POST_SLEEP)
     print(f">   Wrote {nlines} lines")
     return
 

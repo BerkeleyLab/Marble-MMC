@@ -63,12 +63,6 @@ void mailbox_update_output(void) {
 
 void mailbox_update_input(void) {
   {
-    // Page 2
-    uint8_t page[MB2_SIZE];
-    mbox_read_page(2, MB2_SIZE, page);
-    mbox_handle_fmc_mgt_ctl(page[MB2_FMC_MGT_CTL]);
-  }
-  {
     // Page 5
     uint8_t page[MB5_SIZE];
     mbox_read_page(5, MB5_SIZE, page);
@@ -78,12 +72,6 @@ void mailbox_update_input(void) {
 }
 
 void mailbox_read_print_all(void) {
-  {
-    // Page 2
-    uint8_t page[MB2_SIZE];
-    mbox_read_page(2, MB2_SIZE, page);
-    MBOX_PRINT_PAGE(2);
-  }
   {
     // Page 3
     uint8_t page[MB3_SIZE];

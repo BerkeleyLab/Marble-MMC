@@ -53,14 +53,15 @@
 #    "max6639.h"
 #  ],
 # Page 2 contains only inputs (MMC <= FPGA)
-  "page2" : [
-    { "name" : "FMC_MGT_CTL",
-      "type" : "int",
-      "fmt"  : "0x{:x}",
-      "desc" : "",
-      "input" : "mbox_handle_fmc_mgt_ctl(@)"
-    }
-  ],
+# FMC_MGT_CTL is deprecated in favor of setting via UART console
+#  "page2" : [
+#    { "name" : "FMC_MGT_CTL",
+#      "type" : "int",
+#      "fmt"  : "0x{:x}",
+#      "desc" : "",
+#      "input" : "marble_MGTMUX_config(@)"
+#    }
+#  ],
 # Page 3 contains only outputs (MMC => FPGA)
   "page3" : [
     { "name" : "COUNT",
