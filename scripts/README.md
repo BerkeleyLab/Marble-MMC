@@ -102,28 +102,34 @@ cd marble_mmc
 PYTHONPATH=/path/to/bedrock/badger python3 scripts/decodembox.py -i $IP -p 5 I2C_BUS_STATUS 255
 ```
 
-## mgtmuxset.sh
-A wrapper utility around `mboxexchange.py` for setting the configuration of the MGT MUX pins.
-Because it uses `mboxexchange.py`, it also needs to be able to find the low-level `lbus_access.py`
+## mgtmux.sh
+A wrapper utility around `mboxexchange.py` for reading and setting the configuration of the MGT MUX
+pins. Because it uses `mboxexchange.py`, it also needs to be able to find the low-level `lbus_access.py`
 via `PYTHONPATH`.
 
 Print usage:
 ```sh
 cd marble_mmc
-scripts/mgtmuxset.sh
+scripts/mgtmux.sh -h
 ```
 
 Setting MGT MUX configuration to MUX1=MUX2=MUX3=0, FMC power ON.
 ```sh
 cd marble_mmc
-PYTHONPATH=/path/to/bedrock/badger python3 scripts/mgtmuxset.sh -i $IP M0
+PYTHONPATH=/path/to/bedrock/badger scripts/mgtmux.sh -i $IP M0
 ```
 
 Setting MGT MUX configuration to MUX1=MUX2=1, MUX3=0, FMC power OFF.  Using $IP definition from
 environment rather than explicitly passing as script arg.
 ```sh
 cd marble_mmc
-PYTHONPATH=/path/to/bedrock/badger IP=192.168.19.89 python3 scripts/mgtmuxset.sh m3
+PYTHONPATH=/path/to/bedrock/badger IP=192.168.19.89 scripts/mgtmux.sh m3
+```
+
+Read the current MGT MUX configuration (reads from MGTMUX\_ST in mailbox page 3)
+```sh
+cd marble_mmc
+PYTHONPATH=/path/to/bedrock/badger scripts/mgtmux.sh -i $IP
 ```
 
 ## mkmbox.py
