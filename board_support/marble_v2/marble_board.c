@@ -27,10 +27,21 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <stdio.h>
 #include "stm32f2xx_hal.h"
 #include "marble_api.h"
 #include "string.h"
-#include <stdio.h>
+#include "uart_fifo.h"
+#include "console.h"
+#include "st-eeprom.h"
+#include "i2c_pm.h"
+
+#define UART_ECHO
+
+#define PRINT_POWER_STATE(subs, on) do {\
+   char s[3] = {'f', 'f', '\0'}; \
+   if (on) {s[0] = 'n'; s[1] = '\0';} \
+   printf(subs " Power O%s\r\n", s); } while (0)
 
 void Error_Handler(void) {}
 #ifdef  USE_FULL_ASSERT
@@ -47,62 +58,179 @@ I2C_HandleTypeDef hi2c3;
 SPI_HandleTypeDef hspi1;
 SPI_HandleTypeDef hspi2;
 
-UART_HandleTypeDef huart1;
+UART_HandleTypeDef huart_console;
 UART_HandleTypeDef huart2;
-UART_HandleTypeDef huart3;
+UART_HandleTypeDef huart3;  // Used for nucleo
 
+static Marble_PCB_Rev_t marble_pcb_rev;
+
+static int i2cBusStatus = 0;
 // Moved here from marble_api.h
 SSP_PORT SSP_FPGA;
 SSP_PORT SSP_PMOD;
 I2C_BUS I2C_FPGA;
 I2C_BUS I2C_PM;
-
 /* Private function prototypes -----------------------------------------------*/
-void SystemClock_Config(void);
+static void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_ETH_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_I2C3_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_SPI2_Init(void);
-static void MX_USART1_UART_Init(void);
+//static void MX_USART1_UART_Init(void);
+static void CONSOLE_USART_Init(void);
 static void MX_USART2_UART_Init(void);
-
+static void USART_RXNE_ISR(void);
+static void USART_TXE_ISR(void);
+static void USART_Erase_Echo(void);
+static void USART_Erase(int n);
+static void marble_apply_params(void);
+static void marble_read_pcb_rev(void);
 
 /* Initialize UART pins */
 void marble_UART_init(void)
 {
    /* PA9, PA10 - MMC_CONS_PROG */
-   MX_USART1_UART_Init();
+   //MX_USART1_UART_Init();
+   CONSOLE_USART_Init();
    /* PD5, PD6 - UART4 (Pmod3_7/3_6) */
    MX_USART2_UART_Init();
+   i2cBusStatus = 0;
 }
 
-/* Send \0 terminated string over UART. Returns number of bytes sent */
+/* Send string over UART. Returns number of bytes sent */
 int marble_UART_send(const char *str, int size)
 {
-   HAL_UART_Transmit(&huart1, (const uint8_t *) str, size, 1000);
-   return 1;
+  //HAL_UART_Transmit(&huart_console, (const uint8_t *) str, size, 1000);
+  int txnum = USART_Tx_LL_Queue((char *)str, size);
+  // Kick off the transmission if the TX buffer is empty
+  if ((CONSOLE_USART->SR) & USART_SR_TXE) {
+    SET_BIT(CONSOLE_USART->CR1, USART_CR1_TXEIE);
+  }
+  return txnum;
 }
 
-/* Read at most size-1 bytes (due to \0) from UART. Returns bytes read */
-// TODO: Should return bytes read
-int marble_UART_recv(char *str, int size)
-{
-   if (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_RXNE) == SET) {
-      HAL_UART_Receive(&huart1, (uint8_t *) str, size, 100);
-      return 1;
-   } else {
-      return 0;
-   }
+int marble_UART_recv(char *str, int size) {
+  return USART_Rx_LL_Queue((volatile char *)str, size);
 }
+
+void CONSOLE_USART_ISR(void) {
+  USART_RXNE_ISR();   // Handle RX interrupts first
+  USART_TXE_ISR();  // Then handle TX interrupts
+  return;
+}
+
+/*
+ * void USART_RXNE_ISR(void);
+ *  A low-level ISR to pre-empt the STM32_HAL handler to catch
+ *  received bytes (TxE IRQ passes to HAL handler)
+ */
+void USART_RXNE_ISR(void) {
+  uint8_t c = 0;
+  //if (__HAL_UART_GET_FLAG(&huart_console, UART_FLAG_RXNE) == SET) {
+  if ((CONSOLE_USART->SR & USART_SR_RXNE) == USART_SR_RXNE) {
+    // Don't clear flags; the RXNE flag is cleared automatically by read from DR
+    //c = (uint8_t)(huart_console.Instance->DR & (uint8_t)0x00FF);
+    c = (uint8_t)(CONSOLE_USART->DR & (uint8_t)0x00FF);
+    // Look for control characters first
+    if (c == UART_MSG_ABORT) {
+#ifdef UART_ECHO
+      USART_Erase_Echo();
+#endif
+      // clear queue
+      UARTQUEUE_Clear();
+    } else if (c == UART_MSG_BKSP) {
+#ifdef UART_ECHO
+      USART_Erase(1);
+#endif
+      UARTQUEUE_Rewind(1);
+    } else {
+      if (UARTQUEUE_Add(&c) == UART_QUEUE_FULL) {
+        UARTQUEUE_SetDataLost(UART_DATA_LOST);
+        // Clear QUEUE at this point?
+      }
+      if (c == UART_MSG_TERMINATOR) {
+        console_pend_msg();
+      }
+#ifdef UART_ECHO
+      marble_UART_send((const char *)&c, 1);
+#endif
+    }
+  }
+  return;
+}
+
+/*
+ * void USART_Erase_Echo(void);
+ *  Print 1 backspace for every char in the queue
+ */
+static void USART_Erase_Echo(void) {
+  USART_Erase(0);
+  return;
+}
+
+static void USART_Erase(int n) {
+  int fill = UARTQUEUE_FillLevel();
+  // If n = 0, erase all in queue
+  if (n == 0) {
+    n = fill;
+  } else {
+    // n = min(n, fill)
+    n = n > fill ? fill : n;
+  }
+  // First issue backspaces
+  char bksps[n];
+  for (int m = 0; m < n; m++) {
+    bksps[m] = UART_MSG_BKSP;
+  }
+  marble_UART_send((const char *)bksps, n);
+  // Then overwrite with spaces
+  for (int m = 0; m < n; m++) {
+    bksps[m] = ' ';
+  }
+  marble_UART_send((const char *)bksps, n);
+  // Then issue backspaces again
+  for (int m = 0; m < n; m++) {
+    bksps[m] = UART_MSG_BKSP;
+  }
+  marble_UART_send((const char *)bksps, n);
+  return;
+}
+
+void USART_TXE_ISR(void) {
+  uint8_t outByte;
+  // If char queue not empty
+  //if (__HAL_UART_GET_FLAG(&huart_console, UART_FLAG_TXE) == SET) {
+  if ((CONSOLE_USART->SR & USART_SR_TXE) == USART_SR_TXE) {
+    if (UARTTXQUEUE_Get(&outByte) != UARTTX_QUEUE_EMPTY) {
+      // Write new char to DR
+      //huart_console.Instance->DR = (uint32_t)outByte;
+      CONSOLE_USART->DR = (uint32_t)outByte;
+    } else {
+      // If the queue is empty, disable the TXE interrupt
+      CLEAR_BIT(CONSOLE_USART->CR1, USART_CR1_TXEIE);
+    }
+  }
+  return;
+}
+
 
 /************
 * LEDs
 ************/
 
 #define MAXLEDS 3
-static const uint8_t ledpins[MAXLEDS] = {GPIO_PIN_0, GPIO_PIN_1, GPIO_PIN_2};
+#ifdef NUCLEO
+#define LED_GPIO  GPIOB
+static const uint16_t ledpins[MAXLEDS] = {GPIO_PIN_0, GPIO_PIN_7, GPIO_PIN_14};
+#else
+static const uint16_t ledpins[MAXLEDS] = {GPIO_PIN_0, GPIO_PIN_1, GPIO_PIN_2};
+#define LED_GPIO  GPIOE
+#endif
+// NOTE:  ledpins[0] = PE0 = "LD15"
+//        ledpins[1] = PE1 = "LD11"
+//        ledpins[2] = PE2 = "LD12"
 
 /* Initializes board LED(s) */
 static void marble_LED_init(void)
@@ -114,9 +242,16 @@ static void marble_LED_init(void)
 /* Sets the state of a board LED to on or off */
 void marble_LED_set(uint8_t led_num, bool on)
 {
+  bool state;
+#ifdef NUCLEO
+  /* On Nucleo, GPIO low is off, high is on */
+  state = on;
+#else
+  /* On Marble, GPIO low is on, high is off */
+  state = !on;
+#endif
    if (led_num < MAXLEDS) {
-      /* Set state, low is on, high is off */
-      HAL_GPIO_WritePin(GPIOE, ledpins[led_num], !on);
+      HAL_GPIO_WritePin(LED_GPIO, ledpins[led_num], state);
    }
 }
 
@@ -126,7 +261,7 @@ bool marble_LED_get(uint8_t led_num)
    bool state = false;
 
    if (led_num < MAXLEDS) {
-      state = HAL_GPIO_ReadPin(GPIOE, ledpins[led_num]);
+      state = HAL_GPIO_ReadPin(LED_GPIO, ledpins[led_num]);
    }
 
    /* These LEDs are reverse logic. */
@@ -137,8 +272,14 @@ bool marble_LED_get(uint8_t led_num)
 void marble_LED_toggle(uint8_t led_num)
 {
    if (led_num < MAXLEDS) {
-      HAL_GPIO_TogglePin(GPIOE, ledpins[led_num]);
+      HAL_GPIO_TogglePin(LED_GPIO, ledpins[led_num]);
    }
+}
+
+/* Debug purposes */
+void marble_Pmod3_5_write(bool on) {
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_15, on ? GPIO_PIN_SET : GPIO_PIN_RESET);
+  return;
 }
 
 /************
@@ -150,6 +291,7 @@ void marble_FMC_pwr(bool on)
 {
    HAL_GPIO_WritePin(GPIOD, GPIO_PIN_9, on);
    HAL_GPIO_WritePin(GPIOD, GPIO_PIN_10, on);
+   return;
 }
 
 uint8_t marble_FMC_status(void)
@@ -172,6 +314,7 @@ void marble_PSU_pwr(bool on)
       HAL_GPIO_WritePin(GPIOD, GPIO_PIN_11, on);
       SystemClock_Config(); // switch back to external clock source
    }
+   return;
 }
 
 uint8_t marble_PWR_status(void)
@@ -216,6 +359,11 @@ void reset_fpga(void)
    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, false);
    marble_SLEEP_ms(50);
    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, true);
+}
+
+void enable_fpga(void) {
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, true);
+  return;
 }
 
 /************
@@ -264,6 +412,20 @@ void marble_GPIOint_handlers(void (*FPGA_DONE_handler)(void)) {
 #define MAXMGT 3
 static const uint16_t mgtmux_pins[MAXMGT] = {GPIO_PIN_8, GPIO_PIN_9, GPIO_PIN_10};
 
+void marble_MGTMUX_config(uint8_t mgt_cfg) {
+  // Set the state of all MGT_MUX pins simultaneously.
+  // Note! Non-portable function depends on MGT_MUX pins being consecutive in the GPIO.ODR register
+  // mgt_cfg bit  Signal
+  // -------------------
+  // Bit0         MUX1
+  // Bit1         MUX2
+  // Bit2         MUX3
+  uint32_t odr = GPIOE->ODR;
+  uint32_t mask = (uint32_t)(7 << 8);
+  GPIOE->ODR = (odr & ~mask) | ((mgt_cfg << 8) & mask);
+  return;
+}
+
 void marble_MGTMUX_set(uint8_t mgt_num, bool on)
 {
    mgt_num -= 1;
@@ -289,33 +451,47 @@ uint8_t marble_MGTMUX_status()
 
 /* Non-destructive I2C probe function based on empty data command, i.e. S+[A,RW]+P */
 int marble_I2C_probe(I2C_BUS I2C_bus, uint8_t addr) {
-   return HAL_I2C_IsDeviceReady(I2C_bus, addr, 2, 2);
+   int rc = HAL_I2C_IsDeviceReady(I2C_bus, addr, 2, 2);
+   i2cBusStatus |= rc;
+   return rc;
 }
 
 /* Generic I2C send function with selectable I2C bus and 8-bit I2C addresses (R/W bit = 0) */
 /* 1-byte register addresses */
 int marble_I2C_send(I2C_BUS I2C_bus, uint8_t addr, const uint8_t *data, int size) {
-   return HAL_I2C_Master_Transmit(I2C_bus, (uint16_t)addr, data, size, HAL_MAX_DELAY);
+   int rc = HAL_I2C_Master_Transmit(I2C_bus, (uint16_t)addr, data, size, HAL_MAX_DELAY);
+   i2cBusStatus |= rc;
+   return rc;
 }
 
 int marble_I2C_cmdsend(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size) {
-   return HAL_I2C_Mem_Write(I2C_bus, (uint16_t)addr, cmd, 1, data, size, HAL_MAX_DELAY);
+   int rc = HAL_I2C_Mem_Write(I2C_bus, (uint16_t)addr, cmd, 1, data, size, HAL_MAX_DELAY);
+   i2cBusStatus |= rc;
+   return rc;
 }
 
 int marble_I2C_recv(I2C_BUS I2C_bus, uint8_t addr, uint8_t *data, int size) {
-   return HAL_I2C_Master_Receive(I2C_bus, (uint16_t)addr, data, size, HAL_MAX_DELAY);
+   int rc = HAL_I2C_Master_Receive(I2C_bus, (uint16_t)addr, data, size, HAL_MAX_DELAY);
+   i2cBusStatus |= rc;
+   return rc;
 }
 
 int marble_I2C_cmdrecv(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size) {
-   return HAL_I2C_Mem_Read(I2C_bus, (uint16_t)addr, cmd, 1, data, size, HAL_MAX_DELAY);
+   int rc = HAL_I2C_Mem_Read(I2C_bus, (uint16_t)addr, cmd, 1, data, size, HAL_MAX_DELAY);
+   i2cBusStatus |= rc;
+   return rc;
 }
 
 /* Same but 2-byte register addresses */
 int marble_I2C_cmdsend_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *data, int size) {
-   return HAL_I2C_Mem_Write(I2C_bus, (uint16_t)addr, cmd, 2, data, size, HAL_MAX_DELAY);
+   int rc = HAL_I2C_Mem_Write(I2C_bus, (uint16_t)addr, cmd, 2, data, size, HAL_MAX_DELAY);
+   i2cBusStatus |= rc;
+   return rc;
 }
 int marble_I2C_cmdrecv_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *data, int size) {
-   return HAL_I2C_Mem_Read(I2C_bus, (uint16_t)addr, cmd, 2, data, size, HAL_MAX_DELAY);
+   int rc = HAL_I2C_Mem_Read(I2C_bus, (uint16_t)addr, cmd, 2, data, size, HAL_MAX_DELAY);
+   i2cBusStatus |= rc;
+   return rc;
 }
 
 /************
@@ -386,6 +562,10 @@ void SysTick_Handler(void)
       marble_SysTick_Handler();
 }
 
+uint32_t marble_get_tick(void) {
+  return (uint32_t)HAL_GetTick();
+}
+
 /* Register user-defined interrupt handlers */
 void marble_SYSTIMER_handler(void (*handler)(void)) {
    marble_SysTick_Handler = handler;
@@ -428,39 +608,114 @@ void marble_SLEEP_us(uint32_t delay)
 
 uint32_t marble_init(bool use_xtal)
 {
-   (void) use_xtal;  // feature not yet supported with this chip
+  (void) use_xtal;  // feature not yet supported with this chip
 
-   // Must happen before any other clock manipulations:
-   HAL_Init();
-   SystemClock_Config_HSI();
+  // Must happen before any other clock manipulations:
+  HAL_Init();
+  SystemClock_Config_HSI();
 
-   MX_GPIO_Init();
+  MX_GPIO_Init();
 
-   // Configure GPIO interrupts
-   marble_GPIOint_init();
+  // Configure GPIO interrupts
+  marble_GPIOint_init();
 
-   marble_PSU_pwr(true);
-   MX_ETH_Init();
-   MX_I2C1_Init();
-   MX_I2C3_Init();
-   MX_SPI1_Init();
-   MX_SPI2_Init();
+  marble_PSU_pwr(true);
+  MX_ETH_Init();
+  MX_I2C1_Init();
+  MX_I2C3_Init();
+  MX_SPI1_Init();
+  MX_SPI2_Init();
 
-   marble_LED_init();
-   marble_SW_init();
-   marble_UART_init();
+  marble_LED_init();
+  marble_SW_init();
+  marble_UART_init();
 
-   printf("** Marble init done **\r\n");
+  LM75_Init();
+  eeprom_init(0);
+  marble_apply_params();
+  marble_read_pcb_rev();
 
-   // Init SSP busses
-   //marble_SSP_init(LPC_SSP0);
-   //marble_SSP_init(LPC_SSP1);
+  printf("** Marble init done **\r\n");
+  marble_print_pcb_rev();
 
-   //marble_MDIO_init();
-   return 0;
+  // Init SSP busses
+  //marble_SSP_init(LPC_SSP0);
+  //marble_SSP_init(LPC_SSP1);
+
+  //marble_MDIO_init();
+  return 0;
 }
 
-void SystemClock_Config(void)
+/*
+ * static void marble_apply_params(void);
+ *    Apply parameters stored in non-volatile memory.
+ */
+static void marble_apply_params(void) {
+  // Fan speed
+  uint8_t val;
+  if (eeprom_read_fan_speed(&val, 1)) {
+    printf("Could not read current fan speed.\r\n");
+  } else {
+    max6639_set_fans((int)val);
+  }
+  // Over-temperature threshold
+  if (eeprom_read_overtemp(&val, 1)) {
+    printf("Could not read over-temperature threshold.\r\n");
+  } else {
+    max6639_set_overtemp(val);
+    LM75_set_overtemp((int)val);
+  }
+  return;
+}
+
+void marble_print_pcb_rev(void) {
+#ifdef NUCLEO
+  printf("PCB Rev: Nucleo\r\n");
+#else
+  switch (marble_pcb_rev) {
+    case Marble_v1_3:
+      printf("PCB Rev: Marble v1.3\r\n");
+      break;
+    default:
+      printf("PCB Rev: Marble v1.2\r\n");
+      break;
+  }
+#endif
+}
+
+Marble_PCB_Rev_t marble_get_pcb_rev(void) {
+  return marble_pcb_rev;
+}
+
+uint8_t marble_get_board_id(void) {
+  return ((uint8_t)(marble_pcb_rev & 0x0F) | BOARD_TYPE_MARBLE);
+}
+
+// This macro yields a number in the range 0-15 inclusive where the original
+// bits 12-15 end up reversed and shifted, as in: (MSB->LSB) |b12|b13|b14|b15|
+#define MARBLE_PCB_REV_XFORM(gpio_idr)    ((__RBIT(gpio_idr) >> 16) & 0xF)
+static void marble_read_pcb_rev(void) {
+  uint32_t pcbid = MARBLE_PCB_REV_XFORM(GPIOD->IDR);
+  // Explicit case check rather than simple cast to catch unenumerated values
+  // in 'default'
+  switch ((Marble_PCB_Rev_t)pcbid) {
+    case Marble_v1_3:
+      marble_pcb_rev = Marble_v1_3;
+      break;
+    case Marble_v1_4: // Future support
+      marble_pcb_rev = Marble_v1_4;
+      break;
+    case Marble_v1_5: // Future support
+      marble_pcb_rev = Marble_v1_5;
+      break;
+    default:
+      marble_pcb_rev = Marble_v1_2;
+      break;
+  }
+  return;
+}
+
+static void SystemClock_Config(void)
 {
    RCC_OscInitTypeDef RCC_OscInitStruct = {0};
    RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
@@ -470,9 +725,9 @@ void SystemClock_Config(void)
    RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
    RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
    RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-   RCC_OscInitStruct.PLL.PLLM = 20;
-   RCC_OscInitStruct.PLL.PLLN = 192;
-   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+   RCC_OscInitStruct.PLL.PLLM = CONFIG_CLK_PLLM;
+   RCC_OscInitStruct.PLL.PLLN = CONFIG_CLK_PLLN;
+   RCC_OscInitStruct.PLL.PLLP = CONFIG_CLK_PLLP;
    RCC_OscInitStruct.PLL.PLLQ = 4;
    if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
    {
@@ -635,20 +890,46 @@ static void SPI_CSB_SET(SSP_PORT ssp, bool set)
    }
 }
 
+/*
 static void MX_USART1_UART_Init(void)
 {
-   huart1.Instance = USART1;
-   huart1.Init.BaudRate = 115200;
-   huart1.Init.WordLength = UART_WORDLENGTH_8B;
-   huart1.Init.StopBits = UART_STOPBITS_1;
-   huart1.Init.Parity = UART_PARITY_NONE;
-   huart1.Init.Mode = UART_MODE_TX_RX;
-   huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-   huart1.Init.OverSampling = UART_OVERSAMPLING_16;
-   if (HAL_UART_Init(&huart1) != HAL_OK)
+   huart_console.Instance = USART1;
+   huart_console.Init.BaudRate = 115200;
+   huart_console.Init.WordLength = UART_WORDLENGTH_8B;
+   huart_console.Init.StopBits = UART_STOPBITS_1;
+   huart_console.Init.Parity = UART_PARITY_NONE;
+   huart_console.Init.Mode = UART_MODE_TX_RX;
+   huart_console.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+   huart_console.Init.OverSampling = UART_OVERSAMPLING_16;
+   if (HAL_UART_Init(&huart_console) != HAL_OK)
    {
       Error_Handler();
    }
+   // Enable RXNE, TXE interrupts
+   SET_BIT(huart_console.Instance->CR1, USART_CR1_RXNEIE);
+}
+*/
+
+static void CONSOLE_USART_Init(void) {
+#ifdef NUCLEO
+  huart_console.Instance = USART3;
+#else
+  huart_console.Instance = USART1;
+#endif
+  huart_console.Init.BaudRate = 115200;
+  huart_console.Init.WordLength = UART_WORDLENGTH_8B;
+  huart_console.Init.StopBits = UART_STOPBITS_1;
+  huart_console.Init.Parity = UART_PARITY_NONE;
+  huart_console.Init.Mode = UART_MODE_TX_RX;
+  huart_console.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart_console.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart_console) != HAL_OK)
+  {
+     Error_Handler();
+  }
+  // Enable RXNE, TXE interrupts
+  SET_BIT(CONSOLE_USART->CR1, USART_CR1_RXNEIE);
+  return;
 }
 
 static void MX_USART2_UART_Init(void)
@@ -731,8 +1012,8 @@ static void MX_GPIO_Init(void)
    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, true);
    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-   /*Configure GPIO pin : PA0 */
-   GPIO_InitStruct.Pin = GPIO_PIN_0;
+   /*Configure GPIO pin : PA0, PA1, PA7 */
+   GPIO_InitStruct.Pin = GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_7;
    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
    GPIO_InitStruct.Pull = GPIO_NOPULL;
    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
@@ -758,7 +1039,7 @@ static void MX_GPIO_Init(void)
 
    /*Configure GPIO pin : PB15 */
    GPIO_InitStruct.Pin = GPIO_PIN_15;
-   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;  // TEST
    GPIO_InitStruct.Pull = GPIO_NOPULL;
    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
@@ -771,9 +1052,14 @@ static void MX_GPIO_Init(void)
    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
    HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
-   /* Configure GPIO pins : PD12 PD13 PD14 PD15 PD0 PD3 PD4 */
-   GPIO_InitStruct.Pin = GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15
-                           |GPIO_PIN_3|GPIO_PIN_4;
+   /* Configure GPIO pins : Marble PCB Rev ID (PD12 PD13 PD14 PD15) */
+   GPIO_InitStruct.Pin = GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15;
+   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+   GPIO_InitStruct.Pull = GPIO_PULLUP;
+   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+
+   /* Configure GPIO pins : PD3 PD4 */
+   GPIO_InitStruct.Pin = GPIO_PIN_3|GPIO_PIN_4;
    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
    GPIO_InitStruct.Pull = GPIO_NOPULL;
    HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
@@ -784,6 +1070,97 @@ static void MX_GPIO_Init(void)
    GPIO_InitStruct.Pull = GPIO_NOPULL;
    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+}
+
+#if 0
+static void TIM9_Init(void) {
+  // Only one general-purpose FPGA input: PA3
+  // Using TIM9 Ch2 automatic timer reset on input trigger
+  // Enable clock to TIM9 via RCC APB2 clock enable register (APB2ENR)
+  RCC->APB2ENR |= RCC_APB2ENR_TIM9EN;
+  // GOTCHA! There's a sneaky /2 prescaler enabled whenever PCLK2 prescaler
+  // is not /1 (as it is in this case).  So the input to TIM9 is probably
+  // pclk2_freq_hz/2
+  uint32_t psc = HAL_RCC_GetPCLK2Freq();  // Get PCLK2 freq
+  psc = (psc/FPGA_WATCHDOG_CLK_FREQ) - 1; // Compute prescaler value
+  TIM9->PSC = (uint16_t)(psc & 0xFFFF);
+  TIM9->ARR = 0xFFFF;               // Max ARR for init; is configurable
+  TIM9->CR1 &= ~TIM_CR1_CEN;        // counter disable
+
+  TIM9->CCER &= ~TIM_CCER_CC2E_Msk; // disable ch2
+  // SMCR
+  uint32_t reg = TIM9->SMCR;
+  reg = SET_FIELD_MASK(reg, 0 << TIM_SMCR_MSM_Pos, TIM_SMCR_MSM_Msk); // no synchronization needed
+  reg = SET_FIELD_MASK(reg, 5 << TIM_SMCR_TS_Pos, TIM_SMCR_TS_Msk);   // Filtered Timer Input 2 (TI2FP2)
+  reg = SET_FIELD_MASK(reg, 4 << TIM_SMCR_SMS_Pos, TIM_SMCR_SMS_Msk); // reset mode
+  TIM9->SMCR = reg;
+
+  // CR1
+  reg = TIM9->CR1 | TIM_CR1_ARPE_Msk | TIM_CR1_URS_Msk; // Auto-reload preload enable and prevent
+  TIM9->CR1 = reg;                                      // IRQ on setting of UG bit (software pet)
+
+  // DIER
+  TIM9->DIER |= TIM_DIER_UIE_Msk;   // Enable update interrupt?
+
+  // CCMR1
+  reg = TIM9->CCMR1;
+  reg = SET_FIELD_MASK(reg, 0xF << TIM_CCMR1_IC2F_Pos, TIM_CCMR1_IC2F_Msk); // f_sample = f_dts/32; N = 8
+  reg = SET_FIELD_MASK(reg, 0 << TIM_CCMR1_IC2PSC_Pos, TIM_CCMR1_IC2PSC_Msk); // capture on every edge
+  reg = SET_FIELD_MASK(reg, 1 << TIM_CCMR1_CC2S_Pos, TIM_CCMR1_CC2S_Msk); // ch2 input -> TI2
+  TIM9->CCMR1 = reg;
+
+  // CCER
+  reg = TIM9->CCER;
+  reg = SET_FIELD_MASK(reg, 0 << TIM_CCER_CC2P_Pos, TIM_CCER_CC2P_Msk); // non-inverted input, reset on rising edge
+  reg = SET_FIELD_MASK(reg, 1 << TIM_CCER_CC2E_Pos, TIM_CCER_CC2E_Msk); // enable ch2
+  TIM9->CCER = reg;
+
+  //TIM9->CR1 |= TIM_CR1_CEN;         // counter enable. Do not enable at startup for now.
+
+  // Enable TIM1_BRK_TIM9_IRQn;
+  HAL_NVIC_SetPriority(TIM1_BRK_TIM9_IRQn, 7, 7);
+  HAL_NVIC_EnableIRQ(TIM1_BRK_TIM9_IRQn);
+  return;
+}
+#endif
+
+void FPGAWD_set_period(uint16_t preload) {
+  if (preload) {
+  // disable timer, set preload, and restart timer
+    TIM9->CR1 &= ~TIM_CR1_CEN; // disable counter
+    TIM9->ARR = preload;
+    TIM9->CR1 |= TIM_CR1_CEN;  // enable counter
+    HAL_NVIC_EnableIRQ(TIM1_BRK_TIM9_IRQn);
+  } else {
+  // If preload == 0, disable timer and interrupt
+    TIM9->ARR = 0xFFFF;
+    TIM9->CR1 &= ~TIM_CR1_CEN; // disable counter
+    HAL_NVIC_DisableIRQ(TIM1_BRK_TIM9_IRQn);
+  }
+  return;
+}
+
+void FPGAWD_pet(void) {
+  // Software pet the watchdog
+  TIM9->EGR |= TIM_EGR_UG;
+  return;
+}
+
+void FPGAWD_ISR(void) {
+  // Reset the FPGA (if preload == 0, this should never fire)
+  /* Pull the PROGRAM_B pin low; it's spelled PROG_B on schematic */
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, false);
+  console_pend_FPGA_enable();
+  return;
+}
+
+int getI2CBusStatus(void) {
+  return i2cBusStatus;
+}
+
+void resetI2CBusStatus(void) {
+  i2cBusStatus = 0;
+  return;
 }
 
 /**

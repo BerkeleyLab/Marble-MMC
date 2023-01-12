@@ -43,6 +43,7 @@
 /* System oscillator rate and RTC oscillator rate */
 const uint32_t OscRateIn = 25000000;
 const uint32_t RTCOscRateIn = 32768;
+static uint32_t _systick = 0;
 
 // Moved here from marble_api.h
 SSP_PORT SSP_FPGA;
@@ -170,6 +171,13 @@ void marble_LED_toggle(uint8_t led_num)
    }
 }
 
+/* Debug purposes */
+void marble_Pmod3_5_write(bool on) {
+  // TODO
+  _UNUSED(on);
+  return;
+}
+
 /************
 * FMC & PSU
 ************/
@@ -259,6 +267,11 @@ void reset_fpga(void)
    Chip_GPIO_WriteDirBit(LPC_GPIO, rst_port, rst_pin, false);
 }
 
+void enable_fpga(void) {
+  // XXX What goes here?  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, true) on Marble
+  return;
+}
+
 /************
 * GPIO interrupt setup and user-defined handlers
 ************/
@@ -295,6 +308,27 @@ void marble_GPIOint_init(void)
 /* Register user-defined interrupt handlers */
 void marble_GPIOint_handlers(void (*FPGA_DONE_handler)(void)) {
    marble_FPGA_DONE_handler = FPGA_DONE_handler;
+}
+
+/************
+* MGT Multiplexer (NO-OP for API compatibility with marble v2)
+************/
+void marble_MGTMUX_config(uint8_t mgt_cfg) {
+  // Intentional no-op for API compatibility
+  _UNUSED(mgt_cfg);
+  return;
+}
+
+void marble_MGTMUX_set(uint8_t mgt_num, bool on) {
+  // Intentional no-op for API compatibility
+  _UNUSED(mgt_num);
+  _UNUSED(on);
+  return;
+}
+
+uint8_t marble_MGTMUX_status(void) {
+  // Intentional no-op for API compatibility
+  return 0xFF;
 }
 
 /************
@@ -432,6 +466,16 @@ int marble_I2C_cmdrecv_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *
    return xfer.rxSz != 0;
 }
 
+int getI2CBusStatus(void) {
+  // TODO - Implement
+  return 0;
+}
+
+void resetI2CBusStatus(void) {
+  // TODO - Implement
+  return;
+}
+
 /************
 * SSP/SPI
 ************/
@@ -527,8 +571,13 @@ void (*volatile marble_SysTick_Handler)(void) = SysTick_Handler_dummy;
 // Override default (weak) SysTick_Handler
 void SysTick_Handler(void)
 {
+   ++_systick;
    if (marble_SysTick_Handler)
       marble_SysTick_Handler();
+}
+
+uint32_t marble_get_tick(void) {
+  return _systick;
 }
 
 /* Register user-defined interrupt handlers */
@@ -558,6 +607,17 @@ void marble_SLEEP_ms(uint32_t delay)
 void marble_SLEEP_us(uint32_t delay)
 {
    StopWatch_DelayUs(delay);
+}
+
+Marble_PCB_Rev_t marble_get_pcb_rev(void) {
+  // TODO - How is Marble mini PCB revision ID'd?
+  return Marble_v1_2;
+}
+
+uint8_t marble_get_board_id(void) {
+  // TODO - How is Marble mini PCB revision ID'd?
+  //return ((uint8_t)(marble_pcb_rev & 0x0F) | BOARD_TYPE_MARBLE_MINI);
+  return (uint8_t)BOARD_TYPE_MARBLE_MINI;
 }
 
 /************

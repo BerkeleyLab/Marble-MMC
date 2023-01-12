@@ -75,6 +75,10 @@ int xrp_srecord(uint8_t dev, const uint8_t data[])
 
 int xrp_program_static(uint8_t dev)
 {
+  // HACK! part 1
+#ifdef SIMULATION
+#define MARBLE_V2
+#endif
    // each element of dd represents a hex record,
    // https://en.wikipedia.org/wiki/Intel_HEX
    // including length, address, record type, data, and checksum,
@@ -125,7 +129,8 @@ int xrp_program_static(uint8_t dev)
       "\x01\xFF\xDC\x00\x00\x24",
       "\x00\x00\x00\x01\xFF"
    };
-#elif MARBLE_V2
+#else
+#ifdef MARBLE_V2
    // Data from python hex2c.py < Marble_runtime.hex
    // where Marble_runtime.hex is found in github.com/BerkeleyLab/Marble.git
    const char *dd[] = {
@@ -170,6 +175,12 @@ int xrp_program_static(uint8_t dev)
       "\x01\xFF\xDC\x00\x00\x24",
       "\x00\x00\x00\x01\xFF"
    };
+#endif /* ifdef MARBLE_V2 */
+#endif /* ifdef MARBLEM_V1 */
+
+  // HACK! part 2
+#ifdef SIMULATION
+#undef MARBLE_V2
 #endif
 
    const unsigned dd_size = sizeof(dd) / sizeof(dd[0]);

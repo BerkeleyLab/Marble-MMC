@@ -9,9 +9,13 @@
 #define MAX6639_GET_TEMP_DOUBLE(rTemp, rTempExt) \
    ((double)(((uint16_t)rTemp << 3) | (uint16_t)rTempExt >> 5)/8)
 
-// Moved from marble_api.h, declared in marble_board.c
+/* ============================ Static Variables ============================ */
 extern I2C_BUS I2C_PM;
 
+/* =========================== Static Prototypes ============================ */
+static int set_max6639_reg(int regno, int value);
+
+/* ========================== Function Definitions ========================== */
 void I2C_PM_scan(void)
 {
    printf("Scanning I2C_PM bus:\r\n");
@@ -27,6 +31,12 @@ void I2C_PM_scan(void)
    printf("\r\n");
 }
 
+int max6639_set_overtemp(uint8_t ot) {
+  int rc = set_max6639_reg(MAX6639_NOT_LIM_CH1, ot);
+  rc |= set_max6639_reg(MAX6639_NOT_LIM_CH2, ot);
+  return rc;
+}
+
 static int set_max6639_reg(int regno, int value)
 {
    uint8_t addr = MAX6639;
@@ -37,7 +47,7 @@ static int set_max6639_reg(int regno, int value)
    return rc;
 }
 
-static int get_max6639_reg(int regno, int *value)
+int get_max6639_reg(int regno, int *value)
 {
    uint8_t i2c_dat[4];
    uint8_t addr = MAX6639;
@@ -46,12 +56,20 @@ static int get_max6639_reg(int regno, int *value)
    return rc;
 }
 
-static void set_fans(int speed[2])
+// TODO - Test me!
+int return_max6639_reg(int regno) {
+  uint8_t i2c_dat[4];
+  marble_I2C_cmdrecv(I2C_PM, MAX6639, regno, i2c_dat, 1);
+  return (int)*i2c_dat;
+}
+
+int max6639_set_fans(int speed)
 {
-    set_max6639_reg(0x11, 2);  // Fan 1 PWM sign = 1
-    set_max6639_reg(0x15, 2);  // Fan 2 PWM sign = 1
-    set_max6639_reg(0x26, speed[0]);
-    set_max6639_reg(0x27, speed[1]);
+  int rc = set_max6639_reg(MAX6639_FAN1_CONFIG2A, 2);  // Fan 1 PWM sign = 1
+  rc |= set_max6639_reg(MAX6639_FAN2_CONFIG2A, 2);  // Fan 2 PWM sign = 1
+  rc |= set_max6639_reg(MAX6639_FAN1_DUTY, speed);
+  rc |= set_max6639_reg(MAX6639_FAN2_DUTY, speed);
+  return rc;
 }
 
 void print_max6639(void)
@@ -69,12 +87,12 @@ void print_max6639(void)
       if ((ix&0x3) == 0x3) marble_UART_send("\r\n", 2);
    }
    if (0) {
-      int fan_speed[2];
+      //int fan_speed[2];
       // update fan speed to 83%, max is 120
       // see page 9 in datasheet
-      fan_speed[0] = 100;
-      fan_speed[1] = 100;
-      set_fans(fan_speed);
+      //fan_speed[0] = 100;
+      //fan_speed[1] = 100;
+      max6639_set_fans(100);
    }
 }
 
@@ -132,7 +150,6 @@ static int LM75_readwrite(uint8_t dev, LM75_REG reg, int *data, bool rnw)
       case LM75_TEMP:
       case LM75_HYST:
       case LM75_OS:
-
          if (rnw) {
             i2c_stat = marble_I2C_recv(I2C_PM, dev, i2c_buf, 2);
             // Signed Q7.1, i.e. resolution of 0.5 deg
@@ -190,6 +207,55 @@ void LM75_print(uint8_t dev)
    }
 }
 
+void LM75_print_decoded(uint8_t dev)
+{
+  int vTemp;
+  if (dev == LM75_0) {
+    printf("LM75_0 (U29) Registers:\n");
+  } else {
+    printf("LM75_1 (U28) Registers:\n");
+  }
+#define X(name, val) \
+  do{ \
+    LM75_read(dev, val, &vTemp); \
+    printf("  %s (0x%X) = %d\n", #name, val, vTemp); \
+  }while(0);
+  LM75_FOR_EACH_REGISTER()
+#undef X
+  return;
+}
+
+/*
+ */
+void LM75_Init(void) {
+  LM75_write(LM75_0, LM75_CFG, LM75_CFG_DEFAULT);
+  LM75_write(LM75_1, LM75_CFG, LM75_CFG_DEFAULT);
+  return;
+}
+
+
+/*
+ * int LM75_set_overtemp(int ot);
+ *  Helper function to set the overtemperature (OS) threshold of both LM75 chips
+ *  and set the hysteresis threshold to be T_hyst = (t_os - TEMPERATURE_HYST_DEGC)
+ *  Note! 'ot' is temperature in degrees C but the LM75 register stores in units
+ *  of 0.5 degC
+ */
+int LM75_set_overtemp(int ot) {
+  // Peg ot on lower end at 0degC even though LM75 allows down to -55C
+  ot = ot > 0 ? ot : 0;
+  // Peg ot on higher end at 125degC (250*0.5 degC)
+  ot = ot > 125 ? 125 : ot;
+  // Peg thyst on the lower end at 0degC, otherwise thyst = ot - TEMPERATURE_HYST_DEGC
+  int thyst = ot > TEMPERATURE_HYST_DEGC ? ot - TEMPERATURE_HYST_DEGC : 0;
+  // Note all the 2x multipliers for 0.5degC units
+  int rc = LM75_write(LM75_0, LM75_OS, 2*ot);
+  rc |= LM75_write(LM75_0, LM75_HYST, 2*thyst);
+  rc |= LM75_write(LM75_1, LM75_OS, 2*ot);
+  rc |= LM75_write(LM75_1, LM75_HYST, 2*thyst);
+  return rc;
+}
+
 static const uint8_t i2c_list[I2C_NUM] = {LM75_0, LM75_1, MAX6639, XRP7724};
 
 const char i2c_ok[] = "> Found I2C slave: %x\r\n";
@@ -229,6 +295,7 @@ void I2C_PM_probe(void)
       snprintf(p_buf, 40, i2c_ret, *i2c_dat);
       marble_UART_send(p_buf, strlen(p_buf));
    }
+   return;
 }
 
 /* XPR7724 is special
@@ -536,9 +603,14 @@ static int xrp_program_page(uint8_t dev, unsigned page_no, uint8_t data[], unsig
 void xrp_flash(uint8_t dev)
 {
 
+  // HACK! part 1
+#ifdef SIMULATION
+#define MARBLE_V2
+#endif
+
 #ifdef MARBLEM_V1
    // Data originally based on python hex2c.py < MarbleMini.hex
-   // Pure copy of 7 x 64-byte pages, spannning addresses 0x0000 to 0x01bf
+   // Pure copy of 7 x 64-byte pages, spanning addresses 0x0000 to 0x01bf
    uint8_t dd[] = {
       "\xFF\xC5\x00\x0A\x03\x41\x00\xFA\x02\xDA\x20\x27\xE1\x28\x33\x0D"
       "\x00\x00\x03\x00\x56\x00\x12\x02\x69\x97\x4A\x26\x28\x3C\x20\x01"
@@ -569,9 +641,10 @@ void xrp_flash(uint8_t dev)
       "\x21\x64\x64\x64\x21\x64\x64\x64\x21\x64\x64\x64\x21\x64\x64\x0A"
       "\x20\x0A\x05\x19\x00\xFF\x00\x00\x00\xFF\xFF\x00\x04\xFF\xFF\xCF"
    };
-#elif MARBLE_V2
+#else
+#ifdef MARBLE_V2
    // Data based on python hex2c_linear.py < Marble_flash.hex
-   // Pure copy of 7 x 64-byte pages, spannning addresses 0x0000 to 0x01bf
+   // Pure copy of 7 x 64-byte pages, spanning addresses 0x0000 to 0x01bf
    uint8_t dd[] = {
       "\xFF\xC5\x00\x0A\x03\x41\x00\xFA\x02\xDA\x20\x13\xE1\x14\x33\x0D"
       "\x00\x00\x03\x00\x50\x00\x11\x02\x15\xEB\x4E\x29\x2B\x3C\x14\x01"
@@ -602,6 +675,12 @@ void xrp_flash(uint8_t dev)
       "\x21\x64\x64\x64\x20\x64\x64\x64\x21\x64\x64\x64\x22\x64\x64\x0A"
       "\x20\x0A\x05\x19\xFF\x00\x00\x00\x00\xFF\xFF\x00\x04\xFF\xFF\x12"
    };
+#endif /* ifdef MARBLE_V2 */
+#endif /* ifdef MARBLEM_V1 */
+
+  // HACK! part 2
+#ifdef SIMULATION
+#undef MARBLE_V2
 #endif
 
    const unsigned dd_size = sizeof(dd) / sizeof(dd[0]);

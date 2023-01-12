@@ -111,7 +111,7 @@ void setCalibration_16V_2A(void)
    // MaximumLSB = 0.000488              (488uA per bit)
 
    // 4. Choose an LSB between the min and max values
-   //    (Preferrably a roundish number close to MinLSB)
+   //    (Preferably a roundish number close to MinLSB)
    // CurrentLSB = 0.0001 (100uA per bit)
 
    // 5. Compute the calibration register

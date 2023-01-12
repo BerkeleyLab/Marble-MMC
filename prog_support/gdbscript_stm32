@@ -1,0 +1,8 @@
+#GDB Command File for quickly connecting to a running OpenOCD server
+#Run on startup with:
+#   gdb -x gdbscript_stm32 bin/mytarget.elf
+
+# Note: This next line was moved to makefile.board to adapt to different hardware configurations
+#target remote | openocd -f prog_support/ocd/stm32f207.cfg -c "gdb_port pipe; log_output openocd.log"
+load
+monitor reset init

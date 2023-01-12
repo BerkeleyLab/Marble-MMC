@@ -1,3 +1,6 @@
+# Identify the debug probe used
+export DEBUG_ADAPTER=$(shell ./scripts/id_probe.sh)
+
 marble:
 	make -f makefile.board BOARD=marble all
 
@@ -16,4 +19,33 @@ marble_mini_download:
 marble_mini_clean:
 	make -f makefile.board BOARD=marble_mini clean
 
-clean: marble_mini_clean marble_clean
+marble_gdb:
+	make -f makefile.board BOARD=marble gdb
+
+marble_reset:
+	make -f makefile.board BOARD=marble reset
+
+nucleo:
+	make -f makefile.board BOARD=nucleo all
+
+nucleo_download:
+	make -f makefile.board BOARD=nucleo download
+
+nucleo_gdb:
+	make -f makefile.board BOARD=nucleo gdb
+
+nucleo_clean:
+	make -f makefile.board BOARD=nucleo clean
+
+.PHONY: sim
+sim:
+	make -f makefile.sim BOARD=sim all
+
+sim_clean:
+	make -f makefile.sim BOARD=sim clean
+
+.PHONY: run
+run:
+	make -f makefile.sim BOARD=sim run
+
+clean: marble_mini_clean marble_clean sim_clean nucleo_clean
