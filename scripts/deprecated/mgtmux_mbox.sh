@@ -95,10 +95,10 @@ fi
 
 if [ -z "$muxstate" ]; then
   # Read MGTMUX_ST from page 3
-  python3 $SCRIPT_DIR/mboxexchange.py -i "$ip" MB3_MGTMUX_ST
+  python3 $SCRIPT_DIR/../mboxexchange.py -i "$ip" MB3_MGTMUX_ST
 else
   # Write to FMC_MGT_CTL in page 2
-  python3 $SCRIPT_DIR/mboxexchange.py -i "$ip" MB2_FMC_MGT_CTL $muxval
+  python3 $SCRIPT_DIR/../mboxexchange.py -i "$ip" MB2_FMC_MGT_CTL $muxval
 fi
 
 exit 0
