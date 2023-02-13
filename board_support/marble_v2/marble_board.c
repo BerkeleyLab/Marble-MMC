@@ -530,6 +530,7 @@ static int marble_MGTMUX_store(void) {
 * I2C
 ************/
 #define SPEED_100KHZ 100000
+#define I2C_DELAY_MS 1000
 
 
 /* Non-destructive I2C probe function based on empty data command, i.e. S+[A,RW]+P */
@@ -542,37 +543,67 @@ int marble_I2C_probe(I2C_BUS I2C_bus, uint8_t addr) {
 /* Generic I2C send function with selectable I2C bus and 8-bit I2C addresses (R/W bit = 0) */
 /* 1-byte register addresses */
 int marble_I2C_send(I2C_BUS I2C_bus, uint8_t addr, const uint8_t *data, int size) {
-   int rc = HAL_I2C_Master_Transmit(I2C_bus, (uint16_t)addr, data, size, HAL_MAX_DELAY);
+   int rc = HAL_I2C_Master_Transmit(I2C_bus, (uint16_t)addr, data, size, I2C_DELAY_MS);
+   if (rc == HAL_TIMEOUT) {
+     printf("*** I2C_send TIMEOUT\r\n");
+   } else if (rc == HAL_BUSY) {
+     printf("*** I2C_send BUSY\r\n");
+   }
    i2cBusStatus |= rc;
    return rc;
 }
 
 int marble_I2C_cmdsend(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size) {
-   int rc = HAL_I2C_Mem_Write(I2C_bus, (uint16_t)addr, cmd, 1, data, size, HAL_MAX_DELAY);
+   int rc = HAL_I2C_Mem_Write(I2C_bus, (uint16_t)addr, cmd, 1, data, size, I2C_DELAY_MS);
+   if (rc == HAL_TIMEOUT) {
+     printf("*** I2C_cmdsend TIMEOUT\r\n");
+   } else if (rc == HAL_BUSY) {
+     printf("*** I2C_cmdsend BUSY\r\n");
+   }
    i2cBusStatus |= rc;
    return rc;
 }
 
 int marble_I2C_recv(I2C_BUS I2C_bus, uint8_t addr, uint8_t *data, int size) {
-   int rc = HAL_I2C_Master_Receive(I2C_bus, (uint16_t)addr, data, size, HAL_MAX_DELAY);
+   int rc = HAL_I2C_Master_Receive(I2C_bus, (uint16_t)addr, data, size, I2C_DELAY_MS);
+   if (rc == HAL_TIMEOUT) {
+     printf("*** I2C_recv TIMEOUT\r\n");
+   } else if (rc == HAL_BUSY) {
+     printf("*** I2C_recv BUSY\r\n");
+   }
    i2cBusStatus |= rc;
    return rc;
 }
 
 int marble_I2C_cmdrecv(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size) {
-   int rc = HAL_I2C_Mem_Read(I2C_bus, (uint16_t)addr, cmd, 1, data, size, HAL_MAX_DELAY);
+   int rc = HAL_I2C_Mem_Read(I2C_bus, (uint16_t)addr, cmd, 1, data, size, I2C_DELAY_MS);
+   if (rc == HAL_TIMEOUT) {
+     printf("*** I2C_cmdrecv TIMEOUT\r\n");
+   } else if (rc == HAL_BUSY) {
+     printf("*** I2C_cmdrecv BUSY\r\n");
+   }
    i2cBusStatus |= rc;
    return rc;
 }
 
 /* Same but 2-byte register addresses */
 int marble_I2C_cmdsend_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *data, int size) {
-   int rc = HAL_I2C_Mem_Write(I2C_bus, (uint16_t)addr, cmd, 2, data, size, HAL_MAX_DELAY);
+   int rc = HAL_I2C_Mem_Write(I2C_bus, (uint16_t)addr, cmd, 2, data, size, I2C_DELAY_MS);
+   if (rc == HAL_TIMEOUT) {
+     printf("*** I2C_cmdsend_a2 TIMEOUT\r\n");
+   } else if (rc == HAL_BUSY) {
+     printf("*** I2C_cmdsend_a2 BUSY\r\n");
+   }
    i2cBusStatus |= rc;
    return rc;
 }
 int marble_I2C_cmdrecv_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *data, int size) {
-   int rc = HAL_I2C_Mem_Read(I2C_bus, (uint16_t)addr, cmd, 2, data, size, HAL_MAX_DELAY);
+   int rc = HAL_I2C_Mem_Read(I2C_bus, (uint16_t)addr, cmd, 2, data, size, I2C_DELAY_MS);
+   if (rc == HAL_TIMEOUT) {
+     printf("*** I2C_cmdrecv_a2 TIMEOUT\r\n");
+   } else if (rc == HAL_BUSY) {
+     printf("*** I2C_cmdrecv_a2 BUSY\r\n");
+   }
    i2cBusStatus |= rc;
    return rc;
 }
