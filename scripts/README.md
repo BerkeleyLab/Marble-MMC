@@ -1,5 +1,29 @@
 # Scripts and Usage
 
+[config.sh](##config.sh)
+
+[decodembox.py](##decodembox.py)
+
+[htools.py](##htools.py)
+
+[id_probe.sh](##id_probe.sh)
+
+[load.py](##load.py)
+
+[mboxexchange.py](##mboxexchange.py)
+
+[mgtmux.sh](##mgtmux.sh)
+
+[mgtmux_mbox.sh](##mgtmux_mbox.sh)
+
+[mkmbox.py](##mkmbox.py)
+
+[readfromtty.py](##readfromtty.py)
+
+[reset](##reset)
+
+[testscript.txt](##testscript.txt)
+
 ## config.sh
 ```sh
 config.sh [-d /dev/ttyUSB3] serial_number
@@ -111,18 +135,18 @@ Usage: `mgtmux.sh [-h | --help] [-d $TTY_MMC] [muxstate]`
 
 In the above, 'muxstate' can be string of one or more assignments, 1=x 2=x 3=x (where x=1,0) or one of
 the following.
-  muxstate |MUX3 |MUX2 |MUX1 |State
-  ---------------------------------
-  "M0"     |0    |0    |0    |MGT4-MGT6 => FMC2; MGT7 => FMC1
-  "M1"     |0    |0    |1    |MGT4-MGT5 => FMC2; MGT6-MGT7 => FMC1
-  "M2"     |0    |1    |0    |MGT4-MGT7 => FMC2;
-  "M3"     |0    |1    |1    |MGT4-MGT5 => FMC2; MGT6 => FMC1; MGT7 => FMC2
-  "M4"     |1    |X    |X    |MGT4-MGT7 => QSFP2
-  "m0"     |0    |0    |0    |Same as "M0" but FMC power disabled
-  "m1"     |0    |0    |1    |Same as "M1" but FMC power disabled
-  "m2"     |0    |1    |0    |Same as "M2" but FMC power disabled
-  "m3"     |0    |1    |1    |Same as "M3" but FMC power disabled
-  "m4"     |1    |X    |X    |Same as "M4" but FMC power disabled
+muxstate |MUX3 |MUX2 |MUX1 |State
+---------|-----|-----|-----|-----
+"M0"     |0    |0    |0    |MGT4-MGT6 => FMC2; MGT7 => FMC1
+"M1"     |0    |0    |1    |MGT4-MGT5 => FMC2; MGT6-MGT7 => FMC1
+"M2"     |0    |1    |0    |MGT4-MGT7 => FMC2;
+"M3"     |0    |1    |1    |MGT4-MGT5 => FMC2; MGT6 => FMC1; MGT7 => FMC2
+"M4"     |1    |X    |X    |MGT4-MGT7 => QSFP2
+"m0"     |0    |0    |0    |Same as "M0" but FMC power disabled
+"m1"     |0    |0    |1    |Same as "M1" but FMC power disabled
+"m2"     |0    |1    |0    |Same as "M2" but FMC power disabled
+"m3"     |0    |1    |1    |Same as "M3" but FMC power disabled
+"m4"     |1    |X    |X    |Same as "M4" but FMC power disabled
 
 Print usage:
 ```sh
@@ -159,31 +183,31 @@ Usage: `PYTHONPATH=bedrock/badger mgtmux_mbox.sh [-h | --help] [-i \$IP] [muxsta
 
 In the above, 'muxstate' can be single-byte integer in decimal (0-255) or hex (0x00-0xff)" or one of
 the following.
-  muxstate |MUX3 |MUX2 |MUX1 |State
-  ---------------------------------
-  "M0"     |0    |0    |0    |MGT4-MGT6 => FMC2; MGT7 => FMC1
-  "M1"     |0    |0    |1    |MGT4-MGT5 => FMC2; MGT6-MGT7 => FMC1
-  "M2"     |0    |1    |0    |MGT4-MGT7 => FMC2;
-  "M3"     |0    |1    |1    |MGT4-MGT5 => FMC2; MGT6 => FMC1; MGT7 => FMC2
-  "M4"     |1    |X    |X    |MGT4-MGT7 => QSFP2
-  "m0"     |0    |0    |0    |Same as "M0" but FMC power disabled
-  "m1"     |0    |0    |1    |Same as "M1" but FMC power disabled
-  "m2"     |0    |1    |0    |Same as "M2" but FMC power disabled
-  "m3"     |0    |1    |1    |Same as "M3" but FMC power disabled
-  "m4"     |1    |X    |X    |Same as "M4" but FMC power disabled
+muxstate |MUX3 |MUX2 |MUX1 |State
+---------|-----|-----|-----|-----
+"M0"     |0    |0    |0    |MGT4-MGT6 => FMC2; MGT7 => FMC1
+"M1"     |0    |0    |1    |MGT4-MGT5 => FMC2; MGT6-MGT7 => FMC1
+"M2"     |0    |1    |0    |MGT4-MGT7 => FMC2;
+"M3"     |0    |1    |1    |MGT4-MGT5 => FMC2; MGT6 => FMC1; MGT7 => FMC2
+"M4"     |1    |X    |X    |MGT4-MGT7 => QSFP2
+"m0"     |0    |0    |0    |Same as "M0" but FMC power disabled
+"m1"     |0    |0    |1    |Same as "M1" but FMC power disabled
+"m2"     |0    |1    |0    |Same as "M2" but FMC power disabled
+"m3"     |0    |1    |1    |Same as "M3" but FMC power disabled
+"m4"     |1    |X    |X    |Same as "M4" but FMC power disabled
 
 When 'muxstate' is given as a 1-byte integer in decimal or hex, the value is interpreted as a
 bitfield with the following significance:
-  nBit |Function
-  --------------
-  0    |FMC power state ('1' = ON, '0' = OFF)
-  1    |'1' = apply FMC power state, '0' = do not change FMC power state
-  2    |MGTMUX pin 0 state (MUX0\_MMC on schematic)
-  3    |'1' = apply MGTMUX pin 0 state, '0' = do not change MGTMUX pin 0 state
-  4    |MGTMUX pin 1 state (MUX1\_MMC on schematic)
-  5    |'1' = apply MGTMUX pin 1 state, '0' = do not change MGTMUX pin 1 state
-  6    |MGTMUX pin 2 state (MUX2\_MMC on schematic)
-  7    |'1' = apply MGTMUX pin 2 state, '0' = do not change MGTMUX pin 2 state
+nBit |Function
+-----|--------
+0    |FMC power state ('1' = ON, '0' = OFF)
+1    |'1' = apply FMC power state, '0' = do not change FMC power state
+2    |MGTMUX pin 0 state (MUX0\_MMC on schematic)
+3    |'1' = apply MGTMUX pin 0 state, '0' = do not change MGTMUX pin 0 state
+4    |MGTMUX pin 1 state (MUX1\_MMC on schematic)
+5    |'1' = apply MGTMUX pin 1 state, '0' = do not change MGTMUX pin 1 state
+6    |MGTMUX pin 2 state (MUX2\_MMC on schematic)
+7    |'1' = apply MGTMUX pin 2 state, '0' = do not change MGTMUX pin 2 state
 
 Print usage:
 ```sh
