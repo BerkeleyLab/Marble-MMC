@@ -28,7 +28,7 @@
 #     fmt       string  printf fmt string   Format string for data formatting/presentation.
 #                                           Accepts both printf-style (e.g. '%x') and new Python format
 #                                           strings (e.g. '{:x}')
-#     desc      string  *                   Human-readable description of the data member
+#     desc      string  *                   Human-readable description of the data member (for documentation)
 #     scale     float   *                   Multiply the value read from the mailbox by 'scale' to get
 #                                           physical units (before handed to 'fmt')
 #
@@ -57,7 +57,7 @@
     { "name" : "FMC_MGT_CTL",
       "type" : "int",
       "fmt"  : "0x{:x}",
-      "desc" : "",
+      "desc" : "Input is bitfield. See scripts/README.md mgtmux_mbox.sh.",
       "input" : "marble_MGTMUX_config(@, 0)"
     }
   ],
@@ -77,6 +77,7 @@
       "type" : "float",
       "fmt"  : "{:.1f} degC",
       "scale": 0.5,
+      "desc" : "Returns LM75_0 temperature in units of 0.5degC",
       "output" : "LM75_read(LM75_0, LM75_TEMP, (int *)&@)"
     },
     { "name" : "LM75_1",
@@ -84,22 +85,26 @@
       "type" : "float",
       "fmt"  : "{:.1f} degC",
       "scale": 0.5,
+      "desc" : "Returns LM75_1 temperature in units of 0.5degC",
       "output" : "LM75_read(LM75_1, LM75_TEMP, (int *)&@)"
     },
     { "name" : "FMC_ST",
       "type" : "int",
       "fmt"  : "",
-      "output"  : "@ = marble_FMC_status()"
+      "output"  : "@ = marble_FMC_status()",
+      "desc" : "Returns bitfield. 0=FMC1_PWR, 1=FMC1_FUSE, 2=FMC2_PWR, 3=FMC1_FUSE"
     },
     { "name" : "PWR_ST",
       "type" : "int",
       "fmt"  : "",
-      "output"  : "@ = marble_PWR_status()"
+      "output"  : "@ = marble_PWR_status()",
+      "desc" : "Returns bitfield. 0=PSU_EN, 1=~POE_PRESENT, 2=OTEMP"
     },
     { "name" : "MGTMUX_ST",
       "type" : "int",
       "fmt"  : "",
-      "output"  : "@ = marble_MGTMUX_status()"
+      "output"  : "@ = marble_MGTMUX_status()",
+      "desc" : "Returns bitfield of mux pin states. 0=MUX0_MMC, 1=MUX1_MMC, 2=MUX2_MMC"
     },
     { "name" : "PAD3"
     },
@@ -107,42 +112,52 @@
       "type" : "int",
       "size" : 4,
       "fmt"  : "{:08X}",
-      "output" : "@ = GIT_REV_32BIT"
+      "output" : "@ = GIT_REV_32BIT",
+      "desc" : "32-bit git commit ID"
     }
   ],
 # Page 4 contains only outputs (MMC => FPGA)
   "page4" : [
     { "name" : "MAX_T1_HI",
-      "output" : "@ = return_max6639_reg(MAX6639_TEMP_CH1)"
+      "output" : "@ = return_max6639_reg(MAX6639_TEMP_CH1)",
+      "desc" : "Returns raw value of MAX6639 register TEMP_CH1"
     },
     { "name" : "MAX_T1_LO",
-      "output" : "@ = return_max6639_reg(MAX6639_TEMP_EXT_CH1)"
+      "output" : "@ = return_max6639_reg(MAX6639_TEMP_EXT_CH1)",
+      "desc" : "Returns raw value of MAX6639 register TEMP_EXT_CH1"
     },
     { "name" : "MAX_T2_HI",
-      "output" : "@ = return_max6639_reg(MAX6639_TEMP_CH2)"
+      "output" : "@ = return_max6639_reg(MAX6639_TEMP_CH2)",
+      "desc" : "Returns raw value of MAX6639 register TEMP_CH2"
     },
     { "name" : "MAX_T2_LO",
-      "output" : "@ = return_max6639_reg(MAX6639_TEMP_EXT_CH2)"
+      "output" : "@ = return_max6639_reg(MAX6639_TEMP_EXT_CH2)",
+      "desc" : "Returns raw value of MAX6639 register TEMP_EXT_CH2"
     },
     { "name" : "MAX_F1_TACH",
-      "output" : "@ = return_max6639_reg(MAX6639_FAN1_TACH_CNT)"
+      "output" : "@ = return_max6639_reg(MAX6639_FAN1_TACH_CNT)",
+      "desc" : "Returns raw value of MAX6639 register FAN1_TACH_CNT"
     },
     { "name" : "MAX_F2_TACH",
-      "output" : "@ = return_max6639_reg(MAX6639_FAN2_TACH_CNT)"
+      "output" : "@ = return_max6639_reg(MAX6639_FAN2_TACH_CNT)",
+      "desc" : "Returns raw value of MAX6639 register FAN2_TACH_CNT"
     },
     { "name" : "MAX_F1_DUTY",
       "output" : "@ = return_max6639_reg(MAX6639_FAN1_DUTY)",
+      "desc" : "Returns MAX6639 ch1 fan duty cycle as duty_percent*1.2.",
       "scale": 0.833333,
       "fmt"  : "{:.1f} %"
     },
     { "name" : "MAX_F2_DUTY",
       "output" : "@ = return_max6639_reg(MAX6639_FAN2_DUTY)",
+      "desc" : "Returns MAX6639 ch2 fan duty cycle as duty_percent*1.2.",
       "scale"  : 0.833333,
       "fmt"  : "{:.1f} %"
     },
     {
       "name" : "PCB_REV",
       "output" : "@ = marble_get_board_id()",
+      "desc" : "Returns bitfield. [4:7]=Board type (0=sim, 1=marble, 2=mini), [0:3]=PCB rev",
       "fmt"  : "0x{:x}"
     },
     { "name" : "COUNT",
@@ -159,7 +174,8 @@
       "type" : "int",
       "fmt"  : "0b{:b}",
       "output": "@ = (uint8_t)getI2CBusStatus()",
-      "input" : "mbox_handleI2CBusStatusMsg(@)"
+      "input" : "mbox_handleI2CBusStatusMsg(@)",
+      "desc" : "Returns logical OR of all I2C function return values. Write nonzero value to clear status."
     }
   ]
 }

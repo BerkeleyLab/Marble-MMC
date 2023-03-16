@@ -113,7 +113,7 @@ void print_max6639_decoded(void)
       rTempExt = MAX6639_TEMP_EXT_CH2;
     }
     rval = get_max6639_reg(rTemp, &vTemp);
-    rval = get_max6639_reg(rTempExt, &vTempExt);
+    rval |= get_max6639_reg(rTempExt, &vTempExt);
     if (rval) {
       printf("I2C fault!\r\n");
       return;

@@ -138,12 +138,16 @@ $(OUTPUT_DIR)/%.o: %.c
 
 # =============== Auto-Generated Mailbox Interface ================
 MBOX_DEF=mailbox_def
+MBOX_DOC=mailbox.md
 $(OUTPUT_DIR)/src/mailbox.o: $(SOURCE_DIR)/$(MBOX_DEF).c $(INCLUDE_DIR)/$(MBOX_DEF).h
 
 $(INCLUDE_DIR)/$(MBOX_DEF).h: $(INCLUDE_DIR)/mbox.def
 	python3 scripts/mkmbox.py -d $^ -o $@
 
 $(SOURCE_DIR)/$(MBOX_DEF).c: $(INCLUDE_DIR)/mbox.def
+	python3 scripts/mkmbox.py -d $^ -o $@
+
+$(DOC_DIR)/$(MBOX_DOC): $(INCLUDE_DIR)/mbox.def
 	python3 scripts/mkmbox.py -d $^ -o $@
 
 # Rule for generating object files from assembler files
@@ -204,6 +208,9 @@ download: all
 reset:
 	$(OPENOCD) -f $(PROG_DIR)/ocd/$(OCD_CONF) -c "init" -c "reset" -c "exit"
 
+.PHONY: doc
+doc: $(DOC_DIR)/$(MBOX_DOC)
+
 # Creates a gdb script if required
 #
 #
@@ -233,3 +240,4 @@ gdb:
 clean:
 	$(RM) $(OUTPUT_DIR)/*
 	$(RM) gdbscript $(SOURCE_DIR)/rev.h
+	$(RM) -r $(DOC_DIR)

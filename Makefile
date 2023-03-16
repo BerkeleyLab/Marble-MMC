@@ -37,6 +37,10 @@ nucleo_gdb:
 nucleo_clean:
 	make -f makefile.board BOARD=nucleo clean
 
+.PHONY: doc
+doc:
+	make -f makefile.board BOARD=marble doc
+
 .PHONY: sim
 sim:
 	make -f makefile.sim BOARD=sim all
