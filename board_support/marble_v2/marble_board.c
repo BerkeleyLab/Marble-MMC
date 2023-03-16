@@ -436,7 +436,7 @@ void marble_GPIOint_handlers(void (*FPGA_DONE_handler)(void)) {
 ************/
 static const uint16_t mgtmux_pins[MGT_MAX_PINS] = {GPIO_PIN_8, GPIO_PIN_9, GPIO_PIN_10};
 
-void marble_MGTMUX_config(uint8_t mgt_msg) {
+void marble_MGTMUX_config(uint8_t mgt_msg, uint8_t store) {
   // Control of FMC power and MGT mux based on mailbox entry MB2_FMC_MGT_CTL
   // Currently addressed as 0x200020 = 2097184 in test_marble_family
   // [1] - FMC_SEL,      [0] - ON/OFF
@@ -473,7 +473,9 @@ void marble_MGTMUX_config(uint8_t mgt_msg) {
     HAL_GPIO_WritePin(GPIOE, mgtmux_pins[2], v);
   }
   // Store to EEPROM
-  marble_MGTMUX_store();
+  if (store) {
+    marble_MGTMUX_store();
+  }
   printf("\r\n");
   return;
 }

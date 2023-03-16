@@ -14,6 +14,11 @@
 /* ============== Define mailbox structure in scripts/mbox.def ============== */
 
 typedef enum {
+  MB2_FMC_MGT_CTL,
+  MB2_SIZE // 1
+} PAGE2_ENUM;
+
+typedef enum {
   MB3_COUNT_1,
   MB3_COUNT_0,
   MB3_PAD1,

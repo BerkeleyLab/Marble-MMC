@@ -342,7 +342,7 @@ static int handle_msg_MGTMUX(char *rx_msg, int len) {
     printf("\r\n");
   } else {
     printf("  "); // Indent the line printed by the following function
-    marble_MGTMUX_config((uint8_t)rval);
+    marble_MGTMUX_config((uint8_t)rval, 1); // Store nonvolatile
   }
   return rval;
 }

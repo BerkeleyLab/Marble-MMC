@@ -231,8 +231,9 @@ void marble_GPIOint_handlers(void (*FPGA_DONE_handler)(void)) {
   return;
 }
 
-void marble_MGTMUX_config(uint8_t mgt_cfg) {
+void marble_MGTMUX_config(uint8_t mgt_cfg, uint8_t store) {
   _UNUSED(mgt_cfg);
+  _UNUSED(store);
   return;
 }
 

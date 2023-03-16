@@ -104,7 +104,25 @@ PYTHONPATH=/path/to/bedrock/badger python3 scripts/decodembox.py -i $IP -p 5 I2C
 
 ## mgtmux.sh
 A utility using `load.py` for reading and setting the configuration of the MGT MUX pins via the UART
-console. 
+console. __NOTE__: This method stores the selection in non-volatile memory.  See 'mgtmux\_mbox.sh' for
+an alternate method which uses the FPGA mailbox and avoids non-volatile memory writes.
+
+Usage: `mgtmux.sh [-h | --help] [-d $TTY_MMC] [muxstate]`
+
+In the above, 'muxstate' can be string of one or more assignments, 1=x 2=x 3=x (where x=1,0) or one of
+the following.
+  muxstate |MUX3 |MUX2 |MUX1 |State
+  ---------------------------------
+  "M0"     |0    |0    |0    |MGT4-MGT6 => FMC2; MGT7 => FMC1
+  "M1"     |0    |0    |1    |MGT4-MGT5 => FMC2; MGT6-MGT7 => FMC1
+  "M2"     |0    |1    |0    |MGT4-MGT7 => FMC2;
+  "M3"     |0    |1    |1    |MGT4-MGT5 => FMC2; MGT6 => FMC1; MGT7 => FMC2
+  "M4"     |1    |X    |X    |MGT4-MGT7 => QSFP2
+  "m0"     |0    |0    |0    |Same as "M0" but FMC power disabled
+  "m1"     |0    |0    |1    |Same as "M1" but FMC power disabled
+  "m2"     |0    |1    |0    |Same as "M2" but FMC power disabled
+  "m3"     |0    |1    |1    |Same as "M3" but FMC power disabled
+  "m4"     |1    |X    |X    |Same as "M4" but FMC power disabled
 
 Print usage:
 ```sh
@@ -131,9 +149,69 @@ cd marble_mmc
 scripts/mgtmux.sh -d /dev/ttyUSB3
 ```
 
-Note: In the 'deprecated' folder, there is a similar utility designed to do the same operations
-via the SPI mailbox rather than via the UART console.  The choice was made to switch to UART
-console only and store this parameter as non-volatile boot default.
+## mgtmux\_mbox.sh
+A script which functions in the same ways as 'mgtmux.sh' but uses the FPGA mailbox to set the
+MGT MUX configuration. __NOTE__: This method does not store the selection in non-volatile memory.
+See 'mgtmux.sh' for an alternate method which uses the MMC console and performs a non-volatile
+memory write.
+
+Usage: `PYTHONPATH=bedrock/badger mgtmux_mbox.sh [-h | --help] [-i \$IP] [muxstate]`
+
+In the above, 'muxstate' can be single-byte integer in decimal (0-255) or hex (0x00-0xff)" or one of
+the following.
+  muxstate |MUX3 |MUX2 |MUX1 |State
+  ---------------------------------
+  "M0"     |0    |0    |0    |MGT4-MGT6 => FMC2; MGT7 => FMC1
+  "M1"     |0    |0    |1    |MGT4-MGT5 => FMC2; MGT6-MGT7 => FMC1
+  "M2"     |0    |1    |0    |MGT4-MGT7 => FMC2;
+  "M3"     |0    |1    |1    |MGT4-MGT5 => FMC2; MGT6 => FMC1; MGT7 => FMC2
+  "M4"     |1    |X    |X    |MGT4-MGT7 => QSFP2
+  "m0"     |0    |0    |0    |Same as "M0" but FMC power disabled
+  "m1"     |0    |0    |1    |Same as "M1" but FMC power disabled
+  "m2"     |0    |1    |0    |Same as "M2" but FMC power disabled
+  "m3"     |0    |1    |1    |Same as "M3" but FMC power disabled
+  "m4"     |1    |X    |X    |Same as "M4" but FMC power disabled
+
+When 'muxstate' is given as a 1-byte integer in decimal or hex, the value is interpreted as a
+bitfield with the following significance:
+  nBit |Function
+  --------------
+  0    |FMC power state ('1' = ON, '0' = OFF)
+  1    |'1' = apply FMC power state, '0' = do not change FMC power state
+  2    |MGTMUX pin 0 state (MUX0\_MMC on schematic)
+  3    |'1' = apply MGTMUX pin 0 state, '0' = do not change MGTMUX pin 0 state
+  4    |MGTMUX pin 1 state (MUX1\_MMC on schematic)
+  5    |'1' = apply MGTMUX pin 1 state, '0' = do not change MGTMUX pin 1 state
+  6    |MGTMUX pin 2 state (MUX2\_MMC on schematic)
+  7    |'1' = apply MGTMUX pin 2 state, '0' = do not change MGTMUX pin 2 state
+
+Print usage:
+```sh
+cd marble_mmc
+scripts/mgtmux_mbox.sh -h
+```
+
+Setting MGT MUX configuration to MUX1=MUX2=MUX3=0, FMC power ON with explicit IP
+address and PYTHONPATH assignment.
+```sh
+cd marble_mmc
+PYTHONPATH=bedrock/badger scripts/mgtmux_mbox.sh -i 192.168.10.20 M0
+```
+
+Setting MGT MUX configuration to MUX1=MUX2=1, MUX3=0, FMC power OFF.  Using $IP definition
+from environment rather than explicitly passing as script arg (implied previous definition
+of PYTHONPATH).
+```sh
+cd marble_mmc
+IP=192.168.10.20 scripts/mgtmux_mbox.sh m3
+```
+
+Read the current MGT MUX and FMC power configuration with explicit PYTHONPATH assignment
+and implicit (previously defined) IP address (via 'IP' environment variable).
+```sh
+cd marble_mmc
+PYTHONPATH=bedrock/badger scripts/mgtmux_mbox.sh -d /dev/ttyUSB3
+```
 
 ## mkmbox.py
 Create mailbox definition C outputs (header and/or source files) based on inc/mbox.def.  This

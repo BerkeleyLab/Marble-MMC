@@ -1,6 +1,6 @@
 #! /bin/sh
 
-# Usage: mgtmux.sh [-h | --help] [-i $IP] [muxstate]
+# Usage: mgtmux_mbox.sh [-h | --help] [-i $IP] [muxstate]
 
 # muxstate can be single-byte integer in decimal (0-255) or hex (0x00-0xff) or one of
 #   muxstate  MUX3  MUX2  MUX1  State:
@@ -31,7 +31,7 @@ for arg in "$@"; do
 done
 
 if [ "$help" != 0 ]; then
-  echo "Usage: PYTHONPATH=bedrock/badger $0 [-h] [-i \$IP] muxstate"
+  echo "Usage: PYTHONPATH=bedrock/badger $0 [-h | --help] [-i \$IP] [muxstate]"
   echo "  If environment variable IP is defined, it will be used as the IP address"
   echo "  unless overridden by '-i \$IP' argument."
   echo "  'muxstate' can be single-byte integer in decimal (0-255) or hex (0x00-0xff)"
@@ -95,10 +95,10 @@ fi
 
 if [ -z "$muxstate" ]; then
   # Read MGTMUX_ST from page 3
-  python3 $SCRIPT_DIR/../mboxexchange.py -i "$ip" MB3_MGTMUX_ST
+  python3 $SCRIPT_DIR/mboxexchange.py -i "$ip" MB3_MGTMUX_ST
 else
   # Write to FMC_MGT_CTL in page 2
-  python3 $SCRIPT_DIR/../mboxexchange.py -i "$ip" MB2_FMC_MGT_CTL $muxval
+  python3 $SCRIPT_DIR/mboxexchange.py -i "$ip" MB2_FMC_MGT_CTL $muxval
 fi
 
 exit 0
