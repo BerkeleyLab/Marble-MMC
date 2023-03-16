@@ -1,28 +1,28 @@
 # Scripts and Usage
 
-[config.sh](##config.sh)
+[config.sh](#config.sh)
 
-[decodembox.py](##decodembox.py)
+[decodembox.py](#decodembox.py)
 
-[htools.py](##htools.py)
+[htools.py](#htools.py)
 
-[id_probe.sh](##id_probe.sh)
+[id_probe.sh](#id_probe.sh)
 
-[load.py](##load.py)
+[load.py](#load.py)
 
-[mboxexchange.py](##mboxexchange.py)
+[mboxexchange.py](#mboxexchange.py)
 
-[mgtmux.sh](##mgtmux.sh)
+[mgtmux.sh](#mgtmux.sh)
 
-[mgtmux_mbox.sh](##mgtmux_mbox.sh)
+[mgtmux_mbox.sh](#mgtmux_mbox.sh)
 
-[mkmbox.py](##mkmbox.py)
+[mkmbox.py](#mkmbox.py)
 
-[readfromtty.py](##readfromtty.py)
+[readfromtty.py](#readfromtty.py)
 
-[reset](##reset)
+[reset](#reset)
 
-[testscript.txt](##testscript.txt)
+[testscript.txt](#testscript.txt)
 
 ## config.sh
 ```sh
