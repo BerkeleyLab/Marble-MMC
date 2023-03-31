@@ -320,9 +320,11 @@ void marble_GPIOint_handlers(void (*FPGA_DONE_handler)(void)) {
 /************
 * MGT Multiplexer (NO-OP for API compatibility with marble v2)
 ************/
-void marble_MGTMUX_config(uint8_t mgt_cfg) {
+void marble_MGTMUX_config(uint8_t mgt_msg, uint8_t store, uint8_t print) {
   // Intentional no-op for API compatibility
-  _UNUSED(mgt_cfg);
+  _UNUSED(mgt_msg);
+  _UNUSED(store);
+  _UNUSED(print);
   return;
 }
 

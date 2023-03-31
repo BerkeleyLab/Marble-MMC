@@ -66,7 +66,8 @@ void mailbox_update_input(void) {
     // Page 2
     uint8_t page[MB2_SIZE];
     mbox_read_page(2, MB2_SIZE, page);
-    marble_MGTMUX_config(page[MB2_FMC_MGT_CTL], 0);
+    marble_MGTMUX_config(page[MB2_FMC_MGT_CTL], 0, 0);
+    mbox_write_entry(MB2_FMC_MGT_CTL, page[MB2_FMC_MGT_CTL] & 0x55);
   }
   {
     // Page 5

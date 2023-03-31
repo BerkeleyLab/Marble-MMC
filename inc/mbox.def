@@ -31,6 +31,8 @@
 #     desc      string  *                   Human-readable description of the data member (for documentation)
 #     scale     float   *                   Multiply the value read from the mailbox by 'scale' to get
 #                                           physical units (before handed to 'fmt')
+#     ack       string  *                   Used to respond to mailbox reads (from FPGA) with a write.
+#     respond   string  *                   Alias for 'ack'
 #
 #   Note: if 'size' param is >1, adjacent entries will be created with names 0 to size-1 (in MSB-to-LSB order)
 #
@@ -43,6 +45,12 @@
 #     The special character '@' will be replaced with the destination in the mailbox (and is thus an l-value).
 #     If the value comes from the return value of function 'foo', use "@ = foo()"
 #     If the value is read via a volatile argument to function bar, use "bar(&@)"
+#
+#   ack param:
+#     The special character '@' will be replaced with the value read from the mailbox.  The result will then
+#     be written to the same location in the mailbox.  This should only be used in a mailbox page that
+#     contains only inputs (FPGA-to-MMC).  Otherwise, the respond value would be clobbered by a write of
+#     zero immediately following the response (because reads and writes are done by page).
 
 {
 #  "include" : [
@@ -58,7 +66,8 @@
       "type" : "int",
       "fmt"  : "0x{:x}",
       "desc" : "Input is bitfield. See scripts/README.md mgtmux_mbox.sh.",
-      "input" : "marble_MGTMUX_config(@, 0)"
+      "input" : "marble_MGTMUX_config(@, 0, 0)",
+      "ack"  : "@ & 0x55"
     }
   ],
 # Page 3 contains only outputs (MMC => FPGA)

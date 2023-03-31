@@ -21,6 +21,9 @@ uint16_t mbox_get_update_count(void);
 void mbox_reset_update_count(void);
 void mbox_read_page(uint8_t page_no, uint8_t page_sz, uint8_t *page);
 void mbox_write_page(uint8_t page_no, uint8_t page_sz, const uint8_t page[]);
+// The below write/read to/from the currently selected page
+void mbox_write_entry(uint8_t entry_no, uint8_t data);
+uint8_t mbox_read_entry(uint8_t entry_no);
 
 int push_fpga_mac_ip(mac_ip_data_t *pmac_ip_data);
 //int push_fpga_mac_ip(unsigned char data[10]);

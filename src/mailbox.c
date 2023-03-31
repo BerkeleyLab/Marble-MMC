@@ -33,12 +33,12 @@ static void mbox_set_page(uint8_t page_no)
    marble_SSP_write16(SSP_FPGA, &ssp_buf, 1);
 }
 
-static void mbox_write_entry(uint8_t entry_no, uint8_t data) {
+void mbox_write_entry(uint8_t entry_no, uint8_t data) {
    uint16_t ssp_buf = 0x5000 + (entry_no<<8) + data;
    marble_SSP_write16(SSP_FPGA, &ssp_buf, 1);
 }
 
-static uint8_t mbox_read_entry(uint8_t entry_no) {
+uint8_t mbox_read_entry(uint8_t entry_no) {
    uint16_t ssp_recv, ssp_buf = 0x4000 + (entry_no<<8);
    marble_SSP_exch16(SSP_FPGA, &ssp_buf, &ssp_recv, 1);
    return (ssp_recv & 0xff);

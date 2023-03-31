@@ -215,7 +215,7 @@ void marble_MGTMUX_set(uint8_t mgt_num, bool on);
 
 // Set multiple MGTMUX pins
 // Stores to EEPROM
-void marble_MGTMUX_config(uint8_t mgt_msg, uint8_t store);
+void marble_MGTMUX_config(uint8_t mgt_msg, uint8_t store, uint8_t print);
 
 // Get status in same bit format as argument to marble_MGTMUX_set_all()
 uint8_t marble_MGTMUX_status(void);

@@ -322,6 +322,7 @@ class MailboxInterface():
         for npage, elementList in self._pageList: # Each entry is (npage, [(name, paramDict),...])
             hasInputs = False
             hasBigval = False
+            hasAck = False
             mbprefix = f"MB{npage}_"
             for n in range(len(elementList)):
                 name, paramDict = elementList[n]
@@ -357,6 +358,23 @@ class MailboxInterface():
                     else:
                         # size = 1 (nice and easy)
                         self._fp("    {};".format(pinput.replace('@', f"page[{enumName}]")))
+                    # Handle acks if needed
+                    ack = paramDict.get('ack', None)
+                    if ack is None:
+                        # try alternate keyword
+                        ack = paramDict.get('respond', None)
+                    if ack is not None:
+                        hasAck = True
+                        if size > 1:
+                            # TODO
+                            for n in range(size):
+                                member = f"page[{enumName}_{n}]"
+                                #self._fp("    {} = {};".format(member, ack.replace('@', member)))
+                                self._fp("    mbox_write_entry({}, {});".format(enumName, ack.replace('@', member)))
+                        else:
+                            #self._fp("    page[{}] = {};".format(enumName, ack.replace('@', f'(page[{enumName}])')))
+                            member = f"page[{enumName}]"
+                            self._fp("    mbox_write_entry({}, {});".format(enumName, ack.replace('@', member)))
             if hasInputs:
                 self._fp("  }")
         self._fp("  return;\n}")

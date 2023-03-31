@@ -436,39 +436,53 @@ void marble_GPIOint_handlers(void (*FPGA_DONE_handler)(void)) {
 ************/
 static const uint16_t mgtmux_pins[MGT_MAX_PINS] = {GPIO_PIN_8, GPIO_PIN_9, GPIO_PIN_10};
 
-void marble_MGTMUX_config(uint8_t mgt_msg, uint8_t store) {
+void marble_MGTMUX_config(uint8_t mgt_msg, uint8_t store, uint8_t print) {
   // Control of FMC power and MGT mux based on mailbox entry MB2_FMC_MGT_CTL
   // Currently addressed as 0x200020 = 2097184 in test_marble_family
   // [1] - FMC_SEL,      [0] - ON/OFF
   // [3] - MGT_MUX1_SEL, [2] - ON/OFF
   // [5] - MGT_MUX2_SEL, [4] - ON/OFF
   // [7] - MGT_MUX3_SEL, [6] - ON/OFF
-  printf("Setting ");
+  if ((mgt_msg & 0xaa) == 0) {
+    // Nothing to do; early exit
+    return;
+  }
+  if (print) {
+    printf("Setting ");
+  }
   if (mgt_msg & 0x2) {
-    printf("FMC_Pwr=");
-    if (mgt_msg & 0x1) {
-      printf("ON ");
-    } else {
-      printf("OFF ");
+    if (print) {
+      printf("FMC_Pwr=");
+      if (mgt_msg & 0x1) {
+        printf("ON ");
+      } else {
+        printf("OFF ");
+      }
     }
     marble_FMC_pwr(mgt_msg & 1);
   }
   uint8_t v;
   if (mgt_msg & 0x8) {
     v = ((mgt_msg & 0x4) >> 2);
-    printf("MUX1=%d ", v);
+    if (print) {
+      printf("MUX1=%d ", v);
+    }
     HAL_GPIO_WritePin(GPIOE, mgtmux_pins[0], v);
     //marble_MGTMUX_set(1, v);
   }
   if (mgt_msg & 0x20) {
     v = ((mgt_msg & 0x10) >> 4);
-    printf("MUX2=%d ", v);
+    if (print) {
+      printf("MUX2=%d ", v);
+    }
     //marble_MGTMUX_set(2, v);
     HAL_GPIO_WritePin(GPIOE, mgtmux_pins[1], v);
   }
   if (mgt_msg & 0x80) {
     v = ((mgt_msg & 0x40) >> 6);
-    printf("MUX3=%d ", v);
+    if (print) {
+      printf("MUX3=%d ", v);
+    }
     //marble_MGTMUX_set(3, v & 1);
     HAL_GPIO_WritePin(GPIOE, mgtmux_pins[2], v);
   }
@@ -476,7 +490,9 @@ void marble_MGTMUX_config(uint8_t mgt_msg, uint8_t store) {
   if (store) {
     marble_MGTMUX_store();
   }
-  printf("\r\n");
+  if (print) {
+    printf("\r\n");
+  }
   return;
 }
 
