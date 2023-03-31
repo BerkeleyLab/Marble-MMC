@@ -366,11 +366,13 @@ class MailboxInterface():
                     if ack is not None:
                         hasAck = True
                         if size > 1:
-                            # TODO
+                            # Apply the ack operation to the full-sized value
+                            self._fp("    val = {};".format(ack.replace('@', 'val')))
                             for n in range(size):
                                 member = f"page[{enumName}_{n}]"
                                 #self._fp("    {} = {};".format(member, ack.replace('@', member)))
-                                self._fp("    mbox_write_entry({}, {});".format(enumName, ack.replace('@', member)))
+                                self._fp("    mbox_write_entry({}_{}, {});".format(
+                                         enumName, n, f"(uint8_t)((val >> {8*n}) & 0xFF)"))
                         else:
                             #self._fp("    page[{}] = {};".format(enumName, ack.replace('@', f'(page[{enumName}])')))
                             member = f"page[{enumName}]"
