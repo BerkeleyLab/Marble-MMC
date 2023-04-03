@@ -67,13 +67,28 @@ void mailbox_update_input(void) {
     uint8_t page[MB2_SIZE];
     mbox_read_page(2, MB2_SIZE, page);
     marble_MGTMUX_config(page[MB2_FMC_MGT_CTL], 0, 0);
-    mbox_write_entry(MB2_FMC_MGT_CTL, page[MB2_FMC_MGT_CTL] & 0x55);
+    page[MB2_FMC_MGT_CTL] = page[MB2_FMC_MGT_CTL] & 0x55;
+    mbox_write_entry(MB2_FMC_MGT_CTL, page[MB2_FMC_MGT_CTL]);
   }
   {
     // Page 5
     uint8_t page[MB5_SIZE];
     mbox_read_page(5, MB5_SIZE, page);
     mbox_handleI2CBusStatusMsg(page[MB5_I2C_BUS_STATUS]);
+  }
+  {
+    // Page 16
+    uint8_t page[MB16_SIZE];
+    mbox_read_page(16, MB16_SIZE, page);
+    pmodf_handleConfig0((void *)&page[MB16_PMOD_CR0_0], 16);
+  }
+  {
+    // Page 17
+    uint8_t page[MB17_SIZE];
+    mbox_read_page(17, MB17_SIZE, page);
+    pmodf_handleData0((void *)&page[MB17_PMOD_DATA_PAGE0_0], 16);
+    pmodf_returnData0((void *)&page[MB17_PMOD_DATA_PAGE0_0], 16);
+    mbox_write_entries(MB17_PMOD_DATA_PAGE0_0, (void *)page, 16);
   }
   return;
 }
@@ -102,6 +117,18 @@ void mailbox_read_print_all(void) {
     uint8_t page[MB5_SIZE];
     mbox_read_page(5, MB5_SIZE, page);
     MBOX_PRINT_PAGE(5);
+  }
+  {
+    // Page 16
+    uint8_t page[MB16_SIZE];
+    mbox_read_page(16, MB16_SIZE, page);
+    MBOX_PRINT_PAGE(16);
+  }
+  {
+    // Page 17
+    uint8_t page[MB17_SIZE];
+    mbox_read_page(17, MB17_SIZE, page);
+    MBOX_PRINT_PAGE(17);
   }
   return;
 }

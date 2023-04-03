@@ -355,11 +355,17 @@ class MailboxInterface():
                 name, paramDict = elementList[n]
                 size = paramDict.get('size', 1)
                 index = paramDict.get('index', None)
-                if size > 1:
+                etype = paramDict.get('type', 'int')
+                if size == 1:
+                    self._fp(f"{mbprefix}{name},")
+                elif etype == 'pointer':
+                    # pointers count LSB-to-MSB
+                    for m in range(size):
+                        self._fp("{}{}_{},".format(mbprefix, name, m))
+                else:
+                    # Ints/floats count MSB-to-LSB
                     for m in range(size):
                         self._fp("{}{}_{},".format(mbprefix, name, size-m-1))
-                else:
-                    self._fp(f"{mbprefix}{name},")
             self._fp(f"{mbprefix}SIZE // {index + size}")
             self._fp(f"}} PAGE{npage}_ENUM;\n");
         return
@@ -383,7 +389,6 @@ class MailboxInterface():
         for npage, elementList in self._pageList: # Each entry is (npage, [(name, paramDict),...])
             hasInputs = False
             hasBigval = False
-            hasAck = False
             mbprefix = f"MB{npage}_"
             for n in range(len(elementList)):
                 name, paramDict = elementList[n]
@@ -403,9 +408,13 @@ class MailboxInterface():
                     size = paramDict.get('size', 1)
                     etype = paramDict.get('type', 'int')
                     if etype == 'pointer':
-                        prepr = f"(void *)&page[{enumName}]"
-                        s = pinput.replace('@', prepr)
-                        s = s.replace('$', str(size))
+                        if size > 1:
+                            enumBegin = enumName + "_0"
+                        else:
+                            enumBegin = enumName
+                        prepr = f"(void *)&page[{enumBegin}]"
+                        s = pinput.replace('@', prepr)  # Replace name
+                        s = s.replace('$', str(size))   # Replace size
                         self._fp("    {};".format(s))
                     else:
                         if size > 1:
@@ -430,8 +439,14 @@ class MailboxInterface():
                         # try alternate keyword
                         ack = paramDict.get('respond', None)
                     if ack is not None:
-                        hasAck = True
-                        if size > 1:
+                        if etype == 'pointer':
+                            # Apply the ack operation to the pointer
+                            prepr = f"(void *)&page[{enumBegin}]"
+                            oper = ack.replace('@', prepr)      # Replace name
+                            oper = oper.replace('$', str(size))    # Replace size
+                            self._fp("    {};".format(oper))    # Evaluate (discard return value)
+                            self._fp("    mbox_write_entries({}, (void *)page, {});".format(enumBegin, size))
+                        elif size > 1:
                             # Apply the ack operation to the full-sized value
                             self._fp("    val = {};".format(ack.replace('@', 'val')))
                             for n in range(size):
@@ -442,7 +457,8 @@ class MailboxInterface():
                         else:
                             #self._fp("    page[{}] = {};".format(enumName, ack.replace('@', f'(page[{enumName}])')))
                             member = f"page[{enumName}]"
-                            self._fp("    mbox_write_entry({}, {});".format(enumName, ack.replace('@', member)))
+                            self._fp("    {} = {};".format(member, ack.replace('@', member)))
+                            self._fp("    mbox_write_entry({}, {});".format(enumName, member))
             if hasInputs:
                 self._fp("  }")
         self._fp("  return;\n}")

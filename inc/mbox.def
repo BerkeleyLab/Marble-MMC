@@ -71,14 +71,10 @@
 #   Note: If the lone keyword 'return' is found in either 'input' or 'output' attributes, it is flagged as a
 #         syntax error since it would otherwise lead to hard-to-trace bugs.
 
+# =============================================================================
+# ======================== BEGIN MAILBOX DEFINITION ===========================
+# =============================================================================
 {
-#  "include" : [
-#    "marble_api.h",
-#    "i2c_pm.h",
-#    "mailbox.h",
-#    "rev.h",
-#    "max6639.h"
-#  ],
 # Page 2 contains only inputs (MMC <= FPGA)
   "page2" : [
     { "name" : "FMC_MGT_CTL",
@@ -205,9 +201,31 @@
       "input" : "mbox_handleI2CBusStatusMsg(@)",
       "desc" : "Returns logical OR of all I2C function return values. Write nonzero value to clear status."
     }
+  ],
+
+# Page 16 is beginning of Pmod forwarder
+  "page16" : [
+    { "name" : "PMOD_CR0",
+      "type" : "pointer",
+      "size" : 16,
+      "fmt"  : "0b{:b}",
+      "input": "pmodf_handleConfig0(@, $)",
+      "desc" : "Pmod Forwarder configuration register 0 (CR0)"
+    }
+  ],
+  "page17" : [
+    { "name" : "PMOD_DATA_PAGE0",
+      "type" : "pointer",
+      "size" : 16,
+      "fmt"  : "0b{:b}",
+      "input": "pmodf_handleData0(@, $)",
+      "ack"  : "pmodf_returnData0(@, $)",
+      "desc" : "Pmod Forwarder data page 0 (DATA_PAGE0)"
+    }
   ]
 }
 
 
-
-
+# =============================================================================
+# ========================== END MAILBOX DEFINITION ===========================
+# =============================================================================

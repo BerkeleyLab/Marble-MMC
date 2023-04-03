@@ -4,6 +4,7 @@
 #include "mailbox.h"
 #include "max6639.h"
 #include "rev.h"
+#include "pmodf.h"
 
 /* ============================= Helper Macros ============================== */
 // Define SPI_SWITCH to re-route SPI bound for FPGA to PMOD for debugging
@@ -40,10 +41,26 @@ void mbox_write_entry(uint8_t entry_no, uint8_t data) {
    marble_SSP_write16(SSP_FPGA, &ssp_buf, 1);
 }
 
+void mbox_write_entries(uint8_t entry_start, const uint8_t *pdata, uint8_t nentries) {
+  int nmax = nentries > 16-entry_start ? 16-entry_start : nentries;
+  for (int n = 0; n < nmax; n++) {
+    mbox_write_entry(entry_start + n, pdata[n]);
+  }
+  return;
+}
+
 uint8_t mbox_read_entry(uint8_t entry_no) {
    uint16_t ssp_recv, ssp_buf = 0x4000 + (entry_no<<8);
    marble_SSP_exch16(SSP_FPGA, &ssp_buf, &ssp_recv, 1);
    return (ssp_recv & 0xff);
+}
+
+void mbox_read_entries(uint8_t entry_start, uint8_t *pdata, uint8_t nentries) {
+  int nmax = nentries > 16-entry_start ? 16-entry_start : nentries;
+  for (int n = 0; n < nmax; n++) {
+    pdata[n] = mbox_read_entry(entry_start + n);
+  }
+  return;
 }
 
 void mbox_write_page(uint8_t page_no, uint8_t page_sz, const uint8_t page[]) {

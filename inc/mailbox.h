@@ -23,8 +23,10 @@ void mbox_read_page(uint8_t page_no, uint8_t page_sz, uint8_t *page);
 void mbox_write_page(uint8_t page_no, uint8_t page_sz, const uint8_t page[]);
 // The below write/read to/from the currently selected page
 void mbox_write_entry(uint8_t entry_no, uint8_t data);
-void mbox_pend_request(void);
 uint8_t mbox_read_entry(uint8_t entry_no);
+void mbox_write_entries(uint8_t entry_start, const uint8_t *pdata, uint8_t nentries);
+void mbox_read_entries(uint8_t entry_start, uint8_t *pdata, uint8_t nentries);
+void mbox_pend_request(void);
 
 int push_fpga_mac_ip(mac_ip_data_t *pmac_ip_data);
 //int push_fpga_mac_ip(unsigned char data[10]);

@@ -1345,6 +1345,15 @@ void marble_mbox_MISO_ISR(void) {
   return;
 }
 
+uint8_t marble_pmod_get_gpio(void) {
+  // TODO - Write to GPIO
+  return 0;
+}
+
+void marble_pmod_set_gpio(uint8_t data) {
+
+}
+
 /**
   * @brief  This function is executed in case of error occurrence.
   * @retval None

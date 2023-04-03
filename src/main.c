@@ -8,6 +8,7 @@
 #include "rev.h"
 #include "console.h"
 #include "uart_fifo.h"
+#include "pmodf.h"
 
 #define LED_SNAKE
 #ifdef MARBLE_V2
@@ -147,7 +148,7 @@ int main(void) {
       reset_fpga();
       printf("**\r\n");
    }
-
+   pmodf_init();
    // Send demo string over UART at 115200 BAUD
    marble_UART_send(DEMO_STRING, strlen(DEMO_STRING));
    //printf("%s", DEMO_STRING);
