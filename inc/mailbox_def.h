@@ -35,7 +35,7 @@ typedef enum {
   MB3_GIT32_2,
   MB3_GIT32_1,
   MB3_GIT32_0,
-  MB3_SIZE // 16
+  MB3_SIZE // 13
 } PAGE3_ENUM;
 
 typedef enum {

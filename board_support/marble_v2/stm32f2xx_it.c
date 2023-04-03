@@ -252,5 +252,10 @@ void TIM1_BRK_TIM9_IRQHandler(void) {
   return;
 }
 
+void EXTI9_5_IRQHandler(void) {
+  marble_mbox_MISO_ISR();
+  return;
+}
+
 /* USER CODE END 1 */
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

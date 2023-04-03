@@ -200,6 +200,9 @@ typedef void *SSP_PORT;
 int marble_SSP_write16(SSP_PORT ssp, uint16_t *buffer, unsigned size);
 int marble_SSP_read16(SSP_PORT ssp, uint16_t *buffer, unsigned size);
 int marble_SSP_exch16(SSP_PORT ssp, uint16_t *tx_buf, uint16_t *rx_buf, unsigned size);
+void marble_mailbox_mode_IRQ(void);
+void marble_mailbox_mode_control(void);
+void marble_mbox_MISO_ISR(void);
 
 /************
 * GPIO user-defined handlers

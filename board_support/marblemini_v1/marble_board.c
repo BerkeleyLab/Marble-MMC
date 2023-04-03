@@ -629,6 +629,21 @@ uint8_t marble_get_board_id(void) {
   return (uint8_t)BOARD_TYPE_MARBLE_MINI;
 }
 
+void marble_mailbox_mode_IRQ(void) {
+  // TODO
+  return;
+}
+
+void marble_mailbox_mode_control(void) {
+  // TODO
+  return;
+}
+
+void marble_mbox_MISO_ISR(void) {
+  // TODO
+  return;
+}
+
 /************
 * Board Init
 ************/

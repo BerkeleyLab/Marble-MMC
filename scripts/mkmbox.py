@@ -110,6 +110,16 @@ class MailboxInterface():
             l.append((val >> 8*m) & 0xff)
         return l
 
+    @staticmethod
+    def _hasReturn(s):
+        """Return True if the string 's' contains a bare 'return' word (unquoted)."""
+        match = re.search(r"(\"[^\"]*\")|('[^']*')|(\breturn\b)", s)
+        if match:
+            groups = match.groups()
+            if groups[2] is not None:
+                return True
+        return False
+
     def __init__(self, inFilename=None, headerFilename=None, sourceFilename=None, prefix="Mailbox_Def"):
         self._prefix = os.path.splitext(prefix)[0]
         if inFilename is None:
@@ -155,11 +165,33 @@ class MailboxInterface():
                         paramDict[param] = val
                 size = self._vetSize(paramDict.get('size', 1))
                 paramDict['index'] = elementIndex
+                # ================ Enforce Syntax =================
+                if name.startswith("PAD"):
+                    elementList.append((name, paramDict))
+                    continue
+                if size is None:
+                    raise MailboxError("Invalid size ({} bytes) for element {}.".format(paramDict.get('size'), name))
+                etype = self._vetType(paramDict.get('type', 'int')) # Default to type 'int'
                 elementIndex += size
                 if elementIndex > PAGE_SIZE:
                     raise MailboxError("Maximum size ({} bytes) exceeded for page {}.".format(PAGE_SIZE, npage))
                 if name == None:
                     raise MailboxError("Encountered mailbox page element {} which has no 'name' entry.".format(nelement))
+                if size > 4 and etype != 'pointer':
+                    raise MailboxError("Page {}, Element {}: Must use type 'pointer' for size > 4".format(npage, name))
+                # Vet input/output attribute values
+                eoutput = paramDict.get('output', None)
+                einput = paramDict.get('input', None)
+                if eoutput is None and einput is None:
+                    raise MailboxError("Page {}, Element {}: Must define either 'input' or 'output' attributes".format(npage, name))
+                if eoutput is not None:
+                    msg = self._vetOutput(eoutput, etype)
+                    if msg is not None:
+                        raise MailboxError("Page {}, Element {}: {}".format(npage, name, msg))
+                if einput is not None:
+                    msg = self._vetInput(einput, etype)
+                    if msg is not None:
+                        raise MailboxError("Page {}, Element {}: {}".format(npage, name, msg))
                 elementList.append((name, paramDict))
             self._pageList.append((npage, elementList))
         self._ready = True
@@ -170,10 +202,39 @@ class MailboxInterface():
             size = 1
         else:
             size = int(size)
-        if size > 4 or size < 1:
+        if size > 16 or size < 1:
             print("Invalid size {}".format(size))
             return None
         return size
+
+    def _vetType(self, typeStr):
+        if typeStr in ('ptr', 'pointer', 'Ptr', 'Pointer'):
+            return 'pointer'
+        if typeStr in ('int', 'float', 'Int', 'Float'):
+            return typeStr.lower()
+        return None
+
+    def _vetOutput(self, attr, typeAttr):
+        if not '@' in attr:
+            return "Missing required '@' (val) character in 'output' attribute."
+        if typeAttr == 'pointer':
+            if not '$' in attr:
+                return "Missing '$' (size) character in 'output' attribute required for pointer-type data."
+        if self._hasReturn(attr):
+            return "Forbidden return keyword detected."
+        # If we get here, the attr string is ok
+        return None
+
+    def _vetInput(self, attr, typeAttr):
+        if not '@' in attr:
+            return "Missing required '@' (val) character in 'input' attribute."
+        if typeAttr == 'pointer':
+            if not '$' in attr:
+                return "Missing '$' (size) character in 'input' attribute required for pointer-type data."
+        if self._hasReturn(attr):
+            return "Forbidden return keyword detected."
+        # If we get here, the attr string is ok
+        return None
 
     def _getDefaultParams(self):
         d = {
@@ -340,24 +401,29 @@ class MailboxInterface():
                         continue
                     enumName = f"{mbprefix}{name}"
                     size = paramDict.get('size', 1)
-                    if size > 1:
-                        if not hasBigval:
-                            # We need to instantiate an int
-                            self._fp(f"    int val;")
-                            hasBigval = True
-                        # Break up into bytes
-                        # First, get value
-                        # TODO - What to do here?
-                        #        I think val = (int)((page[N_3] << 24) | (page[N_2} << 16) | (page[N_1] << 8) | page[N_0])
-                        fmt = f"page[{enumName}_" + "{}]"
-                        v = self._getShiftOR(fmt, size)
-                        # Assign shifted and OR'd value to temporary variable 'val'
-                        self._fp("    val = (int)({});".format(v))
-                        # Use the 'input' param string to return 'val' wherever it needs to go
-                        self._fp("    {};".format(pinput.replace('@', 'val')))
+                    etype = paramDict.get('type', 'int')
+                    if etype == 'pointer':
+                        prepr = f"(void *)&page[{enumName}]"
+                        s = pinput.replace('@', prepr)
+                        s = s.replace('$', str(size))
+                        self._fp("    {};".format(s))
                     else:
-                        # size = 1 (nice and easy)
-                        self._fp("    {};".format(pinput.replace('@', f"page[{enumName}]")))
+                        if size > 1:
+                            if not hasBigval:
+                                # We need to instantiate an int
+                                self._fp(f"    int val;")
+                                hasBigval = True
+                            # Break up into bytes
+                            # First, get value
+                            fmt = f"page[{enumName}_" + "{}]"
+                            v = self._getShiftOR(fmt, size)
+                            # Assign shifted and OR'd value to temporary variable 'val'
+                            self._fp("    val = (int)({});".format(v))
+                            # Use the 'input' param string to return 'val' wherever it needs to go
+                            self._fp("    {};".format(pinput.replace('@', 'val')))
+                        else:
+                            # size = 1 (nice and easy)
+                            self._fp("    {};".format(pinput.replace('@', f"page[{enumName}]")))
                     # Handle acks if needed
                     ack = paramDict.get('ack', None)
                     if ack is None:
@@ -544,6 +610,10 @@ def write(msg, fd=None):
     else:
         fd.write(msg + '\n')
 
+class MailboxError(Exception):
+    def __init__(self, msg):
+        super().__init__(msg)
+
 def test_extractNumber(argv):
     if len(argv) < 2:
         print("gimme a number")
@@ -579,6 +649,18 @@ def test_getShiftOR(argv):
     print(MailboxInterface._getShiftOR(fmt, size))
     return 0
 
+def test_hasReturn(argv):
+    if len(argv) < 2:
+        print("gimme string")
+        return 1
+    s = argv[1]
+    print(f"Parsing: {s}")
+    if MailboxInterface._hasReturn(s):
+        print("Return found")
+    else:
+        print("No return")
+    return 0
+
 def makeHeader(argv):
     parser = argparse.ArgumentParser(description="JSON-ish mailbox defintion interface")
     parser.add_argument('-d', '--def_file', default=None, help='File name for mailbox definition file to be loaded')
@@ -610,7 +692,12 @@ def makeHeader(argv):
             print("Cannot interpret desired file type based on extension '{}'".format(ext))
             return 1
     mbox = MailboxInterface(inFilename=args.def_file, prefix=prefix)
-    mbox.interpret()
+    try:
+        mbox.interpret()
+    except MailboxError as mbe:
+        print("Mailbox Syntax Error")
+        print(mbe)
+        return 1
     print(mbox)
     if makeh:
         mbox.makeHeader()
@@ -625,4 +712,5 @@ if __name__ == "__main__":
     #sys.exit(testJSONRead(sys.argv))
     #test_extractNumber(sys.argv)
     #test_getShiftOR(sys.argv)
+    #test_hasReturn(sys.argv)
     sys.exit(makeHeader(sys.argv))

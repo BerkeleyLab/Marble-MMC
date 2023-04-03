@@ -35,6 +35,7 @@
 #include "console.h"
 #include "st-eeprom.h"
 #include "i2c_pm.h"
+#include "mailbox.h"
 
 #define UART_ECHO
 
@@ -88,6 +89,10 @@ static void USART_Erase(int n);
 static void marble_apply_params(void);
 static void marble_read_pcb_rev(void);
 static int marble_MGTMUX_store(void);
+static void _SPI1_switch_to_MISO(void);
+static void _SPI1_switch_to_EXTI(void);
+static void marble_enable_MISO_ISR(void);
+static void marble_disable_MISO_ISR(void);
 
 /* Initialize UART pins */
 void marble_UART_init(void)
@@ -1270,22 +1275,74 @@ void resetI2CBusStatus(void) {
   return;
 }
 
-void marble_enable_MISO_ISR(void) {
-  NVIC_SetPriority(IRQn_Type IRQn, uint32_t priority);
-  NVIC_EnableIRQ(IRQn_Type IRQn);
+/*
+ * void marble_mailbox_mode_IRQ(void);
+ *  Switch mailbox pin mode to listen for interrupt requests on the
+ *  MISO line.
+ */
+void marble_mailbox_mode_IRQ(void) {
+  _SPI1_switch_to_EXTI();
+  return;
 }
 
-void marble_disable_MISO_ISR(void) {
-  NVIC_DisableIRQ(IRQn_Type IRQn);
+/*
+ * void marble_mailbox_mode_control(void);
+ *  Switch mailbox pin mode to normal SPI controller mode.  This
+ *  disables the MISO IRQ functionality and is required for
+ *  successful SPI reads.
+ */
+void marble_mailbox_mode_control(void) {
+  _SPI1_switch_to_MISO();
+  return;
 }
 
-static _SPI1_switch_to_MISO(void) {
-  //AFR[0]: GPIO_AFRL_AFSEL6
-  //MODER:  GPIO_MODER_MODE6  GPIO_MODE_INPUT GPIO_MODE_AF_PP
-  //PUPDR:  GPIO_PUPDR_PUPD6 GPIO_PULLDOWN
+static void marble_enable_MISO_ISR(void) {
+  NVIC_SetPriority(EXTI9_5_IRQn, 0);
+  NVIC_EnableIRQ(EXTI9_5_IRQn);
+  return;
 }
 
-static _SPI1_switch_to_EXTI(void) {
+static void marble_disable_MISO_ISR(void) {
+  NVIC_DisableIRQ(EXTI9_5_IRQn);
+  return;
+}
+
+static void _SPI1_switch_to_MISO(void) {
+  // Set alternate function
+  LL_GPIO_SetAFPin_0_7(GPIOA, LL_GPIO_PIN_6, LL_GPIO_AF_5);
+  // Set PA6 as AF-push-pull mode
+  LL_GPIO_SetPinMode(GPIOA, LL_GPIO_PIN_6, LL_GPIO_MODE_ALTERNATE);
+  // Remove any pull
+  LL_GPIO_SetPinPull(GPIOA, LL_GPIO_PIN_6, LL_GPIO_PULL_NO);
+  marble_disable_MISO_ISR();
+  return;
+}
+
+static void _SPI1_switch_to_EXTI(void) {
+  // Alternate function ignored
+  // Set pin mode to input
+  LL_GPIO_SetPinMode(GPIOA, LL_GPIO_PIN_6, LL_GPIO_MODE_INPUT);
+  // Set pulldown
+  LL_GPIO_SetPinPull(GPIOA, LL_GPIO_PIN_6, LL_GPIO_PULL_DOWN);
+  // Ensure EXTI6 is configured to get ISRs from PORTA in EXTICR2
+  __HAL_RCC_SYSCFG_CLK_ENABLE();
+  uint32_t temp = SYSCFG->EXTICR[1];  // EXTICR2
+  SYSCFG->EXTICR[1] = temp & 0xf0ff;  // Easy enough bit mask
+  // Configure trigger in EXTI
+  LL_EXTI_EnableIT_0_31(LL_EXTI_LINE_6);
+  LL_EXTI_EnableRisingTrig_0_31(LL_EXTI_LINE_6);
+  LL_EXTI_DisableFallingTrig_0_31(LL_EXTI_LINE_6);
+  // Enable EXTI6 ISR in NVIC
+  marble_enable_MISO_ISR();
+  return;
+}
+
+void marble_mbox_MISO_ISR(void) {
+  if (LL_EXTI_IsActiveFlag_0_31(LL_EXTI_LINE_6)) {
+    LL_EXTI_ClearFlag_0_31(LL_EXTI_LINE_6);
+    mbox_pend_request();
+  }
+  return;
 }
 
 /**

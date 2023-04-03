@@ -22,6 +22,7 @@ static int _mbox_request = 0;
 
 /* =========================== Static Prototypes ============================ */
 static void mbox_handleI2CBusStatusMsg(uint8_t msg);
+static void mbox_update(bool verbose);
 
 // XXX Including auto-generated source file! This is atypical, but works nicely.
 #include "mailbox_def.c"
@@ -63,14 +64,24 @@ void mbox_read_page(uint8_t page_no, uint8_t page_sz, uint8_t *page) {
    }
 }
 
-void mbox_update(bool verbose)
+void mbox_service(void) {
+  if (_mbox_request) {
+    _mbox_request = 0;
+    mbox_update(false);
+  }
+  return;
+}
+
+static void mbox_update(bool verbose)
 {
   _UNUSED(verbose);
   update_count++;
   // Note! Input function must come before output function or any input values will
   // be clobbered by their output value before reading.
+  marble_mailbox_mode_control();
   mailbox_update_input();   // This function is auto-generated in src/mailbox_def.c
   mailbox_update_output();  // This function is auto-generated in src/mailbox_def.c
+  marble_mailbox_mode_IRQ();
   return;
 }
 
@@ -123,22 +134,13 @@ void mbox_reset_update_count(void) {
 static void mbox_handleI2CBusStatusMsg(uint8_t msg) {
   //printf("I2C bus msg = 0x%x\r\n", msg);
   if (msg & 0x01) {
-    printf("Resetting I2C bus status\r\n");
     resetI2CBusStatus();
   }
   return;
 }
 
-void mbox_MISO_ISR(void) {
+void mbox_pend_request(void) {
   _mbox_request = 1;
   return;
 }
 
-void mbox_set_ISR_enable(uint8_t isEnabled) {
-  if (isEnabled) {
-    marble_enable_MISO_ISR();
-  } else {
-    marble_disable_MISO_ISR();
-  }
-  return;
-}

@@ -45,7 +45,7 @@ static void timer_int_handler(void)
    // SPI mailbox update flag; soft-realtime
    spi_ms_cnt += systimer_ms;
    if (spi_ms_cnt > SPI_MBOX_RATE) {
-      spi_update = true;
+      mbox_pend_request();
       spi_ms_cnt = 0;
       // Use LED2 for SPI heartbeat
       marble_LED_toggle(2);
@@ -154,10 +154,7 @@ int main(void) {
 
    while (1) {
       // Run all system update/monitoring tasks and only then handle console
-      if (spi_update) {
-         mbox_update(false);
-         spi_update = false; // Clear flag
-      }
+      mbox_service();
       // TODO - fix encapsulation here
       if (fpga_net_prog_pend) {
         if (BSP_GET_SYSTICK() > fpga_done_tickval + FPGA_PUSH_DELAY_MS) {

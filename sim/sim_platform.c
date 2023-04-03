@@ -289,3 +289,14 @@ void FPGAWD_ISR(void) {
   return;
 }
 
+void marble_mailbox_mode_control(void) {
+  return;
+}
+
+void marble_mailbox_mode_IRQ(void) {
+  return;
+}
+
+void marble_mbox_MISO_ISR(void) {
+  return;
+}

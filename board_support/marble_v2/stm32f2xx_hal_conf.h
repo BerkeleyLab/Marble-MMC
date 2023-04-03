@@ -78,7 +78,7 @@
 /*#define HAL_WWDG_MODULE_ENABLED   */
 /*#define HAL_PCD_MODULE_ENABLED   */
 /*#define HAL_HCD_MODULE_ENABLED   */
-/*#define HAL_EXTI_MODULE_ENABLED   */
+#define HAL_EXTI_MODULE_ENABLED
 #define HAL_GPIO_MODULE_ENABLED
 #define HAL_DMA_MODULE_ENABLED
 #define HAL_RCC_MODULE_ENABLED
@@ -233,11 +233,12 @@
 #endif /* HAL_RCC_MODULE_ENABLED */
 
 #ifdef HAL_EXTI_MODULE_ENABLED
-  #include "stm32f2xx_hal_exti.h"
+  #include "stm32f2xx_ll_exti.h"
 #endif /* HAL_EXTI_MODULE_ENABLED */
 
 #ifdef HAL_GPIO_MODULE_ENABLED
   #include "stm32f2xx_hal_gpio.h"
+  #include "stm32f2xx_ll_gpio.h"
 #endif /* HAL_GPIO_MODULE_ENABLED */
 
 #ifdef HAL_DMA_MODULE_ENABLED

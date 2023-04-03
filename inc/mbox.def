@@ -9,19 +9,18 @@
 # The value of the key-value pair is a list of dicts where each dict represents
 # an entry in the mailbox whose address/index is inferred from its position in
 # the list. Note that this requires dummy entries for unused addresses.
-# The names of these entries can be empty strings.
 
 # Mailbox Element Dict Structure:
 # -------------------------------
-#   Mandatory Parameters:
+#   Mandatory Attributes:
 #     Name      Type    Valid values        Desc
 #     ------------------------------------------
 #     name      string  *                   Mandatory name of mailbox entry
 #
-#   Optional Parameters:
+#   Optional Attributes:
 #     Name      Type    Valid values        Desc
 #     ------------------------------------------
-#     type      string  "int", "float"      Data type to assist in interpreting the contents of the member
+#     type      string  "int", "float", "pointer" Data type to assist in interpreting the contents of the member
 #     size      int     1,2,3,4             Number of bytes that make up element
 #     output    string  *                   How to write the value to the mailbox (where does it come from)
 #     input     string  *                   How to read the value from the mailbox (where does it go)
@@ -34,11 +33,28 @@
 #     ack       string  *                   Used to respond to mailbox reads (from FPGA) with a write.
 #     respond   string  *                   Alias for 'ack'
 #
-#   Note: if 'size' param is >1, adjacent entries will be created with names 0 to size-1 (in MSB-to-LSB order)
+#   Note: If 'size' param is >1, adjacent entries will be created with names 0 to size-1 (in MSB-to-LSB order)
+#
+#   Note: Any entry with a name that starts with 'PAD' will be treated as padding and will not be used.
+#
+#   type param:
+#     If type=="pointer", the '@' character in the "input" or "output" attribute values will be replaced by
+#     a (void *) pointer cast directly to the mailbox page struct while the '$' character will be replaced by
+#     the size of the element.  This allows for handling values up to 16 bytes (size limited by mailbox page
+#     size) simultaneously.  This type is required for 'size' > 4.
+#     Example:
+#       "page1" : [
+#         { "name"  : "BAR",
+#           "type"  : "pointer",
+#           "size"  : 6,
+#           "input" : "foo(@, $)"}
+#       ]
+#       Assumes a function exists with the signature: foo(void *, int)
+#       Will generate: foo((void *)&page[MB1_BAR], 6);
 #
 #   input param:
 #     The special character '@' will be replaced with the value read from the mailbox (and is thus an r-value).
-#     Thus, to pass the value to function 'foo' as the first parameter, simply use "foo(@)".  To assign the
+#     Thus, to pass the value to function 'foo' as the first attribute, simply use "foo(@)".  To assign the
 #     value to a global variable 'bar', use "bar = @"
 #
 #   output param:
@@ -47,10 +63,13 @@
 #     If the value is read via a volatile argument to function bar, use "bar(&@)"
 #
 #   ack param:
-#     The special character '@' will be replaced with the value read from the mailbox.  The result will then
-#     be written to the same location in the mailbox.  This should only be used in a mailbox page that
-#     contains only inputs (FPGA-to-MMC).  Otherwise, the respond value would be clobbered by a write of
-#     zero immediately following the response (because reads and writes are done by page).
+#     The special character '@' will be replaced with the value read from the mailbox.  The resulting expression
+#     is then evaluated and written to the same location in the mailbox.  This should only be used in a mailbox
+#     page that contains only inputs (FPGA-to-MMC).  Otherwise, the respond value would be clobbered by a write
+#     of zero immediately following the response (because reads and writes are done by page).
+#
+#   Note: If the lone keyword 'return' is found in either 'input' or 'output' attributes, it is flagged as a
+#         syntax error since it would otherwise lead to hard-to-trace bugs.
 
 {
 #  "include" : [

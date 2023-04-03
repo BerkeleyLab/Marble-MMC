@@ -148,7 +148,8 @@ $(SOURCE_DIR)/$(MBOX_DEF).c: $(INCLUDE_DIR)/mbox.def
 	python3 scripts/mkmbox.py -d $^ -o $@
 
 $(DOC_DIR)/$(MBOX_DOC): $(INCLUDE_DIR)/mbox.def
-	python3 scripts/mkmbox.py -d $^ -o $@
+	mkdir -p $(DOC_DIR)
+	python3 scripts/mkmbox.py -d $< -o $@
 
 # Rule for generating object files from assembler files
 #
