@@ -18,6 +18,7 @@
 extern SSP_PORT SSP_FPGA;
 extern SSP_PORT SSP_PMOD;
 uint16_t update_count = 0;
+static int _mbox_request = 0;
 
 /* =========================== Static Prototypes ============================ */
 static void mbox_handleI2CBusStatusMsg(uint8_t msg);
@@ -128,29 +129,16 @@ static void mbox_handleI2CBusStatusMsg(uint8_t msg) {
   return;
 }
 
-#if 0
-int OLDpush_fpga_mac_ip(unsigned char data[10])
-{
-   uint16_t ssp_buf;
-   int ssp_expect=0;
-   int ssp_cnt=0;
-
-   static unsigned short test_only = 0;  // use 0x4000 to disable
-
-   ssp_buf = 0x2000 | test_only; // disable FPGA Ethernet
-
-   ssp_expect += 2;
-   ssp_cnt += marble_SSP_write16(SSP_FPGA, &ssp_buf, 1);
-
-   for (unsigned ix = 0; ix < 10; ix++) {
-      ssp_buf = data[ix] | (ix<<8) | 0x1000 | test_only;
-      ssp_expect += 2;
-      ssp_cnt += marble_SSP_write16(SSP_FPGA, &ssp_buf, 1);
-   }
-   ssp_buf = 0x2001 | test_only;  // enable FPGA Ethernet
-   ssp_expect += 2;
-   ssp_cnt += marble_SSP_write16(SSP_FPGA, &ssp_buf, 1);
-
-   return (ssp_cnt == ssp_expect);
+void mbox_MISO_ISR(void) {
+  _mbox_request = 1;
+  return;
 }
-#endif
+
+void mbox_set_ISR_enable(uint8_t isEnabled) {
+  if (isEnabled) {
+    marble_enable_MISO_ISR();
+  } else {
+    marble_disable_MISO_ISR();
+  }
+  return;
+}

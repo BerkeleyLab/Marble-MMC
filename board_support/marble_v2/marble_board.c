@@ -1270,6 +1270,24 @@ void resetI2CBusStatus(void) {
   return;
 }
 
+void marble_enable_MISO_ISR(void) {
+  NVIC_SetPriority(IRQn_Type IRQn, uint32_t priority);
+  NVIC_EnableIRQ(IRQn_Type IRQn);
+}
+
+void marble_disable_MISO_ISR(void) {
+  NVIC_DisableIRQ(IRQn_Type IRQn);
+}
+
+static _SPI1_switch_to_MISO(void) {
+  //AFR[0]: GPIO_AFRL_AFSEL6
+  //MODER:  GPIO_MODER_MODE6  GPIO_MODE_INPUT GPIO_MODE_AF_PP
+  //PUPDR:  GPIO_PUPDR_PUPD6 GPIO_PULLDOWN
+}
+
+static _SPI1_switch_to_EXTI(void) {
+}
+
 /**
   * @brief  This function is executed in case of error occurrence.
   * @retval None
