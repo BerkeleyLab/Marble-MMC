@@ -241,4 +241,3 @@ gdb:
 clean:
 	$(RM) $(OUTPUT_DIR)/*
 	$(RM) gdbscript $(SOURCE_DIR)/rev.h
-	$(RM) -r $(DOC_DIR)

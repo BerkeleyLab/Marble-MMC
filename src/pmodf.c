@@ -39,6 +39,9 @@ void pmodf_handleData0(const uint8_t *pdata, int size) {
   }
   if (pmodType == PMOD_CR0_TYPE_GPIO) {
     marble_pmod_set_gpio(dr0[0]);
+    marble_pmod_set_dir(dr0[1]);
+    marble_pmod_set_pulldown(dr0[2]);
+    marble_pmod_set_pullup(dr0[3]);
   }
   return;
 }
