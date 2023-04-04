@@ -300,3 +300,28 @@ void marble_mailbox_mode_IRQ(void) {
 void marble_mbox_MISO_ISR(void) {
   return;
 }
+
+void marble_pmod_set_dir(uint8_t dir) {
+  _UNUSED(dir);
+  return;
+}
+
+void marble_pmod_set_pullup(uint8_t pu) {
+  _UNUSED(pu);
+  return;
+}
+
+void marble_pmod_set_pulldown(uint8_t pd) {
+  _UNUSED(pd);
+  return;
+}
+
+uint8_t marble_pmod_get_gpio(void) {
+  return 0;
+}
+
+void marble_pmod_set_gpio(uint8_t data) {
+  _UNUSED(data);
+  return;
+}
+

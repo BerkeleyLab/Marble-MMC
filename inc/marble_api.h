@@ -203,6 +203,11 @@ int marble_SSP_exch16(SSP_PORT ssp, uint16_t *tx_buf, uint16_t *rx_buf, unsigned
 void marble_mailbox_mode_IRQ(void);
 void marble_mailbox_mode_control(void);
 void marble_mbox_MISO_ISR(void);
+void marble_pmod_set_dir(uint8_t dir);
+void marble_pmod_set_pullup(uint8_t pu);
+void marble_pmod_set_pulldown(uint8_t pd);
+uint8_t marble_pmod_get_gpio(void);
+void marble_pmod_set_gpio(uint8_t data);
 
 /************
 * GPIO user-defined handlers

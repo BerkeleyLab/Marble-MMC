@@ -5,6 +5,7 @@
 
 #include <stdint.h>
 #include "pmodf.h"
+#include "marble_api.h"
 
 #define PAGE_SIZE                         (16)
 
@@ -27,6 +28,7 @@ void pmodf_handleConfig0(const uint8_t *pdata, int size) {
   }
   if (pdata[0] == PMOD_CR0_TYPE_GPIO) {
     pmodType = PMOD_CR0_TYPE_GPIO;
+    marble_pmod_set_dir(pdata[1]);
   }
 }
 

@@ -44,6 +44,35 @@
    if (on) {s[0] = 'n'; s[1] = '\0';} \
    printf(subs " Power O%s\r\n", s); } while (0)
 
+/* Marble PMOD3: PB9, PC3, PC2, PB10, PB14, PB15, PD6, PD5
+ */
+#define PMOD_PIN0_PORT    GPIOB
+#define PMOD_PIN0_PIN     LL_GPIO_PIN_9
+#define PMOD_PIN1_PORT    GPIOC
+#define PMOD_PIN1_PIN     LL_GPIO_PIN_3
+#define PMOD_PIN2_PORT    GPIOC
+#define PMOD_PIN2_PIN     LL_GPIO_PIN_2
+#define PMOD_PIN3_PORT    GPIOB
+#define PMOD_PIN3_PIN     LL_GPIO_PIN_10
+#define PMOD_PIN4_PORT    GPIOB
+#define PMOD_PIN4_PIN     LL_GPIO_PIN_14
+#define PMOD_PIN5_PORT    GPIOB
+#define PMOD_PIN5_PIN     LL_GPIO_PIN_15
+#define PMOD_PIN6_PORT    GPIOD
+#define PMOD_PIN6_PIN     LL_GPIO_PIN_6
+#define PMOD_PIN7_PORT    GPIOD
+#define PMOD_PIN7_PIN     LL_GPIO_PIN_5
+
+static uint32_t pmod_pins[] = {
+  PMOD_PIN0_PIN, PMOD_PIN1_PIN, PMOD_PIN2_PIN, PMOD_PIN3_PIN,
+  PMOD_PIN4_PIN, PMOD_PIN5_PIN, PMOD_PIN6_PIN, PMOD_PIN7_PIN
+};
+
+static GPIO_TypeDef *pmod_ports[] = {
+  PMOD_PIN0_PORT, PMOD_PIN1_PORT, PMOD_PIN2_PORT, PMOD_PIN3_PORT,
+  PMOD_PIN4_PORT, PMOD_PIN5_PORT, PMOD_PIN6_PORT, PMOD_PIN7_PORT
+};
+
 void Error_Handler(void) {}
 #ifdef  USE_FULL_ASSERT
 void assert_failed(uint8_t *file, uint32_t line) {}
@@ -1345,13 +1374,79 @@ void marble_mbox_MISO_ISR(void) {
   return;
 }
 
-uint8_t marble_pmod_get_gpio(void) {
-  // TODO - Write to GPIO
-  return 0;
+/*
+ * void marble_pmod_set_dir(uint8_t dir);
+ *  Set PMOD pins to GPIO mode and set direction according to bitmask
+ *  'dir' ('1' is output, '0' is input)
+ *  Bit N corresponds to Pmod data pin N
+ */
+void marble_pmod_set_dir(uint8_t dir) {
+  for (int n = 0; n < 8; n++) {
+    if (dir & (1 << n)) {
+      // Set pin n as output
+      LL_GPIO_SetPinMode(pmod_ports[n], pmod_pins[n], LL_GPIO_MODE_OUTPUT);
+    } else {
+      // Set pin n as input
+      LL_GPIO_SetPinMode(pmod_ports[n], pmod_pins[n], LL_GPIO_MODE_INPUT);
+    }
+  }
+  return;
 }
 
-void marble_pmod_set_gpio(uint8_t data) {
+void marble_pmod_set_pullup(uint8_t pu) {
+  for (int n = 0; n < 8; n++) {
+    if (pu & (1 << n)) {
+      // Set pin n as pullup
+      LL_GPIO_SetPinPull(pmod_ports[n], pmod_pins[n], LL_GPIO_PULL_UP);
+    }
+  }
+  return;
+}
 
+void marble_pmod_set_pulldown(uint8_t pd) {
+  for (int n = 0; n < 8; n++) {
+    if (pd & (1 << n)) {
+      // Set pin n as pulldown
+      LL_GPIO_SetPinPull(pmod_ports[n], pmod_pins[n], LL_GPIO_PULL_DOWN);
+    }
+  }
+  return;
+}
+
+/*
+ * uint8_t marble_pmod_get_gpio(void);
+ *  Get a bitmask of the current state of Pmod pins in GPIO mode
+ *  Bit N corresponds to Pmod data pin N
+ */
+uint8_t marble_pmod_get_gpio(void) {
+  uint8_t dr = 0;
+  for (int n = 0; n < 8; n++) {
+    if (LL_GPIO_IsOutputPinSet(pmod_ports[n], pmod_pins[n])) {
+      dr |= (1 << n);
+    }
+  }
+  return dr;
+}
+
+/*
+ * void marble_pmod_set_gpio(uint8_t data);
+ *  Set state of Pmod output pins according to bitmask 'data'
+ *  Bit N corresponds to Pmod data pin N
+ *  If any pin is already configured as an input, the corresponding
+ *  bit is ignored
+ */
+void marble_pmod_set_gpio(uint8_t data) {
+  for (int n = 0; n < 8; n++) {
+    if (LL_GPIO_GetPinMode(pmod_ports[n], pmod_pins[n]) == LL_GPIO_MODE_OUTPUT) {
+      // Only set the value if pin is configured as output
+      if (data & (1 << n)) {
+        LL_GPIO_SetOutputPin(pmod_ports[n], pmod_pins[n]);
+      } else {
+        LL_GPIO_ResetOutputPin(pmod_ports[n], pmod_pins[n]);
+      }
+    }
+  }
+  return;
 }
 
 /**
