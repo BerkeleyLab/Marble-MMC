@@ -1436,6 +1436,7 @@ uint8_t marble_pmod_get_gpio(void) {
  *  bit is ignored
  */
 void marble_pmod_set_gpio(uint8_t data) {
+  printf("set_gpio: 0x%x\r\n", data);
   for (int n = 0; n < 8; n++) {
     if (LL_GPIO_GetPinMode(pmod_ports[n], pmod_pins[n]) == LL_GPIO_MODE_OUTPUT) {
       // Only set the value if pin is configured as output
