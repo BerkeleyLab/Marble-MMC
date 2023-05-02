@@ -6,6 +6,10 @@
 #ifndef __DBG_H
 #define __DBG_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // printd() will be silenced completely by undefining DEBUG_PRINT
 #ifdef DEBUG_PRINT
 #define printd(...)      printf(__FILE__ " [" S__LINE__ "] " __VA_ARGS__)
