@@ -151,7 +151,7 @@ void USART_RXNE_ISR(void) {
         UARTQUEUE_SetDataLost(UART_DATA_LOST);
         // Clear QUEUE at this point?
       }
-      if (c == UART_MSG_TERMINATOR) {
+      if ((c == UART_MSG_TERMINATOR) || (c == UART_MSG_TERMINATOR_ALT)) {
         console_pend_msg();
       }
 #ifdef UART_ECHO

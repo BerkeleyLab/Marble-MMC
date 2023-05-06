@@ -87,6 +87,7 @@ extern "C" {
 #endif
 
 #define UART_MSG_TERMINATOR                           ('\n')
+#define UART_MSG_TERMINATOR_ALT                       ('\r')
 #define UART_MSG_ABORT                                (27)  // esc
 #define UART_MSG_BKSP                                 (8)   // backspace
 #define UART_MSG_DEL                                  (128) // del

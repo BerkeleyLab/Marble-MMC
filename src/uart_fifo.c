@@ -184,6 +184,23 @@ int UARTQUEUE_ShiftUntil(uint8_t *pData, uint8_t target, int len) {
   return nShifted;
 }
 
+/*
+ * int UARTQUEUE_ShiftUntilTerm(uint8_t *pData, int len);
+ *  Shift until finding either linefeed '\n' or carriage-return '\r'
+ */
+int UARTQUEUE_ShiftUntilTerm(uint8_t *pData, int len) {
+  int nShifted = 0;
+  uint8_t dataOut;
+  while (UARTQUEUE_Get(&dataOut) != UART_QUEUE_EMPTY) {
+    *(pData++) = dataOut;
+    if ((++nShifted == len) || (dataOut == '\n') || (dataOut == '\r')) {
+      break;
+    }
+  }
+  return nShifted;
+
+}
+
 void UARTQUEUE_SetDataLost(uint8_t lost) {
   if (lost) {
     _dataLost = UART_DATA_LOST;

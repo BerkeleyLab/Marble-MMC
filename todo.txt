@@ -1,0 +1,34 @@
+Mailbox features todo:
+  DONE 1. mailbox update on interrupt (MISO line)
+      PA6 ------> SPI1_MISO
+      Need to switch MISO from GPIO_input to AF5 before every SPI transaction
+        Also disable ISR
+      Switch back when ISR is enabled
+  DONE 2. mailbox timer disable entry
+      Low-speed timer can peacefully coexist with IRQ mode
+  3. mailbox magic word (implement but do not require yet)
+  DONE 4. Add "pointer" entry type to mbox.def which passes "(void *)&page[enumName]"
+     and "entrySize".  Perhaps I'll need a new special character for 'size'.
+  5. Pmod pin state forwarder
+     One entry for pmod mode (0 = disabled, 1 = GPIO, 2 = UART, 3 = SPI, 4 = I2C, etc)
+     One entry for pmod data:
+        In GPIO mode: 8 bits of pmod pin states to control MMC's pmod
+        In UART, SPI, I2C modes: 8 bit Rx/Tx data
+
+  DONE 6. mask out 'return' because we don't want that in the 'output' or 'input' fields of mbox.def
+
+Pmod Forwarder:
+---------------
+  Universal
+    Page 0: Pmod Config
+      [0]   : Pmod Mode (0 = bypass, 1 = GPIO)
+      [4:15]: Unused
+
+  Mode: GPIO
+    Page 0:
+      [1]   : GPIO Direction Register
+      [2]   : GPIO Pulldown Register
+      [3]   : GPIO Pullup Register
+    Page 1: GPIO Data
+      [0]   : Output/Input?
+      [1:15]: Unused

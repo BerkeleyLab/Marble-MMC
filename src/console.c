@@ -531,7 +531,7 @@ int console_service(void) {
     len = console_shift_msg(msg);
     //len = console_shift_all(msg);
     _msgCount--;
-    if (len) {
+    if (len > 1) {  // Ignore bare LF or CR messages
       return console_handle_msg((char *)msg, len);
     }
   }
@@ -556,7 +556,7 @@ static int console_shift_all(uint8_t *pData) {
  * static int console_shift_msg(uint8_t *pData);
  *  Shift up to CONSOLE_MAX_MESSAGE_LENGTH bytes into 'pData', breaking
  *  at any of:
- *    UART_MSG_TERMINATOR found
+ *    UART_MSG_TERMINATOR or UART_MSG_TERMINATOR_ALT found
  *    FIFO empty
  *    CONSOLE_MAX_MESSAGE_LENGTH bytes shifted
  *  'pData' must be at least CONSOLE_MAX_MESSAGE_LENGTH in length
@@ -564,7 +564,8 @@ static int console_shift_all(uint8_t *pData) {
  */
 static int console_shift_msg(uint8_t *pData) {
   //UARTQUEUE_ShiftOut(pData, CONSOLE_MAX_MESSAGE_LENGTH);
-  return UARTQUEUE_ShiftUntil(pData, UART_MSG_TERMINATOR, CONSOLE_MAX_MESSAGE_LENGTH);
+  //return UARTQUEUE_ShiftUntil(pData, UART_MSG_TERMINATOR, CONSOLE_MAX_MESSAGE_LENGTH);
+  return UARTQUEUE_ShiftUntilTerm(pData, CONSOLE_MAX_MESSAGE_LENGTH);
 }
 
 static int xatoi(char c) {
