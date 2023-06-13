@@ -10,6 +10,11 @@
 extern "C" {
 #endif
 
+// This silly hack is to allow __LINE__ to be converted to a string at compile time
+#define __S(x) #x
+#define __S_(x) __S(x)
+#define S__LINE__ __S_(__LINE__)
+
 // printd() will be silenced completely by undefining DEBUG_PRINT
 #ifdef DEBUG_PRINT
 #define printd(...)      printf(__FILE__ " [" S__LINE__ "] " __VA_ARGS__)
