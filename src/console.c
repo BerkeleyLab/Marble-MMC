@@ -375,7 +375,9 @@ static void handle_gpio(const char *msg, int len) {
            "?) Print state of GPIOs\r\n"
            "a) FMC power\r\n"
            "b) EN_PSU_CH\r\n"
-           "c) PB15 J16[4]\r\n");
+           "c) PB15 J16[4]\r\n"
+           "d) PSU reset\r\n"
+           "e) PSU alert\r\n");
   }
   return;
 }

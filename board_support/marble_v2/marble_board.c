@@ -286,7 +286,6 @@ void marble_Pmod3_5_write(bool on) {
 /************
 * FMC & PSU
 ************/
-
 /* Set FMC power */
 void marble_FMC_pwr(bool on)
 {
@@ -311,8 +310,11 @@ void marble_PSU_pwr(bool on)
       SystemClock_Config_HSI(); // switch to internal clock source, external clock is powered from 3V3!
       marble_SLEEP_ms(50);
       HAL_GPIO_WritePin(GPIOD, GPIO_PIN_11, on);
+      // Power reset pin for LTM4673
+      HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, on);
    } else {
       HAL_GPIO_WritePin(GPIOD, GPIO_PIN_11, on);
+      HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, on);
       SystemClock_Config(); // switch back to external clock source
    }
    return;
@@ -337,7 +339,7 @@ void marble_print_GPIO_status(void) {
     printf("Off\r\n");
   }
   state = HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_11);
-  printf("PSU power = ");
+  printf("PSU power enable = ");
   if (state) {
     printf("On\r\n");
   } else {
@@ -346,9 +348,22 @@ void marble_print_GPIO_status(void) {
   state = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_15);
   printf("Pmod3_5 = %d", state);
   printf("\r\n");
+  state = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_14);
+  printf("PSU power reset = ");
+  if (state) {
+    printf("On\r\n");
+  } else {
+    printf("Off\r\n");
+  }
+  state = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_15);
+  printf("PSU power alert = ");
+  if (state) {
+    printf("On\r\n");
+  } else {
+    printf("Off\r\n");
+  }
   return;
 }
-
 
 
 /************
