@@ -309,12 +309,12 @@ void marble_PSU_pwr(bool on)
    if (on == false) {
       SystemClock_Config_HSI(); // switch to internal clock source, external clock is powered from 3V3!
       marble_SLEEP_ms(50);
-      HAL_GPIO_WritePin(GPIOD, GPIO_PIN_11, on);
-      // Power reset pin for LTM4673
-      HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, on);
-   } else {
-      HAL_GPIO_WritePin(GPIOD, GPIO_PIN_11, on);
-      HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, on);
+   }
+   // Sch net EN_PSU_CH
+   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_11, on);
+   // Power reset pin for LTM4673
+   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, on);
+   if (on) {
       SystemClock_Config(); // switch back to external clock source
    }
    return;
@@ -849,6 +849,7 @@ uint8_t marble_get_board_id(void) {
 #define MARBLE_PCB_REV_XFORM(gpio_idr)    ((__RBIT(gpio_idr) >> 16) & 0xF)
 static void marble_read_pcb_rev(void) {
   uint32_t pcbid = MARBLE_PCB_REV_XFORM(GPIOD->IDR);
+  printf("GPIOD->IDR = 0x%x; pcbid = 0b%b", GPIOD->IDR, pcbid);
   // Explicit case check rather than simple cast to catch unenumerated values
   // in 'default'
   switch ((Marble_PCB_Rev_t)pcbid) {
@@ -1217,9 +1218,16 @@ static void MX_GPIO_Init(void)
    GPIO_InitStruct.Pull = GPIO_NOPULL;
    HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
-   /* Configure GPIO pin : PC12 */
-   GPIO_InitStruct.Pin = GPIO_PIN_12;
+   /* Configure GPIO pin : PC12 PC14 */
+   GPIO_InitStruct.Pin = GPIO_PIN_12, GPIO_PIN_14;
    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+   GPIO_InitStruct.Pull = GPIO_NOPULL;
+   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+   /* Configure GPIO pin : PC15 */
+   GPIO_InitStruct.Pin = GPIO_PIN_15;
+   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
    GPIO_InitStruct.Pull = GPIO_NOPULL;
    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);

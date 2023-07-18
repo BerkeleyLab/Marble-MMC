@@ -18,7 +18,7 @@ typedef enum {
    INA219_0    = 0x84,
    INA219_FMC1 = 0x80,
    INA219_FMC2 = 0x82,
-   PCA9555_0   = 0x40,
+   PCA9555_0   = 0x44,
    PCA9555_1   = 0x42,
    SI570       = 0xEE
 } I2C_APP_BUS;

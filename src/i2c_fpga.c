@@ -346,7 +346,7 @@ void adn4600_printStatus()
 }
 
 
-// Try read the values at all the registers 0x42 and 0x40
+// Try read the values at all the registers 0x42 and 0x44
 void pca9555_status()
 {
    uint8_t val;
@@ -367,10 +367,11 @@ void pca9555_config()
    switch_i2c_bus(6);
    // Reset U39 P1_7, P1_3 and P0_0, and turn on LED LD13
    uint8_t data[3];
-   data[0] = 0x6; // Config reg (6) and (7)
-   data[1] = 0xFE; // Configure P0_0 (SI570_OE) as output (set those bits to 0)
-   data[2] = 0x77; // Configure P1_7 (CLKMUX_RST) and P1_3 (LD13) as outputs (set those bits to 0)
-   marble_I2C_send(I2C_FPGA, 0x42, data, 3);
+   printf("Configuring PCA9555 at address 0x%02x\r\n", PCA9555_1);
+   data[0] = 0x6;  // Config reg (6) and (7)
+   data[1] = 0xFE; // Configure P0_0 (SI570_OE) and P0_1 (unused) as output (set those bits to 0)
+   data[2] = 0x73; // Configure P1_7 (CLKMUX_RST), P1_2, (LD14), and P1_3 (LD13) as outputs
+   marble_I2C_send(I2C_FPGA, PCA9555_1, data, 3);
    marble_SLEEP_ms(100);
 
    // from Part number(570_N_): N --> LVDS output with output enable polarity low
@@ -380,22 +381,22 @@ void pca9555_config()
    data[1] = 0x1; // Write one to P0_0
    // LEDs have reverse polarity
    data[2] = 0x04; // Write zero to P1_7 and one to P1_3
-   marble_I2C_send(I2C_FPGA, 0x42, data, 3);
+   marble_I2C_send(I2C_FPGA, PCA9555_1, data, 3);
 
    // Reassert CLKMUX_RST
    marble_SLEEP_ms(1000);
    data[0] = 0x2; // P0
    data[1] = 0x00; // Write zero to P0_0, thereby enabling SI570
    data[2] = 0x80; // Write one to P1_7 and zero to P1_3 (LED 13 should be ON)
-   marble_I2C_send(I2C_FPGA, 0x42, data, 3);
+   marble_I2C_send(I2C_FPGA, PCA9555_1, data, 3);
    printf("> reg: %x: value: %x\r\n", data[0], data[1]);
    printf("> reg: %x: value: %x\r\n", data[0]+1, data[2]);
 
-   printf("Configuring PCA9555 at address 0x44\r\n");
+   printf("Configuring PCA9555 at address 0x%02x\r\n", PCA9555_0);
    data[0] = 0x6; // Config regs 6(port 0) and 7(port 1)
    data[1] = 0x37; // Configure P0_7, P0_6 and P0_3 as outputs (set those bits to 0)
    data[2] = 0x37; // Configure P1_7, P1_6 and P0_3 as outputs (set those bits to 0)
-   marble_I2C_send(I2C_FPGA, 0x44, data, 3);
+   marble_I2C_send(I2C_FPGA, PCA9555_0, data, 3);
    printf("> reg: %x: value: %x\r\n", data[0], data[1]);
    printf("> reg: %x: value: %x\r\n", data[0]+1, data[2]);
    marble_SLEEP_ms(100);
@@ -403,7 +404,7 @@ void pca9555_config()
    data[0] = 0x2; // P1 and P2
    data[1] = 0x48; // Write ones to P0_7 and P0_3
    data[2] = 0x48; // Write ones to P1_7 and P1_3
-   marble_I2C_send(I2C_FPGA, 0x44, data, 3);
+   marble_I2C_send(I2C_FPGA, PCA9555_0, data, 3);
    printf("> reg: %x: value: %x\r\n", data[0], data[1]);
    printf("> reg: %x: value: %x\r\n", data[0]+1, data[2]);
 }
