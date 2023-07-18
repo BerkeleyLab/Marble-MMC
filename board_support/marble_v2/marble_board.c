@@ -829,6 +829,9 @@ void marble_print_pcb_rev(void) {
     case Marble_v1_3:
       printf("PCB Rev: Marble v1.3\r\n");
       break;
+    case Marble_v1_4:
+      printf("PCB Rev: Marble v1.4\r\n");
+      break;
     default:
       printf("PCB Rev: Marble v1.2\r\n");
       break;
@@ -849,7 +852,7 @@ uint8_t marble_get_board_id(void) {
 #define MARBLE_PCB_REV_XFORM(gpio_idr)    ((__RBIT(gpio_idr) >> 16) & 0xF)
 static void marble_read_pcb_rev(void) {
   uint32_t pcbid = MARBLE_PCB_REV_XFORM(GPIOD->IDR);
-  printf("GPIOD->IDR = 0x%x; pcbid = 0b%b", GPIOD->IDR, pcbid);
+  printf("GPIOD->IDR = 0x%x; pcbid = 0x%lx\n", GPIOD->IDR, pcbid);
   // Explicit case check rather than simple cast to catch unenumerated values
   // in 'default'
   switch ((Marble_PCB_Rev_t)pcbid) {
