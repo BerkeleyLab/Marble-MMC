@@ -39,6 +39,7 @@ nucleo_clean:
 
 .PHONY: doc
 doc:
+	mkdir -p doc
 	make -f makefile.board BOARD=marble doc
 
 .PHONY: sim
