@@ -213,6 +213,11 @@ void marble_PSU_pwr(bool on)
    Chip_GPIO_WritePortBit(LPC_GPIO, 1, 31, on);
 }
 
+void marble_PSU_reset_write(bool on) {
+  // Not implemented on marble mini?
+  return;
+}
+
 uint8_t marble_PWR_status(void)
 {
    uint8_t status = 0;

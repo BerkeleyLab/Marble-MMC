@@ -194,6 +194,10 @@ void marble_PSU_pwr(bool on) {
   return;
 }
 
+void marble_PSU_reset_write(bool on) {
+  return;
+}
+
 uint8_t marble_PWR_status(void) {
   return 0;
 }

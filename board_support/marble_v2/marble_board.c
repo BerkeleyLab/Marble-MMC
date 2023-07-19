@@ -312,12 +312,18 @@ void marble_PSU_pwr(bool on)
    }
    // Sch net EN_PSU_CH
    HAL_GPIO_WritePin(GPIOD, GPIO_PIN_11, on);
-   // Power reset pin for LTM4673
+   // PSU reset; Power reset pin for LTM4673
    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, on);
    if (on) {
       SystemClock_Config(); // switch back to external clock source
    }
    return;
+}
+
+void marble_PSU_reset_write(bool on) {
+  // PSU reset; Power reset pin for LTM4673
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, on);
+  return;
 }
 
 uint8_t marble_PWR_status(void)
@@ -364,7 +370,6 @@ void marble_print_GPIO_status(void) {
   }
   return;
 }
-
 
 /************
 * Switches and FPGA interrupt
@@ -765,6 +770,7 @@ uint32_t marble_init(bool use_xtal)
 
   // Configure GPIO interrupts
   marble_GPIOint_init();
+  marble_read_pcb_rev();
 
   marble_PSU_pwr(true);
   MX_ETH_Init();
@@ -780,7 +786,6 @@ uint32_t marble_init(bool use_xtal)
   LM75_Init();
   eeprom_init(0);
   marble_apply_params();
-  marble_read_pcb_rev();
 
   printf("** Marble init done **\r\n");
   marble_print_pcb_rev();
@@ -832,6 +837,21 @@ void marble_print_pcb_rev(void) {
     case Marble_v1_4:
       printf("PCB Rev: Marble v1.4\r\n");
       break;
+    case Marble_v1_5:
+      printf("PCB Rev: Marble v1.5\r\n");
+      break;
+    case Marble_v1_6:
+      printf("PCB Rev: Marble v1.6\r\n");
+      break;
+    case Marble_v1_7:
+      printf("PCB Rev: Marble v1.7\r\n");
+      break;
+    case Marble_v1_8:
+      printf("PCB Rev: Marble v1.8\r\n");
+      break;
+    case Marble_v1_9:
+      printf("PCB Rev: Marble v1.9\r\n");
+      break;
     default:
       printf("PCB Rev: Marble v1.2\r\n");
       break;
@@ -852,18 +872,29 @@ uint8_t marble_get_board_id(void) {
 #define MARBLE_PCB_REV_XFORM(gpio_idr)    ((__RBIT(gpio_idr) >> 16) & 0xF)
 static void marble_read_pcb_rev(void) {
   uint32_t pcbid = MARBLE_PCB_REV_XFORM(GPIOD->IDR);
-  printf("GPIOD->IDR = 0x%x; pcbid = 0x%lx\n", GPIOD->IDR, pcbid);
   // Explicit case check rather than simple cast to catch unenumerated values
   // in 'default'
   switch ((Marble_PCB_Rev_t)pcbid) {
     case Marble_v1_3:
       marble_pcb_rev = Marble_v1_3;
       break;
-    case Marble_v1_4: // Future support
+    case Marble_v1_4:
       marble_pcb_rev = Marble_v1_4;
       break;
     case Marble_v1_5: // Future support
       marble_pcb_rev = Marble_v1_5;
+      break;
+    case Marble_v1_6: // Future support
+      marble_pcb_rev = Marble_v1_6;
+      break;
+    case Marble_v1_7: // Future support
+      marble_pcb_rev = Marble_v1_7;
+      break;
+    case Marble_v1_8: // Future support
+      marble_pcb_rev = Marble_v1_8;
+      break;
+    case Marble_v1_9: // Future support
+      marble_pcb_rev = Marble_v1_9;
       break;
     default:
       marble_pcb_rev = Marble_v1_2;
@@ -1222,7 +1253,7 @@ static void MX_GPIO_Init(void)
    HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
    /* Configure GPIO pin : PC12 PC14 */
-   GPIO_InitStruct.Pin = GPIO_PIN_12, GPIO_PIN_14;
+   GPIO_InitStruct.Pin = GPIO_PIN_12|GPIO_PIN_14;
    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
    GPIO_InitStruct.Pull = GPIO_NOPULL;
    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;

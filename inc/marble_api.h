@@ -100,8 +100,12 @@ extern "C" {
 typedef enum {
   Marble_v1_2 = 0,
   Marble_v1_3,
-  Marble_v1_4,  // Future support
+  Marble_v1_4,
   Marble_v1_5,  // Future support
+  Marble_v1_6,  // Future support
+  Marble_v1_7,  // Future support
+  Marble_v1_8,  // Future support
+  Marble_v1_9,  // Future support
   Marble_Nucleo,  // Nucleo-F207ZG dev board
   Marble_Simulator
 } Marble_PCB_Rev_t;
@@ -173,6 +177,8 @@ typedef enum {
 uint8_t marble_FMC_status(void);
 
 void marble_PSU_pwr(bool on);
+
+void marble_PSU_reset_write(bool on);
 
 typedef enum {
    M_PWR_STATUS_PSU_EN = 0,
