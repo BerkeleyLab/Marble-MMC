@@ -477,14 +477,14 @@ void xrp_boot(void)
 
 static void print_mac(uint8_t *pdata) {
   printf("MAC: ");
-  PRINT_MULTIBYTE_HEX(pdata, 6, :); // Note the unquoted colon :
+  PRINT_MULTIBYTE_HEX(pdata, 6, ':');
   return;
 }
 
 //static void print_ip(mac_ip_data_t *pmac_ip_data) {
 static void print_ip(uint8_t *pdata) {
   printf("IP: ");
-  PRINT_MULTIBYTE_DEC(pdata, 4, .);  // Note the unquoted period .
+  PRINT_MULTIBYTE_DEC(pdata, 4, '.');
   return;
 }
 
