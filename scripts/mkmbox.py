@@ -12,6 +12,7 @@ import json
 import os
 import re
 import sys
+import hashlib
 
 import htools
 
@@ -28,8 +29,20 @@ class JSONHack():
         if filename == None:
             filename = "mbox.def"
         self.filename = filename
+        self._fileHash = None
         if not os.path.exists(self.filename):
             print("File {} doesn't appear to exist".format(self.filename))
+
+    def getHash(self):
+        """Return the SHA-256 hash of the input file with comment lines removed.
+        The Hash is computed on the concatenated string of the contents of the file with newlines
+        and comment lines removed.  This is done in an attempt to keep the hash from changing if
+        the input file is edited purely with added/removed comments or newlines."""
+        return self._fileHash
+
+    def getHashHex(self):
+        """Return Hex string of SHA-256 hash of the input file with comment lines removed."""
+        return self._fileHashStr
 
     def load(self):
         if not os.path.exists(self.filename):
@@ -56,6 +69,9 @@ class JSONHack():
             # This line number is not correct. Why?
             print("JSON Decoder Error:\n{}".format(jerr))
             o = {}
+        hl = hashlib.sha256(bytes(''.join(s), 'utf-8'))
+        self._fileHash = hl.digest()
+        self._fileHashStr = hl.hexdigest()
         return o
 
 class MailboxInterface():
@@ -129,8 +145,17 @@ class MailboxInterface():
         self._includes = []
         self._fd = None # For _fp method
 
+    def load(self):
+        return self._reader.load()
+
+    def getHash(self):
+        return self._reader.getHash()
+
+    def getHashHex(self):
+        return self._reader.getHashHex()
+
     def interpret(self):
-        jdict = self._reader.load()
+        jdict = self.load()
         self._pageNumbers = []
         self._pageList = [] # Each entry is (npage, [(name, paramDict),...])
         for page, mlist in jdict.items():
@@ -304,6 +329,7 @@ class MailboxInterface():
         return
 
     def makeProtos(self):
+        self._fp("uint32_t mailbox_get_hash(void);")
         self._fp("void mailbox_update_input(void);")
         self._fp("void mailbox_update_output(void);")
         self._fp("void mailbox_read_print_all(void);")
@@ -425,6 +451,11 @@ class MailboxInterface():
                 self._fp("  }")
         self._fp("  return;\n}")
 
+    def makeGetHash(self):
+        self._fp("uint32_t mailbox_get_hash(void) {")
+        self._fp("  return 0x{};\n}}".format(self.getHashHex()[0:8]))
+        return
+
     def makePrintAll(self):
         self._fp("void mailbox_read_print_all(void) {")
         for npage, elementList in self._pageList: # Each entry is (npage, [(name, paramDict),...])
@@ -470,6 +501,8 @@ class MailboxInterface():
         self._fp(htools.sectionLine("DO NOT EDIT THIS AUTO-GENERATED FILE DIRECTLY"))
         self._fp(htools.sectionLine("Define mailbox structure in scripts/mbox.def"))
         self.makeIncludes()
+        self.makeGetHash()
+        self._fp("")
         self.makeUpdateOutput()
         self._fp("")
         self.makeUpdateInput()
@@ -587,10 +620,12 @@ def makeHeader(argv):
                  "If filename has no extension (or any other extension), generates both header and source file "
                  "by appending .h/.c to the filename.")
     parser.add_argument('-o', '--output_file', default=None, help=ofilehelp)
+    parser.add_argument('--hash', default=False, action="store_true", help="Return the hash of the input file.")
     args = parser.parse_args()
     makeh = False
     makes = False
     makedoc = False
+
     if args.output_file is None:
         prefix = args.def_file
         makeh = True
@@ -610,6 +645,11 @@ def makeHeader(argv):
             print("Cannot interpret desired file type based on extension '{}'".format(ext))
             return 1
     mbox = MailboxInterface(inFilename=args.def_file, prefix=prefix)
+    if args.hash:
+        mbox.load()
+        ihash = mbox.getHashHex()
+        print(ihash[0:8])
+        return 0
     mbox.interpret()
     print(mbox)
     if makeh:

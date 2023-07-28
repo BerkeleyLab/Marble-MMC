@@ -499,11 +499,6 @@ static void print_this_mac(void) {
   return;
 }
 
-#define PRINT_MULTIBYTE(pdata, len, div) do { \
-  for (int ix=0; ix<len-1; ix++) { printf("%d" ## div, pdata[ix]); } \
-  printf("%d\r\n", pdata[len-1]); \
-} while (0);
-
 static void print_this_ip(void) {
   uint8_t ip[IP_LENGTH];
   int rval = eeprom_read_ip_addr(ip, IP_LENGTH);

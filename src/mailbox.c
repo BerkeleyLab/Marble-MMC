@@ -48,6 +48,7 @@ void mbox_write_page(uint8_t page_no, uint8_t page_sz, const uint8_t page[]) {
    // Write at most 16 bytes to page
    if (page_sz > 16) page_sz = 16;
    mbox_set_page(page_no);
+   //printf("write_page %d, size %d\r\n", page_no, page_sz);
    for (unsigned jx=0; jx<page_sz; jx++) {
       mbox_write_entry(jx, page[jx]);
    }
@@ -57,6 +58,7 @@ void mbox_read_page(uint8_t page_no, uint8_t page_sz, uint8_t *page) {
    // Write at most 16 bytes to page
    if (page_sz > 16) page_sz = 16;
    mbox_set_page(page_no);
+   //printf("read_page %d, size %d\r\n", page_no, page_sz);
    for (unsigned jx=0; jx<page_sz; jx++) {
       page[jx] = mbox_read_entry(jx);
    }

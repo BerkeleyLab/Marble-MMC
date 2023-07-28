@@ -21,8 +21,8 @@ typedef enum {
 typedef enum {
   MB3_COUNT_1,
   MB3_COUNT_0,
-  MB3_PAD1,
   MB3_PAD2,
+  MB3_PAD3,
   MB3_LM75_0_1,
   MB3_LM75_0_0,
   MB3_LM75_1_1,
@@ -30,7 +30,7 @@ typedef enum {
   MB3_FMC_ST,
   MB3_PWR_ST,
   MB3_MGTMUX_ST,
-  MB3_PAD3,
+  MB3_PAD11,
   MB3_GIT32_3,
   MB3_GIT32_2,
   MB3_GIT32_1,
@@ -48,9 +48,14 @@ typedef enum {
   MB4_MAX_F1_DUTY,
   MB4_MAX_F2_DUTY,
   MB4_PCB_REV,
+  MB4_PAD11,
   MB4_COUNT_1,
   MB4_COUNT_0,
-  MB4_SIZE // 11
+  MB4_HASH_3,
+  MB4_HASH_2,
+  MB4_HASH_1,
+  MB4_HASH_0,
+  MB4_SIZE // 16
 } PAGE4_ENUM;
 
 typedef enum {
@@ -59,6 +64,7 @@ typedef enum {
 } PAGE5_ENUM;
 
 
+uint32_t mailbox_get_hash(void);
 void mailbox_update_input(void);
 void mailbox_update_output(void);
 void mailbox_read_print_all(void);
