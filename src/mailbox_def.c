@@ -8,7 +8,7 @@
 #include "mailbox_def.h"
 
 uint32_t mailbox_get_hash(void) {
-  return 0x9a1751d6;
+  return 0x16db2127;
 }
 
 void mailbox_update_output(void) {
