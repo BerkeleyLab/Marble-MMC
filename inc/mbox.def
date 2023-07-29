@@ -182,7 +182,7 @@
       "size" : 4,
       "type" : "int",
       "desc" : "Hash of mailbox functionality.",
-      "fmt"  : "%d",
+      "fmt"  : "0x{:x}",
       "output" : "@ = mailbox_get_hash()"
     }
 
