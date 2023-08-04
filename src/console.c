@@ -458,7 +458,10 @@ static void pm_bus_display(void)
 {
 	LM75_print(LM75_0);
 	LM75_print(LM75_1);
-	xrp_dump(XRP7724);
+       if (marble_get_board_id() < Marble_v1_3)
+          xrp_dump(XRP7724);
+       else
+          ltm_read_telem(LTM4673);
 }
 
 void xrp_boot(void)

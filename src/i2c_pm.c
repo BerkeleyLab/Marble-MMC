@@ -4,6 +4,7 @@
 #include <string.h>
 #include "i2c_pm.h"
 #include "max6639.h"
+#include "math.h"
 
 /* ============================= Helper Macros ============================== */
 #define MAX6639_GET_TEMP_DOUBLE(rTemp, rTempExt) \
@@ -302,6 +303,7 @@ void I2C_PM_probe(void)
  * valid only for builds > v1.3
  *
  */
+
 int ltm_read_telem(uint8_t dev)
 {
   if (marble_get_board_id() < Marble_v1_3) {
@@ -310,51 +312,65 @@ int ltm_read_telem(uint8_t dev)
   }
    struct {int b; const char *m;} r_table[] = {
       // see page 105
-      {0x88, "READ_VIN"},
-      {0x89, "READ_IIN"},
-      {0x97, "READ_PIN"},
-      {0x8B, "READ_VOUT"},
-      {0x8C, "READ_IOUT"},
-      {0x8D, "READ_TEMPERATURE_1"},
-      {0x8E, "READ_TEMPERATURE_2"},
-      {0x96, "READ_POUT"},
-      {0xBB, "MFR_READ_IOUT"},
-      {0xC4, "MFR_IIN_PEAK"},
-      {0xC5, "MFR_IIN_MIN"},
-      {0xC6, "MFR_PIN_PEAK"},
-      {0xC7, "MFR_PIN_MIN"},
-      {0xFA, "MFR_IOUT_SENSE_VOLTAGE"},
-      {0xDE, "MFR_VIN_PEAK"},
-      {0xDD, "MFR_VOUT_PEAK"},
-      {0xD7, "MFR_IOUT_PEAK"},
-      {0xDF, "MFR_TEMPERATURE_1_PEAK"},
-      {0xFC, "MFR_VIN_MIN"},
-      {0xFB, "MFR_VOUT_MIN"},
-      {0xD8, "MFR_IOUT_MIN"},
-      {0xFD, "MFR_TEMPERATURE_1_MIN"}};
+      {0x88, "V     READ_VIN"},
+      {0x89, "A     READ_IIN"},
+      {0x97, "W     READ_PIN"},
+      {0x8B, "V     READ_VOUT"},
+      {0x8C, "A     READ_IOUT"},
+      {0x8D, "degC  READ_TEMPERATURE_1"},
+      {0x8E, "degC  READ_TEMPERATURE_2"},
+      {0x96, "W     READ_POUT"},
+      {0xBB, "mA    MFR_READ_IOUT"},
+      {0xC4, "A     MFR_IIN_PEAK"},
+      {0xC5, "A     MFR_IIN_MIN"},
+      {0xC6, "P     MFR_PIN_PEAK"},
+      {0xC7, "P     MFR_PIN_MIN"},
+      {0xFA, "V     MFR_IOUT_SENSE_VOLTAGE"},
+      {0xDE, "V     MFR_VIN_PEAK"},
+      {0xDD, "V     MFR_VOUT_PEAK"},
+      {0xD7, "A     MFR_IOUT_PEAK"},
+      {0xDF, "degC  MFR_TEMPERATURE_1_PEAK"},
+      {0xFC, "V     MFR_VIN_MIN"},
+      {0xFB, "V     MFR_VOUT_MIN"},
+      {0xD8, "A     MFR_IOUT_MIN"},
+      {0xFD, "degC  MFR_TEMPERATURE_1_MIN"}};
    printf("LTM4673 Telemetry register dump:\n");
+   float L16 = 0.0001220703125;  // 2**(-13)
    for (unsigned jx = 0; jx < 4; jx++) {
       // start selecting channel/page 0 until you finish reading
       // telemetry data for all 4 channels
       uint8_t page = 0x00 + jx;
       marble_I2C_cmdsend(I2C_PM, dev, 0x00, &page, 1);
-      int rc1 = marble_I2C_cmdrecv(I2C_PM, dev, 0x00, &page, 1);
-      printf("> Read page/channel: %x: cmd: %2.2x\r\n", page, rc1);
+      printf("> Read page/channel: %x:\n", page);
       const unsigned tlen = sizeof(r_table)/sizeof(r_table[0]);
       for (unsigned ix=0; ix<tlen; ix++) {
           uint16_t i2c_dat[4];
           int regno = r_table[ix].b;
           int rc = marble_I2C_cmdrecv(I2C_PM, dev, regno, i2c_dat, 2);
+          float phys_unit;
+          int mask, comp2;
           if (rc == HAL_OK) {
-              // TODO: convert them to physical units
-              printf("r[%2.2x] = 0x%4.4x = %5d = 2(%s)\r\n", regno, i2c_dat[0], i2c_dat[0], r_table[ix].m);
+              if (ix == 3 || ix == 15 || ix == 19)
+                  phys_unit = i2c_dat[0]*L16;  // L16 format
+              else if (ix == 8)
+                  phys_unit = i2c_dat[0]*2.5;  // special for MFR_READ_IOUT
+              else if (ix == 13)
+                  phys_unit = i2c_dat[0]*0.025*pow(2, -13);  // special for MFR_IOUT_SENSE_VOLTAGE
+              else {
+                  // L11 format, see page 35
+                  mask = (i2c_dat[0] >> 11);
+                  comp2 = pow(2, 5) - mask;
+                  phys_unit = (i2c_dat[0] & 0x7FF)*(1.0/(1<<comp2));
+              }
+              printf("r[%2.2x] = 0x%4.4x = %5d = %7.3f %s\r\n", regno, i2c_dat[0], i2c_dat[0], phys_unit, r_table[ix].m);
           } else {
               printf("r[%2.2x]    unread          (%s)\r\n", regno, r_table[ix].m);
           }
       }
    }
+   // TODO: remove this, so function can be void
+   return 1;
 }
-
 
 /* XPR7724 is special
  * Seems that one-byte Std Commands documented in ANP-38 apply to
