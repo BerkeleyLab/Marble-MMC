@@ -344,25 +344,26 @@ int ltm_read_telem(uint8_t dev)
       printf("> Read page/channel: %x:\n", page);
       const unsigned tlen = sizeof(r_table)/sizeof(r_table[0]);
       for (unsigned ix=0; ix<tlen; ix++) {
-          uint16_t i2c_dat[4];
+          uint8_t i2c_dat[4];
           int regno = r_table[ix].b;
           int rc = marble_I2C_cmdrecv(I2C_PM, dev, regno, i2c_dat, 2);
+          uint16_t word0 = ((unsigned int) i2c_dat[1] << 8) | i2c_dat[0];
           float phys_unit;
           int mask, comp2;
           if (rc == HAL_OK) {
               if (ix == 3 || ix == 15 || ix == 19)
-                  phys_unit = i2c_dat[0]*L16;  // L16 format
+                  phys_unit = word0*L16;  // L16 format
               else if (ix == 8)
-                  phys_unit = i2c_dat[0]*2.5;  // special for MFR_READ_IOUT
+                  phys_unit = word0*2.5;  // special for MFR_READ_IOUT
               else if (ix == 13)
-                  phys_unit = i2c_dat[0]*0.025*pow(2, -13);  // special for MFR_IOUT_SENSE_VOLTAGE
+                  phys_unit = word0*0.025*pow(2, -13);  // special for MFR_IOUT_SENSE_VOLTAGE
               else {
                   // L11 format, see page 35
-                  mask = (i2c_dat[0] >> 11);
+                  mask = (word0 >> 11);
                   comp2 = pow(2, 5) - mask;
-                  phys_unit = (i2c_dat[0] & 0x7FF)*(1.0/(1<<comp2));
+                  phys_unit = (word0 & 0x7FF)*(1.0/(1<<comp2));
               }
-              printf("r[%2.2x] = 0x%4.4x = %5d = %7.3f %s\r\n", regno, i2c_dat[0], i2c_dat[0], phys_unit, r_table[ix].m);
+              printf("r[%2.2x] = 0x%4.4x = %5d = %7.3f %s\r\n", regno, word0, word0, phys_unit, r_table[ix].m);
           } else {
               printf("r[%2.2x]    unread          (%s)\r\n", regno, r_table[ix].m);
           }
