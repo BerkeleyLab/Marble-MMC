@@ -121,7 +121,7 @@ void mbox_reset_update_count(void) {
 // A '1' in bit position 0 clears the I2C bus status register
 static void mbox_handleI2CBusStatusMsg(uint8_t msg) {
   //printf("I2C bus msg = 0x%x\r\n", msg);
-  if (msg & 0x01) {
+  if (msg == 0x01) {
     printf("Resetting I2C bus status\r\n");
     resetI2CBusStatus();
   }
