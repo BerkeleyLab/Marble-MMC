@@ -304,12 +304,34 @@ void I2C_PM_probe(void)
  *
  */
 
-int ltm_read_telem(uint8_t dev)
+int ltm_ch_status(uint8_t dev)
 {
   if (marble_get_board_id() < Marble_v1_3) {
     printf("LTM4673 not present; bypassed.\n");
     return 0;
   }
+   const uint8_t STATUS_WORD = 0x79;
+   uint8_t i2c_dat[4];
+   for (unsigned jx = 0; jx < 4; jx++) {
+      // start selecting channel/page 0 until you finish reading
+      // data for all 4 channels
+      uint8_t page = 0x00 + jx;
+      marble_I2C_cmdsend(I2C_PM, dev, 0x00, &page, 1);
+      // marble_I2C_cmd_recv should return 0, if everything is good, see page 100
+      int rc = marble_I2C_cmdrecv(I2C_PM, dev, STATUS_WORD, i2c_dat, 2);
+      if (rc == HAL_OK) {
+          uint16_t word0 = ((unsigned int) i2c_dat[1] << 8) | i2c_dat[0];
+          if (word0) {
+              printf("BAD! LTM4673 Channel %x, Status_word r[%2.2x] = 0x%x\r\n", page, STATUS_WORD, word0);
+              return 0;
+          }
+      }
+   }
+   return 1;
+}
+
+void ltm_read_telem(uint8_t dev)
+{
    struct {int b; const char *m;} r_table[] = {
       // see page 105
       {0x88, "V     READ_VIN"},
@@ -341,7 +363,7 @@ int ltm_read_telem(uint8_t dev)
       // telemetry data for all 4 channels
       uint8_t page = 0x00 + jx;
       marble_I2C_cmdsend(I2C_PM, dev, 0x00, &page, 1);
-      printf("> Read page/channel: %x:\n", page);
+      printf("> Read page/channel: %x\n", page);
       const unsigned tlen = sizeof(r_table)/sizeof(r_table[0]);
       for (unsigned ix=0; ix<tlen; ix++) {
           uint8_t i2c_dat[4];
@@ -369,8 +391,6 @@ int ltm_read_telem(uint8_t dev)
           }
       }
    }
-   // TODO: remove this, so function can be void
-   return 1;
 }
 
 /* XPR7724 is special

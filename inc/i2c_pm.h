@@ -84,5 +84,6 @@ int xrp_srecord(uint8_t dev, const uint8_t data[]);
 int xrp_program_static(uint8_t dev);
 int xrp_file(uint8_t dev);
 
-int ltm_read_telem(uint8_t dev);
+void ltm_read_telem(uint8_t dev);
+int ltm_ch_status(uint8_t dev);
 #endif /* I2C_PM_H_ */
