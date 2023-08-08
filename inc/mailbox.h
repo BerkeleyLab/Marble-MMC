@@ -16,6 +16,9 @@
   printf("\r\n"); \
 } while (0);
 
+void mbox_enable(void);
+void mbox_disable(void);
+int mbox_get_enable(void);
 void mbox_update(bool verbose);
 uint16_t mbox_get_update_count(void);
 void mbox_reset_update_count(void);

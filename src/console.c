@@ -54,7 +54,8 @@ const char *menu_str[] = {"\r\n",
   "n d:d:d:d:d:d - Set MAC Address\r\n",
   "o - SI570 status\r\n",
   "p speed[%] - Set fan speed (0-120 or 0%-100%)\r\n",
-  "q otemp - Set overtemperature threshold (degC)\r\n"
+  "q otemp - Set overtemperature threshold (degC)\r\n",
+  "r enable - Set mailbox enable/disable (0/1, on/off)\r\n"
 };
 #define MENU_LEN (sizeof(menu_str)/sizeof(*menu_str))
 
@@ -78,6 +79,7 @@ static int handle_msg_IP(char *rx_msg, int len);
 static int handle_msg_MAC(char *rx_msg, int len);
 static int handle_msg_fan_speed(char *rx_msg, int len);
 static int handle_msg_overtemp(char *rx_msg, int len);
+static int handle_mailbox_enable(char *rx_msg, int len);
 static int handle_msg_MGTMUX(char *rx_msg, int len);
 //static void print_mac_ip(mac_ip_data_t *pmac_ip_data);
 static void print_mac(uint8_t *pdata);
@@ -229,6 +231,9 @@ static int console_handle_msg(char *rx_msg, int len)
         case 'q':
            handle_msg_overtemp(rx_msg, len);
            break;
+        case 'r':
+           handle_mailbox_enable(rx_msg, len);
+           break;
         default:
            printf(unk_str);
            break;
@@ -318,6 +323,88 @@ static int handle_msg_overtemp(char *rx_msg, int len) {
   //int rval = eeprom_store_overtemp(&otbyte, 1);
   eeprom_store_overtemp(&otbyte, 1); // Discarding return value for now
   // int eeprom_read_overtemp(volatile uint8_t *pdata, int len);
+  return 0;
+}
+
+static int handle_mailbox_enable(char *rx_msg, int len) {
+  //  Msg   Action
+  //  r 0   Disable
+  //  r 1   Enable
+  //  r ?   Print status
+  //  r     Print status
+  //  r on  Enable
+  //  r off Disable
+  int en = 0;
+  int query = 0;
+  char c;
+  int doParse = 0;
+  // 'doParse' 0 means unparsed; 1 means parse fail; 2 means parse success
+  char arg[3];
+  int argp = 0;
+  if (len < 4) {
+    query = 1;
+  }
+  for (int n = 1; n < len; n++) {
+    c = rx_msg[n];
+    if (doParse) {
+      if (c == '0') {
+        en = 0;
+        doParse = 2;
+        break;
+      } else if (c == '1') {
+        en = 1;
+        doParse = 2;
+        break;
+      } else if ((c >= 'A') && (c <= 'z')) {
+        if (argp < 2) {
+          arg[argp++] = c;
+        } else {
+          break;
+        }
+      } else if (c == '?') {
+        query = 1;
+        break;
+      }
+    } else {  // Haven't started parsing
+      if (c == ' ') {
+        doParse = 1;
+      }
+    }
+  }
+  if (argp > 0) {
+    if ((arg[0] == 'o') || (arg[0] == 'O')) {
+      if ((arg[1] == 'n') || (arg[1] == 'N')) {
+        en = 1;
+        doParse = 2;
+      } else if ((arg[1] == 'f') || (arg[1] == 'F')) {
+        en = 0;
+        doParse = 2;
+      }
+    }
+  }
+  if (!doParse) {
+    query = 1;
+  }
+  if ((doParse < 2) && (!query)) {
+    printf("Failed to parse\r\n");
+    return 1;
+  }
+  if (query) {
+    en = mbox_get_enable();
+    if (en) {
+      printf("Mailbox enabled\r\n");
+    } else {
+      printf("Mailbox disabled\r\n");
+    }
+  } else {
+    if (en) {
+      printf("Enabling mailbox update\r\n");
+      mbox_enable();
+    } else {
+      printf("Disabling mailbox update\r\n");
+      mbox_disable();
+    }
+  }
   return 0;
 }
 

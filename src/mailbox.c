@@ -18,6 +18,7 @@
 extern SSP_PORT SSP_FPGA;
 extern SSP_PORT SSP_PMOD;
 uint16_t update_count = 0;
+static int mbox_is_disabled = 0;
 
 /* =========================== Static Prototypes ============================ */
 static void mbox_handleI2CBusStatusMsg(uint8_t msg);
@@ -26,6 +27,24 @@ static void mbox_handleI2CBusStatusMsg(uint8_t msg);
 #include "mailbox_def.c"
 
 /* ========================== Function Definitions ========================== */
+
+void mbox_enable(void) {
+  mbox_is_disabled = 0;
+  return;
+}
+
+void mbox_disable(void) {
+  mbox_is_disabled = 1;
+  return;
+}
+
+int mbox_get_enable(void) {
+  if (mbox_is_disabled) {
+    return 0;
+  }
+  return 1;
+}
+
 static void mbox_set_page(uint8_t page_no)
 {
    uint16_t ssp_buf;
@@ -64,6 +83,9 @@ void mbox_read_page(uint8_t page_no, uint8_t page_sz, uint8_t *page) {
 
 void mbox_update(bool verbose)
 {
+  if (mbox_is_disabled) {
+    return;
+  }
   _UNUSED(verbose);
   update_count++;
   // Note! Input function must come before output function or any input values will
