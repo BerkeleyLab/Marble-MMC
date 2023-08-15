@@ -293,3 +293,15 @@ void FPGAWD_ISR(void) {
   return;
 }
 
+uint8_t fsynthGetAddr(void) {
+  return 0;
+}
+
+uint8_t fsynthGetConfig(void) {
+  return 0;
+}
+
+uint32_t fsynthGetFreq(void) {
+  return 0;
+}
+

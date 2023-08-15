@@ -255,6 +255,25 @@ int getI2CBusStatus(void);
 void resetI2CBusStatus(void);
 
 /************
+* Freq. Synthesizer (si570)
+************/
+#define FSYNTH_ASSEMBLE(data, addr, freq, config) \
+  do { \
+    data[0] = (uint8_t)(addr & 0xff); \
+    data[1] = (uint8_t)(config & 0xff); \
+    data[2] = (uint8_t)((freq >> 24) & 0xff); \
+    data[3] = (uint8_t)((freq >> 16) & 0xff); \
+    data[4] = (uint8_t)((freq >> 8) & 0xff); \
+    data[5] = (uint8_t)(freq & 0xff); \
+  } while (0)
+#define FSYNTH_GET_ADDR(data) data[0]
+#define FSYNTH_GET_CONFIG(data) data[1]
+#define FSYNTH_GET_FREQ(data) (int)((data[2] << 24) | (data[3] << 16) | (data[4] << 8) | data[5])
+uint8_t fsynthGetAddr(void);
+uint8_t fsynthGetConfig(void);
+uint32_t fsynthGetFreq(void);
+
+/************
 * MDIO to PHY
 ************/
 void marble_MDIO_write(uint16_t reg, uint32_t data);

@@ -55,7 +55,8 @@ const char *menu_str[] = {"\r\n",
   "o - SI570 status\r\n",
   "p speed[%] - Set fan speed (0-120 or 0%-100%)\r\n",
   "q otemp - Set overtemperature threshold (degC)\r\n",
-  "r enable - Set mailbox enable/disable (0/1, on/off)\r\n"
+  "r enable - Set mailbox enable/disable (0/1, on/off)\r\n",
+  "s addr_hex freq_hz config_hex - Set Si570 configuration\r\n"
 };
 #define MENU_LEN (sizeof(menu_str)/sizeof(*menu_str))
 
@@ -90,9 +91,15 @@ static int sscanfIP(const char *s, volatile uint8_t *data, int len);
 static int sscanfMAC(const char *s, volatile uint8_t *data, int len);
 static int sscanfFanSpeed(const char *s, int len);
 static int sscanfUnsignedDecimal(const char *s, int len);
+static int sscanfUnsignedHex(const char *s, int len);
 static int sscanfMGTMUX(const char *s, int len);
+static int sscanfSpace(const char *s, int len);
+static int sscanfNonSpace(const char *s, int len);
+static int sscanfNext(const char *s, int len);
+static int sscanfFSynth(const char *s, int len);
 static int xatoi(char c);
 static int htoi(char c);
+static void console_print_fsynth(void);
 
 int console_init(void) {
   _msgCount = 0;
@@ -234,6 +241,9 @@ static int console_handle_msg(char *rx_msg, int len)
         case 'r':
            handle_mailbox_enable(rx_msg, len);
            break;
+        case 's':
+           sscanfFSynth(rx_msg, len);
+           break;
         default:
            printf(unk_str);
            break;
@@ -308,7 +318,7 @@ static int handle_msg_overtemp(char *rx_msg, int len) {
     }
     return 0;
   }
-  int overtemp = sscanfUnsignedDecimal(rx_msg, len);
+  int overtemp = sscanfUnsignedDecimal(rx_msg+1, len-1);
   if (overtemp < 0) {
     printf("Could not interpret input. Fail.\r\n");
     return -1;
@@ -810,11 +820,42 @@ static int sscanfUnsignedDecimal(const char *s, int len) {
   int r;
   unsigned int sum = 0;
   bool digitsFound = false;
-  for (int n = 1; n < len; n++) {
+  for (int n = 0; n < len; n++) {
     c = s[n];
     r = xatoi(c);
     if (r >= 0) {
       sum = (sum * 10) + r;
+      digitsFound = true;
+    } else if (digitsFound) {
+      // If digits have been found, break on first non-numeric character
+      break;
+    }
+  }
+  if (!digitsFound) {
+    return -1;
+  }
+  return (int)sum;
+}
+
+/*
+ * static int sscanfUnsignedHex(const char *s, int len);
+ *    This function skips any non-hex characters (0-9,A-F,a-f)
+ *    until a numeric character is found, then shifts/sums any
+ *    numeric characters until 'len' or until a non-hex character
+ *    is found.
+ *    Returns -1 if no digit is found.
+ *    Returns scanned value otherwise.
+ */
+static int sscanfUnsignedHex(const char *s, int len) {
+  char c;
+  int r;
+  unsigned int sum = 0;
+  bool digitsFound = false;
+  for (int n = 0; n < len; n++) {
+    c = s[n];
+    r = htoi(c);
+    if (r >= 0) {
+      sum = (sum * 16) + r;
       digitsFound = true;
     } else if (digitsFound) {
       // If digits have been found, break on first non-numeric character
@@ -873,6 +914,115 @@ static int sscanfMGTMUX(const char *s, int len) {
   }
   return bmask;
 }
+
+/* static int sscanfSpace(const char *s, int len);
+ *  Return the index of first whitespace found scanning string 's'
+ *  Returns -1 if no whitespace found.
+ */
+static int sscanfSpace(const char *s, int len) {
+  int rval = -1;
+  for (int n = 0; n < len; n++) {
+    if ((s[n] == ' ') || (s[n] == '\t') || (s[n] == '\n') || (s[n] == '\r')) {
+      rval = n;
+      break;
+    }
+  }
+  return rval;
+}
+
+/* static int sscanfNonSpace(const char *s, int len);
+ *  Return the index of first non-whitespace found scanning string 's'
+ *  Returns -1 if only whitespace found.
+ */
+static int sscanfNonSpace(const char *s, int len) {
+  int rval = -1;
+  for (int n = 0; n < len; n++) {
+    if ((s[n] != ' ') && (s[n] != '\t') && (s[n] != '\n') && (s[n] != '\r')) {
+      rval = n;
+      break;
+    }
+  }
+  return rval;
+}
+
+/* static int sscanfNext(const char *s, int len);
+ *  Scan for the next whitespace, then for the next non-whitespace.
+ *  Returns that index or -1 if not found.
+ */
+static int sscanfNext(const char *s, int len) {
+  int win;
+  int cin;
+  win = sscanfSpace(s, len);
+  if (win < 0) {
+    return -1;
+  }
+  cin = sscanfNonSpace(s+win, len-win);
+  if (cin > 0) {
+    return win+cin;
+  }
+  return -1;
+}
+
+static int sscanfFSynth(const char *s, int len) {
+  // Input string format:
+  //  s cc 40000 1
+  int i2c_addr = -1;
+  int freq = -1;
+  int config = -1;
+  int query = 0;
+  int index = sscanfNext(s, len);
+  uint8_t data[6];
+  if (len < 4) {
+    query = 2;  // print usage too
+  } else if (s[index] == '?') {
+    query = 1;
+  } else {
+    i2c_addr = sscanfUnsignedHex(s+index, len-index); // will break at first non-hex char
+    index += sscanfNext(s+index, len-index);
+    if ((index >= 0) && (index < len-1)) {
+      freq = sscanfUnsignedDecimal(s+index, len-index);
+    }
+    index += sscanfNext(s+index, len-index);
+    if ((index >= 0) && (index < len-1)) {
+      config = sscanfUnsignedHex(s+index, len-index);
+    }
+  }
+  if (query) {
+    if (query > 1) {
+      printf("USAGE: s ADDR(hex) FREQ_HZ(decimal) CONFIG(hex)\r\n");
+      printf("  Set frequency synthesizer (Si570) configuration parameters.\r\n");
+    }
+    console_print_fsynth();
+  } else {
+    if ((i2c_addr < 0) || (freq < 0) || (config < 0)) {
+      printf("Could not interpret input\r\n");
+      return -1;
+    }
+    printf("I2C Addr = 0x%x, Freq = %d Hz, Config = 0x%x\r\n", i2c_addr, freq, config);
+    FSYNTH_ASSEMBLE(data, i2c_addr, freq, config);
+    eeprom_store_fsynth((const uint8_t *)data, 6);
+  }
+  return 0;
+}
+
+static void console_print_fsynth(void) {
+  uint8_t data[6];
+  uint8_t i2c_addr;
+  uint8_t config;
+  int freq;
+  int rval = eeprom_read_fsynth(data, 6);
+  if (rval >= 0) {
+    i2c_addr = FSYNTH_GET_ADDR(data);
+    config = FSYNTH_GET_CONFIG(data);
+    freq = FSYNTH_GET_FREQ(data);
+    printf("I2C Addr = 0x%x, Freq = %d Hz, Config = 0x%x\r\n", i2c_addr, freq, config);
+  } else {
+    printf("Could not recall frequency synthesizer parameters\r\n");
+  }
+  return;
+}
+
+
 
 /*
  * void console_pend_FPGA_enable(void);

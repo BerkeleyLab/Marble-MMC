@@ -186,9 +186,26 @@
       "input" : "mbox_handleI2CBusStatusMsg(@)",
       "desc" : "Returns logical OR of all I2C function return values. Write nonzero value to clear status."
     }
+  ],
+# Page 6 contains only outputs (MMC => FPGA)
+  "page6" : [
+    { "name" : "FSYNTH_I2C_ADDR",
+      "size" : 1,
+      "fmt"  : "0x{:x}",
+      "output": "@ = (uint8_t)fsynthGetAddr()",
+      "desc" : "I2C address of frequency synthesizer (si570) in 8-bit (shifted) format."
+    },
+    { "name" : "FSYNTH_CONFIG",
+      "size" : 1,
+      "fmt"  : "0x{:x}",
+      "output": "@ = (uint8_t)fsynthGetConfig()",
+      "desc" : "Config byte of frequency synthesizer (si570). Bit 0: Enable pin polarity. Bits 1-7: reserved"
+    },
+    { "name" : "FSYNTH_FREQ",
+      "size" : 4,
+      "fmt"  : "{} Hz",
+      "output": "@ = fsynthGetFreq()",
+      "desc" : "Startup frequency of frequency synthesizer (si570) in Hz."
+    }
   ]
 }
-
-
-
-
