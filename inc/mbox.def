@@ -199,7 +199,7 @@
       "size" : 1,
       "fmt"  : "0x{:x}",
       "output": "@ = (uint8_t)fsynthGetConfig()",
-      "desc" : "Config byte of frequency synthesizer (si570). Bit 0: Enable pin polarity. Bits 1-7: reserved"
+      "desc" : "Config byte of frequency synthesizer (si570). Bit 0: Enable pin polarity (0 = polarity low, 1 = polarity high). Bit 1: Temperature stability (0 = 20 ppm or 50 ppm, 1 = 7 ppm) Bits 2-5: reserved. Bits [7:6]: 0b01 = Valid config (avoid acting on invalid 0xff or 0x00)."
     },
     { "name" : "FSYNTH_FREQ",
       "size" : 4,
