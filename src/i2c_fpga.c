@@ -414,6 +414,10 @@ void si570_status()
 {
    uint8_t i2c_addr = fsynthGetAddr();
    uint8_t config = fsynthGetConfig();
+   if ((i2c_addr == 0) || (i2c_addr == 0xff) || (config == 0) || (config == 0xff)) {
+     printf("SI570 parameters not configured. Please configure via console.\r\n");
+     return;
+   }
    switch_i2c_bus(6);
    uint8_t val[6];
    printf("SI570 status at address 0x%02x\r\n", i2c_addr);
