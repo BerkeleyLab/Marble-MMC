@@ -490,6 +490,21 @@ void resetI2CBusStatus(void) {
   return;
 }
 
+uint8_t fsynthGetAddr(void) {
+  // TODO - Implement
+  return 0;
+}
+
+uint8_t fsynthGetConfig(void) {
+  // TODO - Implement
+  return 0;
+}
+
+uint32_t fsynthGetFreq(void) {
+  // TODO - Implement
+  return 0;
+}
+
 /************
 * SSP/SPI
 ************/

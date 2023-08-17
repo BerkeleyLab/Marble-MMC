@@ -139,6 +139,10 @@ $(OUTPUT_DIR)/%.o: %.c
 # =============== Auto-Generated Mailbox Interface ================
 MBOX_DEF=mailbox_def
 MBOX_DOC=mailbox.md
+MBOX_JSON=mailbox_map.json
+MBOX_VH=mailbox_map.vh
+MBOX_H=mailbox_map.h
+OFFSET ?= 0
 $(OUTPUT_DIR)/src/mailbox.o: $(SOURCE_DIR)/$(MBOX_DEF).c $(INCLUDE_DIR)/$(MBOX_DEF).h
 
 $(INCLUDE_DIR)/$(MBOX_DEF).h: $(INCLUDE_DIR)/mbox.def
@@ -149,6 +153,15 @@ $(SOURCE_DIR)/$(MBOX_DEF).c: $(INCLUDE_DIR)/mbox.def
 
 $(DOC_DIR)/$(MBOX_DOC): $(INCLUDE_DIR)/mbox.def
 	python3 scripts/mkmbox.py -d $^ -o $@
+
+$(DOC_DIR)/$(MBOX_JSON): $(INCLUDE_DIR)/mbox.def
+	python3 scripts/mkmbox.py --map -d $^ -o $@ --offset $(OFFSET)
+
+$(DOC_DIR)/$(MBOX_VH): $(INCLUDE_DIR)/mbox.def
+	python3 scripts/mkmbox.py --map -d $^ -o $@ --offset $(OFFSET)
+
+$(DOC_DIR)/$(MBOX_H): $(INCLUDE_DIR)/mbox.def
+	python3 scripts/mkmbox.py --map -d $^ -o $@ --offset $(OFFSET)
 
 # Rule for generating object files from assembler files
 #
@@ -209,7 +222,7 @@ reset:
 	$(OPENOCD) -f $(PROG_DIR)/ocd/$(OCD_CONF) -c "init" -c "reset" -c "exit"
 
 .PHONY: doc
-doc: $(DOC_DIR)/$(MBOX_DOC)
+doc: $(DOC_DIR)/$(MBOX_DOC) $(DOC_DIR)/$(MBOX_JSON) $(DOC_DIR)/$(MBOX_VH) $(DOC_DIR)/$(MBOX_H)
 
 # Creates a gdb script if required
 #

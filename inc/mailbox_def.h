@@ -58,6 +58,16 @@ typedef enum {
   MB5_SIZE // 1
 } PAGE5_ENUM;
 
+typedef enum {
+  MB6_FSYNTH_I2C_ADDR,
+  MB6_FSYNTH_CONFIG,
+  MB6_FSYNTH_FREQ_3,
+  MB6_FSYNTH_FREQ_2,
+  MB6_FSYNTH_FREQ_1,
+  MB6_FSYNTH_FREQ_0,
+  MB6_SIZE // 6
+} PAGE6_ENUM;
+
 
 void mailbox_update_input(void);
 void mailbox_update_output(void);

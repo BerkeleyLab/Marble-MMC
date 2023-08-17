@@ -1358,6 +1358,35 @@ void resetI2CBusStatus(void) {
   return;
 }
 
+uint8_t fsynthGetAddr(void) {
+  uint8_t data[6];
+  int rval = eeprom_read_fsynth(data, 6);
+  if (rval >= 0) {
+    return FSYNTH_GET_ADDR(data);
+  }
+  return 0;
+}
+
+uint8_t fsynthGetConfig(void) {
+  uint8_t data[6];
+  int rval = eeprom_read_fsynth(data, 6);
+  if (rval >= 0) {
+    return FSYNTH_GET_CONFIG(data);
+  }
+  return 0;
+}
+
+uint32_t fsynthGetFreq(void) {
+  uint8_t data[6];
+  int rval = eeprom_read_fsynth(data, 6);
+  int freq;
+  if (rval >= 0) {
+    freq = FSYNTH_GET_FREQ(data);
+    return (uint32_t)freq;
+  }
+  return 0;
+}
+
 /**
   * @brief  This function is executed in case of error occurrence.
   * @retval None
