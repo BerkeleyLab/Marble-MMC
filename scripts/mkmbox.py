@@ -158,6 +158,9 @@ class MailboxInterface():
     def getHashHex(self):
         return self._reader.getHashHex()
 
+    def getHashHex32(self):
+        return self.getHashHex()[0:8]
+
     def interpret(self):
         jdict = self.load()
         self._pageNumbers = []
@@ -457,7 +460,7 @@ class MailboxInterface():
 
     def makeGetHash(self):
         self._fp("uint32_t mailbox_get_hash(void) {")
-        self._fp("  return 0x{};\n}}".format(self.getHashHex()[0:8]))
+        self._fp("  return 0x{};\n}}".format(self.getHashHex32()))
         return
 
     def makePrintAll(self):
@@ -606,11 +609,15 @@ class MailboxInterface():
         style = style.lower()[0]
         if style == 'v':
             # Verilog-style
+            pre = "`ifndef __{0}_VH\n`define __{0}_VH\n\n".format(filename.upper()) + \
+                "localparam MAILBOX_HASH = 32'h{};\n\n".format(self.getHashHex32())
             fmt = "localparam {0}_ADDR = 'h{1:x};\n" \
                 + "localparam {0}_SIZE = {2};\n"
+            post = "`endif // __{}_VH\n".format(filename.upper())
         elif style == 'c':
             # C-style
-            pre = "#ifndef __{0}_H\n#define __{0}_H\n".format(filename.upper())
+            pre = "#ifndef __{0}_H\n#define __{0}_H\n\n".format(filename.upper()) + \
+                "#define MAILBOX_HASH (0x{})\n\n".format(self.getHashHex32())
             fmt = "#define {0}_ADDR (0x{1:x})\n" \
                 + "#define {0}_SIZE ({2})\n"
             post = "#endif // __{}_H\n".format(filename.upper())
@@ -753,8 +760,8 @@ def makeHeader(argv):
     mbox = MailboxInterface(inFilename=args.def_file, prefix=prefix)
     if args.hash:
         mbox.load()
-        ihash = mbox.getHashHex()
-        print(ihash[0:8])
+        ihash = mbox.getHashHex32()
+        print(ihash)
         return 0
     mbox.interpret()
     print(mbox)

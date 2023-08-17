@@ -137,6 +137,7 @@ $(OUTPUT_DIR)/%.o: %.c
 -include $(OBJECTS:.o=.d)
 
 # =============== Auto-Generated Mailbox Interface ================
+MKMBOX=scripts/mkmbox.py
 MBOX_DEF=mailbox_def
 MBOX_DOC=mailbox.md
 MBOX_JSON=mailbox_map.json
@@ -145,23 +146,23 @@ MBOX_H=mailbox_map.h
 OFFSET ?= 0
 $(OUTPUT_DIR)/src/mailbox.o: $(SOURCE_DIR)/$(MBOX_DEF).c $(INCLUDE_DIR)/$(MBOX_DEF).h
 
-$(INCLUDE_DIR)/$(MBOX_DEF).h: $(INCLUDE_DIR)/mbox.def
-	python3 scripts/mkmbox.py -d $^ -o $@
+$(INCLUDE_DIR)/$(MBOX_DEF).h: $(INCLUDE_DIR)/mbox.def $(MKMBOX)
+	python3 $(MKMBOX) -d $^ -o $@
 
 $(SOURCE_DIR)/$(MBOX_DEF).c: $(INCLUDE_DIR)/mbox.def
-	python3 scripts/mkmbox.py -d $^ -o $@
+	python3 $(MKMBOX) -d $^ -o $@
 
 $(DOC_DIR)/$(MBOX_DOC): $(INCLUDE_DIR)/mbox.def
-	python3 scripts/mkmbox.py -d $^ -o $@
+	python3 $(MKMBOX) -d $^ -o $@
 
 $(DOC_DIR)/$(MBOX_JSON): $(INCLUDE_DIR)/mbox.def
-	python3 scripts/mkmbox.py --map -d $^ -o $@ --offset $(OFFSET)
+	python3 $(MKMBOX) --map -d $^ -o $@ --offset $(OFFSET)
 
 $(DOC_DIR)/$(MBOX_VH): $(INCLUDE_DIR)/mbox.def
-	python3 scripts/mkmbox.py --map -d $^ -o $@ --offset $(OFFSET)
+	python3 $(MKMBOX) --map -d $^ -o $@ --offset $(OFFSET)
 
 $(DOC_DIR)/$(MBOX_H): $(INCLUDE_DIR)/mbox.def
-	python3 scripts/mkmbox.py --map -d $^ -o $@ --offset $(OFFSET)
+	python3 $(MKMBOX) --map -d $^ -o $@ --offset $(OFFSET)
 
 # Rule for generating object files from assembler files
 #
