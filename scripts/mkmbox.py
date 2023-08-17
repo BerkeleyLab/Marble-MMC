@@ -10,6 +10,7 @@ import os
 import re
 import sys
 import hashlib
+import pickle
 import math
 
 import htools
@@ -37,17 +38,6 @@ class JSONHack():
         if not os.path.exists(self.filename):
             print("File {} doesn't appear to exist".format(self.filename))
 
-    def getHash(self):
-        """Return the SHA-256 hash of the input file with comment lines removed.
-        The Hash is computed on the concatenated string of the contents of the file with newlines
-        and comment lines removed.  This is done in an attempt to keep the hash from changing if
-        the input file is edited purely with added/removed comments or newlines."""
-        return self._fileHash
-
-    def getHashHex(self):
-        """Return Hex string of SHA-256 hash of the input file with comment lines removed."""
-        return self._fileHashStr
-
     def load(self):
         if not os.path.exists(self.filename):
             print("Cannot load. File {} doesn't appear to exist".format(self.filename))
@@ -73,9 +63,9 @@ class JSONHack():
             # This line number is not correct. Why?
             print("JSON Decoder Error:\n{}".format(jerr))
             o = {}
-        hl = hashlib.sha256(bytes(''.join(s), 'utf-8'))
-        self._fileHash = hl.digest()
-        self._fileHashStr = hl.hexdigest()
+        #hl = hashlib.sha256(bytes(''.join(s), 'utf-8'))
+        #self._fileHash = hl.digest()
+        #self._fileHashStr = hl.hexdigest()
         return o
 
 class MailboxInterface():
@@ -144,6 +134,9 @@ class MailboxInterface():
             self._sfilename = htools.makeFileName(prefix, '.c')
         else:
             self._sfilename = sourceFilename
+        self._pageList = None
+        self._fileHash = None
+        self._fileHashStr = None
         self._ready = False
         self._reader = JSONHack(self._filename)
         self._includes = []
@@ -152,13 +145,50 @@ class MailboxInterface():
     def load(self):
         return self._reader.load()
 
+    def _computeHash(self):
+        if self._pageList is None:
+            self.interpret()
+        hashPageList = []
+        # Dict parameters to include in hash calculation (fields we care about)
+        filterList = ("name", "size", "output", "input")
+        for npage, elementList in self._pageList: # Each entry is (npage, [(name, paramDict),...])
+            hashElementList = []
+            for n in range(len(elementList)):
+                hashParamDict = {}
+                name, paramDict = elementList[n]
+                for key, val in paramDict.items():
+                    if key in filterList:
+                        hashParamDict[key] = val
+                hashElementList.append((name, hashParamDict))
+            hashPageList.append((npage, hashElementList))
+        # Now pickle the structure
+        s = pickle.dumps(hashPageList, protocol=4)
+        # Then compute the hash
+        hl = hashlib.sha256(s)
+        self._fileHash = hl.digest()
+        self._fileHashStr = hl.hexdigest()
+        return
+
     def getHash(self):
-        return self._reader.getHash()
+        """Return the SHA-256 hash of the reduced structure of the input (definition) file.
+        The Hash is computed on the pickled nested structure incorporating only the critical
+        components of the JSON definition file (name, size, input/output functions).
+        This is done in an attempt to keep the hash from changing if the definition file
+        is changed in purely superficial ways (i.e. changing comments, documentation,
+        formatting, etc).
+        """
+        if self._fileHash is None:
+            self._computeHash()
+        return self._fileHash
 
     def getHashHex(self):
-        return self._reader.getHashHex()
+        """Return Hex string of SHA-256 hash. See 'getHash' for details."""
+        if self._fileHashStr is None:
+            self._computeHash()
+        return self._fileHashStr
 
     def getHashHex32(self):
+        """Return the 4 least-significant bytes of the SHA-256 hash in hex-ASCII string form."""
         return self.getHashHex()[0:8]
 
     def interpret(self):
