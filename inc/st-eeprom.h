@@ -63,7 +63,11 @@ typedef struct {
   X(4, fan_speed, raw, 1, {102}) \
   X(5, overtemp,  raw, 1, {85}) \
   X(6, mgt_mux,   raw, 1, {0}) \
-  X(7, fsynth,    raw, 6, {0, 0, 0, 0, 0, 0})
+  X(7, fsynth,    raw, 6, {0xee, 0x42, 0x07, 0x73, 0x59, 0x40})
+
+/* Notes:
+ *  fsynth default: I2C address = 0xEE (8-bit), 125 MHz, low polarity, 7ppm
+ */
 
 typedef enum {
 #define X(N, NAME, TYPE, SIZE, ...)  ee_ ## NAME = N,
