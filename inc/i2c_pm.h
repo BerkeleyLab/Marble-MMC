@@ -7,10 +7,11 @@ typedef enum {
    LM75_0 = 0x92,   // U29
    LM75_1 = 0x96,   // U28
    MAX6639 = 0x58,
-   XRP7724 = 0x50
+   XRP7724 = 0x50,
+   LTM4673 = 0xC0
 } I2C_SLAVE;
 
-#define I2C_NUM 4
+#define I2C_NUM 5
 
 // Set hysteresis value in degC
 // Devices will enter shutdown at T = T_overtemp and exit
@@ -83,4 +84,6 @@ int xrp_srecord(uint8_t dev, const uint8_t data[]);
 int xrp_program_static(uint8_t dev);
 int xrp_file(uint8_t dev);
 
+void ltm_read_telem(uint8_t dev);
+int ltm_ch_status(uint8_t dev);
 #endif /* I2C_PM_H_ */

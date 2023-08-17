@@ -41,3 +41,11 @@ Offset|Name|Size|Direction|Desc|Note
 ------|----|----|---------|----|----
 0|MB5\_I2C\_BUS\_STATUS|1|MMC\<=\>FPGA|Returns logical OR of all I2C function return values. Write nonzero value to clear status.|
 
+# Page 6
+
+Offset|Name|Size|Direction|Desc|Note
+------|----|----|---------|----|----
+0|MB6\_FSYNTH\_I2C\_ADDR|1|MCC=\>FPGA|I2C address of frequency synthesizer (si570) in 8-bit (shifted) format.|
+1|MB6\_FSYNTH\_CONFIG|1|MCC=\>FPGA|Config byte of frequency synthesizer (si570). Bit 0: Enable pin polarity (0 = polarity low, 1 = polarity high). Bit 1: Temperature stability (0 = 20 ppm or 50 ppm, 1 = 7 ppm) Bits 2-5: reserved. Bits [7:6]: 0b01 = Valid config (avoid acting on invalid 0xff or 0x00).|
+2|MB6\_FSYNTH\_FREQ|4|MCC=\>FPGA|Startup frequency of frequency synthesizer (si570) in Hz.|Access by byte as: MB6\_FSYNTH\_FREQ\_x (x=0,1,2,3)
+

@@ -3,22 +3,26 @@
 # Make mailbox.h from mailbox definition file (JSON with comments)
 
 # TODO
-#   I need to include a bunch of files in the source file.  I think I will need to add these
-#   as an additional top-level element in mbox.def
-#   Can I pass two arguments to write to two separate locations? .c/.h files need to be in
-#   different directories
+#   After merging with hashbox, write the hash to the top of the memory map files
 
 import json
 import os
 import re
 import sys
 import hashlib
+import math
 
 import htools
 
 PAGE_SIZE=16
 NPAGES=128
 MAILBOX_SIZE = PAGE_SIZE * NPAGES
+
+def _int(x):
+    try:
+        return int(x)
+    except:
+        return int(x, 16)
 
 class JSONHack():
     """A hack to allow an arbitrary number of comment lines within an otherwise JSON-compliant file.
@@ -570,6 +574,94 @@ class MailboxInterface():
                 printf("")
         return
 
+    def makeMemoryMap(self, fd=sys.stdout, offset=0, style='v', filename=None, paginate=False):
+        """Write register map to file descriptor 'fd'.
+        Params:
+            file descriptor fd : Stream-like interface (has 'write' method) to write output.
+            int offset : Memory offset value to be added to all registers
+            str style : Specify register map output style. Options:
+                'v', 'V', 'Verilog', 'verilog' : Verilog style localparams
+                'c', 'C' : C-style preprocessor macros
+                'j', 'json', 'JSON' : JSON register map
+        """
+        cmt = "//"
+        def comment(*args, **kwargs):
+            if cmt is not None:
+                print(cmt, *args, **kwargs, file=fd)
+        if fd is None:
+            if filename is None:
+                fd = sys.stdout
+            else:
+                fd = open(filename, 'w')
+        if filename is None:
+            filename = "mailbox_map"
+        else:
+            filename = str(filename)
+            dir, name = os.path.split(filename)
+            filename, ext = os.path.splitext(name)
+        global_offset = int(offset)
+        pre = None
+        post = None
+        inter = ""
+        style = style.lower()[0]
+        if style == 'v':
+            # Verilog-style
+            fmt = "localparam {0}_ADDR = 'h{1:x};\n" \
+                + "localparam {0}_SIZE = {2};\n"
+        elif style == 'c':
+            # C-style
+            pre = "#ifndef __{0}_H\n#define __{0}_H\n".format(filename.upper())
+            fmt = "#define {0}_ADDR (0x{1:x})\n" \
+                + "#define {0}_SIZE ({2})\n"
+            post = "#endif // __{}_H\n".format(filename.upper())
+        elif style == 'j':
+            # JSON-style
+            pre = "{\n"
+            inter = ",\n"
+            fmt = '  "{0}": {{\n' \
+                + '    "access": "r",\n' \
+                + '    "addr_width": {3},\n' \
+                + '    "sign": "unsigned",\n' \
+                + '    "base_addr": {1},\n' \
+                + '    "data_width": 8\n' \
+                + '  }}'
+            post = "\n}\n"
+            cmt = None
+        else:
+            raise Exception(f"Unknown register map style {style}")
+        first = True
+        if pre is not None:
+            fd.write(pre)
+        for npage, elementList in self._pageList: # Each entry is (npage, [(name, paramDict),...])
+            comment(f" Page {npage}")
+            index = 0
+            offset = 0
+            size = 1
+            for n in range(len(elementList)):
+                name, paramDict = elementList[n]
+                if name.startswith("PAD"):
+                    offset += size
+                    continue
+                mbprefix = f"MB{npage}_"
+                if paginate:
+                    name = f"{mbprefix}{name}"
+                if style == 'j':
+                    name = "mbox_" + name.lower()
+                size = paramDict.get('size', 1)
+                index = paramDict.get('index', None)
+                offset = npage*16 + index + global_offset
+                if first:
+                    first = False
+                else:
+                    fd.write(inter)
+                addr_width = math.ceil(math.log2(size))
+                fd.write(fmt.format(name, offset, size, addr_width))
+        if post is not None:
+            fd.write(post)
+        if fd != sys.stdout:
+            fd.close()
+        return
+
 
 def write(msg, fd=None):
     if fd is None:
@@ -621,15 +713,19 @@ def makeHeader(argv):
                  "by appending .h/.c to the filename.")
     parser.add_argument('-o', '--output_file', default=None, help=ofilehelp)
     parser.add_argument('--hash', default=False, action="store_true", help="Return the hash of the input file.")
+    parser.add_argument('-m', '--map', action="store_true", default=False, help='Force making a memory map output')
+    parser.add_argument('--offset', default=0, help='Global memory offset')
     args = parser.parse_args()
     makeh = False
     makes = False
     makedoc = False
-
+    makemap = False
     if args.output_file is None:
         prefix = args.def_file
         makeh = True
         makes = True
+        makemap = True
+        style = 'j'
     else:
         prefix, ext = os.path.splitext(args.output_file)
         if ext == "":
@@ -638,9 +734,19 @@ def makeHeader(argv):
         elif ext == ".c":
             makes = True
         elif ext == ".h":
-            makeh = True
+            if (args.map):
+                makemap = True
+                style = 'c'
+            else:
+                makeh = True
         elif ext == ".md":
             makedoc = True
+        elif ext == ".json":
+            makemap = True
+            style = 'j'
+        elif ext == ".vh":
+            makemap = True
+            style = 'v'
         else:
             print("Cannot interpret desired file type based on extension '{}'".format(ext))
             return 1
@@ -658,6 +764,8 @@ def makeHeader(argv):
         mbox.makeSource()
     if makedoc:
         mbox.makeDoc(args.output_file)
+    if makemap:
+        mbox.makeMemoryMap(fd=None, offset=_int(args.offset), style=style, filename=args.output_file)
     return 0
 
 if __name__ == "__main__":

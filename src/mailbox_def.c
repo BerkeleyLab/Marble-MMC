@@ -67,6 +67,20 @@ void mailbox_update_output(void) {
     // Write page data
     mbox_write_page(5, MB5_SIZE, page);
   }
+  {
+    // Page 6
+    uint8_t page[MB6_SIZE];
+    page[MB6_FSYNTH_I2C_ADDR] = (uint8_t)fsynthGetAddr();
+    page[MB6_FSYNTH_CONFIG] = (uint8_t)fsynthGetConfig();
+    int val;
+    val = fsynthGetFreq();
+    page[MB6_FSYNTH_FREQ_3] = (uint8_t)((val >> 24) & 0xff);
+    page[MB6_FSYNTH_FREQ_2] = (uint8_t)((val >> 16) & 0xff);
+    page[MB6_FSYNTH_FREQ_1] = (uint8_t)((val >> 8) & 0xff);
+    page[MB6_FSYNTH_FREQ_0] = (uint8_t)((val >> 0) & 0xff);
+    // Write page data
+    mbox_write_page(6, MB6_SIZE, page);
+  }
   return;
 }
 
@@ -111,6 +125,12 @@ void mailbox_read_print_all(void) {
     uint8_t page[MB5_SIZE];
     mbox_read_page(5, MB5_SIZE, page);
     MBOX_PRINT_PAGE(5);
+  }
+  {
+    // Page 6
+    uint8_t page[MB6_SIZE];
+    mbox_read_page(6, MB6_SIZE, page);
+    MBOX_PRINT_PAGE(6);
   }
   return;
 }

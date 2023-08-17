@@ -4,6 +4,7 @@
 #include <string.h>
 #include "i2c_pm.h"
 #include "max6639.h"
+#include "math.h"
 
 /* ============================= Helper Macros ============================== */
 #define MAX6639_GET_TEMP_DOUBLE(rTemp, rTempExt) \
@@ -296,6 +297,100 @@ void I2C_PM_probe(void)
       marble_UART_send(p_buf, strlen(p_buf));
    }
    return;
+}
+
+/* LTM4673, new power management chip
+ * valid only for builds > v1.3
+ *
+ */
+
+int ltm_ch_status(uint8_t dev)
+{
+  if (marble_get_board_id() < Marble_v1_3) {
+    printf("LTM4673 not present; bypassed.\n");
+    return 0;
+  }
+   const uint8_t STATUS_WORD = 0x79;
+   uint8_t i2c_dat[4];
+   for (unsigned jx = 0; jx < 4; jx++) {
+      // start selecting channel/page 0 until you finish reading
+      // data for all 4 channels
+      uint8_t page = 0x00 + jx;
+      marble_I2C_cmdsend(I2C_PM, dev, 0x00, &page, 1);
+      // marble_I2C_cmd_recv should return 0, if everything is good, see page 100
+      int rc = marble_I2C_cmdrecv(I2C_PM, dev, STATUS_WORD, i2c_dat, 2);
+      if (rc == HAL_OK) {
+          uint16_t word0 = ((unsigned int) i2c_dat[1] << 8) | i2c_dat[0];
+          if (word0) {
+              printf("BAD! LTM4673 Channel %x, Status_word r[%2.2x] = 0x%x\r\n", page, STATUS_WORD, word0);
+              return 0;
+          }
+      }
+   }
+   return 1;
+}
+
+void ltm_read_telem(uint8_t dev)
+{
+   struct {int b; const char *m;} r_table[] = {
+      // see page 105
+      {0x88, "V     READ_VIN"},
+      {0x89, "A     READ_IIN"},
+      {0x97, "W     READ_PIN"},
+      {0x8B, "V     READ_VOUT"},
+      {0x8C, "A     READ_IOUT"},
+      {0x8D, "degC  READ_TEMPERATURE_1"},
+      {0x8E, "degC  READ_TEMPERATURE_2"},
+      {0x96, "W     READ_POUT"},
+      {0xBB, "mA    MFR_READ_IOUT"},
+      {0xC4, "A     MFR_IIN_PEAK"},
+      {0xC5, "A     MFR_IIN_MIN"},
+      {0xC6, "P     MFR_PIN_PEAK"},
+      {0xC7, "P     MFR_PIN_MIN"},
+      {0xFA, "V     MFR_IOUT_SENSE_VOLTAGE"},
+      {0xDE, "V     MFR_VIN_PEAK"},
+      {0xDD, "V     MFR_VOUT_PEAK"},
+      {0xD7, "A     MFR_IOUT_PEAK"},
+      {0xDF, "degC  MFR_TEMPERATURE_1_PEAK"},
+      {0xFC, "V     MFR_VIN_MIN"},
+      {0xFB, "V     MFR_VOUT_MIN"},
+      {0xD8, "A     MFR_IOUT_MIN"},
+      {0xFD, "degC  MFR_TEMPERATURE_1_MIN"}};
+   printf("LTM4673 Telemetry register dump:\n");
+   float L16 = 0.0001220703125;  // 2**(-13)
+   for (unsigned jx = 0; jx < 4; jx++) {
+      // start selecting channel/page 0 until you finish reading
+      // telemetry data for all 4 channels
+      uint8_t page = 0x00 + jx;
+      marble_I2C_cmdsend(I2C_PM, dev, 0x00, &page, 1);
+      printf("> Read page/channel: %x\n", page);
+      const unsigned tlen = sizeof(r_table)/sizeof(r_table[0]);
+      for (unsigned ix=0; ix<tlen; ix++) {
+          uint8_t i2c_dat[4];
+          int regno = r_table[ix].b;
+          int rc = marble_I2C_cmdrecv(I2C_PM, dev, regno, i2c_dat, 2);
+          uint16_t word0 = ((unsigned int) i2c_dat[1] << 8) | i2c_dat[0];
+          float phys_unit;
+          int mask, comp2;
+          if (rc == HAL_OK) {
+              if (ix == 3 || ix == 15 || ix == 19)
+                  phys_unit = word0*L16;  // L16 format
+              else if (ix == 8)
+                  phys_unit = word0*2.5;  // special for MFR_READ_IOUT
+              else if (ix == 13)
+                  phys_unit = word0*0.025*pow(2, -13);  // special for MFR_IOUT_SENSE_VOLTAGE
+              else {
+                  // L11 format, see page 35
+                  mask = (word0 >> 11);
+                  comp2 = pow(2, 5) - mask;
+                  phys_unit = (word0 & 0x7FF)*(1.0/(1<<comp2));
+              }
+              printf("r[%2.2x] = 0x%4.4x = %5d = %7.3f %s\r\n", regno, word0, word0, phys_unit, r_table[ix].m);
+          } else {
+              printf("r[%2.2x]    unread          (%s)\r\n", regno, r_table[ix].m);
+          }
+      }
+   }
 }
 
 /* XPR7724 is special
