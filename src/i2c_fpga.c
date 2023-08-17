@@ -412,15 +412,24 @@ void pca9555_config()
 // Compute the current SI570 Frequency
 void si570_status()
 {
+   uint8_t i2c_addr = fsynthGetAddr();
+   uint8_t config = fsynthGetConfig();
    switch_i2c_bus(6);
    uint8_t val[6];
-   printf("SI570 status at address 0xee\r\n");
+   printf("SI570 status at address 0x%02x\r\n", i2c_addr);
    // First do register reset
-   // marble_I2C_cmdsend(I2C_FPGA, 0xee, 0x87, 128, 1);
+   // marble_I2C_cmdsend(I2C_FPGA, i2c_addr, 0x87, 128, 1);
    // marble_SLEEP_ms(100);
+   uint8_t start_addr;
+   if (config & 0x02) {
+       start_addr = 0x0d;
+   } else {
+       start_addr = 0x07;
+   }
+
    for (unsigned ix = 0; ix < 6; ix++) {
-      uint8_t reg = 0x0d + ix;
-      marble_I2C_cmdrecv(I2C_FPGA, 0xee, reg, &val[ix], 1);
+      uint8_t reg = start_addr + ix;
+      marble_I2C_cmdrecv(I2C_FPGA, i2c_addr, reg, &val[ix], 1);
       printf("> Reg: %x: Value: %2.2x\r\n", reg, val[ix]);
    }
 
@@ -431,7 +440,7 @@ void si570_status()
    // Nominal internal crystal frequency
    // from datasheet, typically 114.285 MHz +/- 2000 ppm, see page 12
    // In the future, maybe this could this come from a non-volatile mmc parameter
-   float fxtal = 114.286e6;
+   float fxtal = 114.3982e6;
    float fout = (fxtal * rfreq)/(hs_div*n1);
 
    printf("> HS_DIV: %x\r\n", hs_div);
