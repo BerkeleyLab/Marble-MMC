@@ -598,7 +598,7 @@ class MailboxInterface():
         if pre is not None:
             fd.write(pre)
         for npage, elementList in self._pageList: # Each entry is (npage, [(name, paramDict),...])
-            comment(f" Page {npage}\n")
+            comment(f" Page {npage}")
             index = 0
             offset = 0
             size = 1
