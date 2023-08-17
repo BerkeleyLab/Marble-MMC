@@ -564,6 +564,8 @@ class MailboxInterface():
             filename = "mailbox_map"
         else:
             filename = str(filename)
+            dir, name = os.path.split(filename)
+            filename, ext = os.path.splitext(name)
         global_offset = int(offset)
         pre = None
         post = None
