@@ -105,25 +105,25 @@ by `decodembox.py` since the latter only allows for reading/writing of the entir
 Read the value of entry "COUNT" from mailbox page 3.
 ```sh
 cd marble_mmc
-PYTHONPATH=/path/to/bedrock/badger python3 scripts/decodembox.py -i $IP -p 3 COUNT
+PYTHONPATH=/path/to/bedrock/badger python3 scripts/mboxexchange.py -i $IP -p 3 COUNT
 ```
 
 Same as above using fully-resolved name (see inc/mailbox\_def.h)
 ```sh
 cd marble_mmc
-PYTHONPATH=/path/to/bedrock/badger python3 scripts/decodembox.py -i $IP MB3_COUNT
+PYTHONPATH=/path/to/bedrock/badger python3 scripts/mboxexchange.py -i $IP MB3_COUNT
 ```
 
 Same as above, but explicitly specifying the location of the mailbox definition file.
 ```sh
 cd marble_mmc
-PYTHONPATH=/path/to/bedrock/badger python3 scripts/decodembox.py -i $IP -d 'inc/mbox.def' MB3_COUNT
+PYTHONPATH=/path/to/bedrock/badger python3 scripts/mboxexchange.py -i $IP -d 'inc/mbox.def' MB3_COUNT
 ```
 
 Write value 255 to entry "I2C\_BUS\_STATUS" from mailbox page 5.
 ```sh
 cd marble_mmc
-PYTHONPATH=/path/to/bedrock/badger python3 scripts/decodembox.py -i $IP -p 5 I2C_BUS_STATUS 255
+PYTHONPATH=/path/to/bedrock/badger python3 scripts/mboxexchange.py -i $IP -p 5 I2C_BUS_STATUS 255
 ```
 
 ## mgtmux.sh
