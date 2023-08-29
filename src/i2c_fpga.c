@@ -365,8 +365,20 @@ void pca9555_status()
 void pca9555_config()
 {
    switch_i2c_bus(6);
+   uint8_t si570_config = fsynthGetConfig();
+   if ((si570_config == 0) || (si570_config == 0xff)) {
+     printf("SI570 parameters not configured. Please configure via console.\r\n");
+     return;
+   }
+   // from Part number(570_N_): N --> LVDS output with output enable polarity low
+   // default SI570_OE = 0 but using fsynthGetConfig, we can get the polarity
+   // Default freq = 125 MHz but one should measure it through a frequency counter on FPGA
+   uint8_t si570_polarity;
+   if (si570_config & 0x01) si570_polarity = 1;
+   else si570_polarity = 0;
    // Reset U39 P1_7, P1_3 and P0_0, and turn on LED LD13
    uint8_t data[3];
+
    printf("Configuring PCA9555 at address 0x%02x\r\n", PCA9555_1);
    data[0] = 0x6;  // Config reg (6) and (7)
    data[1] = 0xFE; // Configure P0_0 (SI570_OE) and P0_1 (unused) as output (set those bits to 0)
@@ -374,11 +386,8 @@ void pca9555_config()
    marble_I2C_send(I2C_FPGA, PCA9555_1, data, 3);
    marble_SLEEP_ms(100);
 
-   // from Part number(570_N_): N --> LVDS output with output enable polarity low
-   // SI570_OE = 0, from a scope generally default freq = 125 MHz
-   // but one should measure it through a frequency counter on FPGA
    data[0] = 0x2; // P0, by default it will jump to next address 3 for P1
-   data[1] = 0x1; // Write one to P0_0
+   data[1] = si570_polarity; // Write one to P0_0
    // LEDs have reverse polarity
    data[2] = 0x04; // Write zero to P1_7 and one to P1_3
    marble_I2C_send(I2C_FPGA, PCA9555_1, data, 3);
@@ -386,7 +395,7 @@ void pca9555_config()
    // Reassert CLKMUX_RST
    marble_SLEEP_ms(1000);
    data[0] = 0x2; // P0
-   data[1] = 0x00; // Write zero to P0_0, thereby enabling SI570
+   data[1] = si570_polarity; // Write zero/one to P0_0, thereby enabling SI570
    data[2] = 0x80; // Write one to P1_7 and zero to P1_3 (LED 13 should be ON)
    marble_I2C_send(I2C_FPGA, PCA9555_1, data, 3);
    printf("> reg: %x: value: %x\r\n", data[0], data[1]);
