@@ -9,6 +9,8 @@ import json
 import os
 import re
 import sys
+import hashlib
+import pickle
 import math
 
 import htools
@@ -32,6 +34,7 @@ class JSONHack():
         if filename == None:
             filename = "mbox.def"
         self.filename = filename
+        self._fileHash = None
         if not os.path.exists(self.filename):
             print("File {} doesn't appear to exist".format(self.filename))
 
@@ -60,6 +63,9 @@ class JSONHack():
             # This line number is not correct. Why?
             print("JSON Decoder Error:\n{}".format(jerr))
             o = {}
+        #hl = hashlib.sha256(bytes(''.join(s), 'utf-8'))
+        #self._fileHash = hl.digest()
+        #self._fileHashStr = hl.hexdigest()
         return o
 
 class MailboxInterface():
@@ -128,13 +134,65 @@ class MailboxInterface():
             self._sfilename = htools.makeFileName(prefix, '.c')
         else:
             self._sfilename = sourceFilename
+        self._pageList = None
+        self._fileHash = None
+        self._fileHashStr = None
         self._ready = False
         self._reader = JSONHack(self._filename)
         self._includes = []
         self._fd = None # For _fp method
 
+    def load(self):
+        return self._reader.load()
+
+    def _computeHash(self):
+        if self._pageList is None:
+            self.interpret()
+        hashPageList = []
+        # Dict parameters to include in hash calculation (fields we care about)
+        filterList = ("name", "size", "output", "input")
+        for npage, elementList in self._pageList: # Each entry is (npage, [(name, paramDict),...])
+            hashElementList = []
+            for n in range(len(elementList)):
+                hashParamDict = {}
+                name, paramDict = elementList[n]
+                for key, val in paramDict.items():
+                    if key in filterList:
+                        hashParamDict[key] = val
+                hashElementList.append((name, hashParamDict))
+            hashPageList.append((npage, hashElementList))
+        # Now pickle the structure
+        s = pickle.dumps(hashPageList, protocol=4)
+        # Then compute the hash
+        hl = hashlib.sha256(s)
+        self._fileHash = hl.digest()
+        self._fileHashStr = hl.hexdigest()
+        return
+
+    def getHash(self):
+        """Return the SHA-256 hash of the reduced structure of the input (definition) file.
+        The Hash is computed on the pickled nested structure incorporating only the critical
+        components of the JSON definition file (name, size, input/output functions).
+        This is done in an attempt to keep the hash from changing if the definition file
+        is changed in purely superficial ways (i.e. changing comments, documentation,
+        formatting, etc).
+        """
+        if self._fileHash is None:
+            self._computeHash()
+        return self._fileHash
+
+    def getHashHex(self):
+        """Return Hex string of SHA-256 hash. See 'getHash' for details."""
+        if self._fileHashStr is None:
+            self._computeHash()
+        return self._fileHashStr
+
+    def getHashHex32(self):
+        """Return the 4 least-significant bytes of the SHA-256 hash in hex-ASCII string form."""
+        return self.getHashHex()[0:8]
+
     def interpret(self):
-        jdict = self._reader.load()
+        jdict = self.load()
         self._pageNumbers = []
         self._pageList = [] # Each entry is (npage, [(name, paramDict),...])
         for page, mlist in jdict.items():
@@ -308,6 +366,7 @@ class MailboxInterface():
         return
 
     def makeProtos(self):
+        self._fp("uint32_t mailbox_get_hash(void);")
         self._fp("void mailbox_update_input(void);")
         self._fp("void mailbox_update_output(void);")
         self._fp("void mailbox_read_print_all(void);")
@@ -429,6 +488,11 @@ class MailboxInterface():
                 self._fp("  }")
         self._fp("  return;\n}")
 
+    def makeGetHash(self):
+        self._fp("uint32_t mailbox_get_hash(void) {")
+        self._fp("  return 0x{};\n}}".format(self.getHashHex32()))
+        return
+
     def makePrintAll(self):
         self._fp("void mailbox_read_print_all(void) {")
         for npage, elementList in self._pageList: # Each entry is (npage, [(name, paramDict),...])
@@ -474,6 +538,8 @@ class MailboxInterface():
         self._fp(htools.sectionLine("DO NOT EDIT THIS AUTO-GENERATED FILE DIRECTLY"))
         self._fp(htools.sectionLine("Define mailbox structure in scripts/mbox.def"))
         self.makeIncludes()
+        self.makeGetHash()
+        self._fp("")
         self.makeUpdateOutput()
         self._fp("")
         self.makeUpdateInput()
@@ -573,11 +639,15 @@ class MailboxInterface():
         style = style.lower()[0]
         if style == 'v':
             # Verilog-style
+            pre = "`ifndef __{0}_VH\n`define __{0}_VH\n\n".format(filename.upper()) + \
+                "localparam MAILBOX_HASH = 32'h{};\n\n".format(self.getHashHex32())
             fmt = "localparam {0}_ADDR = 'h{1:x};\n" \
                 + "localparam {0}_SIZE = {2};\n"
+            post = "`endif // __{}_VH\n".format(filename.upper())
         elif style == 'c':
             # C-style
-            pre = "#ifndef __{0}_H\n#define __{0}_H\n".format(filename.upper())
+            pre = "#ifndef __{0}_H\n#define __{0}_H\n\n".format(filename.upper()) + \
+                "#define MAILBOX_HASH (0x{})\n\n".format(self.getHashHex32())
             fmt = "#define {0}_ADDR (0x{1:x})\n" \
                 + "#define {0}_SIZE ({2})\n"
             post = "#endif // __{}_H\n".format(filename.upper())
@@ -679,6 +749,7 @@ def makeHeader(argv):
                  "If filename has no extension (or any other extension), generates both header and source file "
                  "by appending .h/.c to the filename.")
     parser.add_argument('-o', '--output_file', default=None, help=ofilehelp)
+    parser.add_argument('--hash', default=False, action="store_true", help="Return the hash of the input file.")
     parser.add_argument('-m', '--map', action="store_true", default=False, help='Force making a memory map output')
     parser.add_argument('--offset', default=0, help='Global memory offset')
     args = parser.parse_args()
@@ -717,6 +788,11 @@ def makeHeader(argv):
             print("Cannot interpret desired file type based on extension '{}'".format(ext))
             return 1
     mbox = MailboxInterface(inFilename=args.def_file, prefix=prefix)
+    if args.hash:
+        mbox.load()
+        ihash = mbox.getHashHex32()
+        print(ihash)
+        return 0
     mbox.interpret()
     print(mbox)
     if makeh:
