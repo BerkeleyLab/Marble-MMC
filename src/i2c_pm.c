@@ -409,7 +409,7 @@ void ltm_read_telem(uint8_t dev)
  */
 int xrp_set2(uint8_t dev, uint16_t addr, uint8_t data)
 {
-  if (marble_get_board_id() > Marble_v1_3) {
+  if (marble_get_pcb_rev() > Marble_v1_3) {
     printf("XRP7724 not present; bypassed.\n");
     return 0;
   }
@@ -429,7 +429,7 @@ int xrp_set2(uint8_t dev, uint16_t addr, uint8_t data)
 
 int xrp_read2(uint8_t dev, uint16_t addr)
 {
-  if (marble_get_board_id() > Marble_v1_3) {
+  if (marble_get_pcb_rev() > Marble_v1_3) {
     printf("XRP7724 not present; bypassed.\n");
     return 0;
   }
@@ -444,7 +444,7 @@ int xrp_read2(uint8_t dev, uint16_t addr)
 
 void xrp_dump(uint8_t dev)
 {
-  if (marble_get_board_id() > Marble_v1_3) {
+  if (marble_get_pcb_rev() > Marble_v1_3) {
     printf("XRP7724 not present; bypassed.\n");
     return;
   }
@@ -489,7 +489,7 @@ void xrp_dump(uint8_t dev)
  */
 int xrp_ch_status(uint8_t dev, uint8_t chn)
 {
-  if (marble_get_board_id() > Marble_v1_3) {
+  if (marble_get_pcb_rev() > Marble_v1_3) {
     printf("XRP7724 not present; bypassed.\n");
     return 0;
   }
@@ -504,7 +504,7 @@ int xrp_ch_status(uint8_t dev, uint8_t chn)
 
 static int xrp_reg_write(uint8_t dev, uint8_t regno, uint16_t d)
 {
-  if (marble_get_board_id() > Marble_v1_3) {
+  if (marble_get_pcb_rev() > Marble_v1_3) {
     printf("XRP7724 not present; bypassed.\n");
     return 0;
   }
@@ -520,7 +520,7 @@ static int xrp_reg_write(uint8_t dev, uint8_t regno, uint16_t d)
 
 static int xrp_reg_write_check(uint8_t dev, uint8_t regno, uint16_t d)
 {
-  if (marble_get_board_id() > Marble_v1_3) {
+  if (marble_get_pcb_rev() > Marble_v1_3) {
     printf("XRP7724 not present; bypassed.\n");
     return 0;
   }
@@ -559,7 +559,7 @@ static void xrp_print_reg(uint8_t dev, uint8_t regno)
 // Sending data to flash, see ANP-38
 int xrp_push_low(uint8_t dev, uint16_t addr, const uint8_t data[], unsigned len)
 {
-  if (marble_get_board_id() > Marble_v1_3) {
+  if (marble_get_pcb_rev() > Marble_v1_3) {
     printf("XRP7724 not present; bypassed.\n");
     return 0;
   }
@@ -647,7 +647,7 @@ static int xrp_pull(uint8_t dev, unsigned len)
 // Figure 4:  cmd is FLASH_PAGE_ERASE (0x4F),  mode is 5,  dwell is 50
 static int xrp_process_flash(uint8_t dev, int page_no, int cmd, int mode, int dwell)
 {
-  if (marble_get_board_id() > Marble_v1_3) {
+  if (marble_get_pcb_rev() > Marble_v1_3) {
     printf("XRP7724 not present; bypassed.\n");
     return 0;
   }
@@ -700,7 +700,7 @@ static int xrp_process_flash(uint8_t dev, int page_no, int cmd, int mode, int dw
 
 static int xrp_program_page(uint8_t dev, unsigned page_no, uint8_t data[], unsigned len)
 {
-  if (marble_get_board_id() > Marble_v1_3) {
+  if (marble_get_pcb_rev() > Marble_v1_3) {
     printf("XRP7724 not present. Program bypassed.\n");
     return 0;
   }
@@ -733,7 +733,7 @@ static int xrp_program_page(uint8_t dev, unsigned page_no, uint8_t data[], unsig
 // Temporarily abandon hex record concept
 void xrp_flash(uint8_t dev)
 {
-  if (marble_get_board_id() > Marble_v1_3) {
+  if (marble_get_pcb_rev() > Marble_v1_3) {
     printf("XRP7724 not present. Flash bypassed.\n");
     return;
   }
@@ -833,7 +833,7 @@ void xrp_flash(uint8_t dev)
 
 void xrp_go(uint8_t dev)
 {
-  if (marble_get_board_id() > Marble_v1_3) {
+  if (marble_get_pcb_rev() > Marble_v1_3) {
     printf("XRP7724 not present; bypassed.\n");
     return;
   }
@@ -858,7 +858,7 @@ void xrp_go(uint8_t dev)
 
 void xrp_hex_in(uint8_t dev)
 {
-  if (marble_get_board_id() > Marble_v1_3) {
+  if (marble_get_pcb_rev() > Marble_v1_3) {
     printf("XRP7724 not present; bypassed.\n");
     return;
   }

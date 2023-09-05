@@ -7,6 +7,10 @@
 
 #include "mailbox_def.h"
 
+uint32_t mailbox_get_hash(void) {
+  return 0xc1144c22;
+}
+
 void mailbox_update_output(void) {
   {
     // Page 3
@@ -48,6 +52,11 @@ void mailbox_update_output(void) {
     val = mbox_get_update_count();
     page[MB4_COUNT_1] = (uint8_t)((val >> 8) & 0xff);
     page[MB4_COUNT_0] = (uint8_t)((val >> 0) & 0xff);
+    val = mailbox_get_hash();
+    page[MB4_HASH_3] = (uint8_t)((val >> 24) & 0xff);
+    page[MB4_HASH_2] = (uint8_t)((val >> 16) & 0xff);
+    page[MB4_HASH_1] = (uint8_t)((val >> 8) & 0xff);
+    page[MB4_HASH_0] = (uint8_t)((val >> 0) & 0xff);
     // Write page data
     mbox_write_page(4, MB4_SIZE, page);
   }
