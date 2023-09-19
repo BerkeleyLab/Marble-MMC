@@ -199,4 +199,14 @@ if ! time $UDPRTX "$IP" 1000000 8; then
   exit 1
 fi
 
+# 7. Record various device readouts and save it to a file
+# three INA219 Voltage + current, SI570 output frequency
+echo "Record various peripheral devices readouts"
+cd $BEDROCK_PATH/projects/test_marble_family
+sh first_readout.sh "$IP" 2>&1 | tee first_readout_"$IP";
+if ! first_readout_"$IP"; then
+  echo "Could not record various peripheral device readouts. Aborting."
+  exit 1
+fi
+
 exit 0
