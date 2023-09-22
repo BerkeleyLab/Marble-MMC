@@ -134,6 +134,7 @@ fi
 #### Marble Bringup Steps ####
 
 # 1. Program FTDI serial number if needed
+echo "##################################"
 echo "Checking FTDI Configuration..."
 if ! $FTDI_PATH/verifyid.sh "$SERIAL_NUM"; then
   echo "Programming FTDI..."
@@ -145,7 +146,8 @@ if ! $FTDI_PATH/verifyid.sh "$SERIAL_NUM"; then
 fi
 
 # 2. Program MMC
-echo "Programming MMC"
+echo "##################################"
+echo "Programming MMC..."
 cd $MMC_PATH
 if ! make marble_download; then
   echo "Could not program marble_mmc. Is Segger J-Link attached? Is board powered?"
@@ -155,10 +157,14 @@ fi
 # Sleep for a few seconds to give the MMC time to boot
 sleep 5
 
+echo "##################################"
 # 3. Write IP and MAC addresses to marble_mmc based on serial number
+echo "Write IP and MAC addresses to marble_mmc based on serial number..."
 $SCRIPTS_PATH/config.sh -d "$TTY_MMC" "$SERIAL_NUM"
 
+echo "##################################"
 # 4. Load bitfile to FPGA
+echo "Load bitfile to FPGA..."
 cd $BEDROCK_PATH/projects/test_marble_family
 if ! BITFILE=$BITFILE ./mutil usb; then
   echo "Could not write bitfile to FPGA. Is USB FTDI (J10) connected? Is board powered?"
@@ -168,16 +174,19 @@ fi
 # Sleep for a few seconds to give the FPGA time to reconfigure with new IP/MAC
 sleep 3
 
+echo "##################################"
 # Read 4 lines from FPGA frequency counter output
 echo "Reading 4 lines from FPGA frequency counter..."
 python3 $SCRIPTS_PATH/readfromtty.py -d $TTY_FPGA -b 9600 4 -m 24 | tee -a $LOGFILE
 
+echo "##################################"
 # Cross check that the test packets can get _out_ of this workstation
 if ! ip route get "$IP" | grep -E "eth|enp|enx"; then
   echo "No wired route to $IP?"
   exit 1
 fi
 
+echo "##################################"
 # 5. Ping IP 3 times
 if ! ping -c3 "$IP"; then
   echo "No ping response received from IP $IP"
@@ -186,6 +195,7 @@ else
   echo "Successfully pinged from IP $IP"
 fi
 
+echo "##################################"
 # 6. UDP Stress test
 echo "Testing UDP with 100k packets"
 if ! time $UDPRTX "$IP" 100000 8; then
@@ -193,6 +203,7 @@ if ! time $UDPRTX "$IP" 100000 8; then
   exit 1
 fi
 
+echo "##################################"
 echo "Testing UDP with 1M packets"
 if ! time $UDPRTX "$IP" 1000000 8; then
   echo "UDP test failed"
@@ -201,12 +212,17 @@ fi
 
 # 7. Record various device readouts and save it to a file
 # three INA219 Voltage + current, SI570 output frequency
-echo "Record various peripheral devices readouts"
+# MAX6639 temperature in C and speed in rpm, Device DNA and XADC)
+echo "##################################"
+echo "Record various peripheral devices readouts using first_readout.sh"
 cd $BEDROCK_PATH/projects/test_marble_family
-sh first_readout.sh "$IP" 2>&1 | tee first_readout_"$IP";
-if ! first_readout_"$IP"; then
-  echo "Could not record various peripheral device readouts. Aborting."
-  exit 1
-fi
+sh first_readout.sh "$IP" 2>&1 | tee -a first_readout_"$IP";
+
+# 8. Write golden image to flash chip
+# echo "##################################"
+# echo "Write golden image to flash..."
+# cd $BEDROCK_PATH/badger/tests/
+# python3 spi_test.py --ip $IP --id
+
 
 exit 0
