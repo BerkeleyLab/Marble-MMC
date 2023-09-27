@@ -3,6 +3,9 @@
 #include <stdio.h>
 #include <string.h>
 #include "i2c_fpga.h"
+#include <math.h>
+
+extern I2C_BUS I2C_FPGA;
 
 void I2C_FPGA_scan(void)
 {
@@ -79,13 +82,13 @@ void ina219_debug(uint8_t addr)
 {
    uint16_t value = 0;
    bool rc;
-   printf("> INA219 debug at address %2.2xh\n", (unsigned) addr);
+   printf("> INA219 debug at address %2.2xh\r\n", (unsigned) addr);
    rc = wireReadRegister(addr, INA_REG_CONFIG, &value);
-   printf("Register %d value 0x%4.4x (%d)\n", INA_REG_CONFIG, value, rc);
+   printf("Register %d value 0x%4.4x (%d)\r\n", INA_REG_CONFIG, value, rc);
    rc = wireReadRegister(addr, INA_REG_SHUNTVOLTAGE, &value);
-   printf("Register %d value 0x%4.4x (%d)\n", INA_REG_SHUNTVOLTAGE, value, rc);
+   printf("Register %d value 0x%4.4x (%d)\r\n", INA_REG_SHUNTVOLTAGE, value, rc);
    rc = wireReadRegister(addr, INA_REG_BUSVOLTAGE, &value);
-   printf("Register %d value 0x%4.4x (%d)\n", INA_REG_BUSVOLTAGE, value, rc);
+   printf("Register %d value 0x%4.4x (%d)\r\n", INA_REG_BUSVOLTAGE, value, rc);
 }
 
 void setCalibration_16V_2A(void)
@@ -108,7 +111,7 @@ void setCalibration_16V_2A(void)
    // MaximumLSB = 0.000488              (488uA per bit)
 
    // 4. Choose an LSB between the min and max values
-   //    (Preferrably a roundish number close to MinLSB)
+   //    (Preferably a roundish number close to MinLSB)
    // CurrentLSB = 0.0001 (100uA per bit)
 
    // 5. Compute the calibration register
@@ -234,7 +237,7 @@ static float getShuntVoltage_mV(uint8_t ina)
 float getBusVoltage_V(uint8_t ina)
 {
    int16_t value = getBusVoltage_raw(ina);
-   printf("Voltage: %dV\n", value);
+   printf("Voltage: %dV\r\n", value);
    return value * 0.001;
 }
 
@@ -252,7 +255,7 @@ float getCurrentAmps(uint8_t ina)
    int16_t valueRaw;
    float valueDec;
    valueRaw = getCurrent_raw(ina);
-   printf("Current: %dmA\n", valueRaw);
+   printf("Current: %dmA\r\n", valueRaw);
    valueDec = valueRaw;
    valueDec /= currentDivider_mA;
    valueDec /= 1000.0f;
@@ -276,21 +279,28 @@ void adn4600_init()
    int rc;
 
    switch_i2c_bus(6);
-   // Reset U39 P1_7, an mimick that on P1_3 (watch an LED blink)
-   uint8_t data[2];
-   data[0] = 0x7; // Config reg (7)
-   data[1] = 0x77; // Configure P1_7 and P1_3 as outputs (set those bits to 0)
-   marble_I2C_send(I2C_FPGA, 0x42, data, 2);
+   // Reset U39 P1_7, P1_3 and P0_0, and turn on LED LD13
+   uint8_t data[3];
+   data[0] = 0x6; // Config reg (6) and (7)
+   data[1] = 0xFE; // Configure P0_0 (SI570_OE) as output (set those bits to 0)
+   data[2] = 0x77; // Configure P1_7 (CLKMUX_RST) and P1_3 (LD13) as outputs (set those bits to 0)
+   marble_I2C_send(I2C_FPGA, 0x42, data, 3);
    marble_SLEEP_ms(100);
 
-   data[0] = 0x3; // P1
-   data[1] = 0x0; // Write zeros to P1_7 and P1_3
-   marble_I2C_send(I2C_FPGA, 0x42, data, 2);
+   // from Part number(570_N_): N --> LVDS output with output enable polarity low
+   // SI570_OE = 0, from a scope generally default freq = 125 MHz
+   // but one should measure it through a frequency counter on FPGA
+   data[0] = 0x2; // P0, by default it will jump to next address 3 for P1
+   data[1] = 0x1; // Write one to P0_0
+   // LEDs have reverse polarity
+   data[2] = 0x04; // Write zero to P1_7 and one to P1_3
+   marble_I2C_send(I2C_FPGA, 0x42, data, 3);
 
    marble_SLEEP_ms(1000);
-   data[0] = 0x3; // Config reg (7)
-   data[1] = 0x88;// Write ones to P1_7 and P1_3
-   marble_I2C_send(I2C_FPGA, 0x42, data, 2);
+   data[0] = 0x2; // P0
+   data[1] = 0x00; // Write zero to P0_0, thereby enabling SI570
+   data[2] = 0x80; // Write one to P1_7 and zero to P1_3 (LED 13 should be ON)
+   marble_I2C_send(I2C_FPGA, 0x42, data, 3);
 
    switch_i2c_bus(2);
    marble_SLEEP_ms(100);
@@ -333,4 +343,113 @@ void adn4600_printStatus()
       marble_I2C_cmdrecv(I2C_FPGA, ADN4600, cmd, &status, 1);
       printf("> ADN4600 reg: %x: Output number: %d, Connected input: [%d]\r\n", cmd, ix, status);
    }
+}
+
+
+// Try read the values at all the registers 0x42 and 0x44
+void pca9555_status()
+{
+   uint8_t val;
+   switch_i2c_bus(6);
+   for (unsigned jx = 0x42; jx <= 0x44; jx+=2) {
+       printf("PCA9555 status at address 0x%x\r\n", jx);
+       for (unsigned ix = 0; ix < 8; ix++) {
+           uint8_t reg = 0x00 + ix;
+           marble_I2C_cmdrecv(I2C_FPGA, jx, reg, &val, 1);
+           printf("> Reg: %x: Value: %x\r\n", reg, val);
+       }
+   }
+}
+
+
+void pca9555_config()
+{
+   switch_i2c_bus(6);
+   // Reset U39 P1_7, P1_3 and P0_0, and turn on LED LD13
+   uint8_t data[3];
+   printf("Configuring PCA9555 at address 0x%02x\r\n", PCA9555_1);
+   data[0] = 0x6;  // Config reg (6) and (7)
+   data[1] = 0xFE; // Configure P0_0 (SI570_OE) and P0_1 (unused) as output (set those bits to 0)
+   data[2] = 0x73; // Configure P1_7 (CLKMUX_RST), P1_2, (LD14), and P1_3 (LD13) as outputs
+   marble_I2C_send(I2C_FPGA, PCA9555_1, data, 3);
+   marble_SLEEP_ms(100);
+
+   // from Part number(570_N_): N --> LVDS output with output enable polarity low
+   // SI570_OE = 0, from a scope generally default freq = 125 MHz
+   // but one should measure it through a frequency counter on FPGA
+   data[0] = 0x2; // P0, by default it will jump to next address 3 for P1
+   data[1] = 0x1; // Write one to P0_0
+   // LEDs have reverse polarity
+   data[2] = 0x04; // Write zero to P1_7 and one to P1_3
+   marble_I2C_send(I2C_FPGA, PCA9555_1, data, 3);
+
+   // Reassert CLKMUX_RST
+   marble_SLEEP_ms(1000);
+   data[0] = 0x2; // P0
+   data[1] = 0x00; // Write zero to P0_0, thereby enabling SI570
+   data[2] = 0x80; // Write one to P1_7 and zero to P1_3 (LED 13 should be ON)
+   marble_I2C_send(I2C_FPGA, PCA9555_1, data, 3);
+   printf("> reg: %x: value: %x\r\n", data[0], data[1]);
+   printf("> reg: %x: value: %x\r\n", data[0]+1, data[2]);
+
+   printf("Configuring PCA9555 at address 0x%02x\r\n", PCA9555_0);
+   data[0] = 0x6; // Config regs 6(port 0) and 7(port 1)
+   data[1] = 0x37; // Configure P0_7, P0_6 and P0_3 as outputs (set those bits to 0)
+   data[2] = 0x37; // Configure P1_7, P1_6 and P0_3 as outputs (set those bits to 0)
+   marble_I2C_send(I2C_FPGA, PCA9555_0, data, 3);
+   printf("> reg: %x: value: %x\r\n", data[0], data[1]);
+   printf("> reg: %x: value: %x\r\n", data[0]+1, data[2]);
+   marble_SLEEP_ms(100);
+
+   data[0] = 0x2; // P1 and P2
+   data[1] = 0x48; // Write ones to P0_7 and P0_3
+   data[2] = 0x48; // Write ones to P1_7 and P1_3
+   marble_I2C_send(I2C_FPGA, PCA9555_0, data, 3);
+   printf("> reg: %x: value: %x\r\n", data[0], data[1]);
+   printf("> reg: %x: value: %x\r\n", data[0]+1, data[2]);
+}
+
+// Compute the current SI570 Frequency
+void si570_status()
+{
+   uint8_t i2c_addr = fsynthGetAddr();
+   uint8_t config = fsynthGetConfig();
+   if ((i2c_addr == 0) || (i2c_addr == 0xff) || (config == 0) || (config == 0xff)) {
+     printf("SI570 parameters not configured. Please configure via console.\r\n");
+     return;
+   }
+   switch_i2c_bus(6);
+   uint8_t val[6];
+   printf("SI570 status at address 0x%02x\r\n", i2c_addr);
+   // First do register reset
+   // marble_I2C_cmdsend(I2C_FPGA, i2c_addr, 0x87, 128, 1);
+   // marble_SLEEP_ms(100);
+   uint8_t start_addr;
+   if (config & 0x02) {
+       start_addr = 0x0d;
+   } else {
+       start_addr = 0x07;
+   }
+
+   for (unsigned ix = 0; ix < 6; ix++) {
+      uint8_t reg = start_addr + ix;
+      marble_I2C_cmdrecv(I2C_FPGA, i2c_addr, reg, &val[ix], 1);
+      printf("> Reg: %x: Value: %2.2x\r\n", reg, val[ix]);
+   }
+
+   uint8_t hs_div = (val[0] >> 5) + 4;
+   uint8_t n1 = (((val[0] & 0x1f) << 2) | (val[1] >> 6)) + 1;
+   double rfreq = (((val[1] & 0x3f) << 8) | (val[2])) * pow(2.0, -4.0);
+   rfreq += ((val[3] << 16) | (val[4] << 8) | val[5]) * pow(2.0, -28.0);
+   // Nominal internal crystal frequency
+   // from datasheet, typically 114.285 MHz +/- 2000 ppm, see page 12
+   // In the future, maybe this could this come from a non-volatile mmc parameter
+   float fxtal = 114.3982e6;
+   float fout = (fxtal * rfreq)/(hs_div*n1);
+
+   printf("> HS_DIV: %x\r\n", hs_div);
+   printf("> N1: %x\r\n", n1);
+   printf("> RFREQ: %lf\r\n", rfreq);
+   printf("> assume fxtal: %f MHz\r\n", fxtal*0.000001);
+   printf("> guess SI570 output: %f MHz\r\n", fout*0.000001);
 }

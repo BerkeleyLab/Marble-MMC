@@ -62,7 +62,14 @@ _Min_Stack_Size = 0x400; /* required amount of stack */
 MEMORY
 {
 RAM (xrw)      : ORIGIN = 0x20000000, LENGTH = 128K
-FLASH (rx)      : ORIGIN = 0x8000000, LENGTH = 256K
+/*FLASH (rx)     : ORIGIN = 0x08000000, LENGTH = 256K */
+
+ROM_START (rx) : ORIGIN = 0x08000000, LENGTH = 16K
+EEPROM0 (rx)   : ORIGIN = 0x08004000, LENGTH = 16K
+EEPROM1 (rx)   : ORIGIN = 0x08008000, LENGTH = 16K
+ROM_INT (rx)   : ORIGIN = 0x0800c000, LENGTH = 16K+64K+128K
+
+/*ROM_INT (rx)   : ORIGIN = 0x08000000, LENGTH = 256K */
 }
 
 /* Define output sections */
@@ -74,7 +81,8 @@ SECTIONS
     . = ALIGN(4);
     KEEP(*(.isr_vector)) /* Startup code */
     . = ALIGN(4);
-  } >FLASH
+  } >ROM_START
+  /*} >ROM_INT */
 
   /* The program code and other data goes into FLASH */
   .text :
@@ -91,7 +99,7 @@ SECTIONS
 
     . = ALIGN(4);
     _etext = .;        /* define a global symbols at end of code */
-  } >FLASH
+  } >ROM_INT
 
   /* Constant data goes into FLASH */
   .rodata :
@@ -100,35 +108,35 @@ SECTIONS
     *(.rodata)         /* .rodata sections (constants, strings, etc.) */
     *(.rodata*)        /* .rodata* sections (constants, strings, etc.) */
     . = ALIGN(4);
-  } >FLASH
+  } >ROM_INT
 
-  .ARM.extab   : { *(.ARM.extab* .gnu.linkonce.armextab.*) } >FLASH
+  .ARM.extab   : { *(.ARM.extab* .gnu.linkonce.armextab.*) } >ROM_INT
   .ARM : {
     __exidx_start = .;
     *(.ARM.exidx*)
     __exidx_end = .;
-  } >FLASH
+  } >ROM_INT
 
   .preinit_array     :
   {
     PROVIDE_HIDDEN (__preinit_array_start = .);
     KEEP (*(.preinit_array*))
     PROVIDE_HIDDEN (__preinit_array_end = .);
-  } >FLASH
+  } >ROM_INT
   .init_array :
   {
     PROVIDE_HIDDEN (__init_array_start = .);
     KEEP (*(SORT(.init_array.*)))
     KEEP (*(.init_array*))
     PROVIDE_HIDDEN (__init_array_end = .);
-  } >FLASH
+  } >ROM_INT
   .fini_array :
   {
     PROVIDE_HIDDEN (__fini_array_start = .);
     KEEP (*(SORT(.fini_array.*)))
     KEEP (*(.fini_array*))
     PROVIDE_HIDDEN (__fini_array_end = .);
-  } >FLASH
+  } >ROM_INT
 
   /* used by the startup to initialize data */
   _sidata = LOADADDR(.data);
@@ -143,7 +151,7 @@ SECTIONS
 
     . = ALIGN(4);
     _edata = .;        /* define a global symbol at data end */
-  } >RAM AT> FLASH
+  } >RAM AT> ROM_INT
 
 
   /* Uninitialized data section */
@@ -173,8 +181,6 @@ SECTIONS
     . = ALIGN(8);
   } >RAM
 
-
-
   /* Remove information from the standard libraries */
   /DISCARD/ :
   {
@@ -186,4 +192,12 @@ SECTIONS
   .ARM.attributes 0 : { *(.ARM.attributes) }
 }
 
+eeprom_size = LENGTH(EEPROM0);
+eeprom0_base = ORIGIN(EEPROM0);
+eeprom1_base = ORIGIN(EEPROM1);
 
+/*
+eeprom_size = 16384;
+eeprom0_base = 0x08004000;
+eeprom1_base = 0x08008000;
+*/

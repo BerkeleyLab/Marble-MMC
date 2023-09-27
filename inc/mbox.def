@@ -1,0 +1,221 @@
+# Bespoke-syntax mailbox definition file (JSON with comments)
+#
+# To generate #include statements in the source file, there should be one special
+# key-value pair named "include" whose value is a list of file names to include
+# (as strings).
+#
+# Every other key-value pair represents a page of the mailbox.
+# Each page is a key-value pair where the key is 'pageN' where 1 <= N <= 128
+# The value of the key-value pair is a list of dicts where each dict represents
+# an entry in the mailbox whose address/index is inferred from its position in
+# the list. Note that this requires dummy entries for unused addresses.
+# The names of these entries can be empty strings.
+
+# Mailbox Element Dict Structure:
+# -------------------------------
+#   Mandatory Parameters:
+#     Name      Type    Valid values        Desc
+#     ------------------------------------------
+#     name      string  *                   Mandatory name of mailbox entry
+#
+#   Optional Parameters:
+#     Name      Type    Valid values        Desc
+#     ------------------------------------------
+#     type      string  "int", "float"      Data type to assist in interpreting the contents of the member
+#     size      int     1,2,3,4             Number of bytes that make up element
+#     output    string  *                   How to write the value to the mailbox (where does it come from)
+#     input     string  *                   How to read the value from the mailbox (where does it go)
+#     fmt       string  printf fmt string   Format string for data formatting/presentation.
+#                                           Accepts both printf-style (e.g. '%x') and new Python format
+#                                           strings (e.g. '{:x}')
+#     desc      string  *                   Human-readable description of the data member (for documentation)
+#     scale     float   *                   Multiply the value read from the mailbox by 'scale' to get
+#                                           physical units (before handed to 'fmt')
+#     ack       string  *                   Used to respond to mailbox reads (from FPGA) with a write.
+#     respond   string  *                   Alias for 'ack'
+#
+#   Note: if 'size' param is >1, adjacent entries will be created with names 0 to size-1 (in MSB-to-LSB order)
+#
+#   input param:
+#     The special character '@' will be replaced with the value read from the mailbox (and is thus an r-value).
+#     Thus, to pass the value to function 'foo' as the first parameter, simply use "foo(@)".  To assign the
+#     value to a global variable 'bar', use "bar = @"
+#
+#   output param:
+#     The special character '@' will be replaced with the destination in the mailbox (and is thus an l-value).
+#     If the value comes from the return value of function 'foo', use "@ = foo()"
+#     If the value is read via a volatile argument to function bar, use "bar(&@)"
+#
+#   ack param:
+#     The special character '@' will be replaced with the value read from the mailbox.  The result will then
+#     be written to the same location in the mailbox.  This should only be used in a mailbox page that
+#     contains only inputs (FPGA-to-MMC).  Otherwise, the respond value would be clobbered by a write of
+#     zero immediately following the response (because reads and writes are done by page).
+
+{
+#  "include" : [
+#    "marble_api.h",
+#    "i2c_pm.h",
+#    "mailbox.h",
+#    "rev.h",
+#    "max6639.h"
+#  ],
+# Page 2 contains only inputs (MMC <= FPGA)
+  "page2" : [
+    { "name" : "FMC_MGT_CTL",
+      "type" : "int",
+      "fmt"  : "0x{:x}",
+      "desc" : "Input is bitfield. See scripts/README.md mgtmux_mbox.sh.",
+      "input" : "marble_MGTMUX_config(@, 0, 0)",
+      "ack"  : "@ & 0x55"
+    }
+  ],
+# Page 3 contains only outputs (MMC => FPGA)
+  "page3" : [
+    { "name" : "COUNT",
+      "size" : 2,
+      "type" : "int",
+      "desc" : "Mailbox update counter",
+      "fmt"  : "%d",
+      "output" : "@ = mbox_get_update_count()"
+    },
+    { "name" : "PAD2"},
+    { "name" : "PAD3"},
+    { "name" : "LM75_0",
+      "size" : 2,
+      "type" : "float",
+      "fmt"  : "{:.1f} degC",
+      "scale": 0.5,
+      "desc" : "Returns LM75_0 temperature in units of 0.5degC",
+      "output" : "LM75_read(LM75_0, LM75_TEMP, (int *)&@)"
+    },
+    { "name" : "LM75_1",
+      "size" : 2,
+      "type" : "float",
+      "fmt"  : "{:.1f} degC",
+      "scale": 0.5,
+      "desc" : "Returns LM75_1 temperature in units of 0.5degC",
+      "output" : "LM75_read(LM75_1, LM75_TEMP, (int *)&@)"
+    },
+    { "name" : "FMC_ST",
+      "type" : "int",
+      "fmt"  : "",
+      "output"  : "@ = marble_FMC_status()",
+      "desc" : "Returns bitfield. 0=FMC1_PWR, 1=FMC1_FUSE, 2=FMC2_PWR, 3=FMC1_FUSE"
+    },
+    { "name" : "PWR_ST",
+      "type" : "int",
+      "fmt"  : "",
+      "output"  : "@ = marble_PWR_status()",
+      "desc" : "Returns bitfield. 0=PSU_EN, 1=~POE_PRESENT, 2=OTEMP"
+    },
+    { "name" : "MGTMUX_ST",
+      "type" : "int",
+      "fmt"  : "",
+      "output"  : "@ = marble_MGTMUX_status()",
+      "desc" : "Returns bitfield of mux pin states. 0=MUX0_MMC, 1=MUX1_MMC, 2=MUX2_MMC"
+    },
+    { "name" : "PAD11"
+    },
+    { "name" : "GIT32",
+      "type" : "int",
+      "size" : 4,
+      "fmt"  : "{:08X}",
+      "output" : "@ = GIT_REV_32BIT",
+      "desc" : "32-bit git commit ID"
+    }
+  ],
+# Page 4 contains only outputs (MMC => FPGA)
+  "page4" : [
+    { "name" : "MAX_T1_HI",
+      "output" : "@ = return_max6639_reg(MAX6639_TEMP_CH1)",
+      "desc" : "Returns raw value of MAX6639 register TEMP_CH1"
+    },
+    { "name" : "MAX_T1_LO",
+      "output" : "@ = return_max6639_reg(MAX6639_TEMP_EXT_CH1)",
+      "desc" : "Returns raw value of MAX6639 register TEMP_EXT_CH1"
+    },
+    { "name" : "MAX_T2_HI",
+      "output" : "@ = return_max6639_reg(MAX6639_TEMP_CH2)",
+      "desc" : "Returns raw value of MAX6639 register TEMP_CH2"
+    },
+    { "name" : "MAX_T2_LO",
+      "output" : "@ = return_max6639_reg(MAX6639_TEMP_EXT_CH2)",
+      "desc" : "Returns raw value of MAX6639 register TEMP_EXT_CH2"
+    },
+    { "name" : "MAX_F1_TACH",
+      "output" : "@ = return_max6639_reg(MAX6639_FAN1_TACH_CNT)",
+      "desc" : "Returns raw value of MAX6639 register FAN1_TACH_CNT"
+    },
+    { "name" : "MAX_F2_TACH",
+      "output" : "@ = return_max6639_reg(MAX6639_FAN2_TACH_CNT)",
+      "desc" : "Returns raw value of MAX6639 register FAN2_TACH_CNT"
+    },
+    { "name" : "MAX_F1_DUTY",
+      "output" : "@ = return_max6639_reg(MAX6639_FAN1_DUTY)",
+      "desc" : "Returns MAX6639 ch1 fan duty cycle as duty_percent*1.2.",
+      "scale": 0.833333,
+      "fmt"  : "{:.1f} %"
+    },
+    { "name" : "MAX_F2_DUTY",
+      "output" : "@ = return_max6639_reg(MAX6639_FAN2_DUTY)",
+      "desc" : "Returns MAX6639 ch2 fan duty cycle as duty_percent*1.2.",
+      "scale"  : 0.833333,
+      "fmt"  : "{:.1f} %"
+    },
+    {
+      "name" : "PCB_REV",
+      "output" : "@ = marble_get_board_id()",
+      "desc" : "Returns bitfield. [4:7]=Board type (0=sim, 1=marble, 2=mini), [0:3]=PCB rev",
+      "fmt"  : "0x{:x}"
+    },
+    { "name" : "PAD11"
+    },
+    { "name" : "COUNT",
+      "size" : 2,
+      "type" : "int",
+      "desc" : "Mailbox update counter",
+      "fmt"  : "%d",
+      "output" : "@ = mbox_get_update_count()"
+    },
+    { "name" : "HASH",
+      "size" : 4,
+      "type" : "int",
+      "desc" : "Hash of mailbox functionality.",
+      "fmt"  : "0x{:x}",
+      "output" : "@ = mailbox_get_hash()"
+    }
+
+  ],
+# Page 5 contains both inputs and outputs (MMC <=> FPGA)
+  "page5" : [
+    { "name" : "I2C_BUS_STATUS",
+      "type" : "int",
+      "fmt"  : "0b{:b}",
+      "output": "@ = (uint8_t)getI2CBusStatus()",
+      "input" : "mbox_handleI2CBusStatusMsg(@)",
+      "desc" : "Returns logical OR of all I2C function return values. Write nonzero value to clear status."
+    }
+  ],
+# Page 6 contains only outputs (MMC => FPGA)
+  "page6" : [
+    { "name" : "FSYNTH_I2C_ADDR",
+      "size" : 1,
+      "fmt"  : "0x{:x}",
+      "output": "@ = (uint8_t)fsynthGetAddr()",
+      "desc" : "I2C address of frequency synthesizer (si570) in 8-bit (shifted) format."
+    },
+    { "name" : "FSYNTH_CONFIG",
+      "size" : 1,
+      "fmt"  : "0x{:x}",
+      "output": "@ = (uint8_t)fsynthGetConfig()",
+      "desc" : "Config byte of frequency synthesizer (si570). Bit 0: Enable pin polarity (0 = polarity low, 1 = polarity high). Bit 1: Temperature stability (0 = 20 ppm or 50 ppm, 1 = 7 ppm) Bits 2-5: reserved. Bits [7:6]: 0b01 = Valid config (avoid acting on invalid 0xff or 0x00)."
+    },
+    { "name" : "FSYNTH_FREQ",
+      "size" : 4,
+      "fmt"  : "{} Hz",
+      "output": "@ = fsynthGetFreq()",
+      "desc" : "Startup frequency of frequency synthesizer (si570) in Hz."
+    }
+  ]
+}

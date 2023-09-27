@@ -23,15 +23,14 @@
 #
 # The primary targets in this file are:
 #
-# [none]	Compiles the source to create an .elf in the output directory
-# sources	Creates sources.mk from all the .c files in the src directory
-# download	Compiles and downloads over lpc-link
-# lpc-link 	Blocking - Initialises an lpc-link device and acts as a debug server
-# clean		Removes generated files
+# [none]        Compiles the source to create an .elf in the output directory
+# sources       Creates sources.mk from all the .c files in the src directory
+# download      Compiles and downloads over lpc-link
+# lpc-link      Blocking - Initialises an lpc-link device and acts as a debug server
+# clean         Removes generated files
 #
 # This makefile is intended to be run from the root of the project.
 #
-
 # Directories
 #
 # These define the locations of the source and output trees.
@@ -40,8 +39,14 @@ include dir_list.mk
 # External makefile.conf
 #
 # Edit the project name, chip, includes directories and so on in this file.
-#
+
+# Nucleo build uses 'marble' settings but with NUCLEO macro defined
+ifeq ($(BOARD), nucleo)
+include $(BUILD_DIR)/marble.conf
+USR_CFLAGS += -DNUCLEO
+else
 include $(BUILD_DIR)/$(BOARD).conf
+endif
 OUTPUT_DIR := out_$(BOARD)
 
 # Shell Commands
@@ -62,12 +67,14 @@ SHUF	:= shuf
 # These tools are available from https://launchpad.net/gcc-arm-embedded/ and
 # should be placed on your path. ALternatively you could compile your own.
 #
-TARGET  := arm-none-eabi
+TARGET	:= arm-none-eabi
 AS	:= $(TARGET)-as
 CC	:= $(TARGET)-gcc
 CXX	:= $(TARGET)-g++
 OBJCOPY	:= $(TARGET)-objcopy
 SIZE	:= $(TARGET)-size
+# An alternative to gdb-multiarch is arm-none-eabi-gdb distributed with gcc-arm-none-eabi-xxxx
+GDB=gdb-multiarch
 
 # Download Tools
 #
@@ -75,17 +82,18 @@ SIZE	:= $(TARGET)-size
 #
 OPENOCD         = openocd
 
+
 # Compilation Flags
 #
 # Display all warnings. Compile functions and data into their own sections so
 # they can be discarded if unused.  The linker performs garbage collection of
 # unused input sections.
-CFLAGS	= $(FLAGS) -Os -std=c11 -ffunction-sections -fdata-sections $(ARCH_FLAGS) $(USR_CFLAGS)
+CFLAGS = $(FLAGS) -Os -std=c11 -ffunction-sections -fdata-sections $(ARCH_FLAGS) $(USR_CFLAGS)
 CFLAGS += -Wall -Wextra -Wundef -Wshadow -Wstrict-prototypes -Wwrite-strings -pedantic
 CFLAGS += -Wpointer-arith -Wredundant-decls -Wunreachable-code
 # to do:  -Wcast-align -Wcast-qual
 
-ASFLAGS	= $(FLAGS) $(ARCH_FLAGS)
+ASFLAGS = $(FLAGS) $(ARCH_FLAGS)
 LDFLAGS = $(FLAGS) $(LINKER_FLAGS) -Wextra $(ARCH_FLAGS)
 
 # Default target
@@ -106,7 +114,7 @@ src/rev.h: $(SOURCES)
 	(git rev-parse --short=8 HEAD | awk '{print "#define GIT_REV \"" $$1 "\""}'; \
 	! git diff | grep -q .; echo "#define GIT_DIRTY $$?")  > $@
 	git rev-parse --short=8 HEAD | awk '{print "#define GIT_REV_32BIT 0x" $$1 ""}' >> $@
-$(OUTPUT_DIR)/src/main.o $(OUTPUT_DIR)/src/mailbox.o: src/rev.h
+$(OUTPUT_DIR)/src/main.o $(OUTPUT_DIR)/src/mailbox.o: src/rev.h 
 
 # Rule for generating object and dependancy files from source files
 #
@@ -122,11 +130,48 @@ $(OUTPUT_DIR)/%.o: %.c
 	$(CC) -c -MMD $(CPPFLAGS) $(CFLAGS) $(addprefix -I,$(INCLUDES)) -o $@ $<
 	@$(SED) -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' -e '/^$$/ d' -e 's/$$/ :/' < $(OUTPUT_DIR)/$*.d >> $(OUTPUT_DIR)/$*.d;
 
-# Attempt to include the dependany makefiles for every object in this makefile.
+# Attempt to include the dependancy makefiles for every object in this makefile.
 #
 # This means that object files depend on the header files they include.
 #
 -include $(OBJECTS:.o=.d)
+
+# =============== Auto-Generated Mailbox Interface ================
+MKMBOX=scripts/mkmbox.py
+MBOX_DEF=mailbox_def
+MBOX_DOC=mailbox.md
+MBOX_JSON=mailbox_map.json
+MBOX_VH=mailbox_map.vh
+MBOX_H=mailbox_map.h
+OFFSET ?= 0
+$(OUTPUT_DIR)/src/mailbox.o: $(SOURCE_DIR)/$(MBOX_DEF).c $(INCLUDE_DIR)/$(MBOX_DEF).h
+
+$(INCLUDE_DIR)/$(MBOX_DEF).h: $(INCLUDE_DIR)/mbox.def $(MKMBOX)
+	python3 $(MKMBOX) -d $< -o $@
+
+$(SOURCE_DIR)/$(MBOX_DEF).c: $(INCLUDE_DIR)/mbox.def
+	python3 $(MKMBOX) -d $< -o $@
+
+$(DOC_DIR)/$(MBOX_DOC): $(INCLUDE_DIR)/mbox.def
+	python3 $(MKMBOX) -d $< -o $@
+
+$(DOC_DIR)/$(MBOX_JSON): $(INCLUDE_DIR)/mbox.def
+	python3 $(MKMBOX) --map -d $< -o $@ --offset $(OFFSET)
+
+$(DOC_DIR)/$(MBOX_VH): $(INCLUDE_DIR)/mbox.def
+	python3 $(MKMBOX) --map -d $< -o $@ --offset $(OFFSET)
+
+$(DOC_DIR)/$(MBOX_H): $(INCLUDE_DIR)/mbox.def
+	python3 $(MKMBOX) --map -d $< -o $@ --offset $(OFFSET)
+
+$(DOC_DIR)/$(MBOX_JSON): $(INCLUDE_DIR)/mbox.def
+	python3 scripts/mkmbox.py --map -d $^ -o $@ --offset $(OFFSET)
+
+$(DOC_DIR)/$(MBOX_VH): $(INCLUDE_DIR)/mbox.def
+	python3 scripts/mkmbox.py --map -d $^ -o $@ --offset $(OFFSET)
+
+$(DOC_DIR)/$(MBOX_H): $(INCLUDE_DIR)/mbox.def
+	python3 scripts/mkmbox.py --map -d $^ -o $@ --offset $(OFFSET)
 
 # Rule for generating object files from assembler files
 #
@@ -180,7 +225,14 @@ sources:
 #
 .PHONY: download
 download: all
-	$(OPENOCD) -f prog_support/ocd/$(OCD_CONF) -c "program $(OUTPUT_DIR)/$(PROJECT_NAME).elf reset exit"
+	$(OPENOCD) -f $(PROG_DIR)/ocd/$(OCD_CONF) -c "program $(OUTPUT_DIR)/$(PROJECT_NAME).elf reset exit"
+
+.PHONY: reset
+reset:
+	$(OPENOCD) -f $(PROG_DIR)/ocd/$(OCD_CONF) -c "init" -c "reset" -c "exit"
+
+.PHONY: doc
+doc: $(DOC_DIR)/$(MBOX_DOC) $(DOC_DIR)/$(MBOX_JSON) $(DOC_DIR)/$(MBOX_VH) $(DOC_DIR)/$(MBOX_H)
 
 # Creates a gdb script if required
 #
@@ -188,7 +240,7 @@ download: all
 #
 gdbscript:
 	@$(ECHO) "# Load our .elf file into GDB" >> gdbscript
-	@$(ECHO) "file" > gdbscript
+	@$(ECHO) "file" >> gdbscript
 	@$(ECHO) "# Define a target description to override the lpc-link default" >> gdbscript
 	@$(ECHO) "set tdesc filename arm-core.xml" >> gdbscript
 	@$(ECHO) "# Required for semihosting" >> gdbscript
@@ -198,6 +250,10 @@ gdbscript:
 	@$(ECHO) "# Enable semihosting" >> gdbscript
 	@$(ECHO) "monitor semihosting enable" >> gdbscript
 
+.PHONY: gdb
+gdb:
+	$(GDB) -ex "target remote | $(OPENOCD) -f $(PROG_DIR)/ocd/$(OCD_CONF) -c 'gdb_port pipe; log_output $(PROG_DIR)/openocd.log'" \
+				 -x $(PROG_DIR)/gdbscript_stm32 $(OUTPUT_DIR)/$(PROJECT_NAME).elf
 
 # Removes everything in the output directory
 #
@@ -206,4 +262,4 @@ gdbscript:
 .PHONY: clean
 clean:
 	$(RM) $(OUTPUT_DIR)/*
-	$(RM) gdbscript src/rev.h
+	$(RM) gdbscript $(SOURCE_DIR)/rev.h

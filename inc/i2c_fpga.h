@@ -3,6 +3,8 @@
 
 #define TCA9548 (0xe0)
 
+#include <stdint.h>
+
 typedef enum {
    I2C_FMC1  = 0,
    I2C_FMC2  = 1,
@@ -16,8 +18,9 @@ typedef enum {
    INA219_0    = 0x84,
    INA219_FMC1 = 0x80,
    INA219_FMC2 = 0x82,
-   PCA9555_0   = 0x40,
-   PCA9555_1   = 0x42
+   PCA9555_0   = 0x44,
+   PCA9555_1   = 0x42,
+   SI570       = 0xEE
 } I2C_APP_BUS;
 
 #define I2C_APP_NUM 5
@@ -30,6 +33,9 @@ void ina219_init(void);
 void ina219_debug(uint8_t addr);
 float getBusVoltage_V(uint8_t);
 float getCurrentAmps(uint8_t);
+void pca9555_status(void);
+void pca9555_config(void);
+void si570_status(void);
 
 /************
 * INA219
@@ -114,7 +120,7 @@ typedef enum {
 #define ADN4600_OUT_CFG_0 2   // input 2 connected to output 0
 #define ADN4600_OUT_CFG_1 3   // input 3 connected to output 1
 #define ADN4600_OUT_CFG_4 4   // input 4 connected to output 4
-#define ADN4600_OUT_CFG_5 6   // input 6 connected to output 6
+#define ADN4600_OUT_CFG_5 6   // input 6 connected to output 5
 
 #define ADN4600_XPT_Conf    (0x40)
 #define ADN4600_XPT_Update  (0x41)

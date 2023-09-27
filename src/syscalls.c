@@ -6,7 +6,7 @@
 **  Abstract    : System Workbench Minimal System calls file
 **
 **                For more information about which c-functions
-**                need which of these lowlevel functions
+**                need which of these low level functions
 **                please consult the Newlib libc-manual
 **
 **  Environment : System Workbench for MCU

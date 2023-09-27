@@ -3,7 +3,20 @@
 #include <stdio.h>
 #include <string.h>
 #include "i2c_pm.h"
+#include "max6639.h"
+#include "math.h"
 
+/* ============================= Helper Macros ============================== */
+#define MAX6639_GET_TEMP_DOUBLE(rTemp, rTempExt) \
+   ((double)(((uint16_t)rTemp << 3) | (uint16_t)rTempExt >> 5)/8)
+
+/* ============================ Static Variables ============================ */
+extern I2C_BUS I2C_PM;
+
+/* =========================== Static Prototypes ============================ */
+static int set_max6639_reg(int regno, int value);
+
+/* ========================== Function Definitions ========================== */
 void I2C_PM_scan(void)
 {
    printf("Scanning I2C_PM bus:\r\n");
@@ -19,6 +32,12 @@ void I2C_PM_scan(void)
    printf("\r\n");
 }
 
+int max6639_set_overtemp(uint8_t ot) {
+  int rc = set_max6639_reg(MAX6639_NOT_LIM_CH1, ot);
+  rc |= set_max6639_reg(MAX6639_NOT_LIM_CH2, ot);
+  return rc;
+}
+
 static int set_max6639_reg(int regno, int value)
 {
    uint8_t addr = MAX6639;
@@ -29,7 +48,7 @@ static int set_max6639_reg(int regno, int value)
    return rc;
 }
 
-static int get_max6639_reg(int regno, int *value)
+int get_max6639_reg(int regno, int *value)
 {
    uint8_t i2c_dat[4];
    uint8_t addr = MAX6639;
@@ -38,12 +57,20 @@ static int get_max6639_reg(int regno, int *value)
    return rc;
 }
 
-static void set_fans(int speed[2])
+// TODO - Test me!
+int return_max6639_reg(int regno) {
+  uint8_t i2c_dat[4];
+  marble_I2C_cmdrecv(I2C_PM, MAX6639, regno, i2c_dat, 1);
+  return (int)*i2c_dat;
+}
+
+int max6639_set_fans(int speed)
 {
-    set_max6639_reg(0x11, 2);  // Fan 1 PWM sign = 1
-    set_max6639_reg(0x15, 2);  // Fan 2 PWM sign = 1
-    set_max6639_reg(0x26, speed[0]);
-    set_max6639_reg(0x27, speed[1]);
+  int rc = set_max6639_reg(MAX6639_FAN1_CONFIG2A, 2);  // Fan 1 PWM sign = 1
+  rc |= set_max6639_reg(MAX6639_FAN2_CONFIG2A, 2);  // Fan 2 PWM sign = 1
+  rc |= set_max6639_reg(MAX6639_FAN1_DUTY, speed);
+  rc |= set_max6639_reg(MAX6639_FAN2_DUTY, speed);
+  return rc;
 }
 
 void print_max6639(void)
@@ -61,13 +88,51 @@ void print_max6639(void)
       if ((ix&0x3) == 0x3) marble_UART_send("\r\n", 2);
    }
    if (0) {
-      int fan_speed[2];
-      fan_speed[0] = 200;
-      fan_speed[1] = 150;
-      set_fans(fan_speed);
+      //int fan_speed[2];
+      // update fan speed to 83%, max is 120
+      // see page 9 in datasheet
+      //fan_speed[0] = 100;
+      //fan_speed[1] = 100;
+      max6639_set_fans(100);
    }
 }
 
+void print_max6639_decoded(void)
+{
+  int vTemp, vTempExt;
+  double temp;
+  int rTemp, rTempExt;
+  int rval;
+  printf("MAX6639 Temperatures:\n");
+  // Read/decode temperature for channels 1 and 2
+  for (int nChan = 1; nChan < 3; nChan++) {
+    if (nChan == 1) {
+      rTemp = MAX6639_TEMP_CH1;
+      rTempExt = MAX6639_TEMP_EXT_CH1;
+    } else {
+      rTemp = MAX6639_TEMP_CH2;
+      rTempExt = MAX6639_TEMP_EXT_CH2;
+    }
+    rval = get_max6639_reg(rTemp, &vTemp);
+    rval |= get_max6639_reg(rTempExt, &vTempExt);
+    if (rval) {
+      printf("I2C fault!\r\n");
+      return;
+    }
+    temp = MAX6639_GET_TEMP_DOUBLE(vTemp, vTempExt);
+    printf("  Ch %d Temp = %.3f\n", nChan, temp);
+  }
+  // Now just dump the register contents
+  printf("MAX6639 Registers:\n");
+#define X(nReg, desc) \
+  do{ \
+    get_max6639_reg(nReg, &vTemp); \
+    printf("  %s (0x%X) = 0x%X\n", desc, nReg, vTemp); \
+  }while(0);
+  MAX6639_FOR_EACH_REGISTER();
+#undef X
+  return;
+}
 
 /************
 * LM75 Register interface
@@ -86,7 +151,6 @@ static int LM75_readwrite(uint8_t dev, LM75_REG reg, int *data, bool rnw)
       case LM75_TEMP:
       case LM75_HYST:
       case LM75_OS:
-
          if (rnw) {
             i2c_stat = marble_I2C_recv(I2C_PM, dev, i2c_buf, 2);
             // Signed Q7.1, i.e. resolution of 0.5 deg
@@ -144,6 +208,55 @@ void LM75_print(uint8_t dev)
    }
 }
 
+void LM75_print_decoded(uint8_t dev)
+{
+  int vTemp;
+  if (dev == LM75_0) {
+    printf("LM75_0 (U29) Registers:\n");
+  } else {
+    printf("LM75_1 (U28) Registers:\n");
+  }
+#define X(name, val) \
+  do{ \
+    LM75_read(dev, val, &vTemp); \
+    printf("  %s (0x%X) = %d\n", #name, val, vTemp); \
+  }while(0);
+  LM75_FOR_EACH_REGISTER()
+#undef X
+  return;
+}
+
+/*
+ */
+void LM75_Init(void) {
+  LM75_write(LM75_0, LM75_CFG, LM75_CFG_DEFAULT);
+  LM75_write(LM75_1, LM75_CFG, LM75_CFG_DEFAULT);
+  return;
+}
+
+
+/*
+ * int LM75_set_overtemp(int ot);
+ *  Helper function to set the overtemperature (OS) threshold of both LM75 chips
+ *  and set the hysteresis threshold to be T_hyst = (t_os - TEMPERATURE_HYST_DEGC)
+ *  Note! 'ot' is temperature in degrees C but the LM75 register stores in units
+ *  of 0.5 degC
+ */
+int LM75_set_overtemp(int ot) {
+  // Peg ot on lower end at 0degC even though LM75 allows down to -55C
+  ot = ot > 0 ? ot : 0;
+  // Peg ot on higher end at 125degC (250*0.5 degC)
+  ot = ot > 125 ? 125 : ot;
+  // Peg thyst on the lower end at 0degC, otherwise thyst = ot - TEMPERATURE_HYST_DEGC
+  int thyst = ot > TEMPERATURE_HYST_DEGC ? ot - TEMPERATURE_HYST_DEGC : 0;
+  // Note all the 2x multipliers for 0.5degC units
+  int rc = LM75_write(LM75_0, LM75_OS, 2*ot);
+  rc |= LM75_write(LM75_0, LM75_HYST, 2*thyst);
+  rc |= LM75_write(LM75_1, LM75_OS, 2*ot);
+  rc |= LM75_write(LM75_1, LM75_HYST, 2*thyst);
+  return rc;
+}
+
 static const uint8_t i2c_list[I2C_NUM] = {LM75_0, LM75_1, MAX6639, XRP7724};
 
 const char i2c_ok[] = "> Found I2C slave: %x\r\n";
@@ -183,6 +296,101 @@ void I2C_PM_probe(void)
       snprintf(p_buf, 40, i2c_ret, *i2c_dat);
       marble_UART_send(p_buf, strlen(p_buf));
    }
+   return;
+}
+
+/* LTM4673, new power management chip
+ * valid only for builds > v1.3
+ *
+ */
+
+int ltm_ch_status(uint8_t dev)
+{
+  if (marble_get_board_id() < Marble_v1_3) {
+    printf("LTM4673 not present; bypassed.\n");
+    return 0;
+  }
+   const uint8_t STATUS_WORD = 0x79;
+   uint8_t i2c_dat[4];
+   for (unsigned jx = 0; jx < 4; jx++) {
+      // start selecting channel/page 0 until you finish reading
+      // data for all 4 channels
+      uint8_t page = 0x00 + jx;
+      marble_I2C_cmdsend(I2C_PM, dev, 0x00, &page, 1);
+      // marble_I2C_cmd_recv should return 0, if everything is good, see page 100
+      int rc = marble_I2C_cmdrecv(I2C_PM, dev, STATUS_WORD, i2c_dat, 2);
+      if (rc == HAL_OK) {
+          uint16_t word0 = ((unsigned int) i2c_dat[1] << 8) | i2c_dat[0];
+          if (word0) {
+              printf("BAD! LTM4673 Channel %x, Status_word r[%2.2x] = 0x%x\r\n", page, STATUS_WORD, word0);
+              return 0;
+          }
+      }
+   }
+   return 1;
+}
+
+void ltm_read_telem(uint8_t dev)
+{
+   struct {int b; const char *m;} r_table[] = {
+      // see page 105
+      {0x88, "V     READ_VIN"},
+      {0x89, "A     READ_IIN"},
+      {0x97, "W     READ_PIN"},
+      {0x8B, "V     READ_VOUT"},
+      {0x8C, "A     READ_IOUT"},
+      {0x8D, "degC  READ_TEMPERATURE_1"},
+      {0x8E, "degC  READ_TEMPERATURE_2"},
+      {0x96, "W     READ_POUT"},
+      {0xBB, "mA    MFR_READ_IOUT"},
+      {0xC4, "A     MFR_IIN_PEAK"},
+      {0xC5, "A     MFR_IIN_MIN"},
+      {0xC6, "P     MFR_PIN_PEAK"},
+      {0xC7, "P     MFR_PIN_MIN"},
+      {0xFA, "V     MFR_IOUT_SENSE_VOLTAGE"},
+      {0xDE, "V     MFR_VIN_PEAK"},
+      {0xDD, "V     MFR_VOUT_PEAK"},
+      {0xD7, "A     MFR_IOUT_PEAK"},
+      {0xDF, "degC  MFR_TEMPERATURE_1_PEAK"},
+      {0xFC, "V     MFR_VIN_MIN"},
+      {0xFB, "V     MFR_VOUT_MIN"},
+      {0xD8, "A     MFR_IOUT_MIN"},
+      {0xFD, "degC  MFR_TEMPERATURE_1_MIN"}};
+   printf("LTM4673 Telemetry register dump:\n");
+   float L16 = 0.0001220703125;  // 2**(-13)
+   for (unsigned jx = 0; jx < 4; jx++) {
+      // start selecting channel/page 0 until you finish reading
+      // telemetry data for all 4 channels
+      uint8_t page = 0x00 + jx;
+      marble_I2C_cmdsend(I2C_PM, dev, 0x00, &page, 1);
+      printf("> Read page/channel: %x\n", page);
+      const unsigned tlen = sizeof(r_table)/sizeof(r_table[0]);
+      for (unsigned ix=0; ix<tlen; ix++) {
+          uint8_t i2c_dat[4];
+          int regno = r_table[ix].b;
+          int rc = marble_I2C_cmdrecv(I2C_PM, dev, regno, i2c_dat, 2);
+          uint16_t word0 = ((unsigned int) i2c_dat[1] << 8) | i2c_dat[0];
+          float phys_unit;
+          int mask, comp2;
+          if (rc == HAL_OK) {
+              if (ix == 3 || ix == 15 || ix == 19)
+                  phys_unit = word0*L16;  // L16 format
+              else if (ix == 8)
+                  phys_unit = word0*2.5;  // special for MFR_READ_IOUT
+              else if (ix == 13)
+                  phys_unit = word0*0.025*pow(2, -13);  // special for MFR_IOUT_SENSE_VOLTAGE
+              else {
+                  // L11 format, see page 35
+                  mask = (word0 >> 11);
+                  comp2 = pow(2, 5) - mask;
+                  phys_unit = (word0 & 0x7FF)*(1.0/(1<<comp2));
+              }
+              printf("r[%2.2x] = 0x%4.4x = %5d = %7.3f %s\r\n", regno, word0, word0, phys_unit, r_table[ix].m);
+          } else {
+              printf("r[%2.2x]    unread          (%s)\r\n", regno, r_table[ix].m);
+          }
+      }
+   }
 }
 
 /* XPR7724 is special
@@ -201,6 +409,10 @@ void I2C_PM_probe(void)
  */
 int xrp_set2(uint8_t dev, uint16_t addr, uint8_t data)
 {
+  if (marble_get_pcb_rev() > Marble_v1_3) {
+    printf("XRP7724 not present; bypassed.\n");
+    return 0;
+  }
    int rc = marble_I2C_cmdsend_a2(I2C_PM, dev, addr, &data, 1);
    if (rc != HAL_OK) {
       printf("xrp_set2: failure writing r[%4.4x] <= %2.2x\n", addr, data);
@@ -217,6 +429,10 @@ int xrp_set2(uint8_t dev, uint16_t addr, uint8_t data)
 
 int xrp_read2(uint8_t dev, uint16_t addr)
 {
+  if (marble_get_pcb_rev() > Marble_v1_3) {
+    printf("XRP7724 not present; bypassed.\n");
+    return 0;
+  }
    uint8_t chk = 0x55;
    int rc = marble_I2C_cmdrecv_a2(I2C_PM, dev, addr, &chk, 1);
    if (rc != HAL_OK) {
@@ -228,8 +444,12 @@ int xrp_read2(uint8_t dev, uint16_t addr)
 
 void xrp_dump(uint8_t dev)
 {
+  if (marble_get_pcb_rev() > Marble_v1_3) {
+    printf("XRP7724 not present; bypassed.\n");
+    return;
+  }
    // https://www.maxlinear.com/appnote/anp-38.pdf
-   printf("XRP7724 dump [%2.2x]\n", dev);
+   printf("XRP7724 dump [%2.2x]\r\n", dev);
    struct {int a; const char *n;} r_table[] = {
       {0x02, "HOST_STS"},
       {0x05, "FAULT_STATUS"},
@@ -257,9 +477,9 @@ void xrp_dump(uint8_t dev)
       int rc = marble_I2C_cmdrecv(I2C_PM, dev, regno, i2c_dat, 2);
       if (rc == HAL_OK) {
           unsigned value = (((unsigned) i2c_dat[0]) << 8) | i2c_dat[1];
-          printf("r[%2.2x] = 0x%4.4x = %5d   (%s)\n", regno, value, value, r_table[ix].n);
+          printf("r[%2.2x] = 0x%4.4x = %5d   (%s)\r\n", regno, value, value, r_table[ix].n);
       } else {
-          printf("r[%2.2x]    unread          (%s)\n", regno, r_table[ix].n);
+          printf("r[%2.2x]    unread          (%s)\r\n", regno, r_table[ix].n);
       }
    }
 }
@@ -269,6 +489,10 @@ void xrp_dump(uint8_t dev)
  */
 int xrp_ch_status(uint8_t dev, uint8_t chn)
 {
+  if (marble_get_pcb_rev() > Marble_v1_3) {
+    printf("XRP7724 not present; bypassed.\n");
+    return 0;
+  }
    const uint8_t XRP_STS = 0x9;
    uint8_t i2c_dat[2];
    if (HAL_OK == marble_I2C_cmdrecv(I2C_PM, dev, XRP_STS, i2c_dat, 2)) {
@@ -280,6 +504,10 @@ int xrp_ch_status(uint8_t dev, uint8_t chn)
 
 static int xrp_reg_write(uint8_t dev, uint8_t regno, uint16_t d)
 {
+  if (marble_get_pcb_rev() > Marble_v1_3) {
+    printf("XRP7724 not present; bypassed.\n");
+    return 0;
+  }
    uint8_t i2c_dat[4];
    i2c_dat[0] = (d>>8) & 0xff;
    i2c_dat[1] = d & 0xff;
@@ -292,6 +520,10 @@ static int xrp_reg_write(uint8_t dev, uint8_t regno, uint16_t d)
 
 static int xrp_reg_write_check(uint8_t dev, uint8_t regno, uint16_t d)
 {
+  if (marble_get_pcb_rev() > Marble_v1_3) {
+    printf("XRP7724 not present; bypassed.\n");
+    return 0;
+  }
    xrp_reg_write(dev, regno, d);
    marble_SLEEP_ms(10);
    uint8_t i2c_dat[4];
@@ -327,6 +559,10 @@ static void xrp_print_reg(uint8_t dev, uint8_t regno)
 // Sending data to flash, see ANP-38
 int xrp_push_low(uint8_t dev, uint16_t addr, const uint8_t data[], unsigned len)
 {
+  if (marble_get_pcb_rev() > Marble_v1_3) {
+    printf("XRP7724 not present; bypassed.\n");
+    return 0;
+  }
    printf("xrp_push_low WIP 0x%4.4x\n", addr);
    int rc;
    if (len & 1) return 1;  // Odd length not allowed
@@ -411,6 +647,10 @@ static int xrp_pull(uint8_t dev, unsigned len)
 // Figure 4:  cmd is FLASH_PAGE_ERASE (0x4F),  mode is 5,  dwell is 50
 static int xrp_process_flash(uint8_t dev, int page_no, int cmd, int mode, int dwell)
 {
+  if (marble_get_pcb_rev() > Marble_v1_3) {
+    printf("XRP7724 not present; bypassed.\n");
+    return 0;
+  }
    int rc;
    uint8_t i2c_dat[4];
    for (unsigned retry=0; retry<5; retry++) {
@@ -460,6 +700,10 @@ static int xrp_process_flash(uint8_t dev, int page_no, int cmd, int mode, int dw
 
 static int xrp_program_page(uint8_t dev, unsigned page_no, uint8_t data[], unsigned len)
 {
+  if (marble_get_pcb_rev() > Marble_v1_3) {
+    printf("XRP7724 not present. Program bypassed.\n");
+    return 0;
+  }
    printf("FLASH_PAGE_CLEAR %u\n", page_no);
    if (xrp_process_flash(dev, page_no, 0x4E, 1, 10)) return 1;
    printf("FLASH_PAGE_ERASE %u\n", page_no);
@@ -489,10 +733,19 @@ static int xrp_program_page(uint8_t dev, unsigned page_no, uint8_t data[], unsig
 // Temporarily abandon hex record concept
 void xrp_flash(uint8_t dev)
 {
+  if (marble_get_pcb_rev() > Marble_v1_3) {
+    printf("XRP7724 not present. Flash bypassed.\n");
+    return;
+  }
+
+  // HACK! part 1
+#ifdef SIMULATION
+#define MARBLE_V2
+#endif
 
 #ifdef MARBLEM_V1
    // Data originally based on python hex2c.py < MarbleMini.hex
-   // Pure copy of 7 x 64-byte pages, spannning addresses 0x0000 to 0x01bf
+   // Pure copy of 7 x 64-byte pages, spanning addresses 0x0000 to 0x01bf
    uint8_t dd[] = {
       "\xFF\xC5\x00\x0A\x03\x41\x00\xFA\x02\xDA\x20\x27\xE1\x28\x33\x0D"
       "\x00\x00\x03\x00\x56\x00\x12\x02\x69\x97\x4A\x26\x28\x3C\x20\x01"
@@ -523,39 +776,46 @@ void xrp_flash(uint8_t dev)
       "\x21\x64\x64\x64\x21\x64\x64\x64\x21\x64\x64\x64\x21\x64\x64\x0A"
       "\x20\x0A\x05\x19\x00\xFF\x00\x00\x00\xFF\xFF\x00\x04\xFF\xFF\xCF"
    };
-#elif MARBLE_V2
-   // Data originally based on python hex2c.py < Marble.hex
-   // Pure copy of 7 x 64-byte pages, spannning addresses 0x0000 to 0x01bf
+#else
+#ifdef MARBLE_V2
+   // Data based on python hex2c_linear.py < Marble_flash.hex
+   // Pure copy of 7 x 64-byte pages, spanning addresses 0x0000 to 0x01bf
    uint8_t dd[] = {
       "\xFF\xC5\x00\x0A\x03\x41\x00\xFA\x02\xDA\x20\x13\xE1\x14\x33\x0D"
-      "\x00\x00\x03\x00\x50\x00\x11\x02\x15\xEB\x4E\x2A\x2C\x3C\x14\x01"
-      "\x01\x01\x01\x01\x01\x1D\x1E\xCE\x04\xB0\x0D\x00\x40\x00\x40\xCB"
-      "\x00\x58\x64\x3D\x3D\x14\x73\x59\x5D\x12\x3E\x21\x7F\x12\x28\x1E"
+      "\x00\x00\x03\x00\x50\x00\x11\x02\x15\xEB\x4E\x29\x2B\x3C\x14\x01"
+      "\x01\x01\x01\x01\x01\x1C\x1E\xCE\x04\xB0\x0D\x00\x40\x00\x40\xCB"
+      "\x00\x48\x64\x3D\x3D\x21\x65\x41\x44\x1D\x73\x21\x7F\x11\x18\xA4"
       "\xFF\xC5\x00\x0A\x03\x41\x00\xFA\x02\xDA\x20\x1D\xE1\x14\x33\x0D"
-      "\x00\x00\x04\x00\x6A\x00\x16\x02\x0D\xF3\x5F\x36\x3B\x3C\x0D\x04"
-      "\x04\x04\x04\x04\x04\x1C\x1E\xCE\x04\xB0\x0D\x00\x40\x00\x40\xCB"
-      "\x00\x90\x42\x7B\x7B\x1F\xD3\x44\x61\x1B\xE9\x20\x00\x22\x28\x62"
+      "\x00\x00\x04\x00\x6A\x00\x16\x02\x0D\xF3\x5F\x35\x3A\x3C\x0D\x04"
+      "\x04\x04\x04\x04\x04\x1B\x1E\xCE\x04\xB0\x0D\x00\x40\x00\x40\xCB"
+      "\x00\x76\x42\x7B\x7B\x17\x39\x54\xC7\x14\x1A\x23\x7D\x22\x28\xF7"
       "\xFF\xC5\x00\x0A\x03\x41\x00\xFA\x02\xDA\x20\x27\xE1\x28\x33\x0D"
       "\x00\x00\x03\x00\x40\x00\x0D\x02\x11\xEF\x58\x4D\x56\x3C\x10\x80"
       "\x80\x80\x80\x80\x80\x1D\x1E\xCE\x04\xB0\x0D\x00\x40\x00\x40\xCB"
       "\x00\x44\x50\x1E\x1E\x17\xD6\x52\x56\x15\xDD\x2A\x76\x01\x18\x76"
       "\xFF\xC5\x00\x0A\x03\x41\x00\xFA\x02\xDA\x20\x13\xE1\x28\x33\x0D"
-      "\x00\x00\x05\x00\x73\x00\x18\x02\x91\x6F\x5C\x2F\x32\x3C\x16\x40"
+      "\x00\x00\x05\x00\x73\x00\x18\x02\x91\x6F\x5C\x2E\x31\x3C\x16\x40"
       "\x40\x40\x40\x40\x40\x1D\x1E\xCE\x04\xB0\x0D\x00\x40\x00\x40\xCB"
-      "\x00\x29\x48\x3D\x3D\x15\x07\x59\x26\x11\xEE\x20\x00\x11\x18\x73"
+      "\x00\x22\x48\x3D\x3D\x22\x27\x41\x68\x1C\xA8\x20\x00\x10\x08\x8F"
       "\x05\x00\x00\x4C\x4F\x4C\x1E\x1C\x00\x30\x01\x9F\x55\x02\x02\x00"
       "\x08\x16\x04\x0A\x10\x00\x00\x00\x00\x10\x0F\x17\x10\x17\x0F\x64"
       "\x42\x50\x48\x18\x0C\x30\x18\x00\x00\x00\x00\x00\x00\x00\x00\xFF"
       "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x0F\x00\x00\x00\xE1"
-      "\x00\x00\x00\x02\x00\x00\x37\x00\x00\x0F\x02\x02\x02\x03\x09\x09"
+      "\x00\x00\x00\x02\x00\x00\x37\x00\x00\x0F\x02\x03\x02\x04\x09\x09"
       "\x09\x0A\x00\x00\x00\x00\x0F\x00\x02\x00\x00\x00\x00\x01\x00\x00"
       "\x00\x00\x00\x04\x04\x00\x00\x00\x62\x61\x61\x61\x61\x00\x00\x62"
-      "\x01\x62\xFA\x00\x80\x00\x00\xFF\x12\x02\xE1\x00\x1E\x00\x00\x34"
+      "\x01\x62\xFA\x00\x80\x00\x00\xFF\x12\x02\xE1\x00\x1E\x00\x00\xD5"
       "\x00\x02\x50\x00\x00\xFF\xFF\x32\x04\x32\x06\x32\x00\x00\x03\x00"
       "\x00\x00\x00\x00\x00\x00\x02\x00\x04\x00\x07\x00\x00\x00\x00\x64"
       "\x21\x64\x64\x64\x20\x64\x64\x64\x21\x64\x64\x64\x22\x64\x64\x0A"
       "\x20\x0A\x05\x19\xFF\x00\x00\x00\x00\xFF\xFF\x00\x04\xFF\xFF\x12"
    };
+#endif /* ifdef MARBLE_V2 */
+#endif /* ifdef MARBLEM_V1 */
+
+  // HACK! part 2
+#ifdef SIMULATION
+#undef MARBLE_V2
 #endif
 
    const unsigned dd_size = sizeof(dd) / sizeof(dd[0]);
@@ -573,6 +833,10 @@ void xrp_flash(uint8_t dev)
 
 void xrp_go(uint8_t dev)
 {
+  if (marble_get_pcb_rev() > Marble_v1_3) {
+    printf("XRP7724 not present; bypassed.\n");
+    return;
+  }
    printf("XRP7724 go [%2.2x]\n", dev);
    // check that PWR_CHIP_READY (0E) reads back 0
    xrp_reg_write_check(dev, 0x0E, 0x0000);
@@ -594,6 +858,10 @@ void xrp_go(uint8_t dev)
 
 void xrp_hex_in(uint8_t dev)
 {
+  if (marble_get_pcb_rev() > Marble_v1_3) {
+    printf("XRP7724 not present; bypassed.\n");
+    return;
+  }
    printf("XRP7724 hex in (WIP) [%2.2x]\n", dev);
    printf("Do not use for flash programming! (yet)\n");
    // check that PWR_CHIP_READY (0E) reads back 0

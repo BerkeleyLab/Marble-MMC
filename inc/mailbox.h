@@ -1,35 +1,38 @@
 #ifndef MAILBOX_H_
 #define MAILBOX_H_
 
-/* Mailbox */
-typedef enum {
-   MB3_COUNT_HI = 0,
-   MB3_COUNT_LO,
-   MB3_PAD1,
-   MB3_PAD2,
-   MB3_LM75_0_HI,
-   MB3_LM75_0_LO,
-   MB3_LM75_1_HI,
-   MB3_LM75_1_LO,
-   MB3_FMC_ST,
-   MB3_PWR_ST,
-   MB3_MGTMUX_ST,
-   MB3_PAD3,
-   MB3_GIT32_4,
-   MB3_GIT32_3,
-   MB3_GIT32_2,
-   MB3_GIT32_1,
-   MB3_SIZE
-} PAGE3_ENUM;
+#ifdef __cplusplus
+ extern "C" {
+#endif
 
-typedef enum {
-   MB2_FMC_MGT_CTL = 0,
-   MB2_SIZE
-} PAGE2_ENUM;
+#include "console.h"
+#include "mailbox_def.h"
 
+#define MBOX_PRINT_PAGE(npage) do { \
+  printf("Page %d\r\n", npage); \
+  for (int n = 0; n < MB ## npage ## _SIZE; n++) { \
+    printf("0x%x ", page[n]); \
+  } \
+  printf("\r\n"); \
+} while (0);
+
+void mbox_enable(void);
+void mbox_disable(void);
+int mbox_get_enable(void);
 void mbox_update(bool verbose);
-void mbox_peek(void);
+uint16_t mbox_get_update_count(void);
+void mbox_reset_update_count(void);
+void mbox_read_page(uint8_t page_no, uint8_t page_sz, uint8_t *page);
+void mbox_write_page(uint8_t page_no, uint8_t page_sz, const uint8_t page[]);
+// The below write/read to/from the currently selected page
+void mbox_write_entry(uint8_t entry_no, uint8_t data);
+uint8_t mbox_read_entry(uint8_t entry_no);
 
-int push_fpga_mac_ip(unsigned char data[10]);
+int push_fpga_mac_ip(mac_ip_data_t *pmac_ip_data);
+//int push_fpga_mac_ip(unsigned char data[10]);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // MAILBOX_H_

@@ -8,14 +8,14 @@ own copyright/license in the source file.
 Released as part of ARM CMSIS, under a
 [new-style BSD license](http://opensource.org/licenses/BSD-3-Clause). You can
 find all the BSD licensed parts of ARM CMSIS
-[here](https://github.com/pfalcon/ARM-CMSIS-BSD). 
+[here](https://github.com/pfalcon/ARM-CMSIS-BSD).
 
 ##### `chip/system_LPC**xx.*` #####
 
 Released as part of ARM CMSIS, under a
 [new-style BSD license](http://opensource.org/licenses/BSD-3-Clause). You can
 find all the BSD licensed parts of ARM CMSIS
-[here](https://github.com/pfalcon/ARM-CMSIS-BSD). 
+[here](https://github.com/pfalcon/ARM-CMSIS-BSD).
 
 Subsequently modified for the LPC**xx device.
 
@@ -24,7 +24,7 @@ Subsequently modified for the LPC**xx device.
 Released as part of ARM CMSIS, under a
 [new-style BSD license](http://opensource.org/licenses/BSD-3-Clause). You can
 find all the BSD licensed parts of ARM CMSIS
-[here](https://github.com/pfalcon/ARM-CMSIS-BSD). 
+[here](https://github.com/pfalcon/ARM-CMSIS-BSD).
 
 Subsequently modified for the LPC**xx device. Incorporates code
 generated from the NXP User Manual using
