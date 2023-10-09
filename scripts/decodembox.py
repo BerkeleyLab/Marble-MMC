@@ -49,6 +49,8 @@ def getFromFile(filename):
     return list(mbox)
 
 def getIPAddr(s):
+    if s is None:
+        return "127.0.0.1"
     # IPv4
     match = re.search('(\d+.\d+.\d+.\d+)', s)
     if match:

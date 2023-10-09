@@ -33,7 +33,8 @@ Offset|Name|Size|Direction|Desc|Note
 6|MB4\_MAX\_F1\_DUTY|1|MCC=\>FPGA|Returns MAX6639 ch1 fan duty cycle as duty\_percent*1.2.|
 7|MB4\_MAX\_F2\_DUTY|1|MCC=\>FPGA|Returns MAX6639 ch2 fan duty cycle as duty\_percent*1.2.|
 8|MB4\_PCB\_REV|1|MCC=\>FPGA|Returns bitfield. [4:7]=Board type (0=sim, 1=marble, 2=mini), [0:3]=PCB rev|
-9|MB4\_COUNT|2|MCC=\>FPGA|Mailbox update counter|Access by byte as: MB4\_COUNT\_x (x=0,1)
+10|MB4\_COUNT|2|MCC=\>FPGA|Mailbox update counter|Access by byte as: MB4\_COUNT\_x (x=0,1)
+12|MB4\_HASH|4|MCC=\>FPGA|Hash of mailbox functionality.|Access by byte as: MB4\_HASH\_x (x=0,1,2,3)
 
 # Page 5
 
