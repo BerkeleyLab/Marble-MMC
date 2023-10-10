@@ -163,12 +163,19 @@ int main(void) {
       }
       // TODO - fix encapsulation here
       if (fpga_net_prog_pend) {
+<<<<<<< HEAD
         if (BSP_GET_SYSTICK() > fpga_done_tickval + FPGA_PUSH_DELAY_MS) {
           console_print_mac_ip();
           console_push_fpga_mac_ip();
           printf("DONE\r\n");
           fpga_net_prog_pend=0;
         }
+=======
+         print_mac_ip(mac_ip_data);
+         push_fpga_mac_ip(mac_ip_data);
+         printf("DONE\r\n");
+         fpga_net_prog_pend=0;
+>>>>>>> master
       }
 #ifdef SIMULATION
       if (sim_platform_service()) {
