@@ -11,11 +11,12 @@
 
 #define LED_SNAKE
 #ifdef MARBLE_V2
+
 static void mgtclk_xpoint_en(void)
 {
-   if (xrp_ch_status(XRP7724, 1)) { // CH1: 3.3V
+   if ((marble_get_pcb_rev() < Marble_v1_4) & xrp_ch_status(XRP7724, 1)) { // CH1: 3.3V
       adn4600_init();
-   } else if (ltm_ch_status(LTM4673)) {
+   } else if ((marble_get_pcb_rev() > Marble_v1_3) & ltm_ch_status(LTM4673)) {
       printf("Using LTM4673 and adn4600_init\r\n");
       adn4600_init();
    } else {

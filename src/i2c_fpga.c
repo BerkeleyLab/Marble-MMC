@@ -453,7 +453,7 @@ void si570_status()
    // Nominal internal crystal frequency
    // from datasheet, typically 114.285 MHz +/- 2000 ppm, see page 12
    // In the future, maybe this could this come from a non-volatile mmc parameter
-   float fxtal = 114.3982e6;
+   float fxtal = 114.285e6;
    float fout = (fxtal * rfreq)/(hs_div*n1);
 
    printf("> HS_DIV: %x\r\n", hs_div);
