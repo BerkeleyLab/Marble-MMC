@@ -44,7 +44,7 @@ static void _sigHandler(int c);
 
 // Emulate UART_RXNE_ISR() from marble_board.c but with keyboard input from stdin
 // Also emulate USART_TXE_ISR() for printf()
-int sim_platform_service(void) {
+int board_service(void) {
   uint8_t outByte;
   shiftMessage();
   if (sim_console_state.msgReady) {
@@ -105,15 +105,19 @@ static int shiftMessage(void) {
   return 0;
 }
 
-uint32_t marble_init(bool initFlash) {
+uint32_t marble_init(void) {
   _timeStart = BSP_GET_SYSTICK();
   _fpgaDonePend = 1;
   signal(SIGINT, _sigHandler);
   fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK);
   sim_console_state.toExit = 0;
   sim_console_state.msgReady = 0;
-  eeprom_init(initFlash);
+  eeprom_init();
   return 0;
+}
+
+void pwr_autoboot(void) {
+  return;
 }
 
 Marble_PCB_Rev_t marble_get_pcb_rev(void) {
@@ -199,6 +203,10 @@ void marble_PSU_reset_write(bool on) {
 }
 
 uint8_t marble_PWR_status(void) {
+  return 0;
+}
+
+int marble_PMBridge_do_sanitized_xact(uint16_t *xact, int len) {
   return 0;
 }
 

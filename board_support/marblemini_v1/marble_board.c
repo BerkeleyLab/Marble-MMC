@@ -52,6 +52,14 @@ I2C_BUS I2C_FPGA;
 I2C_BUS I2C_PM;
 I2C_BUS I2C_IPMB;
 
+/* int board_service(void);
+ *  Call in main loop. Handles routines scheduled from interrupts.
+ *  Must always return 0 (otherwise execution will terminate).
+ */
+int board_service(void) {
+   // TODO - Any board-specific maintenance for the main loop
+   return 0;
+}
 /************
 * UART
 ************/
@@ -214,6 +222,7 @@ void marble_PSU_pwr(bool on)
 }
 
 void marble_PSU_reset_write(bool on) {
+  _UNUSED(on);
   // Not implemented on marble mini?
   return;
 }
@@ -653,16 +662,16 @@ uint8_t marble_get_board_id(void) {
 * Board Init
 ************/
 
-uint32_t marble_init(bool use_xtal)
+uint32_t marble_init(void)
 {
    // Must happen before any other clock manipulations:
    SystemCoreClockUpdate(); /* Update the value of SystemCoreClock */
 
-   if (use_xtal) {
-      Chip_SetupXtalClocking();
-   } else {
-      Chip_SetupIrcClocking(); // 120 MHz based on 12 MHz internal clock
-   }
+#ifdef CLOCK_USE_XTAL
+   Chip_SetupXtalClocking();
+#else
+   Chip_SetupIrcClocking(); // 120 MHz based on 12 MHz internal clock
+#endif
 
    SystemCoreClockUpdate(); /* Update the value of SystemCoreClock (120 MHz) */
 
@@ -693,4 +702,16 @@ uint32_t marble_init(bool use_xtal)
    marble_MDIO_init();
 
    return SystemCoreClock;
+}
+
+/* This will probably remain unused for the Marble-Mini  */
+int marble_PMBridge_do_sanitized_xact(uint16_t *xact, int len) {
+   _UNUSED(xact);
+   _UNUSED(len);
+   return 0;
+}
+
+void pwr_autoboot(void) {
+   // This likely also unused for Marble-Mini
+   return;
 }

@@ -111,12 +111,11 @@ typedef enum {
 } Marble_PCB_Rev_t;
 
 /* Initialize uC and peripherals before main code can run. */
-#ifndef SIMULATION
-uint32_t marble_init(bool use_xtal);
-#else
-uint32_t marble_init(bool initFlash);
-int sim_platform_service(void);
-#endif
+uint32_t marble_init(void);
+
+int board_service(void);
+
+void pwr_autoboot(void);
 
 Marble_PCB_Rev_t marble_get_pcb_rev(void);
 
@@ -251,6 +250,7 @@ int marble_I2C_recv(I2C_BUS I2C_bus, uint8_t addr, uint8_t *data, int size);
 int marble_I2C_cmdrecv(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size);
 int marble_I2C_cmdsend_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *data, int size);
 int marble_I2C_cmdrecv_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *data, int size);
+int marble_PMBridge_do_sanitized_xact(uint16_t *xact, int len);
 int getI2CBusStatus(void);
 void resetI2CBusStatus(void);
 

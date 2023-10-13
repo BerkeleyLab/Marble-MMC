@@ -86,7 +86,6 @@ all: $(OUTPUT_DIR)/$(PROJECT_NAME)
 SOURCES := $(SIM_SOURCES)
 include $(BUILD_DIR)/sources.mk
 SOURCES := $(filter-out $(IGNORES), $(SOURCES))
-$(info "SOURCES =" $(SOURCES))
 
 # Translate this list of sources into a list of required objects
 # in the output directory

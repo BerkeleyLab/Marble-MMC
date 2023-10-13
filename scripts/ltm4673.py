@@ -202,6 +202,12 @@ commands = {
     "MFR_TEMPERATURE_1_MIN":         (0xfd, MODE_WORD),
 }
 
+def print_commands_c():
+    for name, arg in commands.items():
+        addr, mode = arg
+        print(f"#define LTM4673_{name:32s} (0x{addr:02x})")
+    return
+
 def write_byte(cmd, val):
     #   WRITE_BYTE:         | cmd + wr  | command code | data byte |
     args = vet_args(cmd, val)
@@ -491,4 +497,4 @@ MMC_READ_BLOCK      = '*'
 #   DDD : Use decimal value DDD as the next transaction byte
 
 if __name__ == "__main__":
-    printMissing()
+    print_commands_c()

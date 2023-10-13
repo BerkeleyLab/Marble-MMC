@@ -12,6 +12,13 @@
 
 /* ============================ Static Variables ============================ */
 extern I2C_BUS I2C_PM;
+// PMBridge
+static const uint8_t pmbus_limits [][7] = {
+// *_hi only used for WORD access type registers
+//{command_code, pass_mask_lo,  min_lo, max_lo, pass_mask_hi, min_hi, max_hi}
+  {LTM4673_PAGE, 0xff,          0x00,   0xff,   0xff,         0,      0     },
+};
+#define PMBUS_LIMITS_ENTRIES    sizeof(pmbus_limits)/7
 
 /* =========================== Static Prototypes ============================ */
 static int set_max6639_reg(int regno, int value);
@@ -391,6 +398,95 @@ void ltm_read_telem(uint8_t dev)
           }
       }
    }
+}
+
+int PMBridge_xact(uint16_t *xact, int len) {
+  // Msg bytes:
+  //  | Addr + rnw | command_code | [data] ... |
+  /* ===================== Message Syntax Validation =========================
+   * Syntax Rules:
+   *  xact[0] MUST be Addr+wr (even reads always start with a write)
+   *  xact[1] MUST be command_code
+   *  if xact[2] is PMBRIDGE_XACT_REPEAT_START: (xact is read)
+   *    xact[3] MUST be Addr+r
+   *    xact[3] MUST be either PMBRIDGE_XACT_READ_ONE or PMBRIDGE_XACT_READ_BLOCK
+   *  elif xact[2] is PMBRIDGE_XACT_READ_ONE or PMBRIDGE_XACT_READ_BLOCK:
+   *    ERROR!
+   *  else: (xact is write)
+   *    xact[2:] are data to be written
+   */
+  if (len < 2) {
+    printf("Transaction shorter than min length (2)\r\n");
+    return -1;
+  }
+  int syntax_invalid = 0;
+  unsigned int read = 0;
+  uint8_t command_code;
+  // Recall I2C addresses above 8-bit 0xee (7-bit 0x77) are reserved for 10-bit addressing
+  if (xact[0] > 0xee) {
+    syntax_invalid |= (1);
+  }
+  // Even read transactions start with an I2C write
+  if (xact[0] & 1) {
+    syntax_invalid |= (1<<1);
+  }
+  // Command codes must be 1 byte (no control chars in the 1 position)
+  if (xact[1] > 0xff) {
+    syntax_invalid |= (1<<2);
+  }
+  command_code = xact[1] & 0xff;
+  if (len > 2) {
+    if (xact[2] == PMBRIDGE_XACT_REPEAT_START) {
+      read = 1;
+      if (len > 3) {
+        if (xact[3] < PMBRIDGE_XACT_READ_ONE) {
+          printf("Repeat Start not followed by PMBRIDGE_XACT_READ_ONE or PMBRIDGE_XACT_READ_BLOCK\r\n");
+          syntax_invalid |= (1<<4);
+        }
+      } else {
+        printf("Repeat Start not followed by PMBRIDGE_XACT_READ_ONE or PMBRIDGE_XACT_READ_BLOCK\r\n");
+        syntax_invalid |= (1<<5);
+      }
+    } else if (xact[2] & 0x100) { // PMBRIDGE_XACT_READ_ONE or PMBRIDGE_XACT_READ_BLOCK
+      printf("Command code followed improperly by PMBRIDGE_XACT_READ_ONE or PMBRIDGE_XACT_READ_BLOCK\r\n");
+      syntax_invalid |= (1<<3);
+    }
+  } else {
+    // No additional syntax checks needed on SEND_BYTE protocol types
+  }
+  if (syntax_invalid) {
+    printf("Invalid transaction syntax: 0x%x\r\n", syntax_invalid);
+    return -1;
+  }
+  /* ====================== Context-Aware Sanitation ==========================
+   * Limits only enforced for WRITE transactions
+   * This step can be skipped with compile-time macro PMBUS_REMOVE_SAFEGUARDS
+   */
+#ifndef PMBUS_REMOVE_SAFEGUARDS
+  uint8_t lim;
+  uint8_t data;
+  if (!read) {
+    for (unsigned int n = 0; n < PMBUS_LIMITS_ENTRIES; n++) {
+      if (pmbus_limits[n][0] == command_code) {
+        // Apply limits to data_lo (and data_hi if len > 3)
+        for (int m = 2; m < len; m++) {
+          // Apply pass_mask
+          data = xact[m];
+          data = data & pmbus_limits[n][3*(m-2)+1];
+          // Clip at lower limit
+          lim = pmbus_limits[n][3*(m-2)+2];
+          data = data < lim ? lim : data;
+          // Clip at upper limit
+          lim = pmbus_limits[n][3*(m-2)+3];
+          data = data > lim ? lim : data;
+          // Clobber old data
+          xact[m] = data;
+        }
+      }
+    }
+  }
+#endif
+  return marble_PMBridge_do_sanitized_xact(xact, len);
 }
 
 /* XPR7724 is special

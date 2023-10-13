@@ -61,11 +61,6 @@ const char *menu_str[] = {"\r\n",
 };
 #define MENU_LEN (sizeof(menu_str)/sizeof(*menu_str))
 
-typedef enum {
-   CONSOLE_TOP,
-} console_mode_e;
-
-static console_mode_e console_mode;
 static uint8_t _msgCount;
 static uint8_t _fpgaEnable;
 
@@ -106,7 +101,6 @@ static void console_print_fsynth(void);
 
 int console_init(void) {
   _msgCount = 0;
-  console_mode = CONSOLE_TOP;
   return 0;
 }
 
@@ -1036,16 +1030,14 @@ static void console_print_fsynth(void) {
     0xHH: Use hex value 0xHH as the next transaction byte
     DDD : Use decimal value DDD as the next transaction byte
 */
-#define MAX_LINE_LENGTH   (256)
-#define MAX_ITEMS         (32)
 static int sscanfPMBridge(const char *s, int len) {
   // Skip the first character (command char)
   int ptr = sscanfNext(s, len);
   int ptrinc; // DEBUG
-  int max_len = len > MAX_LINE_LENGTH ? MAX_LINE_LENGTH : len;
+  int max_len = len > PMBRIDGE_MAX_LINE_LENGTH ? PMBRIDGE_MAX_LINE_LENGTH : len;
   int arg;
   int item_index = 0;
-  uint16_t xact[MAX_ITEMS];
+  uint16_t xact[PMBRIDGE_XACT_MAX_ITEMS];
   while (ptr < max_len) {
     if (s[ptr] == '\n') {
       break;
@@ -1054,10 +1046,15 @@ static int sscanfPMBridge(const char *s, int len) {
     //printf("consume arg ptr %d -> %d\r\n", ptr, ptr+ptrinc);
     ptr += ptrinc;
     if (arg < 0) {
-      printf("Parse failed at character %d [%c]\r\n", ptr, s[ptr]);
+      printf("ERROR: Parse failed at character %d [%c]\r\n", ptr, s[ptr]);
       break;
     } else {
-      xact[item_index++] = (uint16_t)(arg & 0xffff);
+      if (item_index < PMBRIDGE_XACT_MAX_ITEMS) {
+        xact[item_index++] = (uint16_t)(arg & 0xffff);
+      } else {
+        printf("ERROR: Exceeded maximum number of bytes per transaction\r\n");
+        break;
+      }
     }
     ptrinc = sscanfNonSpace(s+ptr, len-ptr);
     if (ptrinc == -1) {
@@ -1071,18 +1068,27 @@ static int sscanfPMBridge(const char *s, int len) {
     printf("0x%x ", xact[n]);
   }
   printf("]\r\n");
+  PMBridge_xact(xact, item_index);
   return 0;
 }
 
 #define MMC_REPEAT_START      ('!')
 #define MMC_READ_ONE          ('?')
 #define MMC_READ_BLOCK        ('*')
-#define XACT_REPEAT_START (0x100)
-#define XACT_READ_ONE     (0x101)
-#define XACT_READ_BLOCK   (0x102)
-
+/* static int PMBridgeConsumeArg(const char *s, int len, volatile int *arg);
+ *  Consume one whitespace-separated arg from string 's'.
+ *  Returns when:
+ *    1. Whitespace is encountered
+ *      1a. If no valid chars have been parsed, *arg is set to -1.
+ *      1b. Otherwise, *arg is set to the parsed value.
+ *    2. An invalid character is encountered
+ *      2a. Always sets *arg to -1.
+ *    3. 'len' characters have been consumed
+ *      3a. Check value of *arg for validity.
+ *  Always returns the index into 's' where parsing stopped.
+ */
 static int PMBridgeConsumeArg(const char *s, int len, volatile int *arg) {
-  int max_len = len > MAX_LINE_LENGTH ? MAX_LINE_LENGTH : len;
+  int max_len = len > PMBRIDGE_MAX_LINE_LENGTH ? PMBRIDGE_MAX_LINE_LENGTH : len;
   int state = 0;
   // state:
   //  0 : No chars processed
@@ -1106,13 +1112,13 @@ static int PMBridgeConsumeArg(const char *s, int len, volatile int *arg) {
     // Look for special PMBridge characters
     } else if (c == MMC_REPEAT_START) {
       state = 4;
-      val = XACT_REPEAT_START;
+      val = PMBRIDGE_XACT_REPEAT_START;
     } else if (c == MMC_READ_ONE) {
       state = 4;
-      val = XACT_READ_ONE;
+      val = PMBRIDGE_XACT_READ_ONE;
     } else if (c == MMC_READ_BLOCK) {
       state = 4;
-      val = XACT_READ_BLOCK;
+      val = PMBRIDGE_XACT_READ_BLOCK;
     } else if (state == 4) {
       // If we get here, then a special char was not properly followed by whitespace. Fail.
       printf("Special not followed by whitespace\r\n");
