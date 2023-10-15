@@ -52,6 +52,7 @@
 # Read Byte, Read Word, Block Read
 # Alert Response Address
 
+MMC_COMMAND_CHAR_PMBRIDGE = 't'
 addr_alert  = 0x19 # 8-bit
 addr_global = 0xb6 # 8-bit
 addr_base   = 0xb8 # 8-bit (note this can be changed via MFR_I2C_BASE_ADDRESS register)
@@ -460,7 +461,7 @@ def read(cmd):
     return get_xact(cmd, None, pec=False)
 
 def translate_xact_mmc(xact):
-    line = []
+    line = [MMC_COMMAND_CHAR_PMBRIDGE]
     first = True
     for msg in xact:
         if not first:
@@ -514,7 +515,7 @@ def trial():
     xacts = []
     xacts.append(write(VIN_ON,0xCA40))
     lines = translate_mmc(xacts)
-    print(lines)
+    return lines
 
 def program():
     """Program derived from LTC PMBus Project Text File Version:1.1"""
@@ -737,11 +738,26 @@ def program():
     xacts.append(write(MFR_TEMP_1_OFFSET,0x8000))
 
     lines = translate_mmc(xacts)
-    for line in lines:
-        print(line)
+    return lines
+
+def main(argv):
+    import load
+    parser = load.ArgParser()
+    parser.add_argument('--test', default=False, action="store_true", help='Test; not full program')
+    # TODO - Enable complete readback
+    #parser.add_argument('--read', default=False, action="store_true", help='Test; not full program')
+    args = parser.parse_args()
+    if args.test:
+        lines = trial()
+    else:
+        lines = program()
+    if args.dev is not None:
+        load.loadCommands(args.dev, args.baud, args.commands)
+    else:
+        for line in lines:
+            print(line)
 
 if __name__ == "__main__":
-    #print_commands_c()
-    #print(globals())
     #trial()
-    program()
+    import sys
+    main(sys.argv)

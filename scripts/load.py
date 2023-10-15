@@ -100,8 +100,8 @@ def getLines(filename):
                 lines.append(line)
     return lines
 
-def serveFile(sdev, filename):
-    lines = getLines(filename)
+"""
+def serveLines(sdev, lines):
     nlines = 0
     for line in lines:
         if len(line) > 0 and not line.strip().startswith('#'):
@@ -110,6 +110,12 @@ def serveFile(sdev, filename):
             time.sleep(INTERCOMMAND_SLEEP)
     print(f">   Wrote {nlines} lines")
     return
+"""
+
+def serveFile(sdev, filename):
+    lines = getLines(filename)
+    #return serveLines(sdev, lines)
+    return serveCommands(sdev, lines)
 
 def serveCommands(sdev, *commands):
     nlines = 0
@@ -133,28 +139,51 @@ def testReadLines(argv):
     print("got {}".format(lines))
     return True
 
-def doLoad(argv):
-    # Unused 'argv' since argparse is handling everything
+def loadCommands(dev, baud=115200, commands=None):
+    if commands is None:
+        print("Missing mandatory filename")
+        return 1
+    sdev = StreamSerial(dev, baud)
+    if sdev.failed():
+        return 1
+    executor = Executor(max_workers = 2)
+    task1 = executor.submit(serveCommands, sdev, *commands)
+    task2 = executor.submit(readDevice, sdev, task1)
+    return 0
+
+def loadFile(dev, baud=115200, filename=None):
+    if filename is None:
+        print("Missing mandatory filename")
+        return 1
+    sdev = StreamSerial(dev, baud)
+    if sdev.failed():
+        return 1
+    executor = Executor(max_workers = 2)
+    task1 = executor.submit(serveFile, sdev, filename)
+    task2 = executor.submit(readDevice, sdev, task1)
+    return 0
+
+def ArgParser():
     parser = argparse.ArgumentParser(description="Script loader for marble_mmc")
-    parser.add_argument('-f', '--filename', default=None, help='File name for command script to be loaded')
-    parser.add_argument('-d', '--dev', default='/dev/ttyUSB3',
+    parser.add_argument('-d', '--dev', default=None,
                         help='Device descriptor of TTY/COM port for marble_mmc')
     parser.add_argument('-b', '--baud', default=115200, help="UART Baud rate")
+    return parser
+
+def doLoad(argv):
+    # Unused 'argv' since argparse is handling everything
+    parser = ArgParser()
+    parser.add_argument('-f', '--filename', default=None, help='File name for command script to be loaded')
     # Any ordered args will be assumed to be commands to pass to device
     parser.add_argument("commands", nargs=argparse.REMAINDER, help="Strings to be sent directly to device")
     args = parser.parse_args()
     if args.filename is None and len(args.commands) == 0:
         print("Missing mandatory filename or ordered args")
         return 1
-    sdev = StreamSerial(args.dev, args.baud)
-    if sdev.failed():
-        return 1
-    executor = Executor(max_workers = 2)
     if args.filename is not None:
-        task1 = executor.submit(serveFile, sdev, args.filename)
-    else:
-        task1 = executor.submit(serveCommands, sdev, *args.commands)
-    task2 = executor.submit(readDevice, sdev, task1)
+        loadFile(args.dev, args.baud, args.filename)
+    elif len(args.commands) > 0:
+        loadCommands(args.dev, args.baud, args.commands)
     return 0
 
 if __name__ == "__main__":
