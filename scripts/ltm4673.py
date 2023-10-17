@@ -2,6 +2,8 @@
 
 # LTM4673 PMBus protocol definitions
 
+import re
+
 # SMBus
 # Legend:
 #   ~> means controller to peripheral
@@ -55,9 +57,9 @@
 MMC_COMMAND_CHAR_PMBRIDGE = 't'
 addr_alert  = 0x19 # 8-bit
 addr_global = 0xb6 # 8-bit
-addr_base   = 0xb8 # 8-bit (note this can be changed via MFR_I2C_BASE_ADDRESS register)
-pin_offset  = 0
-addr_dev    = addr_base + pin_offset
+addr_base   = 0xb8 # 8-bit (0x5c 7-bit)(note this can be changed via MFR_I2C_BASE_ADDRESS register)
+pin_offset  = 4
+addr_dev    = addr_base + 2*pin_offset
 
 # nbytes = 0: send_byte command
 # nbytes = 1: write_byte/read_byte command
@@ -205,6 +207,18 @@ commands = {
 
 for name, arg in commands.items():
     globals()[name] = arg[0]
+
+def _int(x):
+    try:
+        return int(x)
+    except ValueError:
+        pass
+    try:
+        return int(x, 16)
+    except ValueError:
+        pass
+    return None
+
 
 def print_commands_c():
     for name, arg in commands.items():
@@ -511,253 +525,410 @@ MMC_READ_BLOCK      = '*'
 #   0xHH: Use hex value 0xHH as the next transaction byte
 #   DDD : Use decimal value DDD as the next transaction byte
 
-def trial():
-    xacts = []
-    xacts.append(write(VIN_ON,0xCA40))
-    lines = translate_mmc(xacts)
-    return lines
+# Program derived from LTC PMBus Project Text File Version:1.1
+_program = (
+    # Select PAGE 0xff
+    #(PAGE,0xff),
+    (0xff, (
+        (WRITE_PROTECT,0x00),
+        (VIN_ON,0xCA40),
+        (VIN_OFF,0xCA33),
+        (VIN_OV_FAULT_LIMIT,0xD3C0),
+        (VIN_OV_FAULT_RESPONSE,0x80),
+        (VIN_OV_WARN_LIMIT,0xD380),
+        (VIN_UV_WARN_LIMIT,0x8000),
+        (VIN_UV_FAULT_LIMIT,0x8000),
+        (VIN_UV_FAULT_RESPONSE,0x00),
+        (USER_DATA_00,0x0000),
+        (USER_DATA_02,0x0000),
+        (USER_DATA_04,0x0000),
+        (MFR_EIN_CONFIG,0x00),
+        (MFR_IIN_CAL_GAIN_TC,0x0000),
+        (MFR_CONFIG_ALL_LTM4673,0x0F73),
+        (MFR_PWRGD_EN,0x0000),
+        (MFR_FAULTB0_RESPONSE,0x00),
+        (MFR_FAULTB1_RESPONSE,0x00),
+        (MFR_CONFIG2_LTM4673,0x00),
+        (MFR_CONFIG3_LTM4673,0x00),
+        (MFR_RETRY_DELAY,0xF320),
+        (MFR_RESTART_DELAY,0xFB20),
+        (MFR_POWERGOOD_ASSERTION_DELAY,0xEB20),
+        (MFR_WATCHDOG_T_FIRST,0x8000),
+        (MFR_WATCHDOG_T,0x8000),
+        (MFR_PAGE_FF_MASK,0x0F),
+        (MFR_I2C_BASE_ADDRESS,0x5C),
+        (MFR_IIN_CAL_GAIN,0xCA80),
+        (MFR_RETRY_COUNT,0x07),
+    )),
+    # Select PAGE 0
+    #(PAGE,0x00),
+    (0x00, (
+        (OPERATION,0x80),
+        (ON_OFF_CONFIG,0x1E),
+        (VOUT_COMMAND,0x2000),
+        (VOUT_MAX,0x8000),
+        (VOUT_MARGIN_HIGH,0x219A),
+        (VOUT_MARGIN_LOW,0x1E66),
+        (VOUT_OV_FAULT_LIMIT,0x2333),
+        (VOUT_OV_FAULT_RESPONSE,0x80),
+        (VOUT_OV_WARN_LIMIT,0x223D),
+        (VOUT_UV_WARN_LIMIT,0x1DC3),
+        (VOUT_UV_FAULT_LIMIT,0x1CCD),
+        (VOUT_UV_FAULT_RESPONSE,0x7F),
+        (IOUT_OC_FAULT_LIMIT,0xDA20),
+        (IOUT_OC_FAULT_RESPONSE,0x00),
+        (IOUT_OC_WARN_LIMIT,0xD340),
+        (IOUT_UC_FAULT_LIMIT,0xC500),
+        (IOUT_UC_FAULT_RESPONSE,0x00),
+        (OT_FAULT_LIMIT,0xF200),
+        (OT_FAULT_RESPONSE,0xB8),
+        (OT_WARN_LIMIT,0xEBE8),
+        (UT_WARN_LIMIT,0xDD80),
+        (UT_FAULT_LIMIT,0xE530),
+        (UT_FAULT_RESPONSE,0xB8),
+        (POWER_GOOD_ON,0x1EB8),
+        (POWER_GOOD_OFF,0x1E14),
+        (TON_DELAY,0xBA00),
+        (TON_RISE,0xE320),
+        (TON_MAX_FAULT_LIMIT,0xF258),
+        (TON_MAX_FAULT_RESPONSE,0xB8),
+        (TOFF_DELAY,0xBA00),
+        (USER_DATA_01,0x0000),
+        (USER_DATA_03,0x0000),
+        (MFR_IOUT_CAL_GAIN_TAU_INV,0x8000),
+        (MFR_IOUT_CAL_GAIN_THETA,0x8000),
+        (MFR_CONFIG_LTM4673,0x0088),
+        (MFR_FAULTB0_PROPAGATE,0x00),
+        (MFR_FAULTB1_PROPAGATE,0x00),
+        (MFR_DAC,0x01FF),
+        (MFR_VOUT_DISCHARGE_THRESHOLD,0xC200),
+        (MFR_IOUT_CAL_GAIN_TC,0x0000),
+        (MFR_TEMP_1_GAIN,0x4000),
+        (MFR_TEMP_1_OFFSET,0x8000),
+    )),
+    # Select PAGE 1
+    #(PAGE,0x01),
+    (0x01, (
+        (OPERATION,0x80),
+        (ON_OFF_CONFIG,0x1E),
+        (VOUT_COMMAND,0x399A),
+        (VOUT_MAX,0xFFFF),
+        (VOUT_MARGIN_HIGH,0x3C7B),
+        (VOUT_MARGIN_LOW,0x36B9),
+        (VOUT_OV_FAULT_LIMIT,0x3F5D),
+        (VOUT_OV_FAULT_RESPONSE,0x80),
+        (VOUT_OV_WARN_LIMIT,0x3DEC),
+        (VOUT_UV_WARN_LIMIT,0x3548),
+        (VOUT_UV_FAULT_LIMIT,0x33D7),
+        (VOUT_UV_FAULT_RESPONSE,0x7F),
+        (IOUT_OC_FAULT_LIMIT,0xD200),
+        (IOUT_OC_FAULT_RESPONSE,0x00),
+        (IOUT_OC_WARN_LIMIT,0xCB00),
+        (IOUT_UC_FAULT_LIMIT,0xBD00),
+        (IOUT_UC_FAULT_RESPONSE,0x00),
+        (OT_FAULT_LIMIT,0xF200),
+        (OT_FAULT_RESPONSE,0xB8),
+        (OT_WARN_LIMIT,0xEBE8),
+        (UT_WARN_LIMIT,0xDD80),
+        (UT_FAULT_LIMIT,0xE530),
+        (UT_FAULT_RESPONSE,0xB8),
+        (POWER_GOOD_ON,0x372F),
+        (POWER_GOOD_OFF,0x3643),
+        (TON_DELAY,0xEB20),
+        (TON_RISE,0xE320),
+        (TON_MAX_FAULT_LIMIT,0xF258),
+        (TON_MAX_FAULT_RESPONSE,0xB8),
+        (TOFF_DELAY,0xBA00),
+        (USER_DATA_01,0x0000),
+        (USER_DATA_03,0x0000),
+        (MFR_IOUT_CAL_GAIN_TAU_INV,0x8000),
+        (MFR_IOUT_CAL_GAIN_THETA,0x8000),
+        (MFR_CONFIG_LTM4673,0x1088),
+        (MFR_FAULTB0_PROPAGATE,0x00),
+        (MFR_FAULTB1_PROPAGATE,0x00),
+        (MFR_DAC,0x0245),
+        (MFR_VOUT_DISCHARGE_THRESHOLD,0xC200),
+        (MFR_IOUT_CAL_GAIN_TC,0x0000),
+        (MFR_TEMP_1_GAIN,0x4000),
+        (MFR_TEMP_1_OFFSET,0x8000),
+    )),
+    # Select PAGE 2
+    #(PAGE,0x02),
+    (0x02, (
+        (OPERATION,0x80),
+        (ON_OFF_CONFIG,0x1E),
+        (VOUT_COMMAND,0x5000),
+        (VOUT_MAX,0xFFFF),
+        (VOUT_MARGIN_HIGH,0x5400),
+        (VOUT_MARGIN_LOW,0x4C00),
+        (VOUT_OV_FAULT_LIMIT,0x5800),
+        (VOUT_OV_FAULT_RESPONSE,0x80),
+        (VOUT_OV_WARN_LIMIT,0x563D),
+        (VOUT_UV_WARN_LIMIT,0x4A3D),
+        (VOUT_UV_FAULT_LIMIT,0x4800),
+        (VOUT_UV_FAULT_RESPONSE,0x7F),
+        (IOUT_OC_FAULT_LIMIT,0xD200),
+        (IOUT_OC_FAULT_RESPONSE,0x00),
+        (IOUT_OC_WARN_LIMIT,0xCB00),
+        (IOUT_UC_FAULT_LIMIT,0xBD00),
+        (IOUT_UC_FAULT_RESPONSE,0x00),
+        (OT_FAULT_LIMIT,0xF200),
+        (OT_FAULT_RESPONSE,0xB8),
+        (OT_WARN_LIMIT,0xEBE8),
+        (UT_WARN_LIMIT,0xDD80),
+        (UT_FAULT_LIMIT,0xE530),
+        (UT_FAULT_RESPONSE,0xB8),
+        (POWER_GOOD_ON,0x4CE1),
+        (POWER_GOOD_OFF,0x4B1F),
+        (TON_DELAY,0xF320),
+        (TON_RISE,0xE320),
+        (TON_MAX_FAULT_LIMIT,0xF258),
+        (TON_MAX_FAULT_RESPONSE,0xB8),
+        (TOFF_DELAY,0xBA00),
+        (USER_DATA_01,0xB48F),
+        (USER_DATA_03,0x0000),
+        (MFR_IOUT_CAL_GAIN_TAU_INV,0x8000),
+        (MFR_IOUT_CAL_GAIN_THETA,0x8000),
+        (MFR_CONFIG_LTM4673,0x2088),
+        (MFR_FAULTB0_PROPAGATE,0x00),
+        (MFR_FAULTB1_PROPAGATE,0x00),
+        (MFR_DAC,0x0218),
+        (MFR_VOUT_DISCHARGE_THRESHOLD,0xC200),
+        (MFR_IOUT_CAL_GAIN_TC,0x0000),
+        (MFR_TEMP_1_GAIN,0x4000),
+        (MFR_TEMP_1_OFFSET,0x8000),
+    )),
+    # Select PAGE 3
+    #(PAGE,0x03),
+    (0x03, (
+        (OPERATION,0x80),
+        (ON_OFF_CONFIG,0x1E),
+        (VOUT_COMMAND,0x699A),
+        (VOUT_MAX,0xFFFF),
+        (VOUT_MARGIN_HIGH,0x6EE2),
+        (VOUT_MARGIN_LOW,0x6452),
+        (VOUT_OV_FAULT_LIMIT,0x7429),
+        (VOUT_OV_FAULT_RESPONSE,0x80),
+        (VOUT_OV_WARN_LIMIT,0x71D7),
+        (VOUT_UV_WARN_LIMIT,0x615D),
+        (VOUT_UV_FAULT_LIMIT,0x5F0B),
+        (VOUT_UV_FAULT_RESPONSE,0x7F),
+        (IOUT_OC_FAULT_LIMIT,0xDA20),
+        (IOUT_OC_FAULT_RESPONSE,0x00),
+        (IOUT_OC_WARN_LIMIT,0xD340),
+        (IOUT_UC_FAULT_LIMIT,0xC500),
+        (IOUT_UC_FAULT_RESPONSE,0x00),
+        (OT_FAULT_LIMIT,0xF200),
+        (OT_FAULT_RESPONSE,0xB8),
+        (OT_WARN_LIMIT,0xEBE8),
+        (UT_WARN_LIMIT,0xDD80),
+        (UT_FAULT_LIMIT,0xE530),
+        (UT_FAULT_RESPONSE,0xB8),
+        (POWER_GOOD_ON,0x64F5),
+        (POWER_GOOD_OFF,0x63B0),
+        (TON_DELAY,0xFA58),
+        (TON_RISE,0xE320),
+        (TON_MAX_FAULT_LIMIT,0xF258),
+        (TON_MAX_FAULT_RESPONSE,0xB8),
+        (TOFF_DELAY,0xBA00),
+        (USER_DATA_01,0x3322),
+        (USER_DATA_03,0x0000),
+        (MFR_IOUT_CAL_GAIN_TAU_INV,0x8000),
+        (MFR_IOUT_CAL_GAIN_THETA,0x8000),
+        (MFR_CONFIG_LTM4673,0x3088),
+        (MFR_FAULTB0_PROPAGATE,0x00),
+        (MFR_FAULTB1_PROPAGATE,0x00),
+        (MFR_DAC,0x01CB),
+        (MFR_VOUT_DISCHARGE_THRESHOLD,0xC200),
+        (MFR_IOUT_CAL_GAIN_TC,0x0000),
+        (MFR_TEMP_1_GAIN,0x4000),
+        (MFR_TEMP_1_OFFSET,0x8000),
+    ))
+)
 
 def program():
     """Program derived from LTC PMBus Project Text File Version:1.1"""
     xacts = []
-    # Select PAGE 0xff
-    xacts.append(write(PAGE,0xff))
+    for page, prog in _program:
+        # Select the page
+        xacts.append(write(PAGE,page))
+        for reg, val in prog:
+            # Write each register
+            xacts.append(write(reg,val))
+    lines = translate_mmc(xacts)
+    return lines
 
-    xacts.append(write(WRITE_PROTECT,0x00))
+def readback():
+    """Readback of all that is written by program()"""
+    xacts = []
+    for page, prog in _program:
+        # Select the page
+        xacts.append(write(PAGE,page))
+        for reg, val in prog:
+            # Read each register
+            xacts.append(read(reg))
+    lines = translate_mmc(xacts)
+    return lines
+
+def test_program():
+    xacts = []
     xacts.append(write(VIN_ON,0xCA40))
+    xacts.append(write(VIN_OFF,0xCA33))
     xacts.append(write(VIN_OFF,0xCA33))
     xacts.append(write(VIN_OV_FAULT_LIMIT,0xD3C0))
     xacts.append(write(VIN_OV_FAULT_RESPONSE,0x80))
-    xacts.append(write(VIN_OV_WARN_LIMIT,0xD380))
-    xacts.append(write(VIN_UV_WARN_LIMIT,0x8000))
-    xacts.append(write(VIN_UV_FAULT_LIMIT,0x8000))
-    xacts.append(write(VIN_UV_FAULT_RESPONSE,0x00))
-    xacts.append(write(USER_DATA_00,0x0000))
-    xacts.append(write(USER_DATA_02,0x0000))
-    xacts.append(write(USER_DATA_04,0x0000))
-    xacts.append(write(MFR_EIN_CONFIG,0x00))
-    xacts.append(write(MFR_IIN_CAL_GAIN_TC,0x0000))
-    xacts.append(write(MFR_CONFIG_ALL_LTM4673,0x0F73))
-    xacts.append(write(MFR_PWRGD_EN,0x0000))
-    xacts.append(write(MFR_FAULTB0_RESPONSE,0x00))
-    xacts.append(write(MFR_FAULTB1_RESPONSE,0x00))
-    xacts.append(write(MFR_CONFIG2_LTM4673,0x00))
-    xacts.append(write(MFR_CONFIG3_LTM4673,0x00))
-    xacts.append(write(MFR_RETRY_DELAY,0xF320))
-    xacts.append(write(MFR_RESTART_DELAY,0xFB20))
-    xacts.append(write(MFR_POWERGOOD_ASSERTION_DELAY,0xEB20))
-    xacts.append(write(MFR_WATCHDOG_T_FIRST,0x8000))
-    xacts.append(write(MFR_WATCHDOG_T,0x8000))
-    xacts.append(write(MFR_PAGE_FF_MASK,0x0F))
-    xacts.append(write(MFR_I2C_BASE_ADDRESS,0x5C))
-    xacts.append(write(MFR_IIN_CAL_GAIN,0xCA80))
-    xacts.append(write(MFR_RETRY_COUNT,0x07))
-
-    # Select PAGE 0
-    xacts.append(write(PAGE,0x00))
-
-    xacts.append(write(OPERATION,0x80))
-    xacts.append(write(ON_OFF_CONFIG,0x1E))
-    xacts.append(write(VOUT_COMMAND,0x2000))
-    xacts.append(write(VOUT_MAX,0x8000))
-    xacts.append(write(VOUT_MARGIN_HIGH,0x219A))
-    xacts.append(write(VOUT_MARGIN_LOW,0x1E66))
-    xacts.append(write(VOUT_OV_FAULT_LIMIT,0x2333))
-    xacts.append(write(VOUT_OV_FAULT_RESPONSE,0x80))
-    xacts.append(write(VOUT_OV_WARN_LIMIT,0x223D))
-    xacts.append(write(VOUT_UV_WARN_LIMIT,0x1DC3))
-    xacts.append(write(VOUT_UV_FAULT_LIMIT,0x1CCD))
-    xacts.append(write(VOUT_UV_FAULT_RESPONSE,0x7F))
-    xacts.append(write(IOUT_OC_FAULT_LIMIT,0xDA20))
-    xacts.append(write(IOUT_OC_FAULT_RESPONSE,0x00))
-    xacts.append(write(IOUT_OC_WARN_LIMIT,0xD340))
-    xacts.append(write(IOUT_UC_FAULT_LIMIT,0xC500))
-    xacts.append(write(IOUT_UC_FAULT_RESPONSE,0x00))
-    xacts.append(write(OT_FAULT_LIMIT,0xF200))
-    xacts.append(write(OT_FAULT_RESPONSE,0xB8))
-    xacts.append(write(OT_WARN_LIMIT,0xEBE8))
-    xacts.append(write(UT_WARN_LIMIT,0xDD80))
-    xacts.append(write(UT_FAULT_LIMIT,0xE530))
-    xacts.append(write(UT_FAULT_RESPONSE,0xB8))
-    xacts.append(write(POWER_GOOD_ON,0x1EB8))
-    xacts.append(write(POWER_GOOD_OFF,0x1E14))
-    xacts.append(write(TON_DELAY,0xBA00))
-    xacts.append(write(TON_RISE,0xE320))
-    xacts.append(write(TON_MAX_FAULT_LIMIT,0xF258))
-    xacts.append(write(TON_MAX_FAULT_RESPONSE,0xB8))
-    xacts.append(write(TOFF_DELAY,0xBA00))
-    xacts.append(write(USER_DATA_01,0x0000))
-    xacts.append(write(USER_DATA_03,0x0000))
-    xacts.append(write(MFR_IOUT_CAL_GAIN_TAU_INV,0x8000))
-    xacts.append(write(MFR_IOUT_CAL_GAIN_THETA,0x8000))
-    xacts.append(write(MFR_CONFIG_LTM4673,0x0088))
-    xacts.append(write(MFR_FAULTB0_PROPAGATE,0x00))
-    xacts.append(write(MFR_FAULTB1_PROPAGATE,0x00))
-    xacts.append(write(MFR_DAC,0x01FF))
-    xacts.append(write(MFR_VOUT_DISCHARGE_THRESHOLD,0xC200))
-    xacts.append(write(MFR_IOUT_CAL_GAIN_TC,0x0000))
-    xacts.append(write(MFR_TEMP_1_GAIN,0x4000))
-    xacts.append(write(MFR_TEMP_1_OFFSET,0x8000))
-
-    # Select PAGE 1
-    xacts.append(write(PAGE,0x01))
-
-    xacts.append(write(OPERATION,0x80))
-    xacts.append(write(ON_OFF_CONFIG,0x1E))
-    xacts.append(write(VOUT_COMMAND,0x399A))
-    xacts.append(write(VOUT_MAX,0xFFFF))
-    xacts.append(write(VOUT_MARGIN_HIGH,0x3C7B))
-    xacts.append(write(VOUT_MARGIN_LOW,0x36B9))
-    xacts.append(write(VOUT_OV_FAULT_LIMIT,0x3F5D))
-    xacts.append(write(VOUT_OV_FAULT_RESPONSE,0x80))
-    xacts.append(write(VOUT_OV_WARN_LIMIT,0x3DEC))
-    xacts.append(write(VOUT_UV_WARN_LIMIT,0x3548))
-    xacts.append(write(VOUT_UV_FAULT_LIMIT,0x33D7))
-    xacts.append(write(VOUT_UV_FAULT_RESPONSE,0x7F))
-    xacts.append(write(IOUT_OC_FAULT_LIMIT,0xD200))
-    xacts.append(write(IOUT_OC_FAULT_RESPONSE,0x00))
-    xacts.append(write(IOUT_OC_WARN_LIMIT,0xCB00))
-    xacts.append(write(IOUT_UC_FAULT_LIMIT,0xBD00))
-    xacts.append(write(IOUT_UC_FAULT_RESPONSE,0x00))
-    xacts.append(write(OT_FAULT_LIMIT,0xF200))
-    xacts.append(write(OT_FAULT_RESPONSE,0xB8))
-    xacts.append(write(OT_WARN_LIMIT,0xEBE8))
-    xacts.append(write(UT_WARN_LIMIT,0xDD80))
-    xacts.append(write(UT_FAULT_LIMIT,0xE530))
-    xacts.append(write(UT_FAULT_RESPONSE,0xB8))
-    xacts.append(write(POWER_GOOD_ON,0x372F))
-    xacts.append(write(POWER_GOOD_OFF,0x3643))
-    xacts.append(write(TON_DELAY,0xEB20))
-    xacts.append(write(TON_RISE,0xE320))
-    xacts.append(write(TON_MAX_FAULT_LIMIT,0xF258))
-    xacts.append(write(TON_MAX_FAULT_RESPONSE,0xB8))
-    xacts.append(write(TOFF_DELAY,0xBA00))
-    xacts.append(write(USER_DATA_01,0x0000))
-    xacts.append(write(USER_DATA_03,0x0000))
-    xacts.append(write(MFR_IOUT_CAL_GAIN_TAU_INV,0x8000))
-    xacts.append(write(MFR_IOUT_CAL_GAIN_THETA,0x8000))
-    xacts.append(write(MFR_CONFIG_LTM4673,0x1088))
-    xacts.append(write(MFR_FAULTB0_PROPAGATE,0x00))
-    xacts.append(write(MFR_FAULTB1_PROPAGATE,0x00))
-    xacts.append(write(MFR_DAC,0x0245))
-    xacts.append(write(MFR_VOUT_DISCHARGE_THRESHOLD,0xC200))
-    xacts.append(write(MFR_IOUT_CAL_GAIN_TC,0x0000))
-    xacts.append(write(MFR_TEMP_1_GAIN,0x4000))
-    xacts.append(write(MFR_TEMP_1_OFFSET,0x8000))
-
-    # Select PAGE 2
-    xacts.append(write(PAGE,0x02))
-
-    xacts.append(write(OPERATION,0x80))
-    xacts.append(write(ON_OFF_CONFIG,0x1E))
-    xacts.append(write(VOUT_COMMAND,0x5000))
-    xacts.append(write(VOUT_MAX,0xFFFF))
-    xacts.append(write(VOUT_MARGIN_HIGH,0x5400))
-    xacts.append(write(VOUT_MARGIN_LOW,0x4C00))
-    xacts.append(write(VOUT_OV_FAULT_LIMIT,0x5800))
-    xacts.append(write(VOUT_OV_FAULT_RESPONSE,0x80))
-    xacts.append(write(VOUT_OV_WARN_LIMIT,0x563D))
-    xacts.append(write(VOUT_UV_WARN_LIMIT,0x4A3D))
-    xacts.append(write(VOUT_UV_FAULT_LIMIT,0x4800))
-    xacts.append(write(VOUT_UV_FAULT_RESPONSE,0x7F))
-    xacts.append(write(IOUT_OC_FAULT_LIMIT,0xD200))
-    xacts.append(write(IOUT_OC_FAULT_RESPONSE,0x00))
-    xacts.append(write(IOUT_OC_WARN_LIMIT,0xCB00))
-    xacts.append(write(IOUT_UC_FAULT_LIMIT,0xBD00))
-    xacts.append(write(IOUT_UC_FAULT_RESPONSE,0x00))
-    xacts.append(write(OT_FAULT_LIMIT,0xF200))
-    xacts.append(write(OT_FAULT_RESPONSE,0xB8))
-    xacts.append(write(OT_WARN_LIMIT,0xEBE8))
-    xacts.append(write(UT_WARN_LIMIT,0xDD80))
-    xacts.append(write(UT_FAULT_LIMIT,0xE530))
-    xacts.append(write(UT_FAULT_RESPONSE,0xB8))
-    xacts.append(write(POWER_GOOD_ON,0x4CE1))
-    xacts.append(write(POWER_GOOD_OFF,0x4B1F))
-    xacts.append(write(TON_DELAY,0xF320))
-    xacts.append(write(TON_RISE,0xE320))
-    xacts.append(write(TON_MAX_FAULT_LIMIT,0xF258))
-    xacts.append(write(TON_MAX_FAULT_RESPONSE,0xB8))
-    xacts.append(write(TOFF_DELAY,0xBA00))
-    xacts.append(write(USER_DATA_01,0xB48F))
-    xacts.append(write(USER_DATA_03,0x0000))
-    xacts.append(write(MFR_IOUT_CAL_GAIN_TAU_INV,0x8000))
-    xacts.append(write(MFR_IOUT_CAL_GAIN_THETA,0x8000))
-    xacts.append(write(MFR_CONFIG_LTM4673,0x2088))
-    xacts.append(write(MFR_FAULTB0_PROPAGATE,0x00))
-    xacts.append(write(MFR_FAULTB1_PROPAGATE,0x00))
-    xacts.append(write(MFR_DAC,0x0218))
-    xacts.append(write(MFR_VOUT_DISCHARGE_THRESHOLD,0xC200))
-    xacts.append(write(MFR_IOUT_CAL_GAIN_TC,0x0000))
-    xacts.append(write(MFR_TEMP_1_GAIN,0x4000))
-    xacts.append(write(MFR_TEMP_1_OFFSET,0x8000))
-
-    # Select PAGE 3
-    xacts.append(write(PAGE,0x03))
-
-    xacts.append(write(OPERATION,0x80))
-    xacts.append(write(ON_OFF_CONFIG,0x1E))
-    xacts.append(write(VOUT_COMMAND,0x699A))
-    xacts.append(write(VOUT_MAX,0xFFFF))
-    xacts.append(write(VOUT_MARGIN_HIGH,0x6EE2))
-    xacts.append(write(VOUT_MARGIN_LOW,0x6452))
-    xacts.append(write(VOUT_OV_FAULT_LIMIT,0x7429))
-    xacts.append(write(VOUT_OV_FAULT_RESPONSE,0x80))
-    xacts.append(write(VOUT_OV_WARN_LIMIT,0x71D7))
-    xacts.append(write(VOUT_UV_WARN_LIMIT,0x615D))
-    xacts.append(write(VOUT_UV_FAULT_LIMIT,0x5F0B))
-    xacts.append(write(VOUT_UV_FAULT_RESPONSE,0x7F))
-    xacts.append(write(IOUT_OC_FAULT_LIMIT,0xDA20))
-    xacts.append(write(IOUT_OC_FAULT_RESPONSE,0x00))
-    xacts.append(write(IOUT_OC_WARN_LIMIT,0xD340))
-    xacts.append(write(IOUT_UC_FAULT_LIMIT,0xC500))
-    xacts.append(write(IOUT_UC_FAULT_RESPONSE,0x00))
-    xacts.append(write(OT_FAULT_LIMIT,0xF200))
-    xacts.append(write(OT_FAULT_RESPONSE,0xB8))
-    xacts.append(write(OT_WARN_LIMIT,0xEBE8))
-    xacts.append(write(UT_WARN_LIMIT,0xDD80))
-    xacts.append(write(UT_FAULT_LIMIT,0xE530))
-    xacts.append(write(UT_FAULT_RESPONSE,0xB8))
-    xacts.append(write(POWER_GOOD_ON,0x64F5))
-    xacts.append(write(POWER_GOOD_OFF,0x63B0))
-    xacts.append(write(TON_DELAY,0xFA58))
-    xacts.append(write(TON_RISE,0xE320))
-    xacts.append(write(TON_MAX_FAULT_LIMIT,0xF258))
-    xacts.append(write(TON_MAX_FAULT_RESPONSE,0xB8))
-    xacts.append(write(TOFF_DELAY,0xBA00))
-    xacts.append(write(USER_DATA_01,0x3322))
-    xacts.append(write(USER_DATA_03,0x0000))
-    xacts.append(write(MFR_IOUT_CAL_GAIN_TAU_INV,0x8000))
-    xacts.append(write(MFR_IOUT_CAL_GAIN_THETA,0x8000))
-    xacts.append(write(MFR_CONFIG_LTM4673,0x3088))
-    xacts.append(write(MFR_FAULTB0_PROPAGATE,0x00))
-    xacts.append(write(MFR_FAULTB1_PROPAGATE,0x00))
-    xacts.append(write(MFR_DAC,0x01CB))
-    xacts.append(write(MFR_VOUT_DISCHARGE_THRESHOLD,0xC200))
-    xacts.append(write(MFR_IOUT_CAL_GAIN_TC,0x0000))
-    xacts.append(write(MFR_TEMP_1_GAIN,0x4000))
-    xacts.append(write(MFR_TEMP_1_OFFSET,0x8000))
-
     lines = translate_mmc(xacts)
     return lines
+
+def test_readback():
+    xacts = []
+    xacts.append(read(VIN_ON))
+    xacts.append(read(VIN_OFF))
+    xacts.append(read(VIN_OV_FAULT_LIMIT))
+    xacts.append(read(VIN_OV_FAULT_RESPONSE))
+    lines = translate_mmc(xacts)
+    return lines
+
+def parse_readback_file(filename):
+    lines = []
+    with open(filename, 'r') as fd:
+        line = True
+        while line:
+            line = fd.readline()
+            lines.append(line)
+    return parse_readback(lines)
+
+def parse_readback(lines):
+    _readback = []
+    _prog = []
+    newpage = None
+    for line in lines:
+        rval = match_readback(line)
+        if rval is not None:
+            command, val = rval
+            _prog.append((command, val))
+        else:
+            rval = match_page(line)
+            if rval is not None:
+                if newpage is not None:
+                    _readback.append((newpage, _prog))
+                newpage = rval
+                _prog = []
+    _readback.append((newpage, _prog))
+    #print(f"_readback = {_readback}")
+    compare_progs(_program, _readback)
+    return
+
+def match_readback(line):
+    res = "\((0x[0-9a-fA-F]+)\)\s+(0x[0-9a-fA-F]+):\s+(0x[0-9a-fA-F]+)\s*(0x[0-9a-fA-F]+)?"
+    _match = re.match(res, line)
+    if _match:
+        groups = _match.groups()
+        devaddr, command, val_lo, val_hi = groups
+        command = _int(command)
+        val = _int(val_lo)
+        if val_hi is not None and len(val_hi) > 0:
+            val_hi = _int(val_hi)
+            val += (val_hi << 8)
+        #print(f"command = 0x{command:02x}, val = 0x{val:02x}")
+        return command, val
+    return None
+
+def match_page(line):
+    res = "#\s+PAGE\s+([0-9a-fA-Fx]+)"
+    _match = re.match(res, line)
+    if _match:
+        page = _match.groups()[0]
+        page = _int(page)
+        #print(f"Write page: 0x{page:02x}")
+        return page
+    return None
+
+def compare_progs(ref, dut):
+    _pass = True
+    prog_results = []
+    for page, prog in dut:
+        _page_results = []
+        ref_prog = None
+        for _page, _prog in ref:
+            if _page == page:
+                ref_prog = _prog
+                break
+        if ref_prog is None:
+            _page_results.append((page, None))
+            _pass = False
+            continue
+        for reg, val in prog:
+            found = False
+            reg_good = False
+            for _reg, _val in ref_prog:
+                if reg == _reg:
+                    found = True
+                    if val == _val:
+                        reg_good = True
+                    else:
+                        _pass = False
+                    break
+            if not found:
+                _page_results.append((reg, None))
+                _pass = False
+            else:
+                _page_results.append((reg, reg_good))
+        prog_results.append((page, _page_results))
+    if _pass:
+        print("PASS")
+    else:
+        print("FAIL")
+        print(prog_results)
+    return
+
+def do_parse(argv):
+    if len(argv) < 2:
+        print("need filename")
+        return
+    filename = argv[1]
+    parse_readback_file(filename)
+    return
+
 
 def main(argv):
     import load
     parser = load.ArgParser()
     parser.add_argument('--test', default=False, action="store_true", help='Test; not full program')
+    parser.add_argument('-r', '--read', default=False, action="store_true", help='Read instead of write')
+    parser.add_argument('--check', default=False, action="store_true", help='Compare values of readback with program')
     # TODO - Enable complete readback
     #parser.add_argument('--read', default=False, action="store_true", help='Test; not full program')
     args = parser.parse_args()
     if args.test:
-        lines = trial()
+        if args.read:
+            lines = test_readback()
+        else:
+            lines = test_program()
     else:
-        lines = program()
+        if args.read:
+            lines = readback()
+        else:
+            lines = program()
     if args.dev is not None:
-        load.loadCommands(args.dev, args.baud, args.commands)
+        load.loadCommands(args.dev, args.baud, lines, log=True)
+        readback_log = load.get_log()
+        print(f"readback_log = {readback_log}")
+        # TODO - FIXME!
+        # Need to add a context-aware hook to MMC to printf on a PAGE write
+        parse_readback(readback_log)
     else:
         for line in lines:
             print(line)
+
+# Quick Test
+#   Blk = Gnd       = CN8[11]
+#   Red = 3V3       = CN8[7]
+#   Wht = SCL = PA8 = CN9[17]
+#   Brn = SDA = PC9 = CN8[4]
 
 if __name__ == "__main__":
     #trial()
     import sys
     main(sys.argv)
+    #do_parse(sys.argv)

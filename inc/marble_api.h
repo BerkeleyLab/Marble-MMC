@@ -237,7 +237,7 @@ typedef int I2C_BUS;
 typedef void *I2C_BUS;
 #else
 #ifdef SIMULATION
-typedef void *I2C_BUS;
+typedef int I2C_BUS;
 #else
 #error Marble microcontroller API not defined!
 #endif /* SIMULATION */
@@ -250,7 +250,6 @@ int marble_I2C_recv(I2C_BUS I2C_bus, uint8_t addr, uint8_t *data, int size);
 int marble_I2C_cmdrecv(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size);
 int marble_I2C_cmdsend_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *data, int size);
 int marble_I2C_cmdrecv_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *data, int size);
-int marble_PMBridge_do_sanitized_xact(uint16_t *xact, int len);
 int getI2CBusStatus(void);
 void resetI2CBusStatus(void);
 

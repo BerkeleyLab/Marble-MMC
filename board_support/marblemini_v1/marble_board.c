@@ -704,13 +704,6 @@ uint32_t marble_init(void)
    return SystemCoreClock;
 }
 
-/* This will probably remain unused for the Marble-Mini  */
-int marble_PMBridge_do_sanitized_xact(uint16_t *xact, int len) {
-   _UNUSED(xact);
-   _UNUSED(len);
-   return 0;
-}
-
 void pwr_autoboot(void) {
    // This likely also unused for Marble-Mini
    return;

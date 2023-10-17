@@ -1407,43 +1407,6 @@ uint32_t fsynthGetFreq(void) {
   return 0;
 }
 
-
-int marble_PMBridge_do_sanitized_xact(uint16_t *xact, int len) {
-  // Perform I2C transaction
-  int read = 0;
-  int rval;
-  uint8_t data[PMBRIDGE_XACT_MAX_ITEMS-2];
-  if (xact[2] == PMBRIDGE_XACT_REPEAT_START) {
-    read = 1;
-    if (xact[3] == PMBRIDGE_XACT_READ_BLOCK) {
-      printf("READ_BLOCK not yet implemented. Discarding transaction.\r\n");
-      return -1;
-    }
-  }
-  if (read) {
-    rval = marble_I2C_cmdrecv(I2C_PM, xact[0], xact[1], data, len-2);
-  } else {
-    for (int n = 0; n < len-1; n++) {
-      // Data to send must be uint8_t, not uint16_t
-      data[n] = (uint8_t)(xact[n+1] & 0xff);
-    }
-    rval = marble_I2C_send(I2C_PM, xact[0], data, len-1);
-  }
-  // I2C_RequestMemoryRead() does  | Addr + wr | command_code ! Addr + rd | (no stop!)
-  // HAL_I2C_Mem_Read() does I2C_RequestMemoryRead() + | Data 0 | Data 1 |...| generates stop!
-  // Use marble wrapper for the case of 8-bit addr and 8-bit command code:
-  // READ:
-  //  int marble_I2C_cmdrecv(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size) {
-  // WRITE:
-  //  int marble_I2C_cmdsend(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size) {
-  // SEND_BYTE:
-  //  int marble_I2C_send(I2C_BUS I2C_bus, uint8_t addr, const uint8_t *data, int size) {
-  //  (may also be able to use marble_I2C_cmdsend() with size=0; not sure)
-  // READ_BLOCK:
-  //  Will need custom driver.  Don't implement for now.
-  return rval;
-}
-
 /**
   * @brief  This function is executed in case of error occurrence.
   * @retval None

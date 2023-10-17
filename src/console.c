@@ -1063,11 +1063,13 @@ static int sscanfPMBridge(const char *s, int len) {
     //printf("finding whitespace ptr %d -> %d\r\n", ptr, ptr+ptrinc);
     ptr += ptrinc;
   }
+  /*
   printf("xact = [ ");
   for (int n = 0; n < item_index; n++) {
     printf("0x%x ", xact[n]);
   }
   printf("]\r\n");
+  */
   PMBridge_xact(xact, item_index);
   return 0;
 }

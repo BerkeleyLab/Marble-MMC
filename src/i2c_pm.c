@@ -22,6 +22,7 @@ static const uint8_t pmbus_limits [][7] = {
 
 /* =========================== Static Prototypes ============================ */
 static int set_max6639_reg(int regno, int value);
+static int PMBridge_do_sanitized_xact(uint16_t *xact, int len);
 
 /* ========================== Function Definitions ========================== */
 void I2C_PM_scan(void)
@@ -409,7 +410,7 @@ int PMBridge_xact(uint16_t *xact, int len) {
    *  xact[1] MUST be command_code
    *  if xact[2] is PMBRIDGE_XACT_REPEAT_START: (xact is read)
    *    xact[3] MUST be Addr+r
-   *    xact[3] MUST be either PMBRIDGE_XACT_READ_ONE or PMBRIDGE_XACT_READ_BLOCK
+   *    xact[4] MUST be either PMBRIDGE_XACT_READ_ONE or PMBRIDGE_XACT_READ_BLOCK
    *  elif xact[2] is PMBRIDGE_XACT_READ_ONE or PMBRIDGE_XACT_READ_BLOCK:
    *    ERROR!
    *  else: (xact is write)
@@ -438,13 +439,16 @@ int PMBridge_xact(uint16_t *xact, int len) {
   if (len > 2) {
     if (xact[2] == PMBRIDGE_XACT_REPEAT_START) {
       read = 1;
-      if (len > 3) {
-        if (xact[3] < PMBRIDGE_XACT_READ_ONE) {
+      if (len > 4) {
+        if (!(xact[3] & 0x1)) {
+          printf("Repeat Start not followed by a read\r\n");
+        }
+        if (xact[4] < PMBRIDGE_XACT_READ_ONE) {
           printf("Repeat Start not followed by PMBRIDGE_XACT_READ_ONE or PMBRIDGE_XACT_READ_BLOCK\r\n");
           syntax_invalid |= (1<<4);
         }
       } else {
-        printf("Repeat Start not followed by PMBRIDGE_XACT_READ_ONE or PMBRIDGE_XACT_READ_BLOCK\r\n");
+        printf("Repeat Start not followed by Addr+rd and PMBRIDGE_XACT_READ_ONE or PMBRIDGE_XACT_READ_BLOCK\r\n");
         syntax_invalid |= (1<<5);
       }
     } else if (xact[2] & 0x100) { // PMBRIDGE_XACT_READ_ONE or PMBRIDGE_XACT_READ_BLOCK
@@ -486,7 +490,59 @@ int PMBridge_xact(uint16_t *xact, int len) {
     }
   }
 #endif
-  return marble_PMBridge_do_sanitized_xact(xact, len);
+  return PMBridge_do_sanitized_xact(xact, len);
+}
+
+/* static int PMBridge_do_sanitized_xact(uint16_t *xact, int len);
+ *  NOTE! This function assumes the transaction 'xact' has already been
+ *  sanitized (checked for syntax violations), thus certain length checks
+ *  are not made here (as they would be redundant).  Make sure to only
+ *  use this with sanitized transactions vetted by (e.g.) PMBridge_xact()
+ */
+static int PMBridge_do_sanitized_xact(uint16_t *xact, int len) {
+  // Perform I2C transaction
+  int read = 0;
+  int rval;
+  uint8_t data[PMBRIDGE_XACT_MAX_ITEMS-2];
+  if (xact[2] == PMBRIDGE_XACT_REPEAT_START) {
+    read = 1;
+    if (xact[4] == PMBRIDGE_XACT_READ_BLOCK) {
+      printf("READ_BLOCK not yet implemented. Discarding transaction.\r\n");
+      return -1;
+    }
+  }
+  if (read) {
+    rval = marble_I2C_cmdrecv(I2C_PM, (uint8_t)xact[0], (uint8_t)xact[1], data, len-4);
+    if (rval != HAL_OK) {
+      printf("Read failed with code: 0x%x\r\n", rval);
+    } else {
+      // Readback
+      printf("(0x%02x) 0x%02x:", xact[0], xact[1]);
+      for (int n = 0; n < len-4; n++) {
+         printf(" 0x%02x", data[n]);
+      }
+    }
+    printf("\r\n");
+  } else {
+    for (int n = 0; n < len-1; n++) {
+      // Data to send must be uint8_t, not uint16_t
+      data[n] = (uint8_t)(xact[n+1] & 0xff);
+    }
+    rval = marble_I2C_send(I2C_PM, (uint8_t)xact[0], data, len-1);
+    if (rval != HAL_OK) {
+      printf("Write failed with code: 0x%x\r\n", rval);
+    }
+  }
+  // READ:
+  //  int marble_I2C_cmdrecv(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size) {
+  // WRITE:
+  //  int marble_I2C_cmdsend(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size) {
+  // SEND_BYTE:
+  //  int marble_I2C_send(I2C_BUS I2C_bus, uint8_t addr, const uint8_t *data, int size) {
+  //  (may also be able to use marble_I2C_cmdsend() with size=0; not sure)
+  // READ_BLOCK:
+  //  Will need custom driver.  Don't implement for now.
+  return rval;
 }
 
 /* XPR7724 is special

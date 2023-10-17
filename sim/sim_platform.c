@@ -206,10 +206,6 @@ uint8_t marble_PWR_status(void) {
   return 0;
 }
 
-int marble_PMBridge_do_sanitized_xact(uint16_t *xact, int len) {
-  return 0;
-}
-
 void marble_print_GPIO_status(void) {
   printf("Sim print_GPIO_status\r\n");
   return;

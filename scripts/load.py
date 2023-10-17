@@ -17,8 +17,12 @@ from concurrent.futures import ThreadPoolExecutor as Executor
 INTERCOMMAND_SLEEP = 0.01 # seconds
 POST_SLEEP = 1.0 # seconds
 
+# A global log of read lines
+_log = []
+_done = False
+
 class StreamSerial():
-    def __init__(self, port = None, baud = 115200):
+    def __init__(self, port = None, baud = 115200, flush=True):
         self._ready = False
         self.line = None
         if (port == None):
@@ -28,6 +32,12 @@ class StreamSerial():
             self._ready = True
         except Exception as e:
             print(e)
+        if flush:
+            self.flush()
+
+    def flush(self):
+        """Read and discard anything in the incoming buffer."""
+        self.dev.read_all()
 
     def failed(self):
         return not self._ready
@@ -70,7 +80,7 @@ class StreamSerial():
     def close(self):
         self.dev.close()
 
-def readDevice(sdev, wait_on):
+def readDevice(sdev, wait_on, log=False):
     while True:
         try:
             if wait_on.done():
@@ -80,11 +90,15 @@ def readDevice(sdev, wait_on):
             line = sdev.readline()
             if line:
                 line = line.strip()
-                print(line)
+                if log:
+                    _log.append(line)
+                else:
+                    print(line)
         except Exception as e:
             print(e)
     print(">   closing")
     sdev.close()
+    _done = True
     return True
 
 def getLines(filename):
@@ -100,18 +114,6 @@ def getLines(filename):
                 lines.append(line)
     return lines
 
-"""
-def serveLines(sdev, lines):
-    nlines = 0
-    for line in lines:
-        if len(line) > 0 and not line.strip().startswith('#'):
-            sdev.writeline(line)
-            nlines += 1
-            time.sleep(INTERCOMMAND_SLEEP)
-    print(f">   Wrote {nlines} lines")
-    return
-"""
-
 def serveFile(sdev, filename):
     lines = getLines(filename)
     #return serveLines(sdev, lines)
@@ -121,7 +123,7 @@ def serveCommands(sdev, *commands):
     nlines = 0
     for line in commands:
         if len(line) > 0 and not line.strip().startswith('#'):
-            print("writing {}".format(line))
+            #print("writing {}".format(line))
             sdev.writeline(line + '\r\n')
             nlines += 1
             time.sleep(INTERCOMMAND_SLEEP)
@@ -139,7 +141,20 @@ def testReadLines(argv):
     print("got {}".format(lines))
     return True
 
-def loadCommands(dev, baud=115200, commands=None):
+def get_log():
+    # TODO - FIXME!
+    # Figure out how to correctly wait on the threads to exit
+    timeout = 3
+    while not _done:
+        time.sleep(1)
+        if timeout == 0:
+            print("timeout")
+            break
+        else:
+            timeout -= 1
+    return _log
+
+def loadCommands(dev, baud=115200, commands=None, log=False):
     if commands is None:
         print("Missing mandatory filename")
         return 1
@@ -148,7 +163,7 @@ def loadCommands(dev, baud=115200, commands=None):
         return 1
     executor = Executor(max_workers = 2)
     task1 = executor.submit(serveCommands, sdev, *commands)
-    task2 = executor.submit(readDevice, sdev, task1)
+    task2 = executor.submit(readDevice, sdev, task1, log)
     return 0
 
 def loadFile(dev, baud=115200, filename=None):
