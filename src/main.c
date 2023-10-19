@@ -8,6 +8,7 @@
 #include "rev.h"
 #include "console.h"
 #include "uart_fifo.h"
+#include "ltm4673.h"
 
 #define LED_SNAKE
 #ifdef MARBLE_V2
@@ -15,7 +16,7 @@ static void mgtclk_xpoint_en(void)
 {
    if (xrp_ch_status(XRP7724, 1)) { // CH1: 3.3V
       adn4600_init();
-   } else if (ltm_ch_status(LTM4673)) {
+   } else if (ltm4673_ch_status(LTM4673)) {
       printf("Using LTM4673 and adn4600_init\r\n");
       adn4600_init();
    } else {
@@ -133,6 +134,7 @@ int main(void) {
    marble_UART_send(DEMO_STRING, strlen(DEMO_STRING));
    //printf("%s", DEMO_STRING);
 
+   ltm4673_print_limits();
    while (1) {
       // Run all system update/monitoring tasks and only then handle console
       if (spi_update) {

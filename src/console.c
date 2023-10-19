@@ -17,6 +17,7 @@
 #include "i2c_fpga.h"
 #include "uart_fifo.h"
 #include "st-eeprom.h"
+#include "ltm4673.h"
 
 #define AUTOPUSH
 // TODO - Put this in a better place
@@ -558,7 +559,7 @@ static void pm_bus_display(void)
        if (marble_get_board_id() < Marble_v1_3)
           xrp_dump(XRP7724);
        else
-          ltm_read_telem(LTM4673);
+          ltm4673_read_telem(LTM4673);
 }
 
 void xrp_boot(void)

@@ -3,6 +3,8 @@
  *
  */
 #include "marble_api.h"
+#include "i2c_pm.h"
+#include "ltm4673.h"
 #include <stdio.h>
 
 I2C_BUS I2C_PM = 0;
@@ -17,7 +19,6 @@ typedef struct {
 } four_page_periph_t;
 
 static four_page_periph_t ltm4673;
-static uint8_t ltm4673_page = 0;
 static uint8_t ltm4673_addrs[] = {0xb8, 0xba, 0xbc, 0xbe, 0xc0, 0xc2, 0xc4, 0xc6, 0xc8};
 #define LTM4673_MATCH_ADDRS     (sizeof(ltm4673_addrs)/sizeof(uint8_t))
 
@@ -31,7 +32,6 @@ static int i2c_hook(I2C_BUS I2C_bus, uint8_t addr, uint8_t rnw, int reg,
   // TODO - Can add more I2C device emulators here
   int matched = 0;
   if (I2C_bus != I2C_PM) {
-    printf("Bus mismatch: %d != %d\r\n", I2C_bus, I2C_PM);
     return 1;
   }
   for (unsigned int n = 0; n < LTM4673_MATCH_ADDRS; n++) {
@@ -41,7 +41,6 @@ static int i2c_hook(I2C_BUS I2C_bus, uint8_t addr, uint8_t rnw, int reg,
     }
   }
   if (!matched) {
-    printf("Dev addr mismatch\r\n");
     return 1;
   }
   // Like this one
@@ -53,7 +52,8 @@ static int i2c_hook_ltm4673(uint8_t rnw, int reg, const uint8_t *wdata, volatile
   int offset = 0;
   uint32_t *ppage;
   uint32_t regval = 0;
-  switch (ltm4673_page) {
+  uint8_t page = ltm4673_get_page();
+  switch (page) {
     case 1:
       ppage = ltm4673.page1;
       break;
@@ -69,7 +69,7 @@ static int i2c_hook_ltm4673(uint8_t rnw, int reg, const uint8_t *wdata, volatile
   }
   if (rnw) {
     regval = ppage[(uint8_t)(reg & 0xff)];
-    printf("Reading from page %d, reg 0x%x = 0x%x\r\n", ltm4673_page, reg, regval);
+    printf("Reading from page %d, reg 0x%x = 0x%x\r\n", page, reg, regval);
     for (int n = 0; n < max_rw; n++) {
       // LSB-to-MSB
       rdata[n] = (regval >> 8*n) & 0xff;
@@ -88,8 +88,8 @@ static int i2c_hook_ltm4673(uint8_t rnw, int reg, const uint8_t *wdata, volatile
       // LSB-to-MSB
       regval |= (wdata[n] << 8*(n-offset));
     }
-    printf("Writing 0x%x to page %d, reg 0x%x\r\n", regval, ltm4673_page, reg);
-    if (ltm4673_page == 0xff) {
+    printf("Writing 0x%x to page %d, reg 0x%x\r\n", regval, page, reg);
+    if (page == 0xff) {
       // Write to all pages
       ltm4673.page0[(uint8_t)(reg & 0xff)] = regval;
       ltm4673.page1[(uint8_t)(reg & 0xff)] = regval;

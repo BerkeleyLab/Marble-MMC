@@ -80,7 +80,7 @@ class StreamSerial():
     def close(self):
         self.dev.close()
 
-def readDevice(sdev, wait_on, log=False):
+def readDevice(sdev, wait_on, do_print=False, do_log=False):
     while True:
         try:
             if wait_on.done():
@@ -90,10 +90,10 @@ def readDevice(sdev, wait_on, log=False):
             line = sdev.readline()
             if line:
                 line = line.strip()
-                if log:
-                    _log.append(line)
-                else:
+                if do_print:
                     print(line)
+                if do_log:
+                    _log.append(line)
         except Exception as e:
             print(e)
     print(">   closing")
@@ -142,19 +142,17 @@ def testReadLines(argv):
     return True
 
 def get_log():
-    # TODO - FIXME!
-    # Figure out how to correctly wait on the threads to exit
-    timeout = 3
-    while not _done:
+    timeout = 100
+    while not (task1.done() and task2.done()):
         time.sleep(1)
         if timeout == 0:
-            print("timeout")
+            print("Timeout waiting on task1 and task2")
             break
         else:
             timeout -= 1
     return _log
 
-def loadCommands(dev, baud=115200, commands=None, log=False):
+def loadCommands(dev, baud=115200, commands=None, do_print=False, do_log=False):
     if commands is None:
         print("Missing mandatory filename")
         return 1
@@ -162,8 +160,9 @@ def loadCommands(dev, baud=115200, commands=None, log=False):
     if sdev.failed():
         return 1
     executor = Executor(max_workers = 2)
+    global task1, task2
     task1 = executor.submit(serveCommands, sdev, *commands)
-    task2 = executor.submit(readDevice, sdev, task1, log)
+    task2 = executor.submit(readDevice, sdev, task1, do_print, do_log)
     return 0
 
 def loadFile(dev, baud=115200, filename=None):
@@ -174,6 +173,7 @@ def loadFile(dev, baud=115200, filename=None):
     if sdev.failed():
         return 1
     executor = Executor(max_workers = 2)
+    global task1, task2
     task1 = executor.submit(serveFile, sdev, filename)
     task2 = executor.submit(readDevice, sdev, task1)
     return 0
@@ -198,7 +198,7 @@ def doLoad(argv):
     if args.filename is not None:
         loadFile(args.dev, args.baud, args.filename)
     elif len(args.commands) > 0:
-        loadCommands(args.dev, args.baud, args.commands)
+        loadCommands(args.dev, args.baud, args.commands, do_print=True)
     return 0
 
 if __name__ == "__main__":
