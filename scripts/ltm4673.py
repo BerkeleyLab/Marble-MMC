@@ -4,6 +4,13 @@
 
 import re
 
+# TODO
+#   1. Create a function to attempt to write above the limits, and another to
+#      attempt to write below the limits. Then one more to read back the values
+#      and ensure they clipped at the limits or that the mask was applied.
+#   2. Figure out how to interface this script with the stdin/stdout console
+#      interface of the simulated platform.
+
 # SMBus
 # Legend:
 #   ~> means controller to peripheral
@@ -797,6 +804,52 @@ _program = (
 )
 
 
+def _init_sim_mem():
+    print("void init_sim_ltm4673(void) {")
+    page0 = [0]*0x100
+    page1 = [0]*0x100
+    page2 = [0]*0x100
+    page3 = [0]*0x100
+    pages = (page0, page1, page2, page3)
+    lines = []
+    for page, prog in _program:
+        lines.append(f"  // page 0x{page:02x}")
+        for cmd, val in prog:
+            name = get_command_name(cmd)
+            if page == 0xff:
+                page0[cmd] = val
+                page1[cmd] = val
+                page2[cmd] = val
+                page3[cmd] = val
+                # Write all pages
+                lines.append(f"  ltm4673.page0[LTM4673_{name}] = 0x{val:02x};")
+                lines.append(f"  ltm4673.page1[LTM4673_{name}] = 0x{val:02x};")
+                lines.append(f"  ltm4673.page2[LTM4673_{name}] = 0x{val:02x};")
+                lines.append(f"  ltm4673.page3[LTM4673_{name}] = 0x{val:02x};")
+            else:
+                pages[page][cmd] = val
+                # Write to just the selected page
+                lines.append(f"  ltm4673.page{page}[LTM4673_{name}] = 0x{val:02x};")
+    lines.append("  return;\r\n}")
+    function = False
+    if function:
+        for line in lines:
+            print(line)
+    else:
+        for page_n in range(len(pages)):
+            print(f"uint32_t page{page_n}[] = " + "{");
+            page = pages[page_n]
+            cols = 16
+            print("  ", end="")
+            for cmd in range(len(page)):
+                val = page[cmd]
+                print("{:7s} ".format(hex(val)+','), end="")
+                if cmd % cols == cols-1:
+                    print(f" // 0x{cmd-cols+1:x}-0x{cmd:x}\r\n  ", end="")
+            print("};")
+    return
+
+
 def program():
     """Program derived from LTC PMBus Project Text File Version:1.1"""
     xacts = []
@@ -823,6 +876,150 @@ def readback():
     return lines
 
 
+def read_telem():
+    # Read for each page
+    cmds = (
+        READ_VIN,
+        READ_IIN,
+        READ_PIN,
+        READ_VOUT,
+        READ_IOUT,
+        READ_TEMPERATURE_1,
+        READ_TEMPERATURE_2,
+        READ_POUT,
+        MFR_READ_IOUT,
+        MFR_IIN_PEAK,
+        MFR_IIN_MIN,
+        MFR_PIN_PEAK,
+        MFR_PIN_MIN,
+        MFR_IOUT_SENSE_VOLTAGE,
+        MFR_VIN_PEAK,
+        MFR_VOUT_PEAK,
+        MFR_IOUT_PEAK,
+        MFR_TEMPERATURE_1_PEAK,
+        MFR_VIN_MIN,
+        MFR_VOUT_MIN,
+        MFR_IOUT_MIN,
+        MFR_TEMPERATURE_1_MIN,
+    )
+    xacts = []
+    for page in range(4):
+        xacts.append(write(PAGE, page))
+        for cmd in cmds:
+            xacts.append(read(cmd))
+    lines = translate_mmc(xacts)
+    return lines
+
+
+def _init_sim_telem():
+    # LTM4673_PAGE 0x00
+    page0_dict = {
+        READ_VIN:                      0xd33c,
+        READ_IIN:                      0xaa48,
+        READ_PIN:                      0xc3b0,
+        READ_VOUT:                     0x2001,
+        READ_IOUT:                     0x9b54,
+        READ_TEMPERATURE_1:            0xe20d,
+        READ_TEMPERATURE_2:            0xdbe8,
+        READ_POUT:                     0x9b3c,
+        MFR_READ_IOUT:                 0x28,
+        MFR_IIN_PEAK:                  0xab73,
+        MFR_IIN_MIN:                   0x9313,
+        MFR_PIN_PEAK:                  0xcac2,
+        MFR_PIN_MIN:                   0xb289,
+        MFR_IOUT_SENSE_VOLTAGE:        0x61,
+        MFR_VIN_PEAK:                  0xd34c,
+        MFR_VOUT_PEAK:                 0x2003,
+        MFR_IOUT_PEAK:                 0x9b7d,
+        MFR_TEMPERATURE_1_PEAK:        0xe210,
+        MFR_VIN_MIN:                   0xd332,
+        MFR_VOUT_MIN:                  0x1fdf,
+        MFR_IOUT_MIN:                  0x931f,
+        MFR_TEMPERATURE_1_MIN:         0xdb45,
+    }
+    # LTM4673_PAGE 0x01
+    page1_dict = {
+        READ_VIN:                      0xd33c,
+        READ_IIN:                      0xaa4b,
+        READ_PIN:                      0xc3b8,
+        READ_VOUT:                     0x399a,
+        READ_IOUT:                     0xa27d,
+        READ_TEMPERATURE_1:            0xe238,
+        READ_TEMPERATURE_2:            0xdbec,
+        READ_POUT:                     0xaa3f,
+        MFR_READ_IOUT:                 0x3e,
+        MFR_IIN_PEAK:                  0xab73,
+        MFR_IIN_MIN:                   0x9313,
+        MFR_PIN_PEAK:                  0xcac2,
+        MFR_PIN_MIN:                   0xb289,
+        MFR_IOUT_SENSE_VOLTAGE:        0x307,
+        MFR_VIN_PEAK:                  0xd34c,
+        MFR_VOUT_PEAK:                 0x39fb,
+        MFR_IOUT_PEAK:                 0xa280,
+        MFR_TEMPERATURE_1_PEAK:        0xe238,
+        MFR_VIN_MIN:                   0xd332,
+        MFR_VOUT_MIN:                  0x393e,
+        MFR_IOUT_MIN:                  0x8082,
+        MFR_TEMPERATURE_1_MIN:         0xdb57,
+    }
+    # LTM4673_PAGE 0x02
+    page2_dict = {
+        READ_VIN:                      0xd33c,
+        READ_IIN:                      0xaa52,
+        READ_PIN:                      0xc3c0,
+        READ_VOUT:                     0x5001,
+        READ_IOUT:                     0x9afb,
+        READ_TEMPERATURE_1:            0xe240,
+        READ_TEMPERATURE_2:            0xdbef,
+        READ_POUT:                     0xa3bd,
+        MFR_READ_IOUT:                 0x25,
+        MFR_IIN_PEAK:                  0xab73,
+        MFR_IIN_MIN:                   0x9313,
+        MFR_PIN_PEAK:                  0xcac2,
+        MFR_PIN_MIN:                   0xb289,
+        MFR_IOUT_SENSE_VOLTAGE:        0x1cb,
+        MFR_VIN_PEAK:                  0xd34c,
+        MFR_VOUT_PEAK:                 0x5007,
+        MFR_IOUT_PEAK:                 0x9b01,
+        MFR_TEMPERATURE_1_PEAK:        0xe245,
+        MFR_VIN_MIN:                   0xd332,
+        MFR_VOUT_MIN:                  0x4f54,
+        MFR_IOUT_MIN:                  0x8004,
+        MFR_TEMPERATURE_1_MIN:         0xdb64,
+    }
+    # LTM4673_PAGE 0x03
+    page3_dict = {
+        READ_VIN:                      0xd33b,
+        READ_IIN:                      0xaa48,
+        READ_PIN:                      0xc3b4,
+        READ_VOUT:                     0x6998,
+        READ_IOUT:                     0xb27f,
+        READ_TEMPERATURE_1:            0xe226,
+        READ_TEMPERATURE_2:            0xdbf3,
+        READ_POUT:                     0xc219,
+        MFR_READ_IOUT:                 0xfe,
+        MFR_IIN_PEAK:                  0xab73,
+        MFR_IIN_MIN:                   0x9313,
+        MFR_PIN_PEAK:                  0xcac2,
+        MFR_PIN_MIN:                   0xb289,
+        MFR_IOUT_SENSE_VOLTAGE:        0x26d,
+        MFR_VIN_PEAK:                  0xd34c,
+        MFR_VOUT_PEAK:                 0x6a1b,
+        MFR_IOUT_PEAK:                 0xb387,
+        MFR_TEMPERATURE_1_PEAK:        0xe238,
+        MFR_VIN_MIN:                   0xd332,
+        MFR_VOUT_MIN:                  0x697c,
+        MFR_IOUT_MIN:                  0x8725,
+        MFR_TEMPERATURE_1_MIN:         0xdb49,
+    }
+    page_dicts = (page0_dict, page1_dict, page2_dict, page3_dict)
+    for npage in range(len(page_dicts)):
+        for cmd, val in page_dicts[npage].items():
+            name = get_command_name(cmd)
+            print(f"  ltm4673.page{npage}[LTM4673_{name}] = 0x{val:x};")
+    return
+
+
 def test_program():
     xacts = []
     xacts.append(write(PAGE, 0xff))
@@ -846,17 +1043,17 @@ def test_readback():
     return lines
 
 
-def parse_readback_file(filename):
+def parse_readback_file(filename, compare=False):
     lines = []
     with open(filename, 'r') as fd:
         line = True
         while line:
             line = fd.readline()
             lines.append(line)
-    return parse_readback(lines)
+    return parse_readback(lines, compare=compare, do_print=True)
 
 
-def parse_readback(lines, do_print=False):
+def parse_readback(lines, compare=True, do_print=False):
     _readback = []
     _prog = []
     newpage = None
@@ -873,7 +1070,8 @@ def parse_readback(lines, do_print=False):
                 newpage = rval
                 _prog = []
     _readback.append((newpage, _prog))
-    compare_progs(_program, _readback)
+    if compare:
+        compare_progs(_program, _readback)
     if do_print:
         print_prog(_readback)
     return
@@ -1073,7 +1271,8 @@ def main(argv):
     else:
         if args.read:
             print("Readback of full program (this may take several seconds)")
-            lines = readback()
+            #lines = readback() FIXME
+            lines = read_telem()
         else:
             print("Write of full program (this may take several seconds)")
             lines = program()
@@ -1090,9 +1289,31 @@ def main(argv):
             for line in lines:
                 print(line)
 
+"""
+Common PMBridge commands
+// Select page 0
+t 0xc0 0x0 0x0
+// Select page 1
+t 0xc0 0x0 0x1
+// Select page 2
+t 0xc0 0x0 0x2
+// Select page 3
+t 0xc0 0x0 0x3
+// Select page 0xff
+t 0xc0 0x0 0xff
+// Attempt to set VOUT_COMMAND to 1.1V (1100 mV = 0x2333)
+t 0xc0 0x21 0x33 0x23
+// Attempt to set VOUT_COMMAND to 1.5V (1500 mV = 0x3000)
+t 0xc0 0x21 0x00 0x30
+// Attempt to set VOUT_COMMAND to 2.65V (2650 mV = 0x54cc)
+t 0xc0 0x21 0xcc 0x54
+"""
 
 if __name__ == "__main__":
     import sys
     #main(sys.argv)
     #testVtoL11(sys.argv)
-    print_commands_c()
+    #print_commands_c()
+    #_init_sim_mem()
+    #parse_readback_file(sys.argv[1])
+    _init_sim_telem()

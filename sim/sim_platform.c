@@ -26,6 +26,9 @@
 #define DEBUG_TX_OUT
 #define SIM_FPGA_DONE_DELAY_MS        (2)
 
+// Defined in sim_i2c.c; declared here to avoid creating a "real" i2c_init function in marble_api.h
+void init_sim_ltm4673(void);
+
 typedef struct {
   int toExit;
   int msgReady;
@@ -113,6 +116,7 @@ uint32_t marble_init(void) {
   sim_console_state.toExit = 0;
   sim_console_state.msgReady = 0;
   eeprom_init();
+  init_sim_ltm4673();
   return 0;
 }
 
@@ -130,7 +134,8 @@ void marble_print_pcb_rev(void) {
 }
 
 uint8_t marble_get_board_id(void) {
-  return (uint8_t)BOARD_TYPE_SIMULATION;
+  // Emulating Marble v1.4
+  return ((uint8_t)Marble_v1_4 & 0xf) | (uint8_t)BOARD_TYPE_SIMULATION;
 }
 
 void marble_UART_init(void) {

@@ -11,6 +11,7 @@
 extern I2C_BUS I2C_PM;
 static uint8_t ltm4673_page = 0;
 
+#define FLOAT_LIMITS
 #define PM_LIMITS_COLS 4
 // Linear11 Signed PMBus data format
 #define LTM4673_L16_LIMIT_MV(cmd, min_mv, max_mv) \
@@ -27,47 +28,48 @@ static uint8_t ltm4673_page = 0;
 #define LTM4673_PROTECT(cmd) {cmd, 0, 0, 0}
 // NOTE! I need to operate on the DECODED values (not on their encodings) to properly
 // determine if min <= X <= max for a given value X.
-const int _ltm4673_pageff_limits [][PM_LIMITS_COLS] = {
+const uint16_t _ltm4673_pageff_limits [][PM_LIMITS_COLS] = {
 // If pass_mask is 0, prevents writes to the register for the selected page
 //{command_code, pass_mask,  min, max}
   {LTM4673_PAGE, 0xff, 0x00, 0xff},
   {LTM4673_VIN_OV_FAULT_LIMIT, 0xffff, 12500, 16000}, // 12.5V to 16.0V
 };
-const int _ltm4673_page0_limits [][PM_LIMITS_COLS] = {
-  {LTM4673_VOUT_COMMAND, 950, 1050},  // 0.95V to 1.05V
+const uint16_t _ltm4673_page0_limits [][PM_LIMITS_COLS] = {
+  //{LTM4673_VOUT_COMMAND, 0xffff, MV_TO_L16(950), MV_TO_L16(1050)},  // 0.95V to 1.05V
+  {LTM4673_VOUT_COMMAND, 0xffff, V_TO_L16(0.95), V_TO_L16(1.05)},  // 0.95V to 1.05V
 };
-const int _ltm4673_page1_limits [][PM_LIMITS_COLS] = {
-  {LTM4673_VOUT_COMMAND, 1750, 1850},  // 1.75V to 1.85V
+const uint16_t _ltm4673_page1_limits [][PM_LIMITS_COLS] = {
+  {LTM4673_VOUT_COMMAND, 0xffff, V_TO_L16(1.75), V_TO_L16(1.85)},  // 1.75V to 1.85V
 };
-const int _ltm4673_page2_limits [][PM_LIMITS_COLS] = {
-  {LTM4673_VOUT_COMMAND, 2450, 2550},  // 2.45V to 2.55V
+const uint16_t _ltm4673_page2_limits [][PM_LIMITS_COLS] = {
+  {LTM4673_VOUT_COMMAND, 0xffff, V_TO_L16(2.45), V_TO_L16(2.55)},  // 2.45V to 2.55V
 };
-const int _ltm4673_page3_limits [][PM_LIMITS_COLS] = {
-  {LTM4673_VOUT_COMMAND, 3250, 3350},  // 3.25V to 3.35V
+const uint16_t _ltm4673_page3_limits [][PM_LIMITS_COLS] = {
+  {LTM4673_VOUT_COMMAND, 0xffff, V_TO_L16(3.25), V_TO_L16(3.35)},  // 3.25V to 3.35V
 };
 
 typedef struct {
   unsigned int nrows;
-  const int (*array)[PM_LIMITS_COLS];
+  const uint16_t (*array)[PM_LIMITS_COLS];
 } _ltm4673_limits_t;
 static const _ltm4673_limits_t ltm4673_pageff_limits = {
-  .nrows = sizeof(_ltm4673_pageff_limits)/(sizeof(int)*PM_LIMITS_COLS),
+  .nrows = sizeof(_ltm4673_pageff_limits)/(sizeof(uint16_t)*PM_LIMITS_COLS),
   .array = _ltm4673_pageff_limits
 };
 static const _ltm4673_limits_t ltm4673_page0_limits = {
-  .nrows = sizeof(_ltm4673_page0_limits)/(sizeof(int)*PM_LIMITS_COLS),
+  .nrows = sizeof(_ltm4673_page0_limits)/(sizeof(uint16_t)*PM_LIMITS_COLS),
   .array = _ltm4673_page0_limits
 };
 static const _ltm4673_limits_t ltm4673_page1_limits = {
-  .nrows = sizeof(_ltm4673_page1_limits)/(sizeof(int)*PM_LIMITS_COLS),
+  .nrows = sizeof(_ltm4673_page1_limits)/(sizeof(uint16_t)*PM_LIMITS_COLS),
   .array = _ltm4673_page1_limits
 };
 static const _ltm4673_limits_t ltm4673_page2_limits = {
-  .nrows = sizeof(_ltm4673_page2_limits)/(sizeof(int)*PM_LIMITS_COLS),
+  .nrows = sizeof(_ltm4673_page2_limits)/(sizeof(uint16_t)*PM_LIMITS_COLS),
   .array = _ltm4673_page2_limits
 };
 static const _ltm4673_limits_t ltm4673_page3_limits = {
-  .nrows = sizeof(_ltm4673_page3_limits)/(sizeof(int)*PM_LIMITS_COLS),
+  .nrows = sizeof(_ltm4673_page3_limits)/(sizeof(uint16_t)*PM_LIMITS_COLS),
   .array = _ltm4673_page3_limits
 };
 static const _ltm4673_limits_t ltm4673_limits[] = {
@@ -81,7 +83,7 @@ static const _ltm4673_limits_t ltm4673_limits[] = {
 #define LTM4673_NPAGES_CHECK  sizeof(ltm4673_limits)/sizeof(_ltm4673_limits_t)
 #define LTM4673_NPAGES  (5)
 #define LTM4673_LIMIT_GET_COMMAND(page, row) \
-  ltm4673_limits[LTM4673_PAGE_INDEX(page)].array[row][0]
+  (uint8_t)ltm4673_limits[LTM4673_PAGE_INDEX(page)].array[row][0]
 #define LTM4673_LIMIT_GET_MASK(page, row) \
   ltm4673_limits[LTM4673_PAGE_INDEX(page)].array[row][1]
 #define LTM4673_LIMIT_GET_MIN(page, row) \
@@ -358,20 +360,59 @@ static const uint8_t ltm4673_encodings[256] = {
   LTM4673_UNUSED, // 0xff
 };
 
+#ifdef FLOAT_LIMITS
+static float ltm4673_decode_float(uint8_t cmd, uint16_t data);
+static uint16_t ltm4673_encode_float(uint8_t cmd, float val);
+#else
 static int ltm4673_decode(uint8_t cmd, uint16_t data);
 static uint16_t ltm4673_encode(uint8_t cmd, int val);
+#endif
+
+
+static uint16_t ltm4673_apply_limits_cmd(uint8_t cmd, uint16_t val_enc, uint16_t mask,
+                                     uint16_t min_enc, uint16_t max_enc);
 
 uint8_t ltm4673_get_page(void) {
   return ltm4673_page;
 }
 
+#ifdef FLOAT_LIMITS
+static float ltm4673_decode_float(uint8_t cmd, uint16_t data) {
+  uint8_t encoding = ltm4673_encodings[cmd];
+  float val = 0;
+  if (encoding == LTM4673_ENCODING_RAW) {
+    val = (float)data;
+  } else if (encoding == LTM4673_ENCODING_L11) {
+    // Defaulting to V encoding
+    val = l11_to_v_float(data);
+  } else if (encoding == LTM4673_ENCODING_L16) {
+    val = l16_to_v_float(data);
+  }
+  return val;
+}
+
+static uint16_t ltm4673_encode_float(uint8_t cmd, float val) {
+  uint16_t data = 0;
+  uint8_t encoding = ltm4673_encodings[cmd];
+  if (encoding == LTM4673_ENCODING_RAW) {
+    data = (uint16_t)val;
+  } else if (encoding == LTM4673_ENCODING_L11) {
+    // Defaulting to V encoding
+    data = v_to_l11_float(val);
+  } else if (encoding == LTM4673_ENCODING_L16) {
+    data = v_to_l16_float(val);
+  }
+  return data;
+}
+
+#else
 static int ltm4673_decode(uint8_t cmd, uint16_t data) {
-  // TODO - Get encoding type from 'cmd'
   uint8_t encoding = ltm4673_encodings[cmd];
   int val = 0;
   if (encoding == LTM4673_ENCODING_RAW) {
     val = (int)data;
   } else if (encoding == LTM4673_ENCODING_L11) {
+    // Defaulting to mV encoding
     val = l11_to_mv_int(data);
   } else if (encoding == LTM4673_ENCODING_L16) {
     val = L16_TO_MV(data);
@@ -385,12 +426,14 @@ static uint16_t ltm4673_encode(uint8_t cmd, int val) {
   if (encoding == LTM4673_ENCODING_RAW) {
     data = (uint16_t)val;
   } else if (encoding == LTM4673_ENCODING_L11) {
+    // Defaulting to mV encoding
     data = mv_to_l11_int(val);
   } else if (encoding == LTM4673_ENCODING_L16) {
     data = MV_TO_L16(val);
   }
   return data;
 }
+#endif
 
 int ltm4673_ch_status(uint8_t dev)
 {
@@ -421,28 +464,28 @@ int ltm4673_ch_status(uint8_t dev)
 void ltm4673_read_telem(uint8_t dev) {
    struct {int b; const char *m;} r_table[] = {
       // see page 105
-      {0x88, "V     READ_VIN"},
-      {0x89, "A     READ_IIN"},
-      {0x97, "W     READ_PIN"},
-      {0x8B, "V     READ_VOUT"},
-      {0x8C, "A     READ_IOUT"},
-      {0x8D, "degC  READ_TEMPERATURE_1"},
-      {0x8E, "degC  READ_TEMPERATURE_2"},
-      {0x96, "W     READ_POUT"},
-      {0xBB, "mA    MFR_READ_IOUT"},
-      {0xC4, "A     MFR_IIN_PEAK"},
-      {0xC5, "A     MFR_IIN_MIN"},
-      {0xC6, "P     MFR_PIN_PEAK"},
-      {0xC7, "P     MFR_PIN_MIN"},
-      {0xFA, "V     MFR_IOUT_SENSE_VOLTAGE"},
-      {0xDE, "V     MFR_VIN_PEAK"},
-      {0xDD, "V     MFR_VOUT_PEAK"},
-      {0xD7, "A     MFR_IOUT_PEAK"},
-      {0xDF, "degC  MFR_TEMPERATURE_1_PEAK"},
-      {0xFC, "V     MFR_VIN_MIN"},
-      {0xFB, "V     MFR_VOUT_MIN"},
-      {0xD8, "A     MFR_IOUT_MIN"},
-      {0xFD, "degC  MFR_TEMPERATURE_1_MIN"}};
+      {LTM4673_READ_VIN,              "V     READ_VIN"},
+      {LTM4673_READ_IIN,              "A     READ_IIN"},
+      {LTM4673_READ_PIN,              "W     READ_PIN"},
+      {LTM4673_READ_VOUT,             "V     READ_VOUT"},
+      {LTM4673_READ_IOUT,             "A     READ_IOUT"},
+      {LTM4673_READ_TEMPERATURE_1,    "degC  READ_TEMPERATURE_1"},
+      {LTM4673_READ_TEMPERATURE_2,    "degC  READ_TEMPERATURE_2"},
+      {LTM4673_READ_POUT,             "W     READ_POUT"},
+      {LTM4673_MFR_READ_IOUT,         "mA    MFR_READ_IOUT"},
+      {LTM4673_MFR_IIN_PEAK,          "A     MFR_IIN_PEAK"},
+      {LTM4673_MFR_IIN_MIN,           "A     MFR_IIN_MIN"},
+      {LTM4673_MFR_PIN_PEAK,          "W     MFR_PIN_PEAK"},
+      {LTM4673_MFR_PIN_MIN,           "W     MFR_PIN_MIN"},
+      {LTM4673_MFR_IOUT_SENSE_VOLTAGE,"V     MFR_IOUT_SENSE_VOLTAGE"},
+      {LTM4673_MFR_VIN_PEAK,          "V     MFR_VIN_PEAK"},
+      {LTM4673_MFR_VOUT_PEAK,         "V     MFR_VOUT_PEAK"},
+      {LTM4673_MFR_IOUT_PEAK,         "A     MFR_IOUT_PEAK"},
+      {LTM4673_MFR_TEMPERATURE_1_PEAK,"degC  MFR_TEMPERATURE_1_PEAK"},
+      {LTM4673_MFR_VIN_MIN,           "V     MFR_VIN_MIN"},
+      {LTM4673_MFR_VOUT_MIN,          "V     MFR_VOUT_MIN"},
+      {LTM4673_MFR_IOUT_MIN,          "A     MFR_IOUT_MIN"},
+      {LTM4673_MFR_TEMPERATURE_1_MIN, "degC  MFR_TEMPERATURE_1_MIN"}};
    printf("LTM4673 Telemetry register dump:\n");
    //float L16 = 0.0001220703125;  // 2**(-13)
    for (unsigned jx = 0; jx < 4; jx++) {
@@ -462,6 +505,8 @@ void ltm4673_read_telem(uint8_t dev) {
           if (rc == HAL_OK) {
               if ((uint8_t)regno == LTM4673_MFR_READ_IOUT) {
                   phys_unit = word0*2.5;  // special for MFR_READ_IOUT
+              } else if ((uint8_t)regno == LTM4673_MFR_IOUT_SENSE_VOLTAGE) {
+                  phys_unit = l16_to_v_float(word0*0.025); // special case for MFR_IOUT_SENSE_VOLTAGE
               } else if (ltm4673_encodings[(uint8_t)regno] == LTM4673_ENCODING_L11) {
                   phys_unit = l11_to_v_float(word0);
               } else if (ltm4673_encodings[(uint8_t)regno] == LTM4673_ENCODING_L16) {
@@ -469,20 +514,6 @@ void ltm4673_read_telem(uint8_t dev) {
               } else {
                   phys_unit = (float)word0;
               }
-              /*
-              if (ix == 3 || ix == 15 || ix == 19)
-                  phys_unit = word0*L16;  // L16 format
-              else if (ix == 8)
-                  phys_unit = word0*2.5;  // special for MFR_READ_IOUT
-              else if (ix == 13)
-                  phys_unit = word0*0.025*pow(2, -13);  // special for MFR_IOUT_SENSE_VOLTAGE
-              else {
-                  // L11 format, see page 35
-                  mask = (word0 >> 11);
-                  comp2 = pow(2, 5) - mask;
-                  phys_unit = (word0 & 0x7FF)*(1.0/(1<<comp2));
-              }
-              */
               printf("r[%2.2x] = 0x%4.4x = %5d = %7.3f %s\r\n", regno, word0, word0, phys_unit, r_table[ix].m);
           } else {
               printf("r[%2.2x]    unread          (%s)\r\n", regno, r_table[ix].m);
@@ -549,12 +580,10 @@ int ltm4673_hook_read(uint8_t addr, uint8_t cmd, const uint8_t *data, int len) {
 }
 
 int ltm4673_apply_limits(uint16_t *xact, int len) {
-  uint16_t data;
+  uint16_t val_enc;
   int matched = 0;
   unsigned int row;
-  int val_decoded;
-  int mask;
-  int lim;
+  uint16_t mask, min_enc, max_enc;
   uint8_t command_code = xact[1] & 0xff;
   // Look for LTM4673 writes
   for (unsigned int n = 0; n < LTM4673_MATCH_ADDRS; n++) {
@@ -572,27 +601,17 @@ int ltm4673_apply_limits(uint16_t *xact, int len) {
           printf("Vetoing write to protected register 0x%02x\r\n", command_code);
           return 0;
         }
-        data = (uint16_t)xact[2];
+        val_enc = (uint16_t)xact[2];
         if (len > 3) {
-          data |= ((uint16_t)xact[3] << 8);
+          val_enc |= ((uint16_t)xact[3] << 8);
         }
-        // TODO - Determine the encoding type (L11, L16, raw) before proceeding
-        // Decode the bytes before comparing value
-        val_decoded = ltm4673_decode(command_code, data);
-        // Apply pass_mask
-        val_decoded = val_decoded & mask;
-        // Clip at lower limit
-        lim = LTM4673_LIMIT_GET_MIN(ltm4673_page, row);
-        val_decoded = val_decoded < lim ? lim : val_decoded;
-        // Clip at upper limit
-        lim = LTM4673_LIMIT_GET_MAX(ltm4673_page, row);
-        val_decoded = val_decoded > lim ? lim : val_decoded;
-        // Encode the bytes before storing
-        data = ltm4673_encode(command_code, val_decoded);
+        min_enc = LTM4673_LIMIT_GET_MIN(ltm4673_page, row);
+        max_enc = LTM4673_LIMIT_GET_MAX(ltm4673_page, row);
+        val_enc = ltm4673_apply_limits_cmd(command_code, val_enc, mask, min_enc, max_enc);
         // Clobber old data
-        xact[2] = (uint8_t)(data & 0xff);
+        xact[2] = (uint8_t)(val_enc & 0xff);
         if (len > 3) {
-          xact[3] = (uint8_t)((data >> 8) & 0xff);
+          xact[3] = (uint8_t)((val_enc >> 8) & 0xff);
         }
       }
     }
@@ -600,8 +619,65 @@ int ltm4673_apply_limits(uint16_t *xact, int len) {
   return 0;
 }
 
+static uint16_t ltm4673_apply_limits_cmd(uint8_t cmd, uint16_t val_enc, uint16_t mask,
+                                     uint16_t min_enc, uint16_t max_enc)
+{
+  // Apply pass_mask before decoding
+  val_enc = val_enc & mask;
+  uint8_t encoding = ltm4673_encodings[cmd];
+  if (encoding == LTM4673_ENCODING_RAW) {
+    // Apply mask and limits to raw value
+    val_enc = val_enc < min_enc ? min_enc : val_enc;
+    val_enc = val_enc > max_enc ? max_enc : val_enc;
+  } else {
+#ifdef FLOAT_LIMITS
+    float val_dec, lim_dec;
+    // Decode the set value and limits before comparing
+    val_dec = ltm4673_decode_float(cmd, val_enc);
+    // FIXME DEBUG
+    printf("  [Limits] %f ->", val_dec);
+    // Clip at lower limit
+    lim_dec = ltm4673_decode_float(cmd, min_enc);
+    printf(" (min_enc = 0x%04x)", min_enc);
+    printf(" (min_dec = %f)", lim_dec);
+    val_dec = val_dec < lim_dec ? lim_dec : val_dec;
+    // Clip at upper limit
+    lim_dec = ltm4673_decode_float(cmd, max_enc);
+    printf(" (max_enc = 0x%04x)", max_enc);
+    printf(" (max_dec = %f)", lim_dec);
+    val_dec = val_dec > lim_dec ? lim_dec : val_dec;
+    // FIXME DEBUG
+    printf(" -> %f\r\n", val_dec);
+    // Encode the bytes before storing
+    val_enc = ltm4673_encode_float(cmd, val_dec);
+#else
+    int val_dec, lim_dec;
+    // Decode the set value and limits before comparing
+    val_dec = ltm4673_decode(cmd, val_enc);
+    // FIXME DEBUG
+    printf("  [Limits] %d ->", val_dec);
+    // Clip at lower limit
+    lim_dec = ltm4673_decode(cmd, min_enc);
+    printf(" (min_enc = 0x%04x)", min_enc);
+    printf(" (min_dec = %d)", lim_dec);
+    val_dec = val_dec < lim_dec ? lim_dec : val_dec;
+    // Clip at upper limit
+    lim_dec = ltm4673_decode(cmd, max_enc);
+    printf(" (max_enc = 0x%04x)", max_enc);
+    printf(" (max_dec = %d)", lim_dec);
+    val_dec = val_dec > lim_dec ? lim_dec : val_dec;
+    // FIXME DEBUG
+    printf(" -> %d\r\n", val_dec);
+    // Encode the bytes before storing
+    val_enc = ltm4673_encode(cmd, val_dec);
+#endif
+  }
+  return val_enc;
+}
+
 void ltm4673_print_limits(void) {
-  uint8_t cmd, mask, min, max;
+  uint8_t cmd;
+  uint16_t mask, min, max;
   unsigned int page, row;
   for (page = 0; page < LTM4673_NPAGES; page++) {
     if (page > 3) {
@@ -615,7 +691,7 @@ void ltm4673_print_limits(void) {
       mask = LTM4673_LIMIT_GET_MASK(page, row);
       min  = LTM4673_LIMIT_GET_MIN(page, row);
       max  = LTM4673_LIMIT_GET_MAX(page, row);
-      printf("0x%02x  0x%02x  0x%02x  0x%02x\r\n", cmd, mask, min, max);
+      printf("0x%02x  0x%04x  0x%04x  0x%04x\r\n", cmd, mask, min, max);
     }
   }
   return;
