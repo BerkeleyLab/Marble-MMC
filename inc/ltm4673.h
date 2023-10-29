@@ -140,12 +140,13 @@
 #define LTM4673_MFR_VIN_MIN                      (0xfc)
 #define LTM4673_MFR_TEMPERATURE_1_MIN            (0xfd)
 
+void ltm4673_init(void);
 uint8_t ltm4673_get_page(void);
 void ltm4673_read_telem(uint8_t dev);
 int ltm4673_ch_status(uint8_t dev);
 int ltm4673_apply_limits(uint16_t *xact, int len);
-int ltm4673_hook_read(uint8_t addr, uint8_t cmd, const uint8_t *data, int len);
-int ltm4673_hook_write(uint8_t addr, const uint8_t *data, int len);
+int ltm4673_hook_read(uint8_t addr, int cmd, const uint8_t *data, int len);
+int ltm4673_hook_write(uint8_t addr, int cmd, const uint8_t *data, int len);
 
 void ltm4673_print_limits(void);
 #ifdef __cplusplus

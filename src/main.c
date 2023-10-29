@@ -132,9 +132,9 @@ int main(void) {
 
    // Send demo string over UART at 115200 BAUD
    marble_UART_send(DEMO_STRING, strlen(DEMO_STRING));
-   //printf("%s", DEMO_STRING);
 
-   ltm4673_print_limits();
+   I2C_PM_init();
+
    while (1) {
       // Run all system update/monitoring tasks and only then handle console
       if (spi_update) {
@@ -156,6 +156,7 @@ int main(void) {
         break;
       }
    }
+   cleanup(); // Only used for simulation
 }
 
 // This probably belongs in some other file, but which one?

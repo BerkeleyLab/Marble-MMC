@@ -96,6 +96,8 @@ static void marble_apply_params(void);
 static void marble_read_pcb_rev(void);
 static int marble_MGTMUX_store(void);
 static void I2C_PM_smba_handler(void);
+static int i2c_hook(I2C_BUS I2C_bus, uint8_t addr, uint8_t rnw,
+                    int cmd, const uint8_t *data, int len);
 
 /* int board_service(void);
  *  Call in main loop. Handles routines scheduled from interrupts.
@@ -107,6 +109,11 @@ int board_service(void) {
       i2c_pm_alert = 0;
    }
    return 0;
+}
+
+// Only used in simulation
+void cleanup(void) {
+   return;
 }
 
 /* Initialize UART pins */
@@ -644,15 +651,23 @@ int marble_I2C_send(I2C_BUS I2C_bus, uint8_t addr, const uint8_t *data, int size
      printf("*** I2C_send BUSY\r\n");
    }
    i2cBusStatus |= rc;
+   if (rc == HAL_OK) {
+      // rnw=0, cmd=-1
+      i2c_hook(I2C_bus, addr, 0, -1, data, size);
+   }
    return rc;
 }
 
-int marble_I2C_cmdsend(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size) {
-   int rc = HAL_I2C_Mem_Write(I2C_bus, (uint16_t)addr, cmd, 1, data, size, I2C_DELAY_MS);
+int marble_I2C_cmdsend(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, const uint8_t *data, int size) {
+   int rc = HAL_I2C_Mem_Write(I2C_bus, (uint16_t)addr, cmd, 1, (uint8_t *)data, size, I2C_DELAY_MS);
    if (rc == HAL_TIMEOUT) {
      printf("*** I2C_cmdsend TIMEOUT\r\n");
    } else if (rc == HAL_BUSY) {
      printf("*** I2C_cmdsend BUSY\r\n");
+   }
+   if (rc == HAL_OK) {
+      // rnw=0, cmd=cmd
+      i2c_hook(I2C_bus, addr, 0, cmd, data, size);
    }
    i2cBusStatus |= rc;
    return rc;
@@ -666,6 +681,10 @@ int marble_I2C_recv(I2C_BUS I2C_bus, uint8_t addr, uint8_t *data, int size) {
      printf("*** I2C_recv BUSY\r\n");
    }
    i2cBusStatus |= rc;
+   if (rc == HAL_OK) {
+      // rnw=1, cmd=-1
+      i2c_hook(I2C_bus, addr, 1, -1, data, size);
+   }
    return rc;
 }
 
@@ -677,18 +696,26 @@ int marble_I2C_cmdrecv(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data
      printf("*** I2C_cmdrecv BUSY\r\n");
    }
    i2cBusStatus |= rc;
+   if (rc == HAL_OK) {
+      // rnw=1, cmd=cmd
+      i2c_hook(I2C_bus, addr, 1, cmd, data, size);
+   }
    return rc;
 }
 
 /* Same but 2-byte register addresses */
-int marble_I2C_cmdsend_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *data, int size) {
-   int rc = HAL_I2C_Mem_Write(I2C_bus, (uint16_t)addr, cmd, 2, data, size, I2C_DELAY_MS);
+int marble_I2C_cmdsend_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, const uint8_t *data, int size) {
+   int rc = HAL_I2C_Mem_Write(I2C_bus, (uint16_t)addr, cmd, 2, (uint8_t *)data, size, I2C_DELAY_MS);
    if (rc == HAL_TIMEOUT) {
      printf("*** I2C_cmdsend_a2 TIMEOUT\r\n");
    } else if (rc == HAL_BUSY) {
      printf("*** I2C_cmdsend_a2 BUSY\r\n");
    }
    i2cBusStatus |= rc;
+   if (rc == HAL_OK) {
+      // rnw=0, cmd=cmd
+      i2c_hook(I2C_bus, addr, 0, cmd, data, size);
+   }
    return rc;
 }
 int marble_I2C_cmdrecv_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *data, int size) {
@@ -699,7 +726,43 @@ int marble_I2C_cmdrecv_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *
      printf("*** I2C_cmdrecv_a2 BUSY\r\n");
    }
    i2cBusStatus |= rc;
+   if (rc == HAL_OK) {
+      // rnw=1, cmd=cmd
+      i2c_hook(I2C_bus, addr, 1, cmd, data, size);
+   }
    return rc;
+}
+
+/* static int i2c_hook(I2C_BUS I2C_bus, uint8_t addr, uint8_t rnw,
+                       int cmd, const uint8_t *data, int len);
+ *  Callback (hook) function for side-effects of I2C transactions.
+ *  In blocking mode, this function is called AFTER a successful return of the I2C_write
+ *  or I2C_read functions.  In non-blocking mode, this callback should be scheduled to
+ *  run in the I2C_transaction_complete interrupt handler and should only be called
+ *  in thread mode (not called from the ISR).
+ *  @params:
+ *    I2C_BUS I2C_bus: The bus on which the transaction occurred. One of I2C_PM,
+ *                  or I2C_FPGA.
+ *    uint8_t addr: 8-bit (not 7-bit) I2C device address of the transaction
+ *    uint8_t rnw:  Transaction direction. 0=Write (central to periph), 1=Read
+ *    int cmd:      For API with explicit command/reg bytes, 0 <= cmd <= 0xff.
+ *                  For API with 2-byte commands, 0 <= cmd <= 0xffff.
+ *                  For API without command/reg bytes, cmd = -1. If a cmd byte
+ *                  is mandatory for a given device, the associated hook should
+ *                  expect data[0] = cmd_byte (or data[0:1] = cmd_halfword) with
+ *                  the transaction data continuing immediately afterward.
+ *    uint8_t *data: For Read, the data returned by peripheral. For Write, the
+ *                  data sent to peripheral.
+ *    int len:      The length of valid data in 'data' pointer.
+ */
+static int i2c_hook(I2C_BUS I2C_bus, uint8_t addr, uint8_t rnw,
+                    int cmd, const uint8_t *data, int len)
+{
+   if (I2C_bus == I2C_PM) {
+      i2c_pm_hook(addr, rnw, cmd, data, len);
+   }
+   // Bus-specific I2C hooks here
+   return 0;
 }
 
 /************

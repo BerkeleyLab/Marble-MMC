@@ -139,6 +139,7 @@ $(OUTPUT_DIR)/%.o: %.s
 #
 $(OUTPUT_DIR)/$(PROJECT_NAME): $(OBJECTS) $(LINKERS)
 	@$(ECHO) 'Linking $@...'
+	@$(MKDIR) $(dir $@)
 	$(CC) $(LDFLAGS) $(addprefix -T,$(LINKERS)) -Wl,-Map,$@.map -o $@ $(OBJECTS)
 	@$(ECHO)
 	$(SIZE) $@
@@ -156,11 +157,19 @@ $(INCLUDE_DIR)/$(MBOX_DEF).h: $(INCLUDE_DIR)/mbox.def $(MKMBOX)
 $(SOURCE_DIR)/$(MBOX_DEF).c: $(INCLUDE_DIR)/mbox.def
 	python3 $(MKMBOX) -d $< -o $@
 
+WRAPPER=$(OUTPUT_DIR)/ptywrap
+$(WRAPPER): $(BOARD)/ptywrap.c
+	@$(MKDIR) $(dir $@)
+	$(CC) $^ -o $@
+
+.PHONY: wrap
+wrap: $(WRAPPER) $(OUTPUT_DIR)/$(PROJECT_NAME)
+	$^
+
 # Removes everything in the output directory
-#
 .PHONY: clean
 clean:
-	$(RM) $(OUTPUT_DIR)/*
+	$(RM) $(OUTPUT_DIR)
 	$(RM) src/rev.h
 
 .PHONY: run

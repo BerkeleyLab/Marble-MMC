@@ -19,12 +19,14 @@ typedef enum {
 // Note that the MAX6639 has a hard-coded 5degC hysteresis
 #define TEMPERATURE_HYST_DEGC           (5)
 
+void I2C_PM_init(void);
 void I2C_PM_scan(void);
 void I2C_PM_probe(void);
 void print_max6639(void);
 void print_max6639_decoded(void);
 int get_max6639_reg(int regno, int *value);
 int return_max6639_reg(int regno);
+void i2c_pm_hook(uint8_t addr, uint8_t rnw, int cmd, const uint8_t *data, int len);
 
 #define LM75_FOR_EACH_REGISTER() \
   X(LM75_TEMP, 0) \

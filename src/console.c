@@ -634,7 +634,6 @@ int console_service(void) {
   int len;
   if (_msgCount) {
     len = console_shift_msg(msg);
-    //len = console_shift_all(msg);
     _msgCount--;
     if (len) {
       return console_handle_msg((char *)msg, len);
@@ -1034,10 +1033,11 @@ static void console_print_fsynth(void) {
 static int sscanfPMBridge(const char *s, int len) {
   // Skip the first character (command char)
   int ptr = sscanfNext(s, len);
-  int ptrinc; // DEBUG
+  int ptrinc;
   int max_len = len > PMBRIDGE_MAX_LINE_LENGTH ? PMBRIDGE_MAX_LINE_LENGTH : len;
   int arg;
   int item_index = 0;
+  int fail = 0;
   uint16_t xact[PMBRIDGE_XACT_MAX_ITEMS];
   while (ptr < max_len) {
     if (s[ptr] == '\n') {
@@ -1048,12 +1048,14 @@ static int sscanfPMBridge(const char *s, int len) {
     ptr += ptrinc;
     if (arg < 0) {
       printf("ERROR: Parse failed at character %d [%c]\r\n", ptr, s[ptr]);
+      fail = 1;
       break;
     } else {
       if (item_index < PMBRIDGE_XACT_MAX_ITEMS) {
         xact[item_index++] = (uint16_t)(arg & 0xffff);
       } else {
         printf("ERROR: Exceeded maximum number of bytes per transaction\r\n");
+        fail = 1;
         break;
       }
     }
@@ -1063,6 +1065,9 @@ static int sscanfPMBridge(const char *s, int len) {
     }
     //printf("finding whitespace ptr %d -> %d\r\n", ptr, ptr+ptrinc);
     ptr += ptrinc;
+  }
+  if (fail) {
+    return fail;
   }
   /*
   printf("xact = [ ");
@@ -1108,7 +1113,8 @@ static int PMBridgeConsumeArg(const char *s, int len, volatile int *arg) {
     c = s[n];
     // Stop at whitespace
     if ((c == ' ') || (c == '\n') || (c == '\t') || (c == '\r')) {
-      if (state < 3) {
+      if ((state == 2) || (state == 0)) {
+        // state=1 is valid for bare '0' argument
         val = -1;
       }
       break;

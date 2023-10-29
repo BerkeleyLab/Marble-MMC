@@ -37,7 +37,7 @@ uint32_t _page0[] = {
   0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x7,    0x4000, 0x8000, 0x0,    0x0,    0x0,    0x0,    0x0,    0x0,     // 0xf0-0xff
 };
 uint32_t _page1[] = {
-  0x0,    0x80,   0x1e,   0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,     // 0x0-0xf
+  0x1,    0x80,   0x1e,   0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,     // 0x0-0xf
   0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,     // 0x10-0x1f
   0x0,    0x399a, 0x0,    0x0,    0xffff, 0x3c7b, 0x36b9, 0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,     // 0x20-0x2f
   0x0,    0x0,    0x0,    0x0,    0x0,    0xca40, 0xca33, 0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,     // 0x30-0x3f
@@ -55,7 +55,7 @@ uint32_t _page1[] = {
   0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x7,    0x4000, 0x8000, 0x0,    0x0,    0x0,    0x0,    0x0,    0x0,     // 0xf0-0xff
 };
 uint32_t _page2[] = {
-  0x0,    0x80,   0x1e,   0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,     // 0x0-0xf
+  0x2,    0x80,   0x1e,   0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,     // 0x0-0xf
   0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,     // 0x10-0x1f
   0x0,    0x5000, 0x0,    0x0,    0xffff, 0x5400, 0x4c00, 0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,     // 0x20-0x2f
   0x0,    0x0,    0x0,    0x0,    0x0,    0xca40, 0xca33, 0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,     // 0x30-0x3f
@@ -73,7 +73,7 @@ uint32_t _page2[] = {
   0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x7,    0x4000, 0x8000, 0x0,    0x0,    0x0,    0x0,    0x0,    0x0,     // 0xf0-0xff
 };
 uint32_t _page3[] = {
-  0x0,    0x80,   0x1e,   0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,     // 0x0-0xf
+  0x3,    0x80,   0x1e,   0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,     // 0x0-0xf
   0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,     // 0x10-0x1f
   0x0,    0x699a, 0x0,    0x0,    0xffff, 0x6ee2, 0x6452, 0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,     // 0x20-0x2f
   0x0,    0x0,    0x0,    0x0,    0x0,    0xca40, 0xca33, 0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,    0x0,     // 0x30-0x3f
@@ -95,14 +95,23 @@ static four_page_periph_t ltm4673 = {_page0, _page1, _page2, _page3};
 static uint8_t ltm4673_addrs[] = {0xb8, 0xba, 0xbc, 0xbe, 0xc0, 0xc2, 0xc4, 0xc6, 0xc8};
 #define LTM4673_MATCH_ADDRS     (sizeof(ltm4673_addrs)/sizeof(uint8_t))
 
-static int i2c_hook(I2C_BUS I2C_bus, uint8_t addr, uint8_t rnw, int reg,
-                         const uint8_t *wdata, volatile uint8_t *rdata, int len);
-static int i2c_hook_ltm4673(uint8_t rnw, int reg, const uint8_t *wdata, volatile uint8_t *rdata, int len);
+static int i2c_emu(I2C_BUS I2C_bus, uint8_t addr, uint8_t rnw,
+                    int cmd, uint8_t *data, int len);
+static int i2c_emu_ltm4673(uint8_t rnw, int reg, uint8_t *data, int len);
 static void init_sim_ltm4673_telem(void);
 static void init_sim_ltm4673_config(void);
 
-static int i2c_hook(I2C_BUS I2C_bus, uint8_t addr, uint8_t rnw, int reg,
-                         const uint8_t *wdata, volatile uint8_t *rdata, int len)
+/* static int i2c_emu(I2C_BUS I2C_bus, uint8_t addr, uint8_t rnw,
+ *                     int cmd, uint8_t *data, int len);
+ *  Note that this hook function is fundamentally different from that of
+ *  marble_board.c because this is actually emulating the behavior of the
+ *  I2C hardware (which is why the 'const' qualifier is absent from data).
+ *  For reads (rnw=1) the value of 'data' will not be read but may be
+ *  changed, so a pointer to uninitialized memory is valid. For writes 
+ *  (rnw=0), data is only read, so behaves as if qualified with 'const'.
+ */
+static int i2c_emu(I2C_BUS I2C_bus, uint8_t addr, uint8_t rnw,
+                    int cmd, uint8_t *data, int len)
 {
   // TODO - Can add more I2C device emulators here
   int matched = 0;
@@ -118,18 +127,14 @@ static int i2c_hook(I2C_BUS I2C_bus, uint8_t addr, uint8_t rnw, int reg,
   if (!matched) {
     return 1;
   }
-  // This is all we need for ltm4673_hook_write
-  uint8_t transact_data[2];
-  if ((!rnw) && (len > 0)) {
-    transact_data[0] = (uint8_t)(reg & 0xff);
-    transact_data[1] = wdata[0];
-    ltm4673_hook_write(addr, transact_data, 2);
+  if (!rnw) {
+    ltm4673_hook_write(addr, cmd, data, len);
   }
   // Device emulator hooks
-  return i2c_hook_ltm4673(rnw, reg, wdata, rdata, len);
+  return i2c_emu_ltm4673(rnw, cmd, data, len);
 }
 
-static int i2c_hook_ltm4673(uint8_t rnw, int reg, const uint8_t *wdata, volatile uint8_t *rdata, int len) {
+static int i2c_emu_ltm4673(uint8_t rnw, int reg, uint8_t *data, int len) {
   int max_rw = len > 4 ? 4 : len; // Limit to 32-bit for now
   int offset = 0;
   uint32_t *ppage;
@@ -154,21 +159,21 @@ static int i2c_hook_ltm4673(uint8_t rnw, int reg, const uint8_t *wdata, volatile
     //printf("Reading from page %d, reg 0x%x = 0x%x\r\n", page, reg, regval);
     for (int n = 0; n < max_rw; n++) {
       // LSB-to-MSB
-      rdata[n] = (regval >> 8*n) & 0xff;
+      data[n] = (regval >> 8*n) & 0xff;
     }
   } else {
-    if (reg == -1) {
+    if (reg < 0) {
       // Treat first datum as nreg
-      reg = (int)wdata[0];
+      reg = (int)data[0];
       offset = 1;
     } else if (reg == -2) {
       // Treat first two data as nreg (LSB, MSB)
-      reg = (int)(wdata[0] + (wdata[1]<<8));
+      reg = (int)(data[0] + (data[1]<<8));
       offset = 2;
     }
     for (int n = offset; n < max_rw; n++) {
       // LSB-to-MSB
-      regval |= (wdata[n] << 8*(n-offset));
+      regval |= (data[n] << 8*(n-offset));
     }
     printf("Writing 0x%x to page %d, reg 0x%x\r\n", regval, page, reg);
     if (page == 0xff) {
@@ -190,27 +195,27 @@ int marble_I2C_probe(I2C_BUS I2C_bus, uint8_t addr) {
 }
 
 int marble_I2C_send(I2C_BUS I2C_bus, uint8_t addr, const uint8_t *data, int size) {
-  return i2c_hook(I2C_bus, addr, 0, -1, data, NULL, size);
+  return i2c_emu(I2C_bus, addr, 0, -1, (uint8_t *)data, size);
 }
 
-int marble_I2C_cmdsend(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size) {
-  return i2c_hook(I2C_bus, addr, 0, cmd, data, NULL, size);
+int marble_I2C_cmdsend(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, const uint8_t *data, int size) {
+  return i2c_emu(I2C_bus, addr, 0, cmd, (uint8_t *)data, size);
 }
 
 int marble_I2C_recv(I2C_BUS I2C_bus, uint8_t addr, uint8_t *data, int size) {
-  return i2c_hook(I2C_bus, addr, 1, 0, NULL, data, size);
+  return i2c_emu(I2C_bus, addr, 1, 0, data, size);
 }
 
 int marble_I2C_cmdrecv(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size) {
-  return i2c_hook(I2C_bus, addr, 1, cmd, NULL, data, size);
+  return i2c_emu(I2C_bus, addr, 1, cmd, data, size);
 }
 
-int marble_I2C_cmdsend_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *data, int size) {
-  return i2c_hook(I2C_bus, addr, 0, cmd, data, NULL, size);
+int marble_I2C_cmdsend_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, const uint8_t *data, int size) {
+  return i2c_emu(I2C_bus, addr, 0, cmd, (uint8_t *)data, size);
 }
 
 int marble_I2C_cmdrecv_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *data, int size) {
-  return i2c_hook(I2C_bus, addr, 1, cmd, NULL, data, size);
+  return i2c_emu(I2C_bus, addr, 1, cmd, data, size);
 }
 
 int getI2CBusStatus(void) {

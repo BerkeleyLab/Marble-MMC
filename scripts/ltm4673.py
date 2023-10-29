@@ -84,6 +84,8 @@ ENCODING_RAW = 0
 ENCODING_L11 = 1
 ENCODING_L16 = 2
 
+_L16_EXPONENT=13
+
 commands = {
     # name : (addr, nbytes)
     "PAGE":                          (0x00, MODE_BYTE, ENCODING_RAW),
@@ -262,6 +264,50 @@ def print_commands_c():
             print(enc)
     print("};")
     return
+
+
+def L11_TO_V(l):
+    """PMBus Linear11 Floating-Point format.
+    https://en.wikipedia.org/wiki/Power_Management_Bus#Linear11_Floating-Point_Format
+    """
+    n = tc(val >> 11, 5)
+    a = tc(val & ((1<<11)-1), 11)
+    return a*(2**n)
+
+
+def V_TO_L11(val):
+    # n is 5 bits (signed), can range from -16 to +15; 2**n can range from 15.26u to 32.768k
+    # y is 11 bits (signed), can range from -1024 to +1023
+    n = -16
+    val = val*(2**16)
+    while (val > 1023) or (val < -1024):
+        val /= 2
+        n += 1
+    packed = ((int(n) & 0x1f) << 11) + (int(val) & 0x7ff)
+    #print("L11(0x{:x}) = {}".format(packed, L11(packed)))
+    L11(packed)
+    return packed
+
+
+def MV_TO_L11(val):
+    """val is integer number of millivolts (or milliamps, milliwatts, etc)"""
+    # n is 5 bits (signed), can range from -16 to +15; 2**n can range from 15.26u to 32.768k
+    # y is 11 bits (signed), can range from -1024 to +1023
+    n = -16
+    val = (val << 16)//1000  # signed shift
+    while (val > 1023) or (val < -1024):
+        val = val >> 1
+        n += 1
+    packed = ((int(n) & 0x1f) << 11) + (int(val) & 0x7ff)
+    return packed
+
+
+def V_TO_L16(val):
+    return int(val*(1<<_L16_EXPONENT))
+
+
+def L16_TO_V(l):
+    return l/(1<<_L16_EXPONENT)
 
 
 def calc_pec(*args):
@@ -804,6 +850,25 @@ _program = (
 )
 
 
+# Must be synchronized with const _ltm4673_limits_t ltm4673_limits[]; in ltm4673.c
+ltm4673_limits = {
+    # page: limit_dict
+    0 : {
+        # cmd: (mask, min, max)
+        VOUT_COMMAND: (0xffff, V_TO_L16(0.95), V_TO_L16(1.05)),  # 0.95V to 1.05V
+    },
+    1 : {
+        VOUT_COMMAND: (0xffff, V_TO_L16(1.75), V_TO_L16(1.85)),  # 1.75V to 1.85V
+    },
+    2 : {
+        VOUT_COMMAND: (0xffff, V_TO_L16(2.45), V_TO_L16(2.55)),  # 2.45V to 2.55V
+    },
+    3 : {
+        VOUT_COMMAND: (0xffff, V_TO_L16(3.25), V_TO_L16(3.35)),  # 3.25V to 3.35V
+    },
+}
+
+
 def _init_sim_mem():
     print("void init_sim_ltm4673(void) {")
     page0 = [0]*0x100
@@ -1025,7 +1090,6 @@ def test_program():
     xacts.append(write(PAGE, 0xff))
     xacts.append(write(VIN_ON, 0xCA40))
     xacts.append(write(VIN_OFF, 0xCA33))
-    xacts.append(write(VIN_OFF, 0xCA33))
     xacts.append(write(VIN_OV_FAULT_LIMIT, 0xD3C0))
     xacts.append(write(VIN_OV_FAULT_RESPONSE, 0x80))
     lines = translate_mmc(xacts)
@@ -1039,6 +1103,39 @@ def test_readback():
     xacts.append(read(VIN_OFF))
     xacts.append(read(VIN_OV_FAULT_LIMIT))
     xacts.append(read(VIN_OV_FAULT_RESPONSE))
+    lines = translate_mmc(xacts)
+    return lines
+
+
+def attempt_limit_break(factor=0.1):
+    """Try to write outside the limits in the firmware."""
+    xacts = []
+    xacts.append(write(PAGE, 0xff))
+    xacts.append(write(WRITE_PROTECT, 0x00))
+    for page, limit_dict in ltm4673_limits.items():
+        xacts.append(write(PAGE, page))
+        for cmd, arg in limit_dict.items():
+            mask, _min, _max = arg[:3]
+            if factor > 0:
+                val = _max*(1+factor)
+            else:
+                val = _min*(1+factor)
+            xacts.append(write(cmd, val))
+            if mask < 0xffff:
+                # Try to write to masked-out bits
+                xacts.append(write(cmd, (~mask & 0xffff)))
+    lines = translate_mmc(xacts)
+    return lines
+
+
+def limit_break_readback():
+    xacts = []
+    xacts.append(write(PAGE, 0xff))
+    xacts.append(write(WRITE_PROTECT, 0x00))
+    for page, limit_dict in ltm4673_limits.items():
+        xacts.append(write(PAGE, page))
+        for cmd, arg in limit_dict.items():
+            xacts.append(read(cmd))
     lines = translate_mmc(xacts)
     return lines
 
@@ -1190,46 +1287,7 @@ def tc(val, bits=5):
     return val
 
 
-def L11(val):
-    """PMBus Linear11 Floating-Point format.
-    https://en.wikipedia.org/wiki/Power_Management_Bus#Linear11_Floating-Point_Format
-    """
-    n = tc(val >> 11, 5)
-    a = tc(val & ((1<<11)-1), 11)
-    print(f"0x{val:x} = {a}*2^{n} = {a*(2**n)}")
-    return a*(2**n)
-
-
-def VtoL11(val):
-    # n is 5 bits (signed), can range from -16 to +15; 2**n can range from 15.26u to 32.768k
-    # y is 11 bits (signed), can range from -1024 to +1023
-    n = -16
-    orig = val
-    val = val*(2**16)
-    while (val > 1023) or (val < -1024):
-        val /= 2
-        n += 1
-    packed = ((int(n) & 0x1f) << 11) + (int(val) & 0x7ff)
-    print(f"{orig} ~ {int(val)}*2^{n} = {int(val)*(2**n)} = 0x{packed:x}")
-    #print("L11(0x{:x}) = {}".format(packed, L11(packed)))
-    L11(packed)
-    return packed
-
-
-def mVtoL11(val):
-    """val is integer number of millivolts (or milliamps, milliwatts, etc)"""
-    # n is 5 bits (signed), can range from -16 to +15; 2**n can range from 15.26u to 32.768k
-    # y is 11 bits (signed), can range from -1024 to +1023
-    n = -16
-    val = (val << 16)//1000  # signed shift
-    while (val > 1023) or (val < -1024):
-        val = val >> 1
-        n += 1
-    packed = ((int(n) & 0x1f) << 11) + (int(val) & 0x7ff)
-    return packed
-
-
-def testVtoL11(argv):
+def testV_TO_L11(argv):
     if len(argv) < 2:
         print("value to convert")
         return
@@ -1246,9 +1304,9 @@ def testVtoL11(argv):
         L11(val)
     else:
         val = float(val)
-        VtoL11(val)
-        mvl11 = mVtoL11(int(val*1000))
-        print(f"Using mVtoL11: 0x{mvl11:x}")
+        V_TO_L11(val)
+        mvl11 = MV_TO_L11(int(val*1000))
+        print(f"Using MV_TO_L11: 0x{mvl11:x}")
 
 
 def main(argv):
@@ -1265,9 +1323,11 @@ def main(argv):
     args = parser.parse_args()
     if args.test:
         if args.read:
-            lines = test_readback()
+            #lines = test_readback()
+            lines = limit_break_readback()
         else:
-            lines = test_program()
+            #lines = test_program()
+            lines = attempt_limit_break()
     else:
         if args.read:
             print("Readback of full program (this may take several seconds)")
@@ -1311,9 +1371,9 @@ t 0xc0 0x21 0xcc 0x54
 
 if __name__ == "__main__":
     import sys
-    #main(sys.argv)
-    #testVtoL11(sys.argv)
+    main(sys.argv)
+    #testV_TO_L11(sys.argv)
     #print_commands_c()
     #_init_sim_mem()
     #parse_readback_file(sys.argv[1])
-    _init_sim_telem()
+    #_init_sim_telem()

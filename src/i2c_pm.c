@@ -18,9 +18,15 @@ extern I2C_BUS I2C_PM;
 static int set_max6639_reg(int regno, int value);
 static int PMBridge_do_sanitized_xact(uint16_t *xact, int len);
 static void PMBridge_hook_read(uint8_t addr, uint8_t cmd, const uint8_t *data, int len);
-static void PMBridge_hook_write(uint8_t addr, const uint8_t *data, int len);
+//static void PMBridge_hook_write(uint8_t addr, const uint8_t *data, int len);  // DELETEME
 
 /* ========================== Function Definitions ========================== */
+void I2C_PM_init(void) {
+  // Initialize devices as needed after system init & peripheral config
+  ltm4673_init();
+  return;
+}
+
 void I2C_PM_scan(void)
 {
    printf("Scanning I2C_PM bus:\r\n");
@@ -303,6 +309,37 @@ void I2C_PM_probe(void)
    return;
 }
 
+/* int i2c_pm_hook(uint8_t addr, uint8_t rnw, int cmd, const uint8_t *data, int len);
+ *  Callback (hook) function for side-effects of transactions on the I2C_PM bus.
+ *  In blocking mode, this function is called AFTER a successful return of the I2C_write
+ *  or I2C_read functions.  In non-blocking mode, this callback should be scheduled to
+ *  run in the I2C_transaction_complete interrupt handler and should only be called
+ *  in thread mode (not called from the ISR).
+ *  @params:
+ *    uint8_t addr: 8-bit (not 7-bit) I2C device address of the transaction
+ *    uint8_t rnw:  Transaction direction. 0=Write (central to periph), 1=Read
+ *    int cmd:      For API with explicit command/reg bytes, 0 <= cmd <= 0xff.
+ *                  For API with 2-byte commands, 0 <= cmd <= 0xffff.
+ *                  For API without command/reg bytes, cmd = -1. If a cmd byte
+ *                  is mandatory for a given device, the associated hook should
+ *                  expect data[0] = cmd_byte (or data[0:1] = cmd_halfword) with
+ *                  the transaction data continuing immediately afterward.
+ *    uint8_t *data: For Read, the data returned by peripheral. For Write, the
+ *                  data sent to peripheral.
+ *    int len:      The length of valid data in 'data' pointer.
+ */
+void i2c_pm_hook(uint8_t addr, uint8_t rnw, int cmd, const uint8_t *data, int len) {
+  if (rnw) {
+    // Device-specific I2C read hooks
+    ltm4673_hook_read(addr, cmd, data, len);
+  } else {
+    // Device-specific I2C write hooks
+    ltm4673_hook_write(addr, cmd, data, len);
+  }
+  return;
+}
+
+
 int PMBridge_xact(uint16_t *xact, int len) {
   // Msg bytes:
   //  | Addr + rnw | command_code | [data] ... |
@@ -342,6 +379,7 @@ int PMBridge_xact(uint16_t *xact, int len) {
       if (len > 4) {
         if (!(xact[3] & 0x1)) {
           printf("Repeat Start not followed by a read\r\n");
+          syntax_invalid |= (1<<4);
         }
         if (xact[4] < PMBRIDGE_XACT_READ_ONE) {
           printf("Repeat Start not followed by PMBRIDGE_XACT_READ_ONE or PMBRIDGE_XACT_READ_BLOCK\r\n");
@@ -412,7 +450,7 @@ static int PMBridge_do_sanitized_xact(uint16_t *xact, int len) {
       data[n] = (uint8_t)(xact[n+1] & 0xff);
     }
     rval = marble_I2C_send(I2C_PM, (uint8_t)xact[0], data, len-1);
-    PMBridge_hook_write((uint8_t)xact[0], data, len-1);
+    //PMBridge_hook_write((uint8_t)xact[0], data, len-1);
     if (rval != HAL_OK) {
       printf("Write failed with code: 0x%x\r\n", rval);
     }
@@ -443,11 +481,13 @@ static void PMBridge_hook_read(uint8_t addr, uint8_t cmd, const uint8_t *data, i
 /* static void PMBridge_hook_write(uint8_t addr, const uint8_t *data, int len);
  *  Do any side effects of an I2C (PMB) write on the PMBridge
  */
+/*  TODO DELETEME
 static void PMBridge_hook_write(uint8_t addr, const uint8_t *data, int len) {
   if (ltm4673_hook_write(addr, data, len)) {
     return;
   }
 }
+*/
 
 /* XRP7724 is special
  * Seems that one-byte Std Commands documented in ANP-38 apply to

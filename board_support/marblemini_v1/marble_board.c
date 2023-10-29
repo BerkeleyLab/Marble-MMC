@@ -60,6 +60,11 @@ int board_service(void) {
    // TODO - Any board-specific maintenance for the main loop
    return 0;
 }
+
+// Only used in simulation
+void cleanup(void) {
+   return;
+}
 /************
 * UART
 ************/

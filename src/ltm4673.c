@@ -7,6 +7,8 @@
 #include "pmbus.h"
 #include "marble_api.h"
 
+#define LTM4673_DEV_ADDR_8BIT         (0xc0)
+
 /* ============================ Static Variables ============================ */
 extern I2C_BUS I2C_PM;
 static uint8_t ltm4673_page = 0;
@@ -372,6 +374,17 @@ static uint16_t ltm4673_encode(uint8_t cmd, int val);
 static uint16_t ltm4673_apply_limits_cmd(uint8_t cmd, uint16_t val_enc, uint16_t mask,
                                      uint16_t min_enc, uint16_t max_enc);
 
+/* void ltm4673_init(void);
+ *  Read page from LTM4673 to synchronize internal page tracking
+ */
+void ltm4673_init(void) {
+  uint8_t page;
+  if (marble_I2C_cmdrecv(I2C_PM, LTM4673_DEV_ADDR_8BIT, LTM4673_PAGE, &page, 1) == HAL_OK) {
+    ltm4673_page = page;
+  }
+  return;
+}
+
 uint8_t ltm4673_get_page(void) {
   return ltm4673_page;
 }
@@ -523,7 +536,7 @@ void ltm4673_read_telem(uint8_t dev) {
    return;
 }
 
-int ltm4673_hook_write(uint8_t addr, const uint8_t *data, int len) {
+int ltm4673_hook_write(uint8_t addr, int cmd, const uint8_t *data, int len) {
   int matched = 0;
   // Look for LTM4673 writes
   for (unsigned int n = 0; n < LTM4673_MATCH_ADDRS; n++) {
@@ -535,24 +548,35 @@ int ltm4673_hook_write(uint8_t addr, const uint8_t *data, int len) {
   if (!matched) {
     return 0;
   }
+  uint8_t cmd_byte;
+  const uint8_t *pdata = data;
+  int xact_len = len;
+  if (cmd < 0) {
+    // cmd_byte is concatenated with data
+    cmd_byte = data[0];
+    pdata = &data[1];
+    --xact_len;
+  } else {
+    cmd_byte = (uint8_t)(cmd & 0xff);
+  }
   // Look for page writes
-  if (data[0] == LTM4673_PAGE) {
-    if (len < 2) {
-      printf("Invalid PAGE write length %d\r\n", len);
-    } else if (data[1] == 0xff) {
+  if (cmd_byte == LTM4673_PAGE) {
+    if (xact_len < 1) {
+      printf("Invalid PAGE write length %d\r\n", xact_len);
+    } else if (*pdata == 0xff) {
       printf("# LTM4673_PAGE 0xff\r\n");
       ltm4673_page = 0xff;
-    } else if (data[1] < 4) {
-      printf("# LTM4673_PAGE 0x%02x\r\n", data[1]);
-      ltm4673_page = data[1];
+    } else if (*pdata < 4) {
+      printf("# LTM4673_PAGE 0x%02x\r\n", *pdata);
+      ltm4673_page = *pdata;
     } else {
-      printf("LTM4673 invalid PAGE write: 0x%02x\r\n", data[1]);
+      printf("LTM4673 invalid PAGE write: 0x%02x\r\n", *pdata);
     }
   }
   return matched;
 }
 
-int ltm4673_hook_read(uint8_t addr, uint8_t cmd, const uint8_t *data, int len) {
+int ltm4673_hook_read(uint8_t addr, int cmd, const uint8_t *data, int len) {
   int matched = 0;
   // Look for LTM4673 reads
   for (unsigned int n = 0; n < LTM4673_MATCH_ADDRS; n++) {
@@ -564,16 +588,29 @@ int ltm4673_hook_read(uint8_t addr, uint8_t cmd, const uint8_t *data, int len) {
   if (!matched) {
     return 0;
   }
+  uint8_t cmd_byte;
+  const uint8_t *pdata = data;
+  int xact_len = len;
+  if (cmd < 0) {
+    // cmd_byte is concatenated with data
+    cmd_byte = data[0];
+    pdata = &data[1];
+    --xact_len;
+  } else {
+    cmd_byte = (uint8_t)(cmd & 0xff);
+  }
   // Look for page reads
-  if (cmd == LTM4673_PAGE) {
-    if (len == 0) {
+  if (cmd_byte == LTM4673_PAGE) {
+    if (xact_len == 2) {
       printf("Invalid read length 0\r\n");
-    } else if (data[0] == 0xff) {
+    } else if (*pdata == 0xff) {
+      printf("# LTM4673_PAGE 0xff\r\n");
       ltm4673_page = 0xff;
-    } else if (data[0] < 4) {
-      ltm4673_page = data[0];
+    } else if (*pdata < 4) {
+      printf("# LTM4673_PAGE 0x%02x\r\n", *pdata);
+      ltm4673_page = *pdata;
     } else {
-      printf("LTM4673 invalid PAGE returned on read: 0x%02x\r\n", data[0]);
+      printf("LTM4673 invalid PAGE returned on read: 0x%02x\r\n", *pdata);
     }
   }
   return matched;

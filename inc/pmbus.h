@@ -67,7 +67,7 @@
 #define _L16_EXPONENT                                                      (13)
 
 #define V_TO_L16(v)                                      (v*(1<<_L16_EXPONENT))
-#define L16_TO_V(l)                                      (v/(1<<_L16_EXPONENT))
+#define L16_TO_V(l)                                      (l/(1<<_L16_EXPONENT))
 
 #define MV_TO_L16(v)                                (v*(1<<_L16_EXPONENT)/1000)
 #define L16_TO_MV(l)                                (1000*l/(1<<_L16_EXPONENT))
