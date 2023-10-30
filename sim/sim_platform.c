@@ -72,6 +72,8 @@ int board_service(void) {
       _fpgaDonePend = 0;
     }
   }
+  // Keep the system responsive, but don't hog resources
+  sleep(0.05);
   /*
   static int say_hello = 0;
   ssize_t nwrite;

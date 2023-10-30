@@ -4,13 +4,6 @@
 
 import re
 
-# TODO
-#   1. Create a function to attempt to write above the limits, and another to
-#      attempt to write below the limits. Then one more to read back the values
-#      and ensure they clipped at the limits or that the mask was applied.
-#   2. Figure out how to interface this script with the stdin/stdout console
-#      interface of the simulated platform.
-
 # SMBus
 # Legend:
 #   ~> means controller to peripheral
@@ -230,6 +223,14 @@ def get_command_name(cmd_byte):
     return "{:02x}".format(cmd_byte)
 
 
+def get_encoding(cmd_byte):
+    for name, arg in commands.items():
+        cmd = arg[0]
+        if cmd == cmd_byte:
+            return arg[2]
+    return ENCODING_RAW
+
+
 def _int(x):
     try:
         return int(x)
@@ -266,12 +267,20 @@ def print_commands_c():
     return
 
 
+def _tc(val, bits=5):
+    """Interpret 'val' as two's complement integer of width 'bits'."""
+    if val & (1<<(bits-1)):
+        ival = (~val & ((1<<bits)-1)) + 1
+        return -ival
+    return val
+
+
 def L11_TO_V(l):
     """PMBus Linear11 Floating-Point format.
     https://en.wikipedia.org/wiki/Power_Management_Bus#Linear11_Floating-Point_Format
     """
-    n = tc(val >> 11, 5)
-    a = tc(val & ((1<<11)-1), 11)
+    n = _tc(l >> 11, 5)
+    a = _tc(l & ((1<<11)-1), 11)
     return a*(2**n)
 
 
@@ -285,7 +294,7 @@ def V_TO_L11(val):
         n += 1
     packed = ((int(n) & 0x1f) << 11) + (int(val) & 0x7ff)
     #print("L11(0x{:x}) = {}".format(packed, L11(packed)))
-    L11(packed)
+    #L11_TO_V(packed)
     return packed
 
 
@@ -850,6 +859,16 @@ _program = (
 )
 
 
+_test_program = (
+    (0xff, (
+        (VIN_ON, 0xCA40),
+        (VIN_OFF, 0xCA33),
+        (VIN_OV_FAULT_LIMIT, 0xD3C0),
+        (VIN_OV_FAULT_RESPONSE, 0x80),
+    ))
+)
+
+
 # Must be synchronized with const _ltm4673_limits_t ltm4673_limits[]; in ltm4673.c
 ltm4673_limits = {
     # page: limit_dict
@@ -867,6 +886,58 @@ ltm4673_limits = {
         VOUT_COMMAND: (0xffff, V_TO_L16(3.25), V_TO_L16(3.35)),  # 3.25V to 3.35V
     },
 }
+
+
+def translate_program(program, rnw=True):
+    """Program derived from LTC PMBus Project Text File Version:1.1"""
+    xacts = []
+    for page, prog in program:
+        # Select the page
+        xacts.append(write(PAGE, page))
+        for reg, val in prog:
+            if rnw:
+                # Read each register
+                xacts.append(read(reg))
+            else:
+                # Write each register
+                xacts.append(write(reg, val))
+    lines = translate_mmc(xacts)
+    return lines
+
+
+def read_telem():
+    # Read for each page
+    cmds = (
+        READ_VIN,
+        READ_IIN,
+        READ_PIN,
+        READ_VOUT,
+        READ_IOUT,
+        READ_TEMPERATURE_1,
+        READ_TEMPERATURE_2,
+        READ_POUT,
+        MFR_READ_IOUT,
+        MFR_IIN_PEAK,
+        MFR_IIN_MIN,
+        MFR_PIN_PEAK,
+        MFR_PIN_MIN,
+        MFR_IOUT_SENSE_VOLTAGE,
+        MFR_VIN_PEAK,
+        MFR_VOUT_PEAK,
+        MFR_IOUT_PEAK,
+        MFR_TEMPERATURE_1_PEAK,
+        MFR_VIN_MIN,
+        MFR_VOUT_MIN,
+        MFR_IOUT_MIN,
+        MFR_TEMPERATURE_1_MIN,
+    )
+    xacts = []
+    for page in range(4):
+        xacts.append(write(PAGE, page))
+        for cmd in cmds:
+            xacts.append(read(cmd))
+    lines = translate_mmc(xacts)
+    return lines
 
 
 def _init_sim_mem():
@@ -913,67 +984,6 @@ def _init_sim_mem():
                     print(f" // 0x{cmd-cols+1:x}-0x{cmd:x}\r\n  ", end="")
             print("};")
     return
-
-
-def program():
-    """Program derived from LTC PMBus Project Text File Version:1.1"""
-    xacts = []
-    for page, prog in _program:
-        # Select the page
-        xacts.append(write(PAGE, page))
-        for reg, val in prog:
-            # Write each register
-            xacts.append(write(reg, val))
-    lines = translate_mmc(xacts)
-    return lines
-
-
-def readback():
-    """Readback of all that is written by program()"""
-    xacts = []
-    for page, prog in _program:
-        # Select the page
-        xacts.append(write(PAGE, page))
-        for reg, val in prog:
-            # Read each register
-            xacts.append(read(reg))
-    lines = translate_mmc(xacts)
-    return lines
-
-
-def read_telem():
-    # Read for each page
-    cmds = (
-        READ_VIN,
-        READ_IIN,
-        READ_PIN,
-        READ_VOUT,
-        READ_IOUT,
-        READ_TEMPERATURE_1,
-        READ_TEMPERATURE_2,
-        READ_POUT,
-        MFR_READ_IOUT,
-        MFR_IIN_PEAK,
-        MFR_IIN_MIN,
-        MFR_PIN_PEAK,
-        MFR_PIN_MIN,
-        MFR_IOUT_SENSE_VOLTAGE,
-        MFR_VIN_PEAK,
-        MFR_VOUT_PEAK,
-        MFR_IOUT_PEAK,
-        MFR_TEMPERATURE_1_PEAK,
-        MFR_VIN_MIN,
-        MFR_VOUT_MIN,
-        MFR_IOUT_MIN,
-        MFR_TEMPERATURE_1_MIN,
-    )
-    xacts = []
-    for page in range(4):
-        xacts.append(write(PAGE, page))
-        for cmd in cmds:
-            xacts.append(read(cmd))
-    lines = translate_mmc(xacts)
-    return lines
 
 
 def _init_sim_telem():
@@ -1085,28 +1095,6 @@ def _init_sim_telem():
     return
 
 
-def test_program():
-    xacts = []
-    xacts.append(write(PAGE, 0xff))
-    xacts.append(write(VIN_ON, 0xCA40))
-    xacts.append(write(VIN_OFF, 0xCA33))
-    xacts.append(write(VIN_OV_FAULT_LIMIT, 0xD3C0))
-    xacts.append(write(VIN_OV_FAULT_RESPONSE, 0x80))
-    lines = translate_mmc(xacts)
-    return lines
-
-
-def test_readback():
-    xacts = []
-    xacts.append(write(PAGE, 0xff))
-    xacts.append(read(VIN_ON))
-    xacts.append(read(VIN_OFF))
-    xacts.append(read(VIN_OV_FAULT_LIMIT))
-    xacts.append(read(VIN_OV_FAULT_RESPONSE))
-    lines = translate_mmc(xacts)
-    return lines
-
-
 def attempt_limit_break(factor=0.1):
     """Try to write outside the limits in the firmware."""
     xacts = []
@@ -1128,29 +1116,43 @@ def attempt_limit_break(factor=0.1):
     return lines
 
 
-def limit_break_readback():
-    xacts = []
-    xacts.append(write(PAGE, 0xff))
-    xacts.append(write(WRITE_PROTECT, 0x00))
-    for page, limit_dict in ltm4673_limits.items():
-        xacts.append(write(PAGE, page))
-        for cmd, arg in limit_dict.items():
-            xacts.append(read(cmd))
-    lines = translate_mmc(xacts)
-    return lines
+def compare_to_limits(readback, limits):
+    fail = False
+    for page, _prog in readback:
+        limit_page = limits.get(page, None)
+        if limit_page is None:
+            continue
+        for cmd, val in _prog:
+            limit_page_cmd = limit_page.get(cmd, None)
+            if limit_page_cmd is None:
+                continue
+            enc = get_encoding(cmd)
+            if enc == ENCODING_L11:
+                val = L11_TO_V(val)
+                limit_min = L11_TO_V(limit_page_cmd[1])
+                limit_max = L11_TO_V(limit_page_cmd[2])
+                fmt = "{:.3f}"
+            elif enc == ENCODING_L16:
+                val = L16_TO_V(val)
+                limit_min = L16_TO_V(limit_page_cmd[1])
+                limit_max = L16_TO_V(limit_page_cmd[2])
+                fmt = "{:.3f}"
+            else:
+                limit_min = limit_page_cmd[1]
+                limit_max = limit_page_cmd[2]
+                fmt = "0x{:x}"
+            cmdname = get_command_name(cmd) + ':'
+            val_fmt = fmt.format(val)
+            min_fmt = fmt.format(limit_min)
+            max_fmt = fmt.format(limit_max)
+            _pass = (limit_min <= val) and (val <= limit_max)
+            print(f"[{page}] {cmdname:30s} {min_fmt} <= {val_fmt} <= {max_fmt} ? {_pass}")
+            if not _pass:
+                fail = True
+    return (not fail)
 
 
-def parse_readback_file(filename, compare=False):
-    lines = []
-    with open(filename, 'r') as fd:
-        line = True
-        while line:
-            line = fd.readline()
-            lines.append(line)
-    return parse_readback(lines, compare=compare, do_print=True)
-
-
-def parse_readback(lines, compare=True, do_print=False):
+def parse_readback(lines, compare_prog=None, do_print=False):
     _readback = []
     _prog = []
     newpage = None
@@ -1167,11 +1169,11 @@ def parse_readback(lines, compare=True, do_print=False):
                 newpage = rval
                 _prog = []
     _readback.append((newpage, _prog))
-    if compare:
+    if compare_prog is not None:
         compare_progs(_program, _readback)
     if do_print:
         print_prog(_readback)
-    return
+    return _readback
 
 
 def match_readback(line):
@@ -1262,7 +1264,15 @@ def print_prog(_prog):
         print("# LTM4673_PAGE 0x{:02x}".format(page))
         for cmd, val in prog:
             cmdname = get_command_name(cmd) + ':'
-            print("{:30s} 0x{:x}".format(cmdname, val))
+            enc = get_encoding(cmd)
+            if enc == ENCODING_L11:
+                val = to_si(L11_TO_V(val))
+                print("{:30s} {}".format(cmdname, val))
+            elif enc == ENCODING_L16:
+                val = to_si(L16_TO_V(val))
+                print("{:30s} {}".format(cmdname, val))
+            else:
+                print("{:30s} 0x{:x}".format(cmdname, val))
     return
 
 
@@ -1279,14 +1289,6 @@ def print_diff(diff):
     return
 
 
-def tc(val, bits=5):
-    """Interpret 'val' as two's complement integer of width 'bits'."""
-    if val & (1<<(bits-1)):
-        ival = (~val & ((1<<bits)-1)) + 1
-        return -ival
-    return val
-
-
 def testV_TO_L11(argv):
     if len(argv) < 2:
         print("value to convert")
@@ -1301,12 +1303,239 @@ def testV_TO_L11(argv):
     if decode:
         val = _int(val)
         #print("L11(0x{:x}) = {}".format(val, L11(val)))
-        L11(val)
+        V_TO_L11(val)
     else:
         val = float(val)
         V_TO_L11(val)
         mvl11 = MV_TO_L11(int(val*1000))
         print(f"Using MV_TO_L11: 0x{mvl11:x}")
+
+
+def test_get_program_from_file(argv):
+    if len(argv) < 2:
+        print("gimme filename")
+        return
+    filename = argv[1]
+    prog = get_program_from_file(filename)
+    print_prog(prog)
+    return
+
+
+class ParserSyntaxError(Exception):
+    def __init__(self, s):
+        super().__init__(s)
+
+
+def get_program_from_file(filename):
+    prog = []
+    #0x60,-1,WB,0x10,0x00,WRITE_PROTECT
+    res = "^([0-9a-fA-Fx]+)\s*,([0-9a-fA-Fx\-]+)\s*,(WB|WW|RB|RW),([0-9a-fA-Fx]+)\s*,([0-9a-fA-Fx]+)\s*,(\w+)"
+    with open(filename, 'r') as fd:
+        line = True
+        _page = None
+        pagelist = []
+        nline = 1
+        while line:
+            line = fd.readline()
+            if line.strip().startswith("#"):
+                # Ignore comments
+                continue
+            if len(line.strip()) == 0:
+                # Ignore empty lines
+                continue
+            _match = re.match(res, line)
+            if _match:
+                #0x60,-1,WB,0x10,0x00,WRITE_PROTECT
+                devaddr, page, oper, reg, val, name = _match.groups()
+                page = _int(page) & 0xff # Gotta turn -1 into 0xff
+                reg = _int(reg)
+                val = _int(val)
+                if _page is None:
+                    _page = page
+                elif _page != page:
+                    prog.append((_page, pagelist))
+                    pagelist = []
+                    _page = page
+                else:
+                    pagelist.append((reg, val))
+            else:
+                raise ParserSyntaxError("Syntax error on line {}: {}".format(nline, line) + \
+                                        "Expected format: 0xHH,[-]D,(WB|WW|RB|RW),0xHH,0xHH,NAME")
+            nline += 1
+        # Append the last page list
+        prog.append((_page, pagelist))
+    # Return nested-list
+    #   ((page, ((reg, val),...)),...)
+    return prog
+
+
+def _count_ops(program):
+    ops = 0
+    for page, prog in program:
+        # A page write
+        ops += 1
+        for reg, val in prog:
+            # A read or write for each reg,val pair
+            ops += 1
+    return ops
+
+
+def get_limits_from_file(filename):
+    print("TODO")
+    # Return nested dict
+    # {page: {cmd: (mask, min, max),...},...}
+    return {}
+
+
+def handle_write(args):
+    if args.test:
+        print("Writing test program")
+        program = _test_program
+    elif args.file is not None:
+        print("Writing program from file {}.".format(args.file))
+        program = get_program_from_file(args.file)
+    else:
+        print("Writing default program")
+        program = _program
+    lines = translate_program(program, rnw=False)
+    if args.dev is not None:
+        import load
+        runtime = _count_ops(program)*load.INTERCOMMAND_SLEEP
+        print("Estimated {:.1f}s to complete.".format(runtime))
+        load.loadCommands(args.dev, args.baud, lines, do_print=args.verbose, do_log=False)
+    else:
+        # Just print the program
+        print_prog(program)
+        # TODO - Do I want to enable this with another switch?
+        if False:
+            print("PMBridge MMC Console Encoding:")
+            for line in lines:
+                print(line)
+    return
+
+
+def handle_read(args):
+    if args.test:
+        print("Reading test program")
+        program = _test_program
+    elif args.file is not None:
+        print("Reading program from file {}.".format(args.file))
+        program = get_program_from_file(args.file)
+    else:
+        print("Reading default program")
+        program = _program
+    lines = translate_program(program, rnw=True)
+    if args.dev is not None:
+        import load
+        runtime = _count_ops(program)*load.INTERCOMMAND_SLEEP
+        print("Estimated {:.1f}s to complete.".format(runtime))
+        load.loadCommands(args.dev, args.baud, lines, do_print=args.verbose, do_log=True)
+        readback_log = load.get_log()
+        if args.check:
+            readback = parse_readback(readback_log, compare_prog=program, do_print=args.print)
+        else:
+            readback = parse_readback(readback_log, compare_prog=None, do_print=True)
+    else:
+        # Just print the program
+        print_prog(program)
+        # TODO - Do I want to enable this with another switch?
+        if False:
+            print("PMBridge MMC Console Encoding:")
+            for line in lines:
+                print(line)
+    return
+
+def test_to_si(argv):
+    if len(argv) < 1:
+        print("float plz")
+        return
+    f = float(argv[1])
+    to_si(f)
+    return
+
+
+def to_si(n, sigfigs=4):
+    """Use SI prefixes to represent 'n' up to sigfigs significant figures."""
+    import math
+    if n == 0:
+        return "0"
+    si = ((30, ("Q", "quetta")),
+          (27, ("R", "ronna")),
+          (24, ("Y", "yotta")),
+          (21, ("Z", "zetta")),
+          (18, ("E", "exa")),
+          (15, ("P", "peta")),
+          (12, ("T", "tera")),
+          ( 9, ("G", "giga")),
+          ( 6, ("M", "mega")),
+          ( 3, ("k", "kilo")),
+          ( 0, ("", "")),
+          (-3, ("m", "milli")),
+          (-6, ("u", "micro")),   # mu?
+          (-9, ("n", "nano")),
+         (-12, ("p", "pico")),
+         (-15, ("f", "femto")),
+         (-18, ("a", "atto")),
+         (-21, ("z", "zepto")),
+         (-24, ("y", "yocto")),
+         (-27, ("r", "ronto")),
+         (-30, ("q", "quecto")))
+    sign = ""
+    if n < 0:
+        n = abs(n)
+        sign = "-"
+    npwr = math.log10(n)
+    # x^N = y*10^N = z
+    # log(x^N) = log(y*10^N) = log(y) + log(10^N) = log(y) + N = log(z)
+    fmt = "{:." + str(int(sigfigs)) + "}"
+    for pwr, pfx in si:
+        if npwr >= pwr:
+            mant = 10**(npwr-pwr)
+            s = sign + fmt.format(mant) + pfx[0]
+            break
+    return s
+
+
+def from_si(s):
+    print("TODO")
+    return 1
+
+
+def handle_limits(args):
+    print("TESTING LIMITS")
+    if args.dev is None:
+        print("No valid device handed to limits_test")
+        return False
+    if args.file is not None:
+        limits = get_limits_from_file(args.file)
+    else:
+        limits = ltm4673_limits
+    import load
+    factors = (0.1, -0.1)
+    passed = False
+    for n in range(len(factors)):
+        factor = factors[n]
+        if factor > 0:
+            print("=== Trying to break upper limits ===")
+        elif factor < 0:
+            print("=== Trying to break lower limits ===")
+        else:
+            print("=== Factor is zero. Is this intended? ===")
+        # Get the lines in PMBridge syntax to write above the limits
+        lines = attempt_limit_break(factor=factor)
+        # Perform the write to the serial device
+        load.loadCommands(args.dev, args.baud, lines, do_print=args.verbose, do_log=True)
+        # Get the raw session log
+        readback_log = load.get_log()
+        # Parse the session log
+        readback = parse_readback(lines, do_print=False)
+        # Compare read values with limits
+        if compare_to_limits(readback=readback, limits=limits):
+            print("=== PASS ===")
+            passed = True
+        else:
+            print("=== FAIL ===")
+    return passed
 
 
 def main(argv):
@@ -1315,39 +1544,29 @@ def main(argv):
     load.INTERCOMMAND_SLEEP = 0.1
     # NOTE! This intercommand timing works for all except MFR_EE_ERASE which needs 0.4s sleep
     parser = load.ArgParser()
-    parser.add_argument('--test', default=False, action="store_true", help='Test; not full program')
-    parser.add_argument('-r', '--read', default=False, action="store_true", help='Read instead of write')
-    parser.add_argument('--check', default=False, action="store_true", help='Compare values of readback with program')
     parser.add_argument('--print', default=False, action="store_true", help='Print values to write or read')
     parser.add_argument('-v', '--verbose', default=False, action="store_true", help='Print console chatter')
+    subparsers = parser.add_subparsers(title="Actions", dest="subcmd")
+
+    parser_write = subparsers.add_parser("write", help="Write a program")
+    write_group = parser_write.add_mutually_exclusive_group()
+    write_group.add_argument("--test", default=False, action="store_true", help='Test; write just a few registers')
+    write_group.add_argument("-f", "--file", help="File to use for program values to write")
+    parser_write.set_defaults(handler=handle_write)
+
+    parser_read = subparsers.add_parser("read", help="Read current value of registers in program")
+    parser_read.add_argument("--check", default=False, action="store_true", help="Compare values of readback with values in program")
+    read_group = parser_read.add_mutually_exclusive_group()
+    read_group.add_argument("--test", default=False, action="store_true", help="Test; read just a few registers")
+    read_group.add_argument("-f", "--file", default=None, help="Read values of registers parsed from FILE")
+    parser_read.set_defaults(handler=handle_read)
+
+    parser_limits = subparsers.add_parser("limits", help="Test hard-coded limits")
+    parser_limits.add_argument("-f", "--file", default=None, help="Read limits from FILE")
+    parser_limits.set_defaults(handler=handle_limits)
+
     args = parser.parse_args()
-    if args.test:
-        if args.read:
-            #lines = test_readback()
-            lines = limit_break_readback()
-        else:
-            #lines = test_program()
-            lines = attempt_limit_break()
-    else:
-        if args.read:
-            print("Readback of full program (this may take several seconds)")
-            #lines = readback() FIXME
-            lines = read_telem()
-        else:
-            print("Write of full program (this may take several seconds)")
-            lines = program()
-    if args.dev is not None:
-        load.loadCommands(args.dev, args.baud, lines, do_print=args.verbose, do_log=args.check)
-        if args.check:
-            readback_log = load.get_log()
-            parse_readback(readback_log, args.print)
-    else:
-        if args.print:
-            print_prog(_program)
-        else:
-            print("PMBridge MMC Console Encoding:")
-            for line in lines:
-                print(line)
+    return args.handler(args)
 
 """
 Common PMBridge commands
@@ -1375,5 +1594,6 @@ if __name__ == "__main__":
     #testV_TO_L11(sys.argv)
     #print_commands_c()
     #_init_sim_mem()
-    #parse_readback_file(sys.argv[1])
     #_init_sim_telem()
+    #test_get_program_from_file(sys.argv)
+    #test_to_si(sys.argv)
