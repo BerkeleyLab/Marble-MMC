@@ -34,7 +34,7 @@ const uint16_t _ltm4673_pageff_limits [][PM_LIMITS_COLS] = {
 // If pass_mask is 0, prevents writes to the register for the selected page
 //{command_code, pass_mask,  min, max}
   {LTM4673_PAGE, 0xff, 0x00, 0xff},
-  {LTM4673_VIN_OV_FAULT_LIMIT, 0xffff, 12500, 16000}, // 12.5V to 16.0V
+  {LTM4673_VIN_OV_FAULT_LIMIT, 0xffff, V_TO_L11(12.5), V_TO_L11(16.0)}, // 12.5V to 16.0V
 };
 const uint16_t _ltm4673_page0_limits [][PM_LIMITS_COLS] = {
   //{LTM4673_VOUT_COMMAND, 0xffff, MV_TO_L16(950), MV_TO_L16(1050)},  // 0.95V to 1.05V
