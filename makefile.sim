@@ -65,15 +65,17 @@ CXX	:= g++
 OBJCOPY	:= objcopy
 SIZE	:= size
 
+GCC_BASE_FLAGS = -std=c11 -pedantic -Wall
+GCC_BASE_FLAGS += -Wextra -Wundef -Wshadow -Wstrict-prototypes -Wwrite-strings
+GCC_BASE_FLAGS += -Wpointer-arith -Wredundant-decls -Wunreachable-code
+# to do:  -Wcast-align -Wcast-qual
+
 # Compilation Flags
 #
 # Display all warnings. Compile functions and data into their own sections so
 # they can be discarded if unused.  The linker performs garbage collection of
 # unused input sections.
-CFLAGS = $(FLAGS) -Os -std=c11 -ffunction-sections -fdata-sections $(ARCH_FLAGS) $(USR_CFLAGS)
-CFLAGS += -Wall -Wextra -Wundef -Wshadow -Wstrict-prototypes -Wwrite-strings -pedantic
-CFLAGS += -Wpointer-arith -Wredundant-decls -Wunreachable-code -Wno-unused-parameter
-# to do:  -Wcast-align -Wcast-qual
+CFLAGS = $(FLAGS) -Os $(GCC_BASE_FLAGS) -Wno-unused-parameter -ffunction-sections -fdata-sections $(ARCH_FLAGS) $(USR_CFLAGS)
 
 ASFLAGS = $(FLAGS) $(ARCH_FLAGS)
 LDFLAGS = $(FLAGS) $(LINKER_FLAGS) -Wextra $(ARCH_FLAGS)
@@ -160,7 +162,7 @@ $(SOURCE_DIR)/$(MBOX_DEF).c: $(INCLUDE_DIR)/mbox.def
 WRAPPER=$(OUTPUT_DIR)/ptywrap
 $(WRAPPER): $(BOARD)/ptywrap.c
 	@$(MKDIR) $(dir $@)
-	$(CC) $^ -o $@
+	$(CC) $(GCC_BASE_FLAGS) -Wmissing-prototypes -Wcast-align -Wcast-qual $^ -o $@
 
 .PHONY: wrap
 wrap: $(WRAPPER) $(OUTPUT_DIR)/$(PROJECT_NAME)

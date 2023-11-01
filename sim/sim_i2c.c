@@ -227,7 +227,7 @@ void resetI2CBusStatus(void) {
 }
 
 void init_sim_ltm4673(void) {
-  //init_sim_ltm4673_config();
+  if (0) init_sim_ltm4673_config();
   init_sim_ltm4673_telem();
   return;
 }

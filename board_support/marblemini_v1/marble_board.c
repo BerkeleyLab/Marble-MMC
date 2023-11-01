@@ -455,7 +455,7 @@ int marble_I2C_cmdrecv(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data
    return Chip_I2C_MasterCmdRead(I2C_bus, addr, cmd, data, size) != size;
 }
 
-int marble_I2C_cmdsend(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size) {
+int marble_I2C_cmdsend(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, const uint8_t *data, int size) {
    // Crude hack, prepending 8-bit cmd to the data array
    uint8_t ldata[8];
    if (size > 7) return 1;  // failure
@@ -464,7 +464,7 @@ int marble_I2C_cmdsend(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data
    return marble_I2C_send(I2C_bus, addr, ldata, size+1);
 }
 
-int marble_I2C_cmdsend_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *data, int size) {
+int marble_I2C_cmdsend_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, const uint8_t *data, int size) {
    // Crude hack, prepending 16-bit cmd to the data array
    uint8_t ldata[8];
    if (size > 6) return 1;  // failure

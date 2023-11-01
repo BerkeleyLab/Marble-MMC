@@ -1,8 +1,8 @@
 /* A wrapper which converts STDIN/STDOUT to a pseudoterminal (PTY)
  */
 
-// Annoying gotcha _GNU_SOURCE needed by stdlib.h and unistd.h
-#define _GNU_SOURCE
+// Need a bit more than least-common-denomenator header file features
+#define _XOPEN_SOURCE 600
 #include <sys/time.h> // For sleep
 #include <unistd.h>   // For STDIN_FILENO, fork, sleep
 #include <stdlib.h>   // For posix_openpt et al
@@ -28,16 +28,26 @@
 static void _parentHandler(int c);
 static void _childHandler(int c);
 static int init(void);
+#ifdef PARENT_HEARTBEAT
 static void parent_heartbeat(void);
+#endif
+#ifdef CHILD_HEARTBEAT
 static void child_heartbeat(void);
+#endif
+#if 0
 static void query_pty(int fd);
+#endif
 static int create_pty(void);
+#if 0
 static void print_consts(void);
+#endif
 
 // I've tried many ways to wait for the paired side of the pty to be opened
 // Only a wacky hack in wait_for_open4() has worked on my Ubuntu 22.04 machine
+#if 0
 static int wait_for_open(int fd, int timeout_ms);
 static int wait_for_open2(char *name);
+#endif
 static int wait_for_open3(char *name);
 static int wait_for_open4(int fd);
 
@@ -52,7 +62,6 @@ const char usage[] = \
   "Run 'myExecutable' and wrap its stdin/stdout interface to function as a ptyinal (PTY)\r\n";
 
 static int wait_for_open4(int fd) {
-  int rval;
   struct termios termios_s;
   while (!toExit) {
     errno = 0;
@@ -77,6 +86,7 @@ static int wait_for_open4(int fd) {
 static int wait_for_open3(char *name) {
   // Write a newline, then wait for it to be read
   //int fd = open(name, O_RDWR);
+  (void) name;  /* not used */
   int fd = pty;
   write(fd, "\r\n", 2);
   errno = 0;
@@ -88,6 +98,7 @@ static int wait_for_open3(char *name) {
   return 0;
 }
 
+#if 0
 static int wait_for_open2(char *name) {
   int rval;
   while (!toExit) {
@@ -106,7 +117,9 @@ static int wait_for_open2(char *name) {
   }
   return rval;
 }
+#endif
 
+#if 0
 static int wait_for_open(int fd, int timeout_ms) {
   struct pollfd fds = {.fd=fd, .events = POLLHUP, .revents=0};
   int rval;
@@ -141,9 +154,9 @@ static int wait_for_open(int fd, int timeout_ms) {
   }
   return 0;
 }
+#endif
 
 static int init(void) {
-  int rval;
   toExit = 0;
   // Create PTY
   create_pty();
@@ -162,13 +175,14 @@ static int init(void) {
     printf("Open device %s\r\n", devName);
     return 0;
   }
-};
+}
 
 static void shutdown(void) {
   close(pty);
   return;
 }
 
+#ifdef CHILD_HEARTBEAT
 static void child_heartbeat(void) {
   static int _heartbeat = 0;
   if ((++_heartbeat % 500000000) == 0) {
@@ -177,17 +191,18 @@ static void child_heartbeat(void) {
   }
   return;
 }
+#endif
 
-static void parent_heartbeat(void) {
 #ifdef PARENT_HEARTBEAT
+static void parent_heartbeat(void) {
   static int _heartbeat = 0;
   if ((++_heartbeat % 1000) == 0) {
     fprintf(stderr, "    ptywrap parent heartbeat\r\n");
     write(pty, "Parent Heartbeat\n", 10);
   }
-#endif
   return;
 }
+#endif
 
 int main(int argc, char *argv[]) {
   // Collect argv[1:] in a list of null-terminated strings
@@ -287,13 +302,13 @@ static void _parentHandler(int c) {
 }
 
 static void _childHandler(int c) {
+  (void) c;  /* not used */
   toExit = 1;
   return;
 }
 
 static int create_pty(void) {
   char* dname;
-  int rval;
   pty = posix_openpt(O_RDWR | O_NOCTTY);
   // Get the pty's name
   dname = ptsname(pty);
@@ -302,8 +317,8 @@ static int create_pty(void) {
   // Null-term just in case
   devName[49] = '\0';
   // Do this silly mandatory nonsense
-  rval = grantpt(pty);
-  rval = unlockpt(pty);
+  grantpt(pty);
+  unlockpt(pty);
   // Change settings
   struct termios termios_s;
   errno = 0;
@@ -322,6 +337,7 @@ static int create_pty(void) {
 
 // =========== Experimentally determining how to tell when the paired side pts is open ============
 
+#if 0
 static void query_pty(int fd) {
   struct termios termios_s;
   errno = 0;
@@ -337,6 +353,7 @@ static void query_pty(int fd) {
   fprintf(stderr, "\r\n");
   return;
 }
+#endif
 
 #define X(d, s) fprintf(stderr, "%s is 0x%x\r\n", s, d);
 #define FOR_EACH_IFLAG() do { \
@@ -407,6 +424,7 @@ static void query_pty(int fd) {
   X(IEXTEN, "IEXTEN") \
 } while (0)
 
+#if 0
 static void print_consts(void) {
   fprintf(stderr, "\r\niflags\r\n"); \
   FOR_EACH_IFLAG();
@@ -417,7 +435,8 @@ static void print_consts(void) {
   fprintf(stderr, "\r\nlflags\r\n"); \
   FOR_EACH_LFLAG();
   return;
-};
+}
+#endif
 
 /*
 termios_s.c_iflag = 0x500
