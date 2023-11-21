@@ -1,9 +1,6 @@
 #!/bin/sh
 
-# TODO:
-#   1. Should I support a LOGFILE environment variable or just make
-#      the user pipe to a log file themselves? I.e.
-#       ./bringup.sh | tee -a myLogFile
+# Automatically saves a logfile called bringup_logfile_{serial_number} to the current directory
 
 # Master script automating as much marble board bringup as possible
 # Requires:
@@ -50,7 +47,8 @@
 # ==  /dev/ttyUSB2 -> UART to/from FPGA                               ==
 # ==  /dev/ttyUSB3 -> UART to/from MMC                                ==
 # ======================================================================
-
+SERIAL_NUM=$1
+{
 # Turn on exit on failure
 set -e
 
@@ -88,7 +86,6 @@ fi
 
 # Handy Params
 UDPRTX=udprtx
-SERIAL_NUM=$1
 IP=192.168.19.$SERIAL_NUM
 SCRIPTS_PATH=$MMC_PATH/scripts
 FTDI_PATH=$MMC_PATH/ftdi
@@ -226,3 +223,4 @@ sh first_readout.sh "$IP" 2>&1 | tee -a first_readout_"$IP";
 
 
 exit 0
+} 2>&1 | tee bringup_logfile_$SERIAL_NUM
