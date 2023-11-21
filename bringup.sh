@@ -215,12 +215,5 @@ echo "Record various peripheral devices readouts using first_readout.sh"
 cd $BEDROCK_PATH/projects/test_marble_family
 sh first_readout.sh "$IP" 2>&1 | tee -a first_readout_"$IP";
 
-# 8. Write golden image to flash chip
-# echo "##################################"
-# echo "Write golden image to flash..."
-# cd $BEDROCK_PATH/badger/tests/
-# python3 spi_test.py --ip $IP --id
-
-
 exit 0
 } 2>&1 | tee bringup_logfile_$SERIAL_NUM
