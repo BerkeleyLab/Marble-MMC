@@ -59,15 +59,15 @@ fi
 
 # Mandatory Paths Check.
 paths_complete=1
-if [ -z $BEDROCK_PATH ]; then
+if [ -z "$BEDROCK_PATH" ]; then
   echo "Define BEDROCK_PATH environment variable"
   paths_complete=0
 fi
-if [ -z $MMC_PATH ]; then
+if [ -z "$MMC_PATH" ]; then
   echo "Define MMC_PATH environment variable"
   paths_complete=0
 fi
-if [ -z $BITFILE ]; then
+if [ -z "$BITFILE" ]; then
   echo "Define BITFILE environment variable"
   paths_complete=0
 fi
@@ -77,10 +77,10 @@ if [ $paths_complete -eq 0 ]; then
 fi
 
 # Optional Environment Variables Check.
-if [ -z $TTY_MMC ]; then
+if [ -z "$TTY_MMC" ]; then
   TTY_MMC=/dev/ttyUSB3
 fi
-if [ -z $TTY_FPGA ]; then
+if [ -z "$TTY_FPGA" ]; then
   TTY_FPGA=/dev/ttyUSB2
 fi
 
@@ -91,37 +91,37 @@ SCRIPTS_PATH=$MMC_PATH/scripts
 FTDI_PATH=$MMC_PATH/ftdi
 
 # Test for exist
-if [ ! -e $BEDROCK_PATH ]; then
+if [ ! -e "$BEDROCK_PATH" ]; then
   echo "$BEDROCK_PATH does not exist"
   exit 1
 fi
 
-if [ ! -d $BEDROCK_PATH ]; then
+if [ ! -d "$BEDROCK_PATH" ]; then
   echo "$BEDROCK_PATH is not a directory"
   exit 1
 fi
 
-if [ ! -e $MMC_PATH ]; then
+if [ ! -e "$MMC_PATH" ]; then
   echo "$MMC_PATH does not exist"
   exit 1
 fi
 
-if [ ! -d $MMC_PATH ]; then
+if [ ! -d "$MMC_PATH" ]; then
   echo "$MMC_PATH is not a directory"
   exit 1
 fi
 
-if [ ! -r $BITFILE ]; then
+if [ ! -r "$BITFILE" ]; then
   echo "$BITFILE does not exist or is not readable"
   exit 1
 fi
 
-if [ -d $BITFILE ]; then
+if [ -d "$BITFILE" ]; then
   echo "$BITFILE appears to be a directory"
   exit 1
 fi
 
-if ! command -v $UDPRTX; then
+if ! command -v "$UDPRTX"; then
   echo "$UDPRTX cannot be found.  Build with:"
   echo "  $ cd bedrock/badger/tests"
   echo "  $ make $UDPRTX"
@@ -133,10 +133,10 @@ fi
 # 1. Program FTDI serial number if needed
 echo "##################################"
 echo "Checking FTDI Configuration..."
-if ! $FTDI_PATH/verifyid.sh "$SERIAL_NUM"; then
+if ! "$FTDI_PATH/verifyid.sh" "$SERIAL_NUM"; then
   echo "Programming FTDI..."
-  $FTDI_PATH/prog_marble.sh "$SERIAL_NUM" && echo "Success" || echo "Failed"
-  if ! $FTDI_PATH/verifyid.sh "$SERIAL_NUM"; then
+  "$FTDI_PATH/prog_marble.sh" "$SERIAL_NUM" && echo "Success" || echo "Failed"
+  if ! "$FTDI_PATH/verifyid.sh" "$SERIAL_NUM"; then
     echo "Could not verify FTDI configuration. Aborting."
     exit 1
   fi
@@ -145,7 +145,7 @@ fi
 # 2. Program MMC
 echo "##################################"
 echo "Programming MMC..."
-cd $MMC_PATH
+cd "$MMC_PATH"
 if ! make marble_download; then
   echo "Could not program marble_mmc. Is Segger J-Link attached? Is board powered?"
   exit 1
@@ -157,13 +157,13 @@ sleep 5
 echo "##################################"
 # 3. Write IP and MAC addresses to marble_mmc based on serial number
 echo "Write IP and MAC addresses to marble_mmc based on serial number..."
-$SCRIPTS_PATH/config.sh -d "$TTY_MMC" "$SERIAL_NUM"
+"$SCRIPTS_PATH/config.sh" -d "$TTY_MMC" "$SERIAL_NUM"
 
 echo "##################################"
 # 4. Load bitfile to FPGA
 echo "Load bitfile to FPGA..."
-cd $BEDROCK_PATH/projects/test_marble_family
-if ! BITFILE=$BITFILE ./mutil usb; then
+cd "$BEDROCK_PATH/projects/test_marble_family"
+if ! BITFILE="$BITFILE" ./mutil usb; then
   echo "Could not write bitfile to FPGA. Is USB FTDI (J10) connected? Is board powered?"
   exit 1
 fi
@@ -174,7 +174,7 @@ sleep 3
 echo "##################################"
 # Read 4 lines from FPGA frequency counter output
 echo "Reading 4 lines from FPGA frequency counter..."
-python3 $SCRIPTS_PATH/readfromtty.py -d $TTY_FPGA -b 9600 4 -m 24 | tee -a $LOGFILE
+python3 "$SCRIPTS_PATH/readfromtty.py" -d "$TTY_FPGA" -b 9600 4 -m 24 | tee -a "$LOGFILE"
 
 echo "##################################"
 # Cross check that the test packets can get _out_ of this workstation
@@ -212,8 +212,8 @@ fi
 # MAX6639 temperature in C and speed in rpm, Device DNA and XADC)
 echo "##################################"
 echo "Record various peripheral devices readouts using first_readout.sh"
-cd $BEDROCK_PATH/projects/test_marble_family
+cd "$BEDROCK_PATH/projects/test_marble_family"
 sh first_readout.sh "$IP" 2>&1 | tee -a first_readout_"$IP";
 
 exit 0
-} 2>&1 | tee bringup_logfile_$SERIAL_NUM
+} 2>&1 | tee "bringup_logfile_$SERIAL_NUM"
