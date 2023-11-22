@@ -32,4 +32,5 @@ snum=$(printf "%06d" "$1")
 } > _temp.conf
 
 ftdi_eeprom --device i:0x0403:0x6011 --flash-eeprom _temp.conf; rm _temp.conf
+sleep 3
 exit 0
