@@ -174,7 +174,7 @@ sleep 3
 echo "##################################"
 # Read 4 lines from FPGA frequency counter output
 echo "Reading 4 lines from FPGA frequency counter..."
-python3 "$SCRIPTS_PATH/readfromtty.py" -d "$TTY_FPGA" -b 9600 4 -m 24 | tee -a "$LOGFILE"
+python3 "$SCRIPTS_PATH/readfromtty.py" -d "$TTY_FPGA" -b 9600 4 -m 24
 
 echo "##################################"
 # Cross check that the test packets can get _out_ of this workstation
@@ -195,14 +195,14 @@ fi
 echo "##################################"
 # 6. UDP Stress test
 echo "Testing UDP with 100k packets"
-if ! time $UDPRTX "$IP" 100000 8; then
+if ! $UDPRTX "$IP" 100000 8; then
   echo "UDP test failed"
   exit 1
 fi
 
 echo "##################################"
 echo "Testing UDP with 1M packets"
-if ! time $UDPRTX "$IP" 1000000 8; then
+if ! $UDPRTX "$IP" 1000000 8; then
   echo "UDP test failed"
   exit 1
 fi
@@ -213,7 +213,14 @@ fi
 echo "##################################"
 echo "Record various peripheral devices readouts using first_readout.sh"
 cd "$BEDROCK_PATH/projects/test_marble_family"
-sh first_readout.sh "$IP" 2>&1 | tee -a first_readout_"$IP";
+sh first_readout.sh "$IP"
+
+# Odd that the first one of these in first_readout.sh doesn't work,
+# but a second one here does.  Is there a bug in spi_test?
+tt=$(mktemp quick_XXXXXX)
+python3 "$BEDROCK_PATH/badger/tests/spi_test.py" --ip "$IP" --udp 804 --otp --pages=1 --dump "$tt"
+hexdump "$tt" | head -n 2
+rm "$tt"
 
 exit 0
 } 2>&1 | tee "bringup_logfile_$SERIAL_NUM"
