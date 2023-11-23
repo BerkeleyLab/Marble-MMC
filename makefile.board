@@ -164,15 +164,6 @@ $(DOC_DIR)/$(MBOX_VH): $(INCLUDE_DIR)/mbox.def
 $(DOC_DIR)/$(MBOX_H): $(INCLUDE_DIR)/mbox.def
 	python3 $(MKMBOX) --map -d $< -o $@ --offset $(OFFSET)
 
-$(DOC_DIR)/$(MBOX_JSON): $(INCLUDE_DIR)/mbox.def
-	python3 scripts/mkmbox.py --map -d $^ -o $@ --offset $(OFFSET)
-
-$(DOC_DIR)/$(MBOX_VH): $(INCLUDE_DIR)/mbox.def
-	python3 scripts/mkmbox.py --map -d $^ -o $@ --offset $(OFFSET)
-
-$(DOC_DIR)/$(MBOX_H): $(INCLUDE_DIR)/mbox.def
-	python3 scripts/mkmbox.py --map -d $^ -o $@ --offset $(OFFSET)
-
 # Rule for generating object files from assembler files
 #
 # Creates a directory in the output tree if nessesary. The file is only
