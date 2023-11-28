@@ -51,6 +51,8 @@ void assert_failed(uint8_t *file, uint32_t line) {}
 void SystemClock_Config_HSI(void);
 
 ETH_HandleTypeDef heth;
+RNG_HandleTypeDef hrng;
+HAL_StatusTypeDef rng_init_status;
 
 I2C_HandleTypeDef hi2c1;
 I2C_HandleTypeDef hi2c3;
@@ -772,6 +774,10 @@ uint32_t marble_init(bool use_xtal)
   marble_GPIOint_init();
   marble_read_pcb_rev();
 
+  // RNG
+  __HAL_RCC_RNG_CLK_ENABLE();
+  rng_init_status = HAL_RNG_Init(&hrng);
+
   marble_PSU_pwr(true);
   MX_ETH_Init();
   MX_I2C1_Init();
@@ -1385,6 +1391,13 @@ uint32_t fsynthGetFreq(void) {
     return (uint32_t)freq;
   }
   return 0;
+}
+
+int get_hw_rnd(uint32_t *result, int *rng_init_status_p) {
+  HAL_StatusTypeDef rc;
+  rc = HAL_RNG_GenerateRandomNumber(&hrng, result);
+  *rng_init_status_p = rng_init_status;
+  return rc;
 }
 
 /**

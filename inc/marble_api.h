@@ -297,6 +297,8 @@ void FPGAWD_set_period(uint16_t preload);
 void FPGAWD_pet(void);
 // ISR pends FPGA reset
 void FPGAWD_ISR(void);
+// RND - only on marble_v2 (STM32) for now
+int get_hw_rnd(uint32_t *result, int *rng_init_status_p);
 
 #ifdef __cplusplus
 }
