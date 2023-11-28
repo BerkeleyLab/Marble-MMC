@@ -79,11 +79,13 @@ extern "C" {
 #define CONFIG_CLK_PLLM              (8)
 #define CONFIG_CLK_PLLN            (240)
 #define CONFIG_CLK_PLLP    RCC_PLLP_DIV2
+#define CONFIG_CLK_PLLQ              (5)
 #else
 // HSE input on Marble is 25 MHz from WhiteRabbit module
 #define CONFIG_CLK_PLLM             (20)
 #define CONFIG_CLK_PLLN            (192)
 #define CONFIG_CLK_PLLP    RCC_PLLP_DIV2
+#define CONFIG_CLK_PLLQ              (5)
 #endif
 
 #define UART_MSG_TERMINATOR                           ('\n')
