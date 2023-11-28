@@ -1168,7 +1168,8 @@ def parse_readback(lines, compare_prog=None, do_print=False):
                     _readback.append((newpage, _prog))
                 newpage = rval
                 _prog = []
-    _readback.append((newpage, _prog))
+    if newpage is not None:
+        _readback.append((newpage, _prog))
     if compare_prog is not None:
         compare_progs(_program, _readback)
     if do_print:
@@ -1546,7 +1547,7 @@ def main(argv):
     parser = load.ArgParser()
     parser.add_argument('--print', default=False, action="store_true", help='Print values to write or read')
     parser.add_argument('-v', '--verbose', default=False, action="store_true", help='Print console chatter')
-    subparsers = parser.add_subparsers(title="Actions", dest="subcmd")
+    subparsers = parser.add_subparsers(title="Actions", dest="subcmd", required=True)
 
     parser_write = subparsers.add_parser("write", help="Write a program")
     write_group = parser_write.add_mutually_exclusive_group()

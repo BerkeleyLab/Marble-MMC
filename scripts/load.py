@@ -21,6 +21,12 @@ POST_SLEEP = 1.0 # seconds
 _log = []
 _done = False
 
+
+class LoadError(Exception):
+    def __init__(self, s):
+        super().__init__(s)
+
+
 class StreamSerial():
     def __init__(self, port = None, baud = 115200, flush=True):
         self._ready = False
@@ -30,26 +36,26 @@ class StreamSerial():
         try:
             self.dev = serial.Serial(port=port, baudrate=baud, timeout=0.1)
             self._ready = True
-        except Exception as e:
+            if flush:
+                self.flush()
+        except FileNotFoundError as e:
             print(e)
-        if flush:
-            self.flush()
+            self._ready = False
 
     def flush(self):
         """Read and discard anything in the incoming buffer."""
-        self.dev.read_all()
+        if self._ready:
+            self.dev.read_all()
 
     def failed(self):
         return not self._ready
 
     def writeline(self, line):
+        if not self._ready:
+            return False
         line = line.encode('ascii')
-        #print(f"writing {line}")
-        try:
-            self.dev.write(line)
-        except Exception as e:
-            print(e)
-        return
+        self.dev.write(line)
+        return True
 
     def readline(self):
         if not self._ready:
@@ -57,11 +63,14 @@ class StreamSerial():
         buf = []
         timeout = 10
         while True:
-            r = self.dev.read()
+            try:
+                r = self.dev.read()
+            except serial.serialutil.SerialException as e:
+                raise LoadError("Device likely in use by another reader.\r\n" + str(e))
             if not r:
                 timeout -= 1
                 if timeout == 0:
-                    return None
+                    return ""
                 continue
             else:
                 r = r.decode('utf-8')
@@ -78,24 +87,25 @@ class StreamSerial():
         return self.line
 
     def close(self):
-        self.dev.close()
+        if hasattr(self, 'dev') and hasattr(self.dev, 'close'):
+            self.dev.close()
 
 def readDevice(sdev, wait_on, do_print=False, do_log=False):
     while True:
-        try:
-            if wait_on.done():
-                print(">   done")
-                break
-            #line = await ss.readline()
-            line = sdev.readline()
-            if line:
-                line = line.strip()
-                if do_print:
-                    print(line)
-                if do_log:
-                    _log.append(line)
-        except Exception as e:
-            print(e)
+        if wait_on.done():
+            print(">   done")
+            break
+        line = sdev.readline()
+        # readline returns None on device open fail
+        # Returns empty string on timeout
+        if line is None:
+            break
+        if len(line) > 0:
+            line = line.strip()
+            if do_print:
+                print(line)
+            if do_log:
+                _log.append(line)
     print(">   closing")
     sdev.close()
     _done = True
@@ -123,8 +133,9 @@ def serveCommands(sdev, *commands):
     nlines = 0
     for line in commands:
         if len(line) > 0 and not line.strip().startswith('#'):
-            #print("writing {}".format(line))
-            sdev.writeline(line + '\r\n')
+            # Bread if writeline returns False
+            if not sdev.writeline(line + '\r\n'):
+                break
             nlines += 1
             time.sleep(INTERCOMMAND_SLEEP)
     time.sleep(POST_SLEEP)
