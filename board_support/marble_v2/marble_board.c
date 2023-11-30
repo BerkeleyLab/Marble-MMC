@@ -1428,9 +1428,15 @@ static void fpgawd_init(void) {
 
   // Set prescaler to 1kHz input clock frequency
   WDTIM->PSC = 60000;
+  WDTIM->CR1 = TIM_CR1_ARPE | TIM_CR1_UDIS;
+  WDTIM->CCER = 0;
+  WDTIM->EGR = 0;
+  // Enable update interrupt
+  WDTIM->DIER = TIM_DIER_UIE;
   // Enable WDIRQN;
   HAL_NVIC_SetPriority(WDIRQN, 7, 7);
-  HAL_NVIC_EnableIRQ(WDIRQN);
+  // TODO - Get period from non-volatile
+  bsp_FPGAWD_set_period(0);
   return;
 }
 

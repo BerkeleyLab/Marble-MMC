@@ -19,7 +19,6 @@ typedef enum {
   STATE_GOLDEN,   // Assumed to be running golden image     (disable watchdog)
   STATE_USER,     // Assumed to be running user image       (enable watchdog)
   STATE_RESET,    // MMC is holding the FPGA reset low      (disable watchdog)
-  STATE_CONFIG,   // FPGA is holding its DONE pin low       (disable watchdog)
 } FPGAWD_State_t;
 
 static uint32_t remote_hash[HASH_SIZE] = {0};
@@ -57,11 +56,6 @@ void FPGAWD_DoneHandler(void) {
     case STATE_RESET:
       // This should not happen
       printf("YIKES!!!\r\n");
-      break;
-    case STATE_CONFIG:
-      // Assumed boot to golden image after MMC reset
-      printf("Reboot to STATE_GOLDEN\r\n");
-      fpga_state = STATE_GOLDEN;
       break;
     default:
       break;
