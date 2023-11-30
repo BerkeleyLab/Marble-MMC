@@ -36,6 +36,7 @@ static void fpga_done_handler(void)
 {
    fpga_prog_cnt++;
    fpga_net_prog_pend=1;
+   watchdog_fpga_done();
    fpga_done_tickval = BSP_GET_SYSTICK();
    return;
 }
@@ -69,6 +70,7 @@ static void timer_int_handler(void)
 void print_status_counters(void) {
   printf("Live counter: %u\r\n", live_cnt);
   printf("FPGA prog counter: %d\r\n", fpga_prog_cnt);
+  watchdog_show_state();
   printf("FMC status: %x\r\n", marble_FMC_status());
   printf("PWR status: %x\r\n", marble_PWR_status());
 #ifdef MARBLE_V2
@@ -148,6 +150,7 @@ int main(void) {
    if (1) {
       printf("** Policy: reset FPGA on MMC reset.  Doing it now. **\r\n");
       reset_fpga();
+      watchdog_fpga_reset();
       printf("**\r\n");
    }
 

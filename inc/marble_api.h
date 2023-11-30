@@ -201,6 +201,14 @@ void reset_fpga(void);
 void enable_fpga(void);
 
 /****
+* Watchdog WIP
+****/
+void watchdog_fpga_reset(void);
+void watchdog_fpga_done(void);
+void watchdog_poll(void);
+void watchdog_show_state(void);
+
+/****
 * SPI/SSP
 ****/
 typedef void *SSP_PORT;

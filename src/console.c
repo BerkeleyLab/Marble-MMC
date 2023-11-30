@@ -132,6 +132,7 @@ static int console_handle_msg(char *rx_msg, int len)
            break;
         case '5':
            reset_fpga();
+           watchdog_fpga_reset();
            break;
         case '6':
            print_this_ip();

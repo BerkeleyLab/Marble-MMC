@@ -85,18 +85,7 @@ void mbox_read_page(uint8_t page_no, uint8_t page_sz, uint8_t *page) {
 
 void mbox_update(bool verbose)
 {
-  uint32_t rand=0;
-  if (1) {
-    int rnd_init_status;
-    int rnd_rc = get_hw_rnd(&rand, &rnd_init_status);
-    printf("get_hw_rnd %d %d %lx\n", rnd_init_status, rnd_rc, rand);
-    /* Deep in STM32F2xx_HAL_Driver/Inc/stm32f2xx_hal_def.h is
-    HAL_OK       = 0x00U,
-    HAL_ERROR    = 0x01U,
-    HAL_BUSY     = 0x02U,
-    HAL_TIMEOUT  = 0x03U
-    */
-  }
+  watchdog_poll();
 
   if (mbox_is_disabled) {
     return;
