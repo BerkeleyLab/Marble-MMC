@@ -56,6 +56,8 @@ void assert_failed(uint8_t *file, uint32_t line) {}
 void SystemClock_Config_HSI(void);
 
 ETH_HandleTypeDef heth;
+RNG_HandleTypeDef hrng;
+HAL_StatusTypeDef rng_init_status;
 
 I2C_HandleTypeDef hi2c1;
 I2C_HandleTypeDef hi2c3;
@@ -896,6 +898,11 @@ uint32_t marble_init(void)
   MX_SPI1_Init();
   MX_SPI2_Init();
 
+  // RNG
+  hrng.Instance = RNG;
+  __HAL_RCC_RNG_CLK_ENABLE();
+  rng_init_status = HAL_RNG_Init(&hrng);
+
   marble_LED_init();
   marble_SW_init();
   marble_UART_init();
@@ -1033,7 +1040,7 @@ static void SystemClock_Config(void)
    RCC_OscInitStruct.PLL.PLLM = CONFIG_CLK_PLLM;
    RCC_OscInitStruct.PLL.PLLN = CONFIG_CLK_PLLN;
    RCC_OscInitStruct.PLL.PLLP = CONFIG_CLK_PLLP;
-   RCC_OscInitStruct.PLL.PLLQ = 4;
+   RCC_OscInitStruct.PLL.PLLQ = CONFIG_CLK_PLLQ;
    if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
    {
       Error_Handler();
@@ -1066,7 +1073,7 @@ void SystemClock_Config_HSI(void)
    RCC_OscInitStruct.PLL.PLLM = 13;
    RCC_OscInitStruct.PLL.PLLN = 195;
    RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-   RCC_OscInitStruct.PLL.PLLQ = 4;
+   RCC_OscInitStruct.PLL.PLLQ = 5;
    if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
    {
      Error_Handler();
@@ -1468,6 +1475,18 @@ uint32_t fsynthGetFreq(void) {
     return (uint32_t)freq;
   }
   return 0;
+}
+
+int get_hw_rnd(uint32_t *result, int *rng_init_status_p) {
+  HAL_StatusTypeDef rc;
+  rc = HAL_RNG_GenerateRandomNumber(&hrng, result);
+  *rng_init_status_p = rng_init_status;
+  /*
+  printf("CR = 0x%08lx\r\n", hrng.Instance->CR);
+  printf("SR = 0x%08lx\r\n", hrng.Instance->SR);
+  printf("DR = 0x%08lx\r\n", hrng.Instance->DR);
+  */
+  return rc;
 }
 
 /**
