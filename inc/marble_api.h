@@ -26,7 +26,7 @@ extern "C" {
 #define EEPROM_COUNT ((size_t)FLASH_SECTOR_SIZE/sizeof(ee_frame))
 
 #define DEMO_STRING                 "Marble UART Simulation\r\n"
-#define BSP_GET_SYSTICK()     (uint32_t)((uint64_t)clock()/1000)
+#define BSP_GET_SYSTICK()     (uint32_t)((uint64_t)clock()/40)
 
 # define MGT_MAX_PINS 0
 #else
@@ -296,13 +296,13 @@ void marble_SLEEP_us(uint32_t delay);
 * FPGA Software/Hardware Watchdog
 ************/
 // Set period to 0 to disable
-void FPGAWD_set_period(uint16_t preload);
+void bsp_FPGAWD_set_period(uint16_t preload);
 // Software pet
-void FPGAWD_pet(void);
+void bsp_FPGAWD_pet(void);
 // ISR pends FPGA reset
-void FPGAWD_ISR(void);
+void bsp_FPGAWD_ISR(void);
 // RND - only on marble_v2 (STM32) for now
-int get_hw_rnd(uint32_t *result, int *rng_init_status_p);
+int get_hw_rnd(uint32_t *result);
 
 #ifdef __cplusplus
 }

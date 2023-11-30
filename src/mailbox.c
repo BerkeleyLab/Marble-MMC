@@ -3,6 +3,7 @@
 #include "i2c_pm.h"
 #include "mailbox.h"
 #include "max6639.h"
+#include "watchdog.h"
 #include "rev.h"
 
 /* ============================= Helper Macros ============================== */
@@ -86,16 +87,14 @@ void mbox_read_page(uint8_t page_no, uint8_t page_sz, uint8_t *page) {
 void mbox_update(bool verbose)
 {
   uint32_t rand=0;
-  if (1) {
-    int rnd_init_status;
-    int rnd_rc = get_hw_rnd(&rand, &rnd_init_status);
-    printf("get_hw_rnd %d %d %lx\n", rnd_init_status, rnd_rc, rand);
-    /* Deep in STM32F2xx_HAL_Driver/Inc/stm32f2xx_hal_def.h is
-    HAL_OK       = 0x00U,
-    HAL_ERROR    = 0x01U,
-    HAL_BUSY     = 0x02U,
-    HAL_TIMEOUT  = 0x03U
-    */
+  if (0) {
+    int rnd_rc = get_hw_rnd(&rand);
+#ifdef SIMULATION
+    // Such an annoying difference between format strings on sim target vs hw
+    printf("get_hw_rnd %d %08x\n", rnd_rc, rand);
+#else
+    printf("get_hw_rnd %d %08lx\n", rnd_rc, rand);
+#endif
   }
 
   if (mbox_is_disabled) {

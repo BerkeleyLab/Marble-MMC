@@ -217,5 +217,28 @@
       "output": "@ = fsynthGetFreq()",
       "desc" : "Startup frequency of frequency synthesizer (si570) in Hz."
     }
+  ],
+# Pages 7 and 8 are used for the authenticating watchdog
+  "page7" : [
+    { "name" : "WD_RAND",
+      "size" : 4,
+      "fmt"  : "0x{:x}",
+      "output" : "@ = FPGAWD_GetRand()",
+      "desc" : "A 32-bit random number to be used by the remote host to produce a watchdog hash."
+    }
+  ],
+  "page8" : [
+    { "name" : "WD_HASH_H",
+      "size" : 4,
+      "fmt"  : "0x{:x}",
+      "input" : "FPGAWD_HandleHash(@, 1)",
+      "desc" : "Upper 32 bits of 64-bit random number to be used by the remote host to produce a watchdog hash."
+    },
+    { "name" : "WD_HASH_L",
+      "size" : 4,
+      "fmt"  : "0x{:x}",
+      "input" : "FPGAWD_HandleHash(@, 0)",
+      "desc" : "Lower 32 bits of 64-bit random number to be used by the remote host to produce a watchdog hash."
+    }
   ]
 }

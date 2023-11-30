@@ -248,7 +248,7 @@ void USART3_IRQHandler(void)
 
 /* USER CODE BEGIN 1 */
 void TIM1_BRK_TIM9_IRQHandler(void) {
-  FPGAWD_ISR();
+  bsp_FPGAWD_ISR();
   return;
 }
 

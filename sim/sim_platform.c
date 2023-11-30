@@ -25,9 +25,10 @@
  *  *   handleMsg(msg);
  */
 
-//#define USE_PTY
 #define DEBUG_TX_OUT
-#define SIM_FPGA_DONE_DELAY_MS        (2)
+#define BOARD_SERVICE_SLEEP_MS       (50)
+#define SIM_FPGA_DONE_DELAY_MS      (100)
+#define SIM_FPGA_RESETS               (4)
 
 // Defined in sim_i2c.c; declared here to avoid creating a "real" i2c_init function in marble_api.h
 void init_sim_ltm4673(void);
@@ -39,13 +40,19 @@ typedef struct {
 
 // GLOBALS
 SSP_PORT SSP_FPGA;
-uint32_t _timeStart;
-int _fpgaDonePend;
-static sim_console_state_t sim_console_state;
-void FPGA_DONE_dummy(void) {}
-void (*volatile marble_FPGA_DONE_handler)(void) = FPGA_DONE_dummy;
-static int psuedoterm;
 
+// Local static variables
+static void dummy_handler(void) {}
+static int32_t _fpgaDoneTimeStart;
+static int32_t _systickIrqTimeStart;
+static int _fpgaDonePend;
+static void (*volatile marble_FPGA_DONE_handler)(void) = dummy_handler;
+static sim_console_state_t sim_console_state;
+static void (*volatile marble_SysTick_Handler)(void) = dummy_handler;
+static uint32_t sim_systick_period_ms = 1;
+static int fpga_resets = 0;
+
+// Static Prototypes
 static int shiftMessage(void);
 static void _sigHandler(int c);
 
@@ -60,28 +67,26 @@ int board_service(void) {
   }
   // If char queue not empty
   if (UARTTXQUEUE_Get(&outByte) != UARTTX_QUEUE_EMPTY) {
-#ifdef USE_PTY
-    write(psuedoterm, &outByte, 1);
-#endif
     putchar((char)outByte);
   }
   // If enough time has elapsed, simulate the FPGA_DONE signal arrival
+  uint32_t now = BSP_GET_SYSTICK();
   if (_fpgaDonePend) {
-    if (BSP_GET_SYSTICK() - _timeStart > SIM_FPGA_DONE_DELAY_MS) {
-      marble_FPGA_DONE_handler();
-      _fpgaDonePend = 0;
+    if (now - _fpgaDoneTimeStart > SIM_FPGA_DONE_DELAY_MS) {
+      if (fpga_resets++ < SIM_FPGA_RESETS) {
+        marble_FPGA_DONE_handler();
+        _fpgaDonePend = 1;
+        _fpgaDoneTimeStart = now;
+      }
     }
   }
-  // Keep the system responsive, but don't hog resources
-  sleep(0.05);
-  /*
-  static int say_hello = 0;
-  ssize_t nwrite;
-  if ((say_hello++ % 1000) == 0) {
-    nwrite = write(psuedoterm, "hello\r\n", 7);
-    printf("nwrite = %ld\r\n", nwrite);
+  if (now - _systickIrqTimeStart >= sim_systick_period_ms) {
+    //printf("now-start = %d\r\n", now - _systickIrqTimeStart);
+    marble_SysTick_Handler();
+    _systickIrqTimeStart = now;
   }
-  */
+  // Keep the system responsive, but don't hog resources
+  sleep(BOARD_SERVICE_SLEEP_MS/1000);
   return sim_console_state.toExit;
 }
 
@@ -92,7 +97,6 @@ static void _sigHandler(int c) {
 }
 
 void cleanup(void) {
-  close(psuedoterm);
   return;
 }
 
@@ -105,28 +109,16 @@ static int shiftMessage(void) {
   // NOTE: select() MODIFIES TIMEOUT!!!   Need to reinitialize every time.
   timeout.tv_sec = 0;
   timeout.tv_usec = 1000;  // 1ms timeout
-#ifdef USE_PTY
-  FD_SET(psuedoterm, &rset);    // Add pseudoterm to the read set
-  rval = select(psuedoterm+1, &rset, NULL, NULL, &timeout);
-#else
   FD_SET(STDIN_FILENO, &rset);    // Add STDIN to the read set
   rval = select(STDIN_FILENO+1, &rset, NULL, NULL, &timeout);
-#endif
   int n = UART_QUEUE_ITEMS;
   if (rval) {
     while (n--) {
-#ifdef USE_PTY
-      rval = read(psuedoterm, &rc, 1);
-      if (rval < 1) {
-        break;
-      }
-#else
       ri = fgetc(stdin);
       if ((ri == EOF) || (ri == 0)) {
         break;
       }
       rc = (char)(ri & 0xff);
-#endif
       UARTQUEUE_Add((uint8_t *)&rc);
       if (rc == UART_MSG_TERMINATOR) {
         sim_console_state.msgReady = 1;
@@ -142,17 +134,8 @@ static int shiftMessage(void) {
 }
 
 uint32_t marble_init(void) {
-#ifdef USE_PTY
-  psuedoterm = posix_openpt(O_RDWR | O_NOCTTY);
-  char* deviceName = ptsname(psuedoterm);
-  printf("PTY at: %s\r\n", deviceName);
-  int result = grantpt(psuedoterm);
-  result = unlockpt(psuedoterm);
-  printf("result = %d\r\n", result);
-  ssize_t nwrite = write(psuedoterm, "hello\r\n", 7);
-  printf("nwrite = %ld\r\n", nwrite);
-#endif
-  _timeStart = BSP_GET_SYSTICK();
+  _fpgaDoneTimeStart = BSP_GET_SYSTICK();
+  _systickIrqTimeStart = BSP_GET_SYSTICK();
   _fpgaDonePend = 1;
   signal(SIGINT, _sigHandler);
   fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK);
@@ -308,10 +291,12 @@ uint32_t marble_MDIO_read(uint16_t reg) {
 }
 
 uint32_t marble_SYSTIMER_ms(uint32_t delay) {
-  return 0;
+  sim_systick_period_ms = BOARD_SERVICE_SLEEP_MS > delay ? BOARD_SERVICE_SLEEP_MS : delay;
+  return sim_systick_period_ms;
 }
 
 void marble_SYSTIMER_handler(void (*handler)(void)) {
+  marble_SysTick_Handler = handler;
   return;
 }
 
@@ -329,16 +314,16 @@ uint32_t marble_get_tick(void) {
   return BSP_GET_SYSTICK();
 }
 
-void FPGAWD_set_period(uint16_t preload) {
+void bsp_FPGAWD_set_period(uint16_t preload) {
   _UNUSED(preload);
   return;
 }
 
-void FPGAWD_pet(void) {
+void bsp_FPGAWD_pet(void) {
   return;
 }
 
-void FPGAWD_ISR(void) {
+void bsp_FPGAWD_ISR(void) {
   return;
 }
 
@@ -354,3 +339,8 @@ uint32_t fsynthGetFreq(void) {
   return 0;
 }
 
+int get_hw_rnd(uint32_t *result) {
+  // Using stdlib's random()
+  *result = (uint32_t)random();
+  return 0;
+}

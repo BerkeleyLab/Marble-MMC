@@ -9,6 +9,7 @@
 #include "console.h"
 #include "uart_fifo.h"
 #include "ltm4673.h"
+#include "watchdog.h"
 
 #define LED_SNAKE
 #ifdef MARBLE_V2
@@ -44,6 +45,7 @@ static void fpga_done_handler(void)
    fpga_prog_cnt++;
    fpga_net_prog_pend=1;
    fpga_done_tickval = BSP_GET_SYSTICK();
+   FPGAWD_DoneHandler();
    return;
 }
 
@@ -54,6 +56,7 @@ static void timer_int_handler(void)
 
    // SPI mailbox update flag; soft-realtime
    spi_ms_cnt += systimer_ms;
+   //printf("%d\r\n", spi_ms_cnt);
    if (spi_ms_cnt > SPI_MBOX_RATE) {
       spi_update = true;
       spi_ms_cnt = 0;

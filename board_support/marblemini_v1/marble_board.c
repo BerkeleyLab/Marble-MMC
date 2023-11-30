@@ -713,3 +713,26 @@ void pwr_autoboot(void) {
    // This likely also unused for Marble-Mini
    return;
 }
+
+int get_hw_rnd(uint32_t *result) {
+  // TODO
+  _UNUSED(result);
+  return 0;
+}
+
+void bsp_FPGAWD_set_period(uint16_t preload) {
+  // TODO
+  _UNUSED(preload);
+  return;
+}
+
+void bsp_FPGAWD_pet(void) {
+  // TODO
+  return;
+}
+
+void bsp_FPGAWD_ISR(void) {
+  // TODO
+  return;
+}
+
