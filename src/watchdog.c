@@ -36,11 +36,22 @@ static FPGAWD_State_t fpga_state = STATE_BOOT;
 static void compute_hash(void);
 static int vet_hash(void);
 static void fpga_reset_callback(void);
+static void pet_wdog(void);
 
 /* ========================== Function Definitions ========================== */
-uint32_t FPGAWD_GetRand(void) {
-  rng_status = get_hw_rnd(&rand);
-  return rand;
+static const char* state_str(FPGAWD_State_t ss) {
+  switch (ss) {
+    case STATE_BOOT:   return "BOOT";
+    case STATE_GOLDEN: return "GOLDEN";
+    case STATE_USER:   return "USER";
+    case STATE_RESET:  return "RESET";
+    default: break;
+  }
+  return "BAD";
+}
+
+uint32_t FPGAWD_GetNonce(void) {
+  return local_hash[0];
 }
 
 void FPGAWD_SetPeriod(int period) {
@@ -63,32 +74,32 @@ int FPGAWD_GetPeriod(void) {
 }
 
 void FPGAWD_Poll(void) {
-  if (max_poll_counts == 0) {
-    return;
-  }
-  printf("poll_counter = %d\r\n", poll_counter);
-  if (++poll_counter > max_poll_counts) {
-    reset_fpga_with_callback(fpga_reset_callback);
-    fpga_state = STATE_RESET;
+  if (poll_counter == 0) return;
+  if (--poll_counter == 0) {
+    printf("poll_counter reached 0\r\n");
+    if (fpga_state == STATE_USER) {
+      reset_fpga_with_callback(fpga_reset_callback);
+      fpga_state = STATE_RESET;
+    }
   }
   return;
 }
 
 void FPGAWD_DoneHandler(void) {
+  FPGAWD_State_t old = fpga_state;
   switch (fpga_state) {
     case STATE_BOOT:
       // First rising edge after boot is assumed to be the golden image
-      printf("Going to STATE_GOLDEN\r\n");
       fpga_state = STATE_GOLDEN;
       break;
     case STATE_GOLDEN:
       // Must assume we are booting to user image
-      printf("Going to STATE_USER\r\n");
       fpga_state = STATE_USER;
+      pet_wdog();
       break;
     case STATE_USER:
       // Remain in state USER for subsequent boots
-      printf("Stay in STATE_USER\r\n");
+      pet_wdog();
       break;
     case STATE_RESET:
       // This should not happen
@@ -97,6 +108,7 @@ void FPGAWD_DoneHandler(void) {
     default:
       break;
   }
+  printf("DoneHandler transition %s -> %s\r\n", state_str(old), state_str(fpga_state));
   return;
 }
 
@@ -111,17 +123,17 @@ static void fpga_reset_callback(void) {
   return;
 }
 
-void FPGAWD_HandleHash(uint32_t hash, int index) {
+static void pet_wdog(void) {
+  printf("Watchdog pet\n");
+  poll_counter = max_poll_counts;
+  rng_status = get_hw_rnd(&rand);
+  compute_hash();
+}
+
+void FPGAWD_HandleHash(uint32_t hash, unsigned int index) {
   // Hash should be read in order from highest index to 0. See mbox.def
-  if (index < HASH_SIZE) {
-    remote_hash[index] = hash;
-  }
-  if (index == 0) {
-    if (vet_hash()) {
-      printf("Hash vetted\r\n");
-      poll_counter = 0;
-    }
-  }
+  if (index < HASH_SIZE) remote_hash[index] = hash;
+  if (index == 0 && vet_hash()) pet_wdog();
   return;
 }
 
@@ -136,12 +148,16 @@ static void compute_hash(void) {
 }
 
 static int vet_hash(void) {
-  compute_hash();
   int match = 1;
   for (int n = 0; n < HASH_SIZE; n++) {
-    if (remote_hash[n] != local_hash[n]) {
-      match = 0;
-    }
+    if (remote_hash[n] != local_hash[n]) match = 0;
   }
   return match;
+}
+
+void FPGAWD_ShowState(void) {
+  printf("poll_counter = %d\r\n", poll_counter);
+  printf("FPGA state  = %s\r\n", state_str(fpga_state));
+  printf("local_hash  = %8.8lx\r\n", local_hash[0]);
+  printf("remote_hash = %8.8lx\r\n", remote_hash[0]);
 }

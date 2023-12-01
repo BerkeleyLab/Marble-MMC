@@ -220,11 +220,11 @@
   ],
 # Pages 7 and 8 are used for the authenticating watchdog
   "page7" : [
-    { "name" : "WD_RAND",
+    { "name" : "WD_NONCE",
       "size" : 4,
       "fmt"  : "0x{:x}",
-      "output" : "@ = FPGAWD_GetRand()",
-      "desc" : "A 32-bit random number to be used by the remote host to produce a watchdog hash."
+      "output" : "@ = FPGAWD_GetNonce()",
+      "desc" : "A 32-bit nonce to be used by the remote host to produce a watchdog hash."
     }
   ],
   "page8" : [

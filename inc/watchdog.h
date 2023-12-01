@@ -13,12 +13,13 @@ extern "C" {
 
 #include <stdint.h>
 
-uint32_t FPGAWD_GetRand(void);
+uint32_t FPGAWD_GetNonce(void);
 void FPGAWD_DoneHandler(void);
-void FPGAWD_HandleHash(uint32_t hash, int index);
+void FPGAWD_HandleHash(uint32_t hash, unsigned int index);
 void FPGAWD_Poll(void);
 void FPGAWD_SetPeriod(int period);
 int FPGAWD_GetPeriod(void);
+void FPGAWD_ShowState(void);
 
 #ifdef __cplusplus
 }
