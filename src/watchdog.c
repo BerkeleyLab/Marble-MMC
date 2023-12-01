@@ -11,7 +11,10 @@
 #include <stdio.h>
 
 /* ============================= Helper Macros ============================== */
-#define HASH_SIZE         (3)
+// TODO - Get this from mailbox.h or marble_api.h
+#define MAILBOX_UPDATE_PERIOD_SECONDS (2)
+#define MAX_WATCHDOG_TIMEOUT      (255*MAILBOX_UPDATE_PERIOD_SECONDS)
+#define HASH_SIZE                     (3)
 
 /* ============================ Static Variables ============================ */
 typedef enum {
@@ -40,9 +43,23 @@ uint32_t FPGAWD_GetRand(void) {
   return rand;
 }
 
-void FPGAWD_set_period(int period) {
-  max_poll_counts = period;
+void FPGAWD_SetPeriod(int period) {
+  period = period > MAX_WATCHDOG_TIMEOUT ? MAX_WATCHDOG_TIMEOUT : period;
+  max_poll_counts = (period/MAILBOX_UPDATE_PERIOD_SECONDS)-1 > 0 ? (period/MAILBOX_UPDATE_PERIOD_SECONDS)-1 : 0;
+  if (max_poll_counts == 0) {
+    printf("Disabling watchdog\r\n");
+  } else {
+    printf("Setting watchdog timeout to %d seconds.\r\n", (max_poll_counts+1)*MAILBOX_UPDATE_PERIOD_SECONDS);
+  }
   return;
+}
+
+int FPGAWD_GetPeriod(void) {
+  if (max_poll_counts == 0) {
+    return 0;
+  } else {
+    return (max_poll_counts+1)*MAILBOX_UPDATE_PERIOD_SECONDS;
+  }
 }
 
 void FPGAWD_Poll(void) {

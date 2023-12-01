@@ -70,7 +70,6 @@ extern "C" {
 #endif /* SIMULATION */
 
 #define FLASH_VOLTAGE_MV                              (3300)
-#define FPGA_WATCHDOG_CLK_FREQ                        (3276)
 
 /* = = = = System Clock Configuration = = = = */
 // System Clock Frequency = 120 MHz
@@ -112,6 +111,16 @@ typedef enum {
   Marble_Simulator
 } Marble_PCB_Rev_t;
 
+/****
+* Top-level Application Functionality
+****/
+void system_init(void);
+
+void system_service(void);
+
+/****
+* Platform/Hardware-Specific Routines
+****/
 /* Initialize uC and peripherals before main code can run. */
 uint32_t marble_init(void);
 

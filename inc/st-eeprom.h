@@ -63,7 +63,8 @@ typedef struct {
   X(4, fan_speed, raw, 1, {102}) \
   X(5, overtemp,  raw, 1, {85}) \
   X(6, mgt_mux,   raw, 1, {0}) \
-  X(7, fsynth,    raw, 6, {0, 0, 0, 0, 0, 0})
+  X(7, fsynth,    raw, 6, {0, 0, 0, 0, 0, 0}) \
+  X(8, wd_period, raw, 1, {0})
 
 typedef enum {
 #define X(N, NAME, TYPE, SIZE, ...)  ee_ ## NAME = N,

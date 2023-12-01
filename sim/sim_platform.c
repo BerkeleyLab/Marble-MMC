@@ -355,3 +355,7 @@ int get_hw_rnd(uint32_t *result) {
   *result = (uint32_t)random();
   return 0;
 }
+
+void marble_MGTMUX_set_all(uint8_t mgt_cfg) {
+  _UNUSED(mgt_cfg);
+}

@@ -363,6 +363,11 @@ uint8_t marble_MGTMUX_status(void) {
   return 0xFF;
 }
 
+void marble_MGTMUX_set_all(uint8_t mgt_cfg) {
+  _UNUSED(mgt_cfg);
+  return;
+}
+
 /************
 * I2C
 ************/

@@ -35,6 +35,7 @@
 #include "console.h"
 #include "st-eeprom.h"
 #include "i2c_pm.h"
+#include "watchdog.h"
 
 #define UART_ECHO
 #ifdef NUCLEO
@@ -95,7 +96,6 @@ static void USART_RXNE_ISR(void);
 static void USART_TXE_ISR(void);
 static void USART_Erase_Echo(void);
 static void USART_Erase(int n);
-static void marble_apply_params(void);
 static void marble_read_pcb_rev(void);
 static int marble_MGTMUX_store(void);
 static void I2C_PM_smba_handler(void);
@@ -913,8 +913,6 @@ uint32_t marble_init(void)
   marble_UART_init();
 
   LM75_Init();
-  eeprom_init();
-  marble_apply_params();
 
   printf("** Marble init done **\r\n");
   marble_print_pcb_rev();
@@ -925,34 +923,6 @@ uint32_t marble_init(void)
 
   //marble_MDIO_init();
   return 0;
-}
-
-/*
- * static void marble_apply_params(void);
- *    Apply parameters stored in non-volatile memory.
- */
-static void marble_apply_params(void) {
-  // Fan speed
-  uint8_t val;
-  if (eeprom_read_fan_speed(&val, 1)) {
-    printf("Could not read current fan speed.\r\n");
-  } else {
-    max6639_set_fans((int)val);
-  }
-  // Over-temperature threshold
-  if (eeprom_read_overtemp(&val, 1)) {
-    printf("Could not read over-temperature threshold.\r\n");
-  } else {
-    max6639_set_overtemp(val);
-    LM75_set_overtemp((int)val);
-  }
-  // MGT MUX
-  if (eeprom_read_mgt_mux(&val, 1)) {
-    printf("Could not read MGT MUX config.\r\n");
-  } else {
-    marble_MGTMUX_set_all(val);
-  }
-  return;
 }
 
 void marble_print_pcb_rev(void) {

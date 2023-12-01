@@ -18,6 +18,7 @@
 #include "uart_fifo.h"
 #include "st-eeprom.h"
 #include "ltm4673.h"
+#include "watchdog.h"
 
 #define AUTOPUSH
 // TODO - Put this in a better place
@@ -58,7 +59,8 @@ const char *menu_str[] = {"\r\n",
   "q otemp - Set overtemperature threshold (degC)\r\n",
   "r enable - Set mailbox enable/disable (0/1, on/off)\r\n",
   "s addr_hex freq_hz config_hex - Set Si570 configuration\r\n",
-  "t pmbus_msg - Forward PMBus transaction to LTM4673\r\n"
+  "t pmbus_msg - Forward PMBus transaction to LTM4673\r\n",
+  "u period - Set/get watchdog timeout period (in seconds)\r\n"
 };
 #define MENU_LEN (sizeof(menu_str)/sizeof(*menu_str))
 
@@ -77,6 +79,7 @@ static int handle_msg_IP(char *rx_msg, int len);
 static int handle_msg_MAC(char *rx_msg, int len);
 static int handle_msg_fan_speed(char *rx_msg, int len);
 static int handle_msg_overtemp(char *rx_msg, int len);
+static int handle_msg_watchdog(char *rx_msg, int len);
 static int handle_mailbox_enable(char *rx_msg, int len);
 static int handle_msg_MGTMUX(char *rx_msg, int len);
 //static void print_mac_ip(mac_ip_data_t *pmac_ip_data);
@@ -244,6 +247,9 @@ static int console_handle_msg(char *rx_msg, int len)
            break;
         case 't':
            sscanfPMBridge(rx_msg, len);
+           break;
+        case 'u':
+           handle_msg_watchdog(rx_msg, len);
            break;
         default:
            printf(unk_str);
@@ -830,6 +836,27 @@ static int sscanfUnsignedDecimal(const char *s, int len) {
     return -1;
   }
   return (int)sum;
+}
+
+static int handle_msg_watchdog(char *rx_msg, int len) {
+  int index = sscanfNext(rx_msg, len);
+  int val;
+  if (index < 0) {
+    val = FPGAWD_GetPeriod();
+    if (val == 0) {
+      printf("Watchdog disabled (period = 0)\r\n");
+    } else {
+      printf("Current watchdog timeout: %d seconds\r\n", val);
+    }
+    return -1;
+  }
+  val = sscanfUnsignedDecimal((rx_msg + index), len-index);
+  if (val < 0) {
+    printf("Failed to parse\r\n");
+    return -1;
+  }
+  FPGAWD_SetPeriod(val);
+  return 0;
 }
 
 /*

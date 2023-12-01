@@ -1,17 +1,11 @@
 #include <string.h>
 #include <stdio.h>
 #include "marble_api.h"
+#include "uart_fifo.h"
 #include "i2c_pm.h"
 #include "i2c_fpga.h"
-#include "mailbox.h"
-#include "phy_mdio.h"
-#include "rev.h"
-#include "console.h"
-#include "uart_fifo.h"
 #include "ltm4673.h"
-#include "watchdog.h"
 
-#define LED_SNAKE
 #ifdef MARBLE_V2
 static void mgtclk_xpoint_en(void)
 {
@@ -32,65 +26,6 @@ static void mgtclk_xpoint_en(void)
 #define XTAL_IN_USE     "False"
 #endif
 
-#define FPGA_PUSH_DELAY_MS              (2)
-#define FPGA_RESET_DURATION_MS         (50)
-unsigned int live_cnt=0;
-unsigned int fpga_prog_cnt=0;
-unsigned int fpga_net_prog_pend=0;
-unsigned int fpga_done_tickval=0;
-static uint32_t fpga_disabled_time = 0;
-static int fpga_reset = 0;
-static void (*fpga_reset_callback)(void) = NULL;
-static volatile bool spi_update = false;
-static uint32_t systimer_ms=1; // System timer interrupt period
-
-static void fpga_done_handler(void)
-{
-   fpga_prog_cnt++;
-   fpga_net_prog_pend=1;
-   fpga_done_tickval = BSP_GET_SYSTICK();
-   FPGAWD_DoneHandler();
-   return;
-}
-
-static void timer_int_handler(void)
-{
-   const uint32_t SPI_MBOX_RATE = 2000;  // ms
-   static uint32_t spi_ms_cnt=0;
-
-   // SPI mailbox update flag; soft-realtime
-   spi_ms_cnt += systimer_ms;
-   //printf("%d\r\n", spi_ms_cnt);
-   if (spi_ms_cnt > SPI_MBOX_RATE) {
-      spi_update = true;
-      spi_ms_cnt = 0;
-      // Use LED2 for SPI heartbeat
-      marble_LED_toggle(2);
-   }
-
-   // Snake-pattern LEDs on two LEDs
-#ifdef LED_SNAKE
-   static uint16_t led_cnt = 0;
-   if(led_cnt == 330)
-      marble_LED_toggle(0);
-   else if(led_cnt == 660)
-      marble_LED_toggle(1);
-   led_cnt = (led_cnt + 1) % 1000;
-#endif /* LED_SNAKE */
-   live_cnt++;
-}
-
-void print_status_counters(void) {
-  printf("Live counter: %u\r\n", live_cnt);
-  printf("FPGA prog counter: %d\r\n", fpga_prog_cnt);
-  printf("FMC status: %x\r\n", marble_FMC_status());
-  printf("PWR status: %x\r\n", marble_PWR_status());
-#ifdef MARBLE_V2
-  printf("MGT CLK Mux: %x\r\n", marble_MGTMUX_status());
-#endif
-  return;
-}
-
 int main(void) {
    UARTQUEUE_Init();
 #ifdef MARBLEM_V1
@@ -102,23 +37,12 @@ int main(void) {
 #else
    marble_init();
 #endif
-
-   // UART console service
-   console_init();
+   system_init();
 
    /* Turn on LEDs */
    marble_LED_set(0, true);   // LD15
    marble_LED_set(1, true);   // LD11
    marble_LED_set(2, true);   // LD12
-
-   // Register GPIO interrupt handlers
-   marble_GPIOint_handlers(fpga_done_handler);
-
-   /* Configure the System Timer for 200 Hz interrupts (if supported) */
-   systimer_ms = marble_SYSTIMER_ms(5);
-
-   // Register System Timer interrupt handler
-   marble_SYSTIMER_handler(timer_int_handler);
 
    // Boot the power supply controller if needed
    pwr_autoboot();
@@ -140,49 +64,16 @@ int main(void) {
    // Send demo string over UART at 115200 BAUD
    marble_UART_send(DEMO_STRING, strlen(DEMO_STRING));
 
-   I2C_PM_init();
-
    while (1) {
-      // Run all system update/monitoring tasks and only then handle console
-      if (spi_update) {
-         mbox_update(false);
-         spi_update = false; // Clear flag
-      }
-
-      // Handle delayed action in response to FPGA's DONE pin asserting
-      if ((fpga_net_prog_pend) && (BSP_GET_SYSTICK() > fpga_done_tickval + FPGA_PUSH_DELAY_MS)) {
-        console_print_mac_ip();
-        console_push_fpga_mac_ip();
-        printf("DONE\r\n");
-        fpga_net_prog_pend=0;
-      }
-      // Handle re-enabling FPGA after scheduled reset
-      // NOTE! Timing depends on BSP_GET_SYSTICK returning ms
-      if ((fpga_reset) && (BSP_GET_SYSTICK() - fpga_disabled_time >= FPGA_RESET_DURATION_MS)) {
-        enable_fpga();
-        if (fpga_reset_callback != NULL) {
-          fpga_reset_callback();
-          fpga_reset_callback = NULL;
-        }
-        fpga_reset = 0;
-      }
-      // Regular service
-      console_service();
+      // Service system (application logic)
+      system_service();
+      // Service platform-specific functionality
       if (board_service()) {
         // This exit is only used in simulation
         break;
       }
    }
    cleanup(); // Only used for simulation
-}
-
-void reset_fpga_with_callback(void (*cb)(void)) {
-  printf("Resetting\r\n");
-  fpga_reset_callback = cb;
-  disable_fpga();
-  fpga_reset = 1;
-  fpga_disabled_time = BSP_GET_SYSTICK();
-  return;
 }
 
 // This probably belongs in some other file, but which one?
