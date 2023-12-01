@@ -51,6 +51,7 @@ static sim_console_state_t sim_console_state;
 static void (*volatile marble_SysTick_Handler)(void) = dummy_handler;
 static uint32_t sim_systick_period_ms = 1;
 static int fpga_resets = 0;
+static int fpga_enabled = 1;
 
 // Static Prototypes
 static int shiftMessage(void);
@@ -73,10 +74,12 @@ int board_service(void) {
   uint32_t now = BSP_GET_SYSTICK();
   if (_fpgaDonePend) {
     if (now - _fpgaDoneTimeStart > SIM_FPGA_DONE_DELAY_MS) {
+      marble_FPGA_DONE_handler();
       if (fpga_resets++ < SIM_FPGA_RESETS) {
-        marble_FPGA_DONE_handler();
         _fpgaDonePend = 1;
         _fpgaDoneTimeStart = now;
+      } else {
+        _fpgaDonePend = 0;
       }
     }
   }
@@ -244,6 +247,14 @@ void reset_fpga(void) {
 }
 
 void enable_fpga(void) {
+  fpga_enabled = 1;
+  _fpgaDonePend = 1;
+  _fpgaDoneTimeStart = BSP_GET_SYSTICK();
+  return;
+}
+
+void disable_fpga(void) {
+  fpga_enabled = 0;
   return;
 }
 

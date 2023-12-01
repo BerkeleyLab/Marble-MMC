@@ -298,6 +298,10 @@ void enable_fpga(void) {
   return;
 }
 
+void disable_fpga(void) {
+  return;
+}
+
 /************
 * GPIO interrupt setup and user-defined handlers
 ************/

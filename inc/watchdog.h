@@ -16,6 +16,8 @@ extern "C" {
 uint32_t FPGAWD_GetRand(void);
 void FPGAWD_DoneHandler(void);
 void FPGAWD_HandleHash(uint32_t hash, int index);
+void FPGAWD_Poll(void);
+void FPGAWD_set_period(int period);
 
 #ifdef __cplusplus
 }

@@ -33,10 +33,14 @@ static void mgtclk_xpoint_en(void)
 #endif
 
 #define FPGA_PUSH_DELAY_MS              (2)
+#define FPGA_RESET_DURATION_MS         (50)
 unsigned int live_cnt=0;
 unsigned int fpga_prog_cnt=0;
 unsigned int fpga_net_prog_pend=0;
 unsigned int fpga_done_tickval=0;
+static uint32_t fpga_disabled_time = 0;
+static int fpga_reset = 0;
+static void (*fpga_reset_callback)(void) = NULL;
 static volatile bool spi_update = false;
 static uint32_t systimer_ms=1; // System timer interrupt period
 
@@ -144,15 +148,25 @@ int main(void) {
          mbox_update(false);
          spi_update = false; // Clear flag
       }
-      // TODO - fix encapsulation here
-      if (fpga_net_prog_pend) {
-        if (BSP_GET_SYSTICK() > fpga_done_tickval + FPGA_PUSH_DELAY_MS) {
-          console_print_mac_ip();
-          console_push_fpga_mac_ip();
-          printf("DONE\r\n");
-          fpga_net_prog_pend=0;
-        }
+
+      // Handle delayed action in response to FPGA's DONE pin asserting
+      if ((fpga_net_prog_pend) && (BSP_GET_SYSTICK() > fpga_done_tickval + FPGA_PUSH_DELAY_MS)) {
+        console_print_mac_ip();
+        console_push_fpga_mac_ip();
+        printf("DONE\r\n");
+        fpga_net_prog_pend=0;
       }
+      // Handle re-enabling FPGA after scheduled reset
+      // NOTE! Timing depends on BSP_GET_SYSTICK returning ms
+      if ((fpga_reset) && (BSP_GET_SYSTICK() - fpga_disabled_time >= FPGA_RESET_DURATION_MS)) {
+        enable_fpga();
+        if (fpga_reset_callback != NULL) {
+          fpga_reset_callback();
+          fpga_reset_callback = NULL;
+        }
+        fpga_reset = 0;
+      }
+      // Regular service
       console_service();
       if (board_service()) {
         // This exit is only used in simulation
@@ -160,6 +174,15 @@ int main(void) {
       }
    }
    cleanup(); // Only used for simulation
+}
+
+void reset_fpga_with_callback(void (*cb)(void)) {
+  printf("Resetting\r\n");
+  fpga_reset_callback = cb;
+  disable_fpga();
+  fpga_reset = 1;
+  fpga_disabled_time = BSP_GET_SYSTICK();
+  return;
 }
 
 // This probably belongs in some other file, but which one?

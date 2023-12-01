@@ -100,6 +100,8 @@ void mbox_update(bool verbose)
   if (mbox_is_disabled) {
     return;
   }
+
+  FPGAWD_Poll();
   _UNUSED(verbose);
   update_count++;
   // Note! Input function must come before output function or any input values will

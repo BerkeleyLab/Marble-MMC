@@ -247,10 +247,6 @@ void USART3_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
-void TIM1_BRK_TIM9_IRQHandler(void) {
-  bsp_FPGAWD_ISR();
-  return;
-}
 
 /* USER CODE END 1 */
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

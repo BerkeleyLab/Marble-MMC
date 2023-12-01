@@ -43,9 +43,6 @@
 #define SMBA_PIN GPIO_PIN_15
 #endif
 
-// FPGA Watchdog hardware timer
-#define WDTIM   TIM9
-#define WDIRQN  TIM1_BRK_TIM9_IRQn
 
 #define PRINT_POWER_STATE(subs, on) do {\
    char s[3] = {'f', 'f', '\0'}; \
@@ -58,7 +55,6 @@ void assert_failed(uint8_t *file, uint32_t line) {}
 #endif /* USE_FULL_ASSERT */
 
 void SystemClock_Config_HSI(void);
-static void fpgawd_init(void);
 
 ETH_HandleTypeDef heth;
 RNG_HandleTypeDef hrng;
@@ -451,6 +447,11 @@ void reset_fpga(void)
    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, false);
    marble_SLEEP_ms(50);
    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, true);
+}
+
+void disable_fpga(void) {
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, false);
+  return;
 }
 
 void enable_fpga(void) {
@@ -901,7 +902,6 @@ uint32_t marble_init(void)
   MX_I2C3_Init();
   MX_SPI1_Init();
   MX_SPI2_Init();
-  fpgawd_init();
 
   // RNG
   hrng.Instance = RNG;
@@ -1405,61 +1405,6 @@ static void MX_GPIO_Init(void)
    HAL_NVIC_SetPriority(EXTI15_10_IRQn, 7, 7);
    HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
    return;
-}
-
-static void fpgawd_init(void) {
-  // Enable WDTIM clock
-  // Timers TIM1, TIM8-TIM11 are on APB2
-  // APB2 clock is 60 MHz (120MHz/2)
-  if (WDTIM == TIM1) {
-    __HAL_RCC_TIM1_CLK_ENABLE();
-  } else if (WDTIM == TIM8) {
-    __HAL_RCC_TIM8_CLK_ENABLE();
-  } else if (WDTIM == TIM9) {
-    __HAL_RCC_TIM9_CLK_ENABLE();
-  } else if (WDTIM == TIM10) {
-    __HAL_RCC_TIM10_CLK_ENABLE();
-  } else if (WDTIM == TIM11) {
-    __HAL_RCC_TIM11_CLK_ENABLE();
-  }
-  // Timers TIM2-TIM7, TIM12-TIM14 are on APB1
-  // APB1 clock is 30 MHz (120MHz/2)
-  // TODO
-
-  // Set prescaler to 1kHz input clock frequency
-  WDTIM->PSC = 60000;
-  WDTIM->CR1 = TIM_CR1_ARPE | TIM_CR1_UDIS;
-  WDTIM->CCER = 0;
-  WDTIM->EGR = 0;
-  // Enable update interrupt
-  WDTIM->DIER = TIM_DIER_UIE;
-  // Enable WDIRQN;
-  HAL_NVIC_SetPriority(WDIRQN, 7, 7);
-  // TODO - Get period from non-volatile
-  bsp_FPGAWD_set_period(0);
-  return;
-}
-
-void bsp_FPGAWD_set_period(uint16_t preload) {
-  if (preload) {
-  // disable timer, set preload, and restart timer
-    WDTIM->CR1 &= ~TIM_CR1_CEN; // disable counter
-    WDTIM->ARR = preload;
-    WDTIM->CR1 |= TIM_CR1_CEN;  // enable counter
-    HAL_NVIC_EnableIRQ(WDIRQN);
-  } else {
-  // If preload == 0, disable timer and interrupt
-    WDTIM->ARR = 0xFFFF;
-    WDTIM->CR1 &= ~TIM_CR1_CEN; // disable counter
-    HAL_NVIC_DisableIRQ(WDIRQN);
-  }
-  return;
-}
-
-void bsp_FPGAWD_pet(void) {
-  // Software pet the watchdog
-  WDTIM->EGR |= TIM_EGR_UG;
-  return;
 }
 
 void bsp_FPGAWD_ISR(void) {

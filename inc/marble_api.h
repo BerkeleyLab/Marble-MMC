@@ -202,6 +202,8 @@ void reset_fpga(void);
 
 void enable_fpga(void);
 
+void disable_fpga(void);
+
 /****
 * SPI/SSP
 ****/
@@ -293,14 +295,10 @@ void marble_SLEEP_ms(uint32_t delay);
 void marble_SLEEP_us(uint32_t delay);
 
 /************
-* FPGA Software/Hardware Watchdog
+* FPGA Watchdog Support
 ************/
-// Set period to 0 to disable
-void bsp_FPGAWD_set_period(uint16_t preload);
-// Software pet
-void bsp_FPGAWD_pet(void);
-// ISR pends FPGA reset
-void bsp_FPGAWD_ISR(void);
+// In main.c
+void reset_fpga_with_callback(void (*cb)(void));
 // RND - only on marble_v2 (STM32) for now
 int get_hw_rnd(uint32_t *result);
 

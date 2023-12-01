@@ -25,16 +25,36 @@ static uint32_t remote_hash[HASH_SIZE] = {0};
 static uint32_t local_hash[HASH_SIZE] = {0};
 static uint32_t rand;
 static int rng_status = 0;
+static int poll_counter = 0;
+static int max_poll_counts = 10; // TODO - Get from non-volatile
 static FPGAWD_State_t fpga_state = STATE_BOOT;
 
 /* =========================== Static Prototypes ============================ */
 static void compute_hash(void);
 static int vet_hash(void);
+static void fpga_reset_callback(void);
 
 /* ========================== Function Definitions ========================== */
 uint32_t FPGAWD_GetRand(void) {
   rng_status = get_hw_rnd(&rand);
   return rand;
+}
+
+void FPGAWD_set_period(int period) {
+  max_poll_counts = period;
+  return;
+}
+
+void FPGAWD_Poll(void) {
+  if (max_poll_counts == 0) {
+    return;
+  }
+  printf("poll_counter = %d\r\n", poll_counter);
+  if (++poll_counter > max_poll_counts) {
+    reset_fpga_with_callback(fpga_reset_callback);
+    fpga_state = STATE_RESET;
+  }
+  return;
 }
 
 void FPGAWD_DoneHandler(void) {
@@ -63,6 +83,17 @@ void FPGAWD_DoneHandler(void) {
   return;
 }
 
+/* Encapsulation necessitates this kind of structure
+ */
+static void fpga_reset_callback(void) {
+  printf("reset_callback\r\n");
+  if (fpga_state == STATE_RESET) {
+    fpga_state = STATE_BOOT;
+    poll_counter = 0;
+  }
+  return;
+}
+
 void FPGAWD_HandleHash(uint32_t hash, int index) {
   // Hash should be read in order from highest index to 0. See mbox.def
   if (index < HASH_SIZE) {
@@ -70,7 +101,8 @@ void FPGAWD_HandleHash(uint32_t hash, int index) {
   }
   if (index == 0) {
     if (vet_hash()) {
-      bsp_FPGAWD_pet();
+      printf("Hash vetted\r\n");
+      poll_counter = 0;
     }
   }
   return;
