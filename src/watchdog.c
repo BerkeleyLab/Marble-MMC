@@ -14,7 +14,7 @@
 // TODO - Get this from mailbox.h or marble_api.h
 #define MAILBOX_UPDATE_PERIOD_SECONDS (2)
 #define MAX_WATCHDOG_TIMEOUT      (255*MAILBOX_UPDATE_PERIOD_SECONDS)
-#define HASH_SIZE                     (3)
+#define HASH_SIZE                     (2)
 
 /* ============================ Static Variables ============================ */
 typedef enum {
@@ -26,7 +26,7 @@ typedef enum {
 
 static uint32_t remote_hash[HASH_SIZE] = {0};
 static uint32_t local_hash[HASH_SIZE] = {0};
-static uint32_t rand;
+static uint32_t entropy[HASH_SIZE] = {0};
 static int rng_status = 0;
 static int poll_counter = 0;
 static int max_poll_counts = 10; // TODO - Get from non-volatile
@@ -50,8 +50,9 @@ static const char* state_str(FPGAWD_State_t ss) {
   return "BAD";
 }
 
-uint32_t FPGAWD_GetNonce(void) {
-  return local_hash[0];
+uint32_t FPGAWD_GetNonce(unsigned int index) {
+  if (index < HASH_SIZE) return local_hash[index];
+  else return 0;
 }
 
 void FPGAWD_SetPeriod(int period) {
@@ -126,7 +127,11 @@ static void fpga_reset_callback(void) {
 static void pet_wdog(void) {
   printf("Watchdog pet\n");
   poll_counter = max_poll_counts;
-  rng_status = get_hw_rnd(&rand);
+  for (unsigned ux=0; ux < HASH_SIZE; ux++) {
+    // STM32 has a 4-entry FIFO for this feature, right?
+    rng_status = get_hw_rnd(&(entropy[ux]));
+    printf("rnd %d %d %8.8lx\r\n", ux, rng_status, entropy[ux]);
+  }
   compute_hash();
 }
 
@@ -138,12 +143,11 @@ void FPGAWD_HandleHash(uint32_t hash, unsigned int index) {
 }
 
 static void compute_hash(void) {
-  // TODO - For now we're just comparing the lower 32-bits with the random number
-  //        In the future, this should be an actual hash function.
+  // For now, we just copy bits from the entropy pool.
+  // In the future, this can involve some fancy math.
   for (int n = 0; n < HASH_SIZE; n++) {
-    local_hash[n] = 0;
+    local_hash[n] = entropy[n];
   }
-  local_hash[0] = rand;
   return;
 }
 
@@ -158,6 +162,6 @@ static int vet_hash(void) {
 void FPGAWD_ShowState(void) {
   printf("poll_counter = %d\r\n", poll_counter);
   printf("FPGA state  = %s\r\n", state_str(fpga_state));
-  printf("local_hash  = %8.8lx\r\n", local_hash[0]);
-  printf("remote_hash = %8.8lx\r\n", remote_hash[0]);
+  printf("local_hash  = %8.8lx %8.8lx\r\n", local_hash[0], local_hash[1]);
+  printf("remote_hash = %8.8lx %8.8lx\r\n", remote_hash[0], remote_hash[1]);
 }

@@ -220,11 +220,17 @@
   ],
 # Pages 7 and 8 are used for the authenticating watchdog
   "page7" : [
-    { "name" : "WD_NONCE",
+    { "name" : "WD_NONCE_H",
       "size" : 4,
       "fmt"  : "0x{:x}",
-      "output" : "@ = FPGAWD_GetNonce()",
-      "desc" : "A 32-bit nonce to be used by the remote host to produce a watchdog hash."
+      "output" : "@ = FPGAWD_GetNonce(1)",
+      "desc" : "Upper 32 bits of a 64-bit nonce to be used by the remote host to produce a watchdog MAC."
+    },
+    { "name" : "WD_NONCE_L",
+      "size" : 4,
+      "fmt"  : "0x{:x}",
+      "output" : "@ = FPGAWD_GetNonce(0)",
+      "desc" : "Lower 32 bits of a 64-bit nonce to be used by the remote host to produce a watchdog MAC."
     }
   ],
   "page8" : [
@@ -232,13 +238,13 @@
       "size" : 4,
       "fmt"  : "0x{:x}",
       "input" : "FPGAWD_HandleHash(@, 1)",
-      "desc" : "Upper 32 bits of 64-bit random number to be used by the remote host to produce a watchdog hash."
+      "desc" : "Upper 32 bits of 64-bit MAC supplied by the remote host to reset watchdog timer."
     },
     { "name" : "WD_HASH_L",
       "size" : 4,
       "fmt"  : "0x{:x}",
       "input" : "FPGAWD_HandleHash(@, 0)",
-      "desc" : "Lower 32 bits of 64-bit random number to be used by the remote host to produce a watchdog hash."
+      "desc" : "Lower 32 bits of 64-bit MAC supplied by the remote host to reset watchdog timer."
     }
   ]
 }

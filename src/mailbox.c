@@ -86,17 +86,6 @@ void mbox_read_page(uint8_t page_no, uint8_t page_sz, uint8_t *page) {
 
 void mbox_update(bool verbose)
 {
-  uint32_t rand=0;
-  if (0) {
-    int rnd_rc = get_hw_rnd(&rand);
-#ifdef SIMULATION
-    // Such an annoying difference between format strings on sim target vs hw
-    printf("get_hw_rnd %d %08x\n", rnd_rc, rand);
-#else
-    printf("get_hw_rnd %d %08lx\n", rnd_rc, rand);
-#endif
-  }
-
   if (mbox_is_disabled) {
     return;
   }

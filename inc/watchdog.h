@@ -13,7 +13,7 @@ extern "C" {
 
 #include <stdint.h>
 
-uint32_t FPGAWD_GetNonce(void);
+uint32_t FPGAWD_GetNonce(unsigned int index);
 void FPGAWD_DoneHandler(void);
 void FPGAWD_HandleHash(uint32_t hash, unsigned int index);
 void FPGAWD_Poll(void);
