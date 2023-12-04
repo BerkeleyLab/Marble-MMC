@@ -71,7 +71,7 @@ static const uint8_t eeprom0_sector = 1;
 static const uint8_t eeprom1_sector = 2;
 
 static
-const ee_frame* ee_active;
+ee_frame* ee_active;
 
 static
 uint8_t count_bits_set(uint32_t v)
@@ -169,7 +169,7 @@ const ee_frame* ee_find(const ee_frame* bank, ee_tags_t tag)
 }
 
 static
-int ee_write(const ee_frame* bank, ee_tags_t tag, const ee_val_t val)
+int ee_write(ee_frame* bank, ee_tags_t tag, const ee_val_t val)
 {
     const ee_frame* prev = NULL;
 
@@ -212,7 +212,7 @@ int ee_migrate(ee_frame* __restrict__ dst, const ee_frame* __restrict__ src)
             continue;
 
         // does tag already exist in destination?
-        ee_frame* df = (ee_frame*)ee_find(dst, sf->tag);
+        const ee_frame* df = (const ee_frame*)ee_find(dst, sf->tag);
         if(!df) { // not found, migrate tag
             ret = ee_write(dst, sf->tag, sf->val);
 
@@ -221,7 +221,7 @@ int ee_migrate(ee_frame* __restrict__ dst, const ee_frame* __restrict__ src)
     }
 
     if(ret) {
-        printf("ERROR: migrating %p <- %p : %d\n", (void *)dst, (void *)src, ret);
+        printf("ERROR: migrating %p <- %p : %d\n", (void *)dst, (const void *)src, ret);
     }
     return ret;
 }
@@ -355,7 +355,7 @@ int fmc_ee_write(ee_tags_t tag, const ee_val_t val)
     if(tag==0 || tag==0xff) {
         return -EINVAL;
     }
-    const ee_frame* active = ee_active;
+    ee_frame* active = ee_active;
 
     if (active == &eeprom0_base) {
       printd("e0 active\r\n");
