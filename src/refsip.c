@@ -7,6 +7,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+// Using PRIx32/PRIx64 for cross-platform compatibility (sim vs target)
+#include <inttypes.h>
+
 #include "refsip.h"
 
 #ifdef DEBUG
@@ -84,7 +87,7 @@ rotl64(const uint64_t x, const int b)
 
 #define SIPROUND             \
     do {                     \
-        if (debug) printf("sipround in  %16.16llx %16.16llx %16.16llx %16.16llx\n", v0, v1, v2, v3); \
+        if (debug) printf("sipround in  %16.16"PRIx64" %16.16"PRIx64" %16.16"PRIx64" %16.16"PRIx64"\n", v0, v1, v2, v3); \
         v0 += v1;            \
         v1 = ROTL64(v1, 13); \
         v1 ^= v0;            \
@@ -99,7 +102,7 @@ rotl64(const uint64_t x, const int b)
         v1 = ROTL64(v1, 17); \
         v1 ^= v2;            \
         v2 = ROTL64(v2, 32); \
-        if (debug) printf("sipround out %16.16llx %16.16llx %16.16llx %16.16llx\n", v0, v1, v2, v3); \
+        if (debug) printf("sipround out %16.16"PRIx64" %16.16"PRIx64" %16.16"PRIx64" %16.16"PRIx64"\n", v0, v1, v2, v3); \
     } while (0)
 
 void core_siphash(unsigned char *out, const unsigned char *in,
