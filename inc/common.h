@@ -48,6 +48,9 @@ extern "C" {
   PRINT_MULTIBYTE_HEX(mac, 6, ':');
 */
 
+#define MAX(x, y)       ((x) > (y) ? (x) : (y))
+#define MIN(x, y)       ((x) > (y) ? (y) : (x))
+
 // ============================ Errno Decoding ================================
 #ifdef DEBUG_ENABLE_ERRNO_DECODE
 #include <errno.h>

@@ -20,18 +20,6 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#
-# The primary targets in this file are:
-#
-# [none]        Compiles the source to create an .elf in the output directory
-# sources       Creates sources.mk from all the .c files in the src directory
-# download      Compiles and downloads over lpc-link
-# lpc-link      Blocking - Initialises an lpc-link device and acts as a debug server
-# clean         Removes generated files
-#
-# This makefile is intended to be run from the root of the project.
-#
-
 # Directories
 #
 # These define the locations of the source and output trees.

@@ -42,8 +42,6 @@ extern const char eeprom_size;
 
 #include "st-eeprom.h"
 
-#define MIN(x, y)         (x > y ? y : x)
-
 typedef enum {
     ee_erased = 0xff,
     ee_valid = 0x55,

@@ -7,6 +7,7 @@
 #include "watchdog.h"
 #include "marble_api.h"
 #include "refsip.h"
+#include "common.h"
 #include <stdio.h>
 
 //#define DEBUG_PRINT
@@ -15,7 +16,8 @@
 /* ============================= Helper Macros ============================== */
 // TODO - Get this from mailbox.h or marble_api.h
 #define MAILBOX_UPDATE_PERIOD_SECONDS (SPI_MAILBOX_PERIOD_MS/1000)
-#define MAX_WATCHDOG_TIMEOUT      (255*MAILBOX_UPDATE_PERIOD_SECONDS)
+#define MAX_WATCHDOG_TIMEOUT_PERIODS  (255)
+#define MAX_WATCHDOG_TIMEOUT_S        (MAX_WATCHDOG_TIMEOUT_PERIODS*MAILBOX_UPDATE_PERIOD_SECONDS)
 #define HASH_SIZE                     (2)
 
 /* ============================ Static Variables ============================ */
@@ -58,13 +60,15 @@ uint32_t FPGAWD_GetNonce(unsigned int index) {
 }
 
 int FPGAWD_SetPeriod(unsigned int period) {
-  period = period > MAX_WATCHDOG_TIMEOUT ? MAX_WATCHDOG_TIMEOUT : period;
-  max_poll_counts = (period/MAILBOX_UPDATE_PERIOD_SECONDS)-1 > 0 ? (period/MAILBOX_UPDATE_PERIOD_SECONDS)-1 : 0;
+  period = MIN(period, MAX_WATCHDOG_TIMEOUT_PERIODS);
+  printd("period = %d\r\n", period);
+  max_poll_counts = (unsigned)MAX((int)((period/MAILBOX_UPDATE_PERIOD_SECONDS)-1), 0);
   if (max_poll_counts == 0) {
     printf("Disabling watchdog\r\n");
   } else {
     printf("Setting watchdog timeout to %d seconds.\r\n", (max_poll_counts+1)*MAILBOX_UPDATE_PERIOD_SECONDS);
   }
+  printd("Setting poll_counter to %d\r\n", max_poll_counts);
   poll_counter = max_poll_counts;
   return period;
 }
