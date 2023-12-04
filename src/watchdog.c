@@ -64,6 +64,7 @@ void FPGAWD_SetPeriod(int period) {
   } else {
     printf("Setting watchdog timeout to %d seconds.\r\n", (max_poll_counts+1)*MAILBOX_UPDATE_PERIOD_SECONDS);
   }
+  poll_counter = max_poll_counts;
   return;
 }
 

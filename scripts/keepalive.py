@@ -70,6 +70,6 @@ if __name__ == "__main__":
                     break
             except socket.timeout:
                 print("Disconnected?", args.ipAddr)
-            time.sleep(args.time)
+            time.sleep(int(args.time))
     except KeyboardInterrupt:
         print("\nExiting")
