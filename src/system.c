@@ -40,13 +40,12 @@ static void fpga_done_handler(void)
 
 static void timer_int_handler(void)
 {
-   const uint32_t SPI_MBOX_RATE = 2000;  // ms
    static uint32_t spi_ms_cnt=0;
 
    // SPI mailbox update flag; soft-realtime
    spi_ms_cnt += systimer_ms;
    //printf("%d\r\n", spi_ms_cnt);
-   if (spi_ms_cnt > SPI_MBOX_RATE) {
+   if (spi_ms_cnt > SPI_MAILBOX_PERIOD_MS) {
       spi_update = true;
       spi_ms_cnt = 0;
       // Use LED2 for SPI heartbeat
@@ -152,7 +151,6 @@ static void system_apply_params(void) {
 }
 
 void reset_fpga_with_callback(void (*cb)(void)) {
-  printf("Resetting\r\n");
   fpga_reset_callback = cb;
   disable_fpga();
   fpga_reset = 1;

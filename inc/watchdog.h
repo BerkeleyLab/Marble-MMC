@@ -17,7 +17,7 @@ uint32_t FPGAWD_GetNonce(unsigned int index);
 void FPGAWD_DoneHandler(void);
 void FPGAWD_HandleHash(uint32_t hash, unsigned int index);
 void FPGAWD_Poll(void);
-void FPGAWD_SetPeriod(int period);
+int FPGAWD_SetPeriod(unsigned int period);
 int FPGAWD_GetPeriod(void);
 void FPGAWD_ShowState(void);
 

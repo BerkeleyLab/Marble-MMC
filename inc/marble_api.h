@@ -97,6 +97,9 @@ extern "C" {
 #define BOARD_TYPE_MARBLE           (0x10)
 #define BOARD_TYPE_MARBLE_MINI      (0x20)
 
+// FPGA pseudo-SPI mailbox update period (in ms)
+#define SPI_MAILBOX_PERIOD_MS       (2000)
+
 // Enum for identifying Marble PCB revisions
 typedef enum {
   Marble_v1_2 = 0,

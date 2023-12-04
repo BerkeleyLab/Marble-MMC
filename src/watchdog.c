@@ -7,13 +7,14 @@
 #include "watchdog.h"
 #include "marble_api.h"
 #include "refsip.h"
-
-// Debug
 #include <stdio.h>
+
+//#define DEBUG_PRINT
+#include "dbg.h"
 
 /* ============================= Helper Macros ============================== */
 // TODO - Get this from mailbox.h or marble_api.h
-#define MAILBOX_UPDATE_PERIOD_SECONDS (2)
+#define MAILBOX_UPDATE_PERIOD_SECONDS (SPI_MAILBOX_PERIOD_MS/1000)
 #define MAX_WATCHDOG_TIMEOUT      (255*MAILBOX_UPDATE_PERIOD_SECONDS)
 #define HASH_SIZE                     (2)
 
@@ -29,8 +30,8 @@ static uint32_t remote_hash[HASH_SIZE] = {0};
 static uint32_t local_hash[HASH_SIZE] = {0};
 static uint32_t entropy[HASH_SIZE] = {0};
 static int rng_status = 0;
-static int poll_counter = 0;
-static int max_poll_counts = 10; // TODO - Get from non-volatile
+static unsigned int poll_counter = 0;
+static unsigned int max_poll_counts = 10;
 static FPGAWD_State_t fpga_state = STATE_BOOT;
 
 /* =========================== Static Prototypes ============================ */
@@ -56,7 +57,7 @@ uint32_t FPGAWD_GetNonce(unsigned int index) {
   else return 0;
 }
 
-void FPGAWD_SetPeriod(int period) {
+int FPGAWD_SetPeriod(unsigned int period) {
   period = period > MAX_WATCHDOG_TIMEOUT ? MAX_WATCHDOG_TIMEOUT : period;
   max_poll_counts = (period/MAILBOX_UPDATE_PERIOD_SECONDS)-1 > 0 ? (period/MAILBOX_UPDATE_PERIOD_SECONDS)-1 : 0;
   if (max_poll_counts == 0) {
@@ -65,7 +66,7 @@ void FPGAWD_SetPeriod(int period) {
     printf("Setting watchdog timeout to %d seconds.\r\n", (max_poll_counts+1)*MAILBOX_UPDATE_PERIOD_SECONDS);
   }
   poll_counter = max_poll_counts;
-  return;
+  return period;
 }
 
 int FPGAWD_GetPeriod(void) {
@@ -79,7 +80,7 @@ int FPGAWD_GetPeriod(void) {
 void FPGAWD_Poll(void) {
   if (poll_counter == 0) return;
   if (--poll_counter == 0) {
-    printf("poll_counter reached 0\r\n");
+    printd("poll_counter reached 0\r\n");
     if (fpga_state == STATE_USER) {
       reset_fpga_with_callback(fpga_reset_callback);
       fpga_state = STATE_RESET;
@@ -106,7 +107,7 @@ void FPGAWD_DoneHandler(void) {
       break;
     case STATE_RESET:
       // This should not happen
-      printf("YIKES!!!\r\n");
+      printf("DoneHandler invalid transition. Consider reboot.\r\n");
       break;
     default:
       break;
@@ -118,7 +119,7 @@ void FPGAWD_DoneHandler(void) {
 /* Encapsulation necessitates this kind of structure
  */
 static void fpga_reset_callback(void) {
-  printf("reset_callback\r\n");
+  printf("Watchdog timeout: resetting to golden image.\r\n");
   if (fpga_state == STATE_RESET) {
     fpga_state = STATE_BOOT;
     poll_counter = 0;
@@ -127,12 +128,12 @@ static void fpga_reset_callback(void) {
 }
 
 static void pet_wdog(void) {
-  printf("Watchdog pet\n");
+  printd("Watchdog pet\n");
   poll_counter = max_poll_counts;
   for (unsigned ux=0; ux < HASH_SIZE; ux++) {
     // STM32 has a 4-entry FIFO for this feature, right?
     rng_status = get_hw_rnd(&(entropy[ux]));
-    printf("rnd %d %d %8.8lx\r\n", ux, rng_status, entropy[ux]);
+    printd("rnd %d %d %8.8lx\r\n", ux, rng_status, entropy[ux]);
   }
   compute_hash();
 }

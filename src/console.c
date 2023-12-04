@@ -855,7 +855,9 @@ static int handle_msg_watchdog(char *rx_msg, int len) {
     printf("Failed to parse\r\n");
     return -1;
   }
-  FPGAWD_SetPeriod(val);
+  // Set and peg to limits
+  val = FPGAWD_SetPeriod((unsigned int)val);
+  eeprom_store_wd_period((const uint8_t *)&val, 1);
   return 0;
 }
 
