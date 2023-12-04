@@ -83,7 +83,7 @@ def _splitBytes(val, size):
         l.append((val >> 8*m) & 0xff)
     return l
 
-def mailboxReadWrite(ipAddr, address, value, size = 1):
+def mailboxReadWrite(ipAddr, address, value, size=1, verbose=False):
     """Write to mailbox page number 'nPage', element 'name' via lbus_access low-level protocol
     with IP address 'ipAddr'"""
     readNWrite = False
@@ -97,10 +97,11 @@ def mailboxReadWrite(ipAddr, address, value, size = 1):
         vals = _splitBytes(value, size)
     for n in range(1,size):
         addrs.append(address + n)
-    if readNWrite:
-        print("Reading from address 0x{:x}".format(address))
-    else:
-        print("Writing {} to address 0x{:x}".format(value, address))
+    if verbose:
+        if readNWrite:
+            print("Reading from address 0x{:x}".format(address))
+        else:
+            print("Writing {} to address 0x{:x}".format(value, address))
     rets = dev.exchange(addrs, vals)
     return rets
 

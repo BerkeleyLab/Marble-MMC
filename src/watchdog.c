@@ -6,6 +6,7 @@
 
 #include "watchdog.h"
 #include "marble_api.h"
+#include "refsip.h"
 
 // Debug
 #include <stdio.h>
@@ -151,17 +152,39 @@ static void compute_hash(void) {
   return;
 }
 
+static const unsigned char *get_auth_key(void) {
+  return (const unsigned char *) "super secret key";  // trailing nul ignored
+}
+
 static int vet_hash(void) {
+  uint32_t desired_mac[HASH_SIZE];
+  const unsigned char *key = get_auth_key();
   int match = 1;
   for (int n = 0; n < HASH_SIZE; n++) {
-    if (remote_hash[n] != local_hash[n]) match = 0;
+    if (remote_hash[n] != 0) match = 0;
+  }
+  if (match) return 0;  // all zeros means disabled
+  core_siphash((unsigned char *) desired_mac, (unsigned char *) local_hash, 8, key);
+  match = 1;
+  for (int n = 0; n < HASH_SIZE; n++) {
+    if (remote_hash[n] != desired_mac[n]) match = 0;
+  }
+  if (0) {
+    printf("local_hash  = %8.8lx %8.8lx\r\n", local_hash[0], local_hash[1]);
+    printf("desired_mac = %8.8lx %8.8lx\r\n", desired_mac[0], desired_mac[1]);
+    printf("remote_hash = %8.8lx %8.8lx\r\n", remote_hash[0], remote_hash[1]);
+    printf("vet_hash match = %d\r\n", match);
   }
   return match;
 }
 
 void FPGAWD_ShowState(void) {
+  uint32_t desired_mac[HASH_SIZE];
+  const unsigned char *key = get_auth_key();
+  core_siphash((unsigned char *) desired_mac, (unsigned char *) local_hash, 8, key);
   printf("poll_counter = %d\r\n", poll_counter);
   printf("FPGA state  = %s\r\n", state_str(fpga_state));
   printf("local_hash  = %8.8lx %8.8lx\r\n", local_hash[0], local_hash[1]);
+  printf("desired_mac = %8.8lx %8.8lx\r\n", desired_mac[0], desired_mac[1]);
   printf("remote_hash = %8.8lx %8.8lx\r\n", remote_hash[0], remote_hash[1]);
 }

@@ -10,12 +10,16 @@ import os
 import time
 import mkmbox
 import socket
+from pysiphash import uint_sip_mac, byteswap32
 LBUS_ACCESS_FOUND = True
 SPI_MBOX_ADDR = 0x200000  # needs to match spi_mbox base_addr in static_regmap.json
 
 
 def transform(rval):
-    return rval  # placeholder only
+    tkey = bytearray()
+    tkey.extend("super secret key".encode())
+    xval = uint_sip_mac(rval, tkey)
+    return xval
 
 
 def word_do(ipAddr, pageNo, wordName, val):
@@ -31,14 +35,14 @@ def word_do(ipAddr, pageNo, wordName, val):
 
 
 def refresh(ipAddr, mi):
-    rval_l = word_do(ipAddr, 7, "WD_NONCE_L", None)
-    rval_h = word_do(ipAddr, 7, "WD_NONCE_H", None)
-    print("Returned {:x} {:x}".format(rval_l, rval_h))
+    rval_l = byteswap32(word_do(ipAddr, 7, "WD_NONCE_L", None))
+    rval_h = byteswap32(word_do(ipAddr, 7, "WD_NONCE_H", None))
+    print("Returned {:08x} {:08x}".format(rval_l, rval_h))
     oval = transform((rval_l, rval_h))  # key step
-    print("Writing {:x} {:x}".format(oval[0], oval[1]))
-    rval_l = word_do(ipAddr, 8, "WD_HASH_L", oval[0])
-    rval_h = word_do(ipAddr, 8, "WD_HASH_H", oval[1])
-    print("Returned {:x} {:x}".format(rval_l, rval_h))
+    print("Writing  {:08x} {:08x}".format(oval[0], oval[1]))
+    rval_l = word_do(ipAddr, 8, "WD_HASH_L", byteswap32(oval[0]))
+    rval_h = word_do(ipAddr, 8, "WD_HASH_H", byteswap32(oval[1]))
+    # print("Returned {:x} {:x}".format(rval_l, rval_h))
     return 0
 
 
