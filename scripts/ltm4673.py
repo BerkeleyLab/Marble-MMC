@@ -1116,6 +1116,15 @@ def attempt_limit_break(factor=0.1):
     return lines
 
 
+def xact_store_eeprom(factor=0.1):
+    """Get the transaction for storing to EEPROM."""
+    xacts = []
+    xacts.append(write(PAGE, 0xff))
+    xacts.append(write(STORE_USER_ALL, 0x00))
+    lines = translate_mmc(xacts)
+    return lines
+
+
 def compare_to_limits(readback, limits):
     fail = False
     for page, _prog in readback:
@@ -1170,11 +1179,12 @@ def parse_readback(lines, compare_prog=None, do_print=False):
                 _prog = []
     if newpage is not None:
         _readback.append((newpage, _prog))
+    compare_pass = True
     if compare_prog is not None:
-        compare_progs(_program, _readback)
+        compare_pass = compare_progs(_program, _readback)
     if do_print:
         print_prog(_readback)
-    return _readback
+    return (_readback, compare_pass)
 
 
 def match_readback(line):
@@ -1257,7 +1267,7 @@ def compare_progs(ref, dut, strict=False):
         print("Permissive Readback Comparison FAIL")
         print_diff(diff)
         # print(prog_results)
-    return
+    return _pass
 
 
 def print_prog(_prog):
@@ -1389,6 +1399,7 @@ def get_limits_from_file(filename):
 
 
 def handle_write(args):
+    load_rval = 1
     if args.test:
         print("Writing test program")
         program = _test_program
@@ -1403,7 +1414,7 @@ def handle_write(args):
         import load
         runtime = _count_ops(program)*load.INTERCOMMAND_SLEEP
         print("Estimated {:.1f}s to complete.".format(runtime))
-        load.loadCommands(args.dev, args.baud, lines, do_print=args.verbose, do_log=False)
+        load_rval = load.loadCommands(args.dev, args.baud, lines, do_print=args.verbose, do_log=False)
     else:
         # Just print the program
         print_prog(program)
@@ -1412,10 +1423,11 @@ def handle_write(args):
             print("PMBridge MMC Console Encoding:")
             for line in lines:
                 print(line)
-    return
+    return load_rval
 
 
 def handle_read(args):
+    load_rval = 1
     if args.test:
         print("Reading test program")
         program = _test_program
@@ -1430,12 +1442,12 @@ def handle_read(args):
         import load
         runtime = _count_ops(program)*load.INTERCOMMAND_SLEEP
         print("Estimated {:.1f}s to complete.".format(runtime))
-        load.loadCommands(args.dev, args.baud, lines, do_print=args.verbose, do_log=True)
+        load_rval = load.loadCommands(args.dev, args.baud, lines, do_print=args.verbose, do_log=True)
         readback_log = load.get_log()
         if args.check:
-            readback = parse_readback(readback_log, compare_prog=program, do_print=args.print)
+            readback, compare_pass = parse_readback(readback_log, compare_prog=program, do_print=args.print)
         else:
-            readback = parse_readback(readback_log, compare_prog=None, do_print=True)
+            readback, compare_pass = parse_readback(readback_log, compare_prog=None, do_print=True)
     else:
         # Just print the program
         print_prog(program)
@@ -1444,7 +1456,9 @@ def handle_read(args):
             print("PMBridge MMC Console Encoding:")
             for line in lines:
                 print(line)
-    return
+    # Convert pass = True to pass = 0
+    compare_rval = int(not compare_pass)
+    return load_rval | compare_rval
 
 def test_to_si(argv):
     if len(argv) < 1:
@@ -1529,14 +1543,37 @@ def handle_limits(args):
         # Get the raw session log
         readback_log = load.get_log()
         # Parse the session log
-        readback = parse_readback(lines, do_print=False)
+        readback, compare_pass = parse_readback(lines, do_print=False)
         # Compare read values with limits
         if compare_to_limits(readback=readback, limits=limits):
             print("=== PASS ===")
             passed = True
         else:
             print("=== FAIL ===")
-    return passed
+    # Convert pass = True to pass = 0
+    passed_rval = int(not passed)
+    return passed_rval
+
+
+def handle_store(args):
+    if args.dev is None:
+        print("No valid device handed to handle_store")
+        return False
+    print("Attempting store to EEPROM")
+    import load
+    # Need to sleep 0.5s after issuing the STORE_USER_ALL command.
+    load.INTERCOMMAND_SLEEP = 0.5
+    # Get the lines in PMBridge syntax to store to EEPROM
+    lines = xact_store_eeprom()
+    # Perform the write to the serial device
+    load_rval = load.loadCommands(args.dev, args.baud, lines, do_print=args.verbose, do_log=False)
+    # Just waiting on load via the "get_log" command
+    log = load.get_log()
+    if load_rval == 0:
+        print("Success")
+    else:
+        print("Failed to load transaction to MMC console")
+    return load_rval
 
 
 def main(argv):
@@ -1566,6 +1603,8 @@ def main(argv):
     parser_limits.add_argument("-f", "--file", default=None, help="Read limits from FILE")
     parser_limits.set_defaults(handler=handle_limits)
 
+    parser_store = subparsers.add_parser("store", help="Store existing configuration to LTM4673 EEPROM")
+    parser_store.set_defaults(handler=handle_store)
     args = parser.parse_args()
     return args.handler(args)
 
