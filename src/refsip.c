@@ -125,7 +125,7 @@ void core_siphash(unsigned char *out, const unsigned char *in,
     for (; in != end; in += 8) {
         // Use big-endian because that's network byte order?
         m = LOAD64_BE(in);
-        if (debug) printf("siphash m    %16.16llx\n", m);
+        if (debug) printf("siphash m    %16.16"PRIx64"\n", m);
         v3 ^= m;
         SIPROUND;
         SIPROUND;
@@ -137,7 +137,7 @@ void core_siphash(unsigned char *out, const unsigned char *in,
     SIPROUND;
     SIPROUND;
     b = v0 ^ v1 ^ v2 ^ v3;
-    if (debug) printf("siphash b    %16.16llx\n", b);
+    if (debug) printf("siphash b    %16.16"PRIx64"\n", b);
     STORE64_BE(out, b);
 }
 
