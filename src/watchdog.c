@@ -172,7 +172,7 @@ static const unsigned char *get_auth_key(void) {
 }
 
 static int vet_hash(void) {
-  uint32_t desired_mac[HASH_SIZE];  // TODO FIXME
+  uint8_t desired_mac[HASH_SIZE];
   const unsigned char *key = get_auth_key();
   int match = 1;
   for (int n = 0; n < HASH_SIZE; n++) {
@@ -187,7 +187,7 @@ static int vet_hash(void) {
   if (0) {
     //printf("local_hash  = %8.8"PRIx32" %8.8"PRIx32"\r\n", local_hash[0], local_hash[1]);
     printf("local_hash  = %8.8"PRIx64"\r\n", *local_hash_64);
-    printf("desired_mac = %8.8"PRIx32" %8.8"PRIx32"\r\n", desired_mac[0], desired_mac[1]);
+    printf("desired_mac = %8.8"PRIx64"\r\n", *((uint64_t *)desired_mac));
     //printf("remote_hash = %8.8"PRIx32" %8.8"PRIx32"\r\n", remote_hash[0], remote_hash[1]);
     printf("remote_hash = %8.8"PRIx64"\r\n", *remote_hash_64);
     printf("vet_hash match = %d\r\n", match);
@@ -196,14 +196,14 @@ static int vet_hash(void) {
 }
 
 void FPGAWD_ShowState(void) {
-  uint32_t desired_mac[HASH_SIZE];  // TODO FIXME
+  uint8_t desired_mac[HASH_SIZE];
   const unsigned char *key = get_auth_key();
   core_siphash((unsigned char *) desired_mac, (unsigned char *) local_hash, 8, key);
   printf("poll_counter = %d\r\n", poll_counter);
   printf("FPGA state  = %s\r\n", state_str(fpga_state));
   //printf("local_hash  = %8.8"PRIx32" %8.8"PRIx32"\r\n", local_hash[0], local_hash[1]);
   printf("local_hash  = %8.8"PRIx64"\r\n", *local_hash_64);
-  printf("desired_mac = %8.8"PRIx32" %8.8"PRIx32"\r\n", desired_mac[0], desired_mac[1]);
+  printf("desired_mac = %8.8"PRIx64"\r\n", *((uint64_t *)desired_mac));
   //printf("remote_hash = %8.8"PRIx32" %8.8"PRIx32"\r\n", remote_hash[0], remote_hash[1]);
   printf("remote_hash = %"PRIx64"\r\n", *remote_hash_64);
 }
