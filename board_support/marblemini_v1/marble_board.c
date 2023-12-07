@@ -52,6 +52,19 @@ I2C_BUS I2C_FPGA;
 I2C_BUS I2C_PM;
 I2C_BUS I2C_IPMB;
 
+/* int board_service(void);
+ *  Call in main loop. Handles routines scheduled from interrupts.
+ *  Must always return 0 (otherwise execution will terminate).
+ */
+int board_service(void) {
+   // TODO - Any board-specific maintenance for the main loop
+   return 0;
+}
+
+// Only used in simulation
+void cleanup(void) {
+   return;
+}
 /************
 * UART
 ************/
@@ -214,6 +227,7 @@ void marble_PSU_pwr(bool on)
 }
 
 void marble_PSU_reset_write(bool on) {
+  _UNUSED(on);
   // Not implemented on marble mini?
   return;
 }
@@ -441,7 +455,7 @@ int marble_I2C_cmdrecv(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data
    return Chip_I2C_MasterCmdRead(I2C_bus, addr, cmd, data, size) != size;
 }
 
-int marble_I2C_cmdsend(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size) {
+int marble_I2C_cmdsend(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, const uint8_t *data, int size) {
    // Crude hack, prepending 8-bit cmd to the data array
    uint8_t ldata[8];
    if (size > 7) return 1;  // failure
@@ -450,7 +464,7 @@ int marble_I2C_cmdsend(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data
    return marble_I2C_send(I2C_bus, addr, ldata, size+1);
 }
 
-int marble_I2C_cmdsend_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *data, int size) {
+int marble_I2C_cmdsend_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, const uint8_t *data, int size) {
    // Crude hack, prepending 16-bit cmd to the data array
    uint8_t ldata[8];
    if (size > 6) return 1;  // failure
@@ -653,16 +667,16 @@ uint8_t marble_get_board_id(void) {
 * Board Init
 ************/
 
-uint32_t marble_init(bool use_xtal)
+uint32_t marble_init(void)
 {
    // Must happen before any other clock manipulations:
    SystemCoreClockUpdate(); /* Update the value of SystemCoreClock */
 
-   if (use_xtal) {
-      Chip_SetupXtalClocking();
-   } else {
-      Chip_SetupIrcClocking(); // 120 MHz based on 12 MHz internal clock
-   }
+#ifdef CLOCK_USE_XTAL
+   Chip_SetupXtalClocking();
+#else
+   Chip_SetupIrcClocking(); // 120 MHz based on 12 MHz internal clock
+#endif
 
    SystemCoreClockUpdate(); /* Update the value of SystemCoreClock (120 MHz) */
 
@@ -693,4 +707,9 @@ uint32_t marble_init(bool use_xtal)
    marble_MDIO_init();
 
    return SystemCoreClock;
+}
+
+void pwr_autoboot(void) {
+   // This likely also unused for Marble-Mini
+   return;
 }

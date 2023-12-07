@@ -17,6 +17,7 @@
 #include "i2c_fpga.h"
 #include "uart_fifo.h"
 #include "st-eeprom.h"
+#include "ltm4673.h"
 
 #define AUTOPUSH
 // TODO - Put this in a better place
@@ -56,15 +57,11 @@ const char *menu_str[] = {"\r\n",
   "p speed[%] - Set fan speed (0-120 or 0%-100%)\r\n",
   "q otemp - Set overtemperature threshold (degC)\r\n",
   "r enable - Set mailbox enable/disable (0/1, on/off)\r\n",
-  "s addr_hex freq_hz config_hex - Set Si570 configuration\r\n"
+  "s addr_hex freq_hz config_hex - Set Si570 configuration\r\n",
+  "t pmbus_msg - Forward PMBus transaction to LTM4673\r\n"
 };
 #define MENU_LEN (sizeof(menu_str)/sizeof(*menu_str))
 
-typedef enum {
-   CONSOLE_TOP,
-} console_mode_e;
-
-static console_mode_e console_mode;
 static uint8_t _msgCount;
 static uint8_t _fpgaEnable;
 
@@ -97,13 +94,14 @@ static int sscanfSpace(const char *s, int len);
 static int sscanfNonSpace(const char *s, int len);
 static int sscanfNext(const char *s, int len);
 static int sscanfFSynth(const char *s, int len);
+static int sscanfPMBridge(const char *s, int len);
+static int PMBridgeConsumeArg(const char *s, int len, volatile int *arg);
 static int xatoi(char c);
 static int htoi(char c);
 static void console_print_fsynth(void);
 
 int console_init(void) {
   _msgCount = 0;
-  console_mode = CONSOLE_TOP;
   return 0;
 }
 
@@ -243,6 +241,9 @@ static int console_handle_msg(char *rx_msg, int len)
            break;
         case 's':
            sscanfFSynth(rx_msg, len);
+           break;
+        case 't':
+           sscanfPMBridge(rx_msg, len);
            break;
         default:
            printf(unk_str);
@@ -558,7 +559,7 @@ static void pm_bus_display(void)
        if (marble_get_board_id() < Marble_v1_3)
           xrp_dump(XRP7724);
        else
-          ltm_read_telem(LTM4673);
+          ltm4673_read_telem(LTM4673);
 }
 
 void xrp_boot(void)
@@ -633,7 +634,6 @@ int console_service(void) {
   int len;
   if (_msgCount) {
     len = console_shift_msg(msg);
-    //len = console_shift_all(msg);
     _msgCount--;
     if (len) {
       return console_handle_msg((char *)msg, len);
@@ -1017,6 +1017,176 @@ static void console_print_fsynth(void) {
   return;
 }
 
+
+/* static int sscanfPMBridge(const char *s, int len);
+ *  Parse a line from the user representing a PMBus transaction
+ *  Syntax: x command
+ */
+/*MMC console syntax
+  Each line is a list of any of the following (whitespace-separated)
+    ! : Repeated start
+    ? : Read 1 byte from the target device
+    * : Read 1 byte, then use that as N and read the next N bytes
+    0xHH: Use hex value 0xHH as the next transaction byte
+    DDD : Use decimal value DDD as the next transaction byte
+*/
+static int sscanfPMBridge(const char *s, int len) {
+  // Skip the first character (command char)
+  int ptr = sscanfNext(s, len);
+  int ptrinc;
+  int max_len = len > PMBRIDGE_MAX_LINE_LENGTH ? PMBRIDGE_MAX_LINE_LENGTH : len;
+  int arg;
+  int item_index = 0;
+  int fail = 0;
+  uint16_t xact[PMBRIDGE_XACT_MAX_ITEMS];
+  while (ptr < max_len) {
+    if (s[ptr] == '\n') {
+      break;
+    }
+    ptrinc = PMBridgeConsumeArg(s+ptr, len-ptr, &arg);
+    //printf("consume arg ptr %d -> %d\r\n", ptr, ptr+ptrinc);
+    ptr += ptrinc;
+    if (arg < 0) {
+      printf("ERROR: Parse failed at character %d [%c]\r\n", ptr, s[ptr]);
+      fail = 1;
+      break;
+    } else {
+      if (item_index < PMBRIDGE_XACT_MAX_ITEMS) {
+        xact[item_index++] = (uint16_t)(arg & 0xffff);
+      } else {
+        printf("ERROR: Exceeded maximum number of bytes per transaction\r\n");
+        fail = 1;
+        break;
+      }
+    }
+    ptrinc = sscanfNonSpace(s+ptr, len-ptr);
+    if (ptrinc == -1) {
+      break;
+    }
+    //printf("finding whitespace ptr %d -> %d\r\n", ptr, ptr+ptrinc);
+    ptr += ptrinc;
+  }
+  if (fail) {
+    return fail;
+  }
+  /*
+  printf("xact = [ ");
+  for (int n = 0; n < item_index; n++) {
+    printf("0x%x ", xact[n]);
+  }
+  printf("]\r\n");
+  */
+  PMBridge_xact(xact, item_index);
+  return 0;
+}
+
+#define MMC_REPEAT_START      ('!')
+#define MMC_READ_ONE          ('?')
+#define MMC_READ_BLOCK        ('*')
+/* static int PMBridgeConsumeArg(const char *s, int len, volatile int *arg);
+ *  Consume one whitespace-separated arg from string 's'.
+ *  Returns when:
+ *    1. Whitespace is encountered
+ *      1a. If no valid chars have been parsed, *arg is set to -1.
+ *      1b. Otherwise, *arg is set to the parsed value.
+ *    2. An invalid character is encountered
+ *      2a. Always sets *arg to -1.
+ *    3. 'len' characters have been consumed
+ *      3a. Check value of *arg for validity.
+ *  Always returns the index into 's' where parsing stopped.
+ */
+static int PMBridgeConsumeArg(const char *s, int len, volatile int *arg) {
+  int max_len = len > PMBRIDGE_MAX_LINE_LENGTH ? PMBRIDGE_MAX_LINE_LENGTH : len;
+  int state = 0;
+  // state:
+  //  0 : No chars processed
+  //  1 : A '0' has been found. Awaiting 'x' or 'X'
+  //  2 : A '0x' or '0X' prefix has been found. Waiting for first hex char.
+  //  3 : Consuming additional hex chars.
+  //  4 : Special char found.
+  //  5 : Consuming decimal chars.
+  int val = 0;
+  int n;
+  char c;
+  int cn;
+  for (n = 0; n < max_len; n++) {
+    c = s[n];
+    // Stop at whitespace
+    if ((c == ' ') || (c == '\n') || (c == '\t') || (c == '\r')) {
+      if ((state == 2) || (state == 0)) {
+        // state=1 is valid for bare '0' argument
+        val = -1;
+      }
+      break;
+    // Look for special PMBridge characters
+    } else if (c == MMC_REPEAT_START) {
+      state = 4;
+      val = PMBRIDGE_XACT_REPEAT_START;
+    } else if (c == MMC_READ_ONE) {
+      state = 4;
+      val = PMBRIDGE_XACT_READ_ONE;
+    } else if (c == MMC_READ_BLOCK) {
+      state = 4;
+      val = PMBRIDGE_XACT_READ_BLOCK;
+    } else if (state == 4) {
+      // If we get here, then a special char was not properly followed by whitespace. Fail.
+      printf("Special not followed by whitespace\r\n");
+      val = -1;
+      break;
+    } else if (state == 0) {
+      // Haven't seen any chars yet
+      if (c == '0') {
+        // Seems like it's going to be a hex prefix
+        state = 1;
+      } else {
+        // Assume decimal number
+        cn = xatoi(c);
+        if (cn < 0) {
+          val = -1;
+          break;
+        }
+        val = val*10 + cn;
+        state = 5;
+      }
+    } else if (state == 1) {
+      // First char was '0', looking for an 'x' or 'X'
+      if ((c == 'x') || (c == 'X')) {
+        // Hex prefix satisfied
+        state = 2;
+      } else {
+        // Hex prefix not satisfied. Could be decimal with leading '0'
+        state = 5;
+      }
+    } else if ((state == 2) || (state == 3)) {
+      // Hex prefix satisfied
+      cn = htoi(c);
+      if (cn < 0) {
+        val = -1;
+        break;
+      }
+      val = (val<<4) + cn;
+      state = 3;
+    } else if (state == 5) {
+      // Assume decimal number
+      cn = xatoi(c);
+      if (cn < 0) {
+        val = -1;
+        break;
+      }
+      val = val*10 + cn;
+    } else {
+      // Invalid character
+      val = -1;
+    }
+  }
+  if ((state != 4) & (val >= 0)) {
+    // Only special chars are allowed to extend beyond 1 byte
+    val = val & 0xff;
+  }
+  // If val is negative, parsing failed
+  *arg = val;
+  return n;
+}
 
 
 /*

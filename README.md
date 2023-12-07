@@ -27,9 +27,9 @@ on `/dev/ttyUSB1`.
   * Connect Lab-psu to J17
       - 12 V @ 0.5 A current limit
       - GND pin is the one closer to the barrel connector
-  * Connect Segger j-link mini to J14
-  * Download MMC firmware: `make download`
-  * Connect to Marble-Mini USB port and enter serial terminal:
+  * Connect Segger j-link mini or ST-Link v3 to J14
+  * Download MMC firmware: `make marble_download` or `make marble_mini_download`
+  * Connect to Marble(-Mini) USB port and enter serial terminal:
     `miniterm -e /dev/ttyUSB3 115200`
     (alternatively)
     `python3 -m serial.tools.miniterm -e /dev/ttyUSB3 115200`
@@ -39,6 +39,36 @@ on `/dev/ttyUSB1`.
   * Push `g<enter>` for `g : XRP7724 go`
   * All power LEDs (close to J12) should be on
   * Current consumption should be around 200 mA
+
+# Simulated Target
+There is a simulated target included in this repo which runs the MMC firmware natively on
+the host, implementing as much hardware emulation as has been needed for development.  This
+is mostly useful for developers or anyone hoping to get familiar with the interface without
+access to a Marble board.
+
+Build the simulated target
+`make sim`
+
+Run the simulated target
+`make run`
+
+There is also a 'wrapped' verion of the sim target which redirects input/output to/from a
+pseudo-terminal (PTY).  This is handy for development of scripts designed to talk to the
+actual hardware over a serial port.
+`make wrap`
+
+# Nucleo Target
+One step closer to the real deal is the Nucleo target which runs on a Nucleo-F207ZG development
+board (https://www.st.com/en/evaluation-tools/nucleo-f207zg.html).  This is handy for tests
+that use hardware peripherals but either are dangerous or inconvenient to run on a marble.
+There are a few pin-mapping changes which can be found by looking for `#ifdef NUCLEO` macro
+tests throughout the source code (mostly in board\_support/marble\_v2/marble\_board.c).
+
+Build the firmware targeting the nucleo.
+`make nucleo`
+
+Download to the nucleo board over its built-in ST-Link v2 SWD programmer/debugger.
+`make nucleo_download`
 
 ## Program FTDI
 The FTDI works fine in its default configuration. This step just programs serial number and product name into its USB descriptors.

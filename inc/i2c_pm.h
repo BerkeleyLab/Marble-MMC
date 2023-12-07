@@ -19,12 +19,14 @@ typedef enum {
 // Note that the MAX6639 has a hard-coded 5degC hysteresis
 #define TEMPERATURE_HYST_DEGC           (5)
 
+void I2C_PM_init(void);
 void I2C_PM_scan(void);
 void I2C_PM_probe(void);
 void print_max6639(void);
 void print_max6639_decoded(void);
 int get_max6639_reg(int regno, int *value);
 int return_max6639_reg(int regno);
+void i2c_pm_hook(uint8_t addr, uint8_t rnw, int cmd, const uint8_t *data, int len);
 
 #define LM75_FOR_EACH_REGISTER() \
   X(LM75_TEMP, 0) \
@@ -84,6 +86,16 @@ int xrp_srecord(uint8_t dev, const uint8_t data[]);
 int xrp_program_static(uint8_t dev);
 int xrp_file(uint8_t dev);
 
-void ltm_read_telem(uint8_t dev);
-int ltm_ch_status(uint8_t dev);
+// PMBridge
+#define PMBRIDGE_MAX_LINE_LENGTH        (256)
+#define PMBRIDGE_XACT_MAX_ITEMS          (32)
+// Trigger a repeat_start
+#define PMBRIDGE_XACT_REPEAT_START   (0x100)
+// Expect one byte from peripheral
+#define PMBRIDGE_XACT_READ_ONE       (0x101)
+// Read one byte; use it as N. Then read N more bytes.
+#define PMBRIDGE_XACT_READ_BLOCK     (0x102)
+
+int PMBridge_xact(uint16_t *xact, int len);
+
 #endif /* I2C_PM_H_ */

@@ -3,11 +3,13 @@
  * Desc: Simulated hardware API to run application on host
  */
 
+#define _GNU_SOURCE
 #include <string.h>
 #include <stdio.h>
 #include <signal.h>
 #include <sys/time.h> // Needed for struct timeval
 #include <unistd.h>   // For STDIN_FILENO
+#include <stdlib.h>   // For posix_openpt et al
 #include <fcntl.h>    // For fcntl()
 #include "marble_api.h"
 #include "console.h"
@@ -23,8 +25,12 @@
  *  *   handleMsg(msg);
  */
 
+//#define USE_PTY
 #define DEBUG_TX_OUT
 #define SIM_FPGA_DONE_DELAY_MS        (2)
+
+// Defined in sim_i2c.c; declared here to avoid creating a "real" i2c_init function in marble_api.h
+void init_sim_ltm4673(void);
 
 typedef struct {
   int toExit;
@@ -38,13 +44,14 @@ int _fpgaDonePend;
 static sim_console_state_t sim_console_state;
 void FPGA_DONE_dummy(void) {}
 void (*volatile marble_FPGA_DONE_handler)(void) = FPGA_DONE_dummy;
+static int psuedoterm;
 
 static int shiftMessage(void);
 static void _sigHandler(int c);
 
-// Emulate UART_RXNE_ISR() from marble_board.c but with keyboard input from stdin
+// Emulate USART_RXNE_ISR() from marble_board.c but with keyboard input from stdin
 // Also emulate USART_TXE_ISR() for printf()
-int sim_platform_service(void) {
+int board_service(void) {
   uint8_t outByte;
   shiftMessage();
   if (sim_console_state.msgReady) {
@@ -53,7 +60,9 @@ int sim_platform_service(void) {
   }
   // If char queue not empty
   if (UARTTXQUEUE_Get(&outByte) != UARTTX_QUEUE_EMPTY) {
-    // Write new char to DR
+#ifdef USE_PTY
+    write(psuedoterm, &outByte, 1);
+#endif
     putchar((char)outByte);
   }
   // If enough time has elapsed, simulate the FPGA_DONE signal arrival
@@ -63,6 +72,16 @@ int sim_platform_service(void) {
       _fpgaDonePend = 0;
     }
   }
+  // Keep the system responsive, but don't hog resources
+  sleep(0.05);
+  /*
+  static int say_hello = 0;
+  ssize_t nwrite;
+  if ((say_hello++ % 1000) == 0) {
+    nwrite = write(psuedoterm, "hello\r\n", 7);
+    printf("nwrite = %ld\r\n", nwrite);
+  }
+  */
   return sim_console_state.toExit;
 }
 
@@ -72,25 +91,42 @@ static void _sigHandler(int c) {
   return;
 }
 
+void cleanup(void) {
+  close(psuedoterm);
+  return;
+}
+
 static int shiftMessage(void) {
   fd_set rset;        // A file-descriptor set for read mode
   int ri, rval;
   char rc;
   struct timeval timeout;
   FD_ZERO(&rset);     // Initialize the data to 0s
-  FD_SET(STDIN_FILENO, &rset);    // Add STDIN to the read set
   // NOTE: select() MODIFIES TIMEOUT!!!   Need to reinitialize every time.
   timeout.tv_sec = 0;
   timeout.tv_usec = 1000;  // 1ms timeout
+#ifdef USE_PTY
+  FD_SET(psuedoterm, &rset);    // Add pseudoterm to the read set
+  rval = select(psuedoterm+1, &rset, NULL, NULL, &timeout);
+#else
+  FD_SET(STDIN_FILENO, &rset);    // Add STDIN to the read set
   rval = select(STDIN_FILENO+1, &rset, NULL, NULL, &timeout);
+#endif
   int n = UART_QUEUE_ITEMS;
   if (rval) {
     while (n--) {
+#ifdef USE_PTY
+      rval = read(psuedoterm, &rc, 1);
+      if (rval < 1) {
+        break;
+      }
+#else
       ri = fgetc(stdin);
       if ((ri == EOF) || (ri == 0)) {
         break;
       }
       rc = (char)(ri & 0xff);
+#endif
       UARTQUEUE_Add((uint8_t *)&rc);
       if (rc == UART_MSG_TERMINATOR) {
         sim_console_state.msgReady = 1;
@@ -105,15 +141,30 @@ static int shiftMessage(void) {
   return 0;
 }
 
-uint32_t marble_init(bool initFlash) {
+uint32_t marble_init(void) {
+#ifdef USE_PTY
+  psuedoterm = posix_openpt(O_RDWR | O_NOCTTY);
+  char* deviceName = ptsname(psuedoterm);
+  printf("PTY at: %s\r\n", deviceName);
+  int result = grantpt(psuedoterm);
+  result = unlockpt(psuedoterm);
+  printf("result = %d\r\n", result);
+  ssize_t nwrite = write(psuedoterm, "hello\r\n", 7);
+  printf("nwrite = %ld\r\n", nwrite);
+#endif
   _timeStart = BSP_GET_SYSTICK();
   _fpgaDonePend = 1;
   signal(SIGINT, _sigHandler);
   fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK);
   sim_console_state.toExit = 0;
   sim_console_state.msgReady = 0;
-  eeprom_init(initFlash);
+  eeprom_init();
+  init_sim_ltm4673();
   return 0;
+}
+
+void pwr_autoboot(void) {
+  return;
 }
 
 Marble_PCB_Rev_t marble_get_pcb_rev(void) {
@@ -126,7 +177,8 @@ void marble_print_pcb_rev(void) {
 }
 
 uint8_t marble_get_board_id(void) {
-  return (uint8_t)BOARD_TYPE_SIMULATION;
+  // Emulating Marble v1.4
+  return ((uint8_t)Marble_v1_4 & 0xf) | (uint8_t)BOARD_TYPE_SIMULATION;
 }
 
 void marble_UART_init(void) {
@@ -155,17 +207,14 @@ int marble_UART_recv(char *str, int size) {
 }
 
 void marble_LED_set(uint8_t led_num, bool on) {
-  // TODO - Do I want fake LEDs?
   return;
 }
 
 bool marble_LED_get(uint8_t led_num) {
-  // TODO - Do I want fake LEDs?
   return 0;
 }
 
 void marble_LED_toggle(uint8_t led_num) {
-  // TODO - Do I want fake LEDs?
   return;
 }
 

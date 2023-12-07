@@ -79,11 +79,13 @@ extern "C" {
 #define CONFIG_CLK_PLLM              (8)
 #define CONFIG_CLK_PLLN            (240)
 #define CONFIG_CLK_PLLP    RCC_PLLP_DIV2
+#define CONFIG_CLK_PLLQ              (5)
 #else
 // HSE input on Marble is 25 MHz from WhiteRabbit module
 #define CONFIG_CLK_PLLM             (20)
 #define CONFIG_CLK_PLLN            (192)
 #define CONFIG_CLK_PLLP    RCC_PLLP_DIV2
+#define CONFIG_CLK_PLLQ              (5)
 #endif
 
 #define UART_MSG_TERMINATOR                           ('\n')
@@ -111,12 +113,11 @@ typedef enum {
 } Marble_PCB_Rev_t;
 
 /* Initialize uC and peripherals before main code can run. */
-#ifndef SIMULATION
-uint32_t marble_init(bool use_xtal);
-#else
-uint32_t marble_init(bool initFlash);
-int sim_platform_service(void);
-#endif
+uint32_t marble_init(void);
+
+int board_service(void);
+
+void pwr_autoboot(void);
 
 Marble_PCB_Rev_t marble_get_pcb_rev(void);
 
@@ -129,6 +130,9 @@ uint8_t marble_get_board_id(void);
 void print_status_counters(void);
 
 uint32_t marble_get_tick(void);
+
+// Only used in simulation
+void cleanup(void);
 
 /****
 * UART
@@ -238,7 +242,7 @@ typedef int I2C_BUS;
 typedef void *I2C_BUS;
 #else
 #ifdef SIMULATION
-typedef void *I2C_BUS;
+typedef int I2C_BUS;
 #else
 #error Marble microcontroller API not defined!
 #endif /* SIMULATION */
@@ -246,10 +250,10 @@ typedef void *I2C_BUS;
 
 int marble_I2C_probe(I2C_BUS I2C_bus, uint8_t addr);
 int marble_I2C_send(I2C_BUS I2C_bus, uint8_t addr, const uint8_t *data, int size);
-int marble_I2C_cmdsend(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size);
+int marble_I2C_cmdsend(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, const uint8_t *data, int size);
 int marble_I2C_recv(I2C_BUS I2C_bus, uint8_t addr, uint8_t *data, int size);
 int marble_I2C_cmdrecv(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size);
-int marble_I2C_cmdsend_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *data, int size);
+int marble_I2C_cmdsend_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, const uint8_t *data, int size);
 int marble_I2C_cmdrecv_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *data, int size);
 int getI2CBusStatus(void);
 void resetI2CBusStatus(void);
@@ -297,6 +301,8 @@ void FPGAWD_set_period(uint16_t preload);
 void FPGAWD_pet(void);
 // ISR pends FPGA reset
 void FPGAWD_ISR(void);
+// RND - only on marble_v2 (STM32) for now
+int get_hw_rnd(uint32_t *result, int *rng_init_status_p);
 
 #ifdef __cplusplus
 }
