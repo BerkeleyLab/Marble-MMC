@@ -37,6 +37,11 @@
 #include "i2c_pm.h"
 
 #define UART_ECHO
+#ifdef NUCLEO
+#define SMBA_PIN GPIO_PIN_13
+#else
+#define SMBA_PIN GPIO_PIN_15
+#endif
 
 #define PRINT_POWER_STATE(subs, on) do {\
    char s[3] = {'f', 'f', '\0'}; \
@@ -51,6 +56,8 @@ void assert_failed(uint8_t *file, uint32_t line) {}
 void SystemClock_Config_HSI(void);
 
 ETH_HandleTypeDef heth;
+RNG_HandleTypeDef hrng;
+HAL_StatusTypeDef rng_init_status;
 
 I2C_HandleTypeDef hi2c1;
 I2C_HandleTypeDef hi2c3;
@@ -65,6 +72,8 @@ UART_HandleTypeDef huart3;  // Used for nucleo
 static Marble_PCB_Rev_t marble_pcb_rev;
 
 static int i2cBusStatus = 0;
+static int i2c_pm_alert = 0;
+
 // Moved here from marble_api.h
 SSP_PORT SSP_FPGA;
 SSP_PORT SSP_PMOD;
@@ -88,6 +97,26 @@ static void USART_Erase(int n);
 static void marble_apply_params(void);
 static void marble_read_pcb_rev(void);
 static int marble_MGTMUX_store(void);
+static void I2C_PM_smba_handler(void);
+static int i2c_hook(I2C_BUS I2C_bus, uint8_t addr, uint8_t rnw,
+                    int cmd, const uint8_t *data, int len);
+
+/* int board_service(void);
+ *  Call in main loop. Handles routines scheduled from interrupts.
+ *  Must always return 0 (otherwise execution will terminate).
+ */
+int board_service(void) {
+   if (i2c_pm_alert) {
+      printf("TODO - Respond to I2C_PM Alert\r\n");
+      i2c_pm_alert = 0;
+   }
+   return 0;
+}
+
+// Only used in simulation
+void cleanup(void) {
+   return;
+}
 
 /* Initialize UART pins */
 void marble_UART_init(void)
@@ -98,6 +127,17 @@ void marble_UART_init(void)
    /* PD5, PD6 - UART4 (Pmod3_7/3_6) */
    MX_USART2_UART_Init();
    i2cBusStatus = 0;
+}
+
+void pwr_autoboot(void) {
+#ifndef NUCLEO
+#ifdef XRP_AUTOBOOT
+   printf("XRP_AUTOBOOT\r\n");
+   marble_SLEEP_ms(300);
+   xrp_boot();
+#endif /* XRP_AUTOBOOT */
+#endif /* NUCLEO */
+   return;
 }
 
 /* Send string over UART. Returns number of bytes sent */
@@ -361,12 +401,14 @@ void marble_print_GPIO_status(void) {
   } else {
     printf("Off\r\n");
   }
+  // TODO - Only on Marble v1.4
   state = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_15);
   printf("PSU power alert = ");
   if (state) {
-    printf("On\r\n");
-  } else {
+    // LTM4673 Alert is low-true (open-drain) /Alert
     printf("Off\r\n");
+  } else {
+    printf("On\r\n");
   }
   return;
 }
@@ -429,7 +471,14 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
    if (GPIO_Pin == GPIO_PIN_0) { // Handles any interrupt on line 0 (e.g. PA0, PB0, PC0, PD0)
       marble_FPGA_DONE_handler();
+   } else if (GPIO_Pin == SMBA_PIN) {
+      I2C_PM_smba_handler();
    }
+}
+
+// Override default (weak) IRQHandler and redirect to HAL shim
+void EXTI15_10_IRQHandler(void) {
+   HAL_GPIO_EXTI_IRQHandler(SMBA_PIN);
 }
 
 void marble_GPIOint_init(void)
@@ -450,6 +499,22 @@ void marble_GPIOint_init(void)
 void marble_GPIOint_handlers(void (*FPGA_DONE_handler)(void)) {
    marble_FPGA_DONE_handler = FPGA_DONE_handler;
 }
+
+static void I2C_PM_smba_handler(void) {
+   i2c_pm_alert = 1;
+   return;
+}
+
+/*
+int marble_I2C_PM_get_alert(void) {
+   return i2c_pm_alert;
+}
+
+void marble_I2C_PM_clear_alert(void) {
+   i2c_pm_alert = 0;
+   return;
+}
+*/
 
 /************
 * MGT Multiplexer
@@ -588,15 +653,23 @@ int marble_I2C_send(I2C_BUS I2C_bus, uint8_t addr, const uint8_t *data, int size
      printf("*** I2C_send BUSY\r\n");
    }
    i2cBusStatus |= rc;
+   if (rc == HAL_OK) {
+      // rnw=0, cmd=-1
+      i2c_hook(I2C_bus, addr, 0, -1, data, size);
+   }
    return rc;
 }
 
-int marble_I2C_cmdsend(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size) {
-   int rc = HAL_I2C_Mem_Write(I2C_bus, (uint16_t)addr, cmd, 1, data, size, I2C_DELAY_MS);
+int marble_I2C_cmdsend(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, const uint8_t *data, int size) {
+   int rc = HAL_I2C_Mem_Write(I2C_bus, (uint16_t)addr, cmd, 1, (uint8_t *)data, size, I2C_DELAY_MS);
    if (rc == HAL_TIMEOUT) {
      printf("*** I2C_cmdsend TIMEOUT\r\n");
    } else if (rc == HAL_BUSY) {
      printf("*** I2C_cmdsend BUSY\r\n");
+   }
+   if (rc == HAL_OK) {
+      // rnw=0, cmd=cmd
+      i2c_hook(I2C_bus, addr, 0, cmd, data, size);
    }
    i2cBusStatus |= rc;
    return rc;
@@ -610,6 +683,10 @@ int marble_I2C_recv(I2C_BUS I2C_bus, uint8_t addr, uint8_t *data, int size) {
      printf("*** I2C_recv BUSY\r\n");
    }
    i2cBusStatus |= rc;
+   if (rc == HAL_OK) {
+      // rnw=1, cmd=-1
+      i2c_hook(I2C_bus, addr, 1, -1, data, size);
+   }
    return rc;
 }
 
@@ -621,18 +698,26 @@ int marble_I2C_cmdrecv(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data
      printf("*** I2C_cmdrecv BUSY\r\n");
    }
    i2cBusStatus |= rc;
+   if (rc == HAL_OK) {
+      // rnw=1, cmd=cmd
+      i2c_hook(I2C_bus, addr, 1, cmd, data, size);
+   }
    return rc;
 }
 
 /* Same but 2-byte register addresses */
-int marble_I2C_cmdsend_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *data, int size) {
-   int rc = HAL_I2C_Mem_Write(I2C_bus, (uint16_t)addr, cmd, 2, data, size, I2C_DELAY_MS);
+int marble_I2C_cmdsend_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, const uint8_t *data, int size) {
+   int rc = HAL_I2C_Mem_Write(I2C_bus, (uint16_t)addr, cmd, 2, (uint8_t *)data, size, I2C_DELAY_MS);
    if (rc == HAL_TIMEOUT) {
      printf("*** I2C_cmdsend_a2 TIMEOUT\r\n");
    } else if (rc == HAL_BUSY) {
      printf("*** I2C_cmdsend_a2 BUSY\r\n");
    }
    i2cBusStatus |= rc;
+   if (rc == HAL_OK) {
+      // rnw=0, cmd=cmd
+      i2c_hook(I2C_bus, addr, 0, cmd, data, size);
+   }
    return rc;
 }
 int marble_I2C_cmdrecv_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *data, int size) {
@@ -643,7 +728,43 @@ int marble_I2C_cmdrecv_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *
      printf("*** I2C_cmdrecv_a2 BUSY\r\n");
    }
    i2cBusStatus |= rc;
+   if (rc == HAL_OK) {
+      // rnw=1, cmd=cmd
+      i2c_hook(I2C_bus, addr, 1, cmd, data, size);
+   }
    return rc;
+}
+
+/* static int i2c_hook(I2C_BUS I2C_bus, uint8_t addr, uint8_t rnw,
+                       int cmd, const uint8_t *data, int len);
+ *  Callback (hook) function for side-effects of I2C transactions.
+ *  In blocking mode, this function is called AFTER a successful return of the I2C_write
+ *  or I2C_read functions.  In non-blocking mode, this callback should be scheduled to
+ *  run in the I2C_transaction_complete interrupt handler and should only be called
+ *  in thread mode (not called from the ISR).
+ *  @params:
+ *    I2C_BUS I2C_bus: The bus on which the transaction occurred. One of I2C_PM,
+ *                  or I2C_FPGA.
+ *    uint8_t addr: 8-bit (not 7-bit) I2C device address of the transaction
+ *    uint8_t rnw:  Transaction direction. 0=Write (central to periph), 1=Read
+ *    int cmd:      For API with explicit command/reg bytes, 0 <= cmd <= 0xff.
+ *                  For API with 2-byte commands, 0 <= cmd <= 0xffff.
+ *                  For API without command/reg bytes, cmd = -1. If a cmd byte
+ *                  is mandatory for a given device, the associated hook should
+ *                  expect data[0] = cmd_byte (or data[0:1] = cmd_halfword) with
+ *                  the transaction data continuing immediately afterward.
+ *    uint8_t *data: For Read, the data returned by peripheral. For Write, the
+ *                  data sent to peripheral.
+ *    int len:      The length of valid data in 'data' pointer.
+ */
+static int i2c_hook(I2C_BUS I2C_bus, uint8_t addr, uint8_t rnw,
+                    int cmd, const uint8_t *data, int len)
+{
+   if (I2C_bus == I2C_PM) {
+      i2c_pm_hook(addr, rnw, cmd, data, len);
+   }
+   // Bus-specific I2C hooks here
+   return 0;
 }
 
 /************
@@ -758,10 +879,8 @@ void marble_SLEEP_us(uint32_t delay)
 * Board Init
 ************/
 
-uint32_t marble_init(bool use_xtal)
+uint32_t marble_init(void)
 {
-  (void) use_xtal;  // feature not yet supported with this chip
-
   // Must happen before any other clock manipulations:
   HAL_Init();
   SystemClock_Config_HSI();
@@ -779,12 +898,17 @@ uint32_t marble_init(bool use_xtal)
   MX_SPI1_Init();
   MX_SPI2_Init();
 
+  // RNG
+  hrng.Instance = RNG;
+  __HAL_RCC_RNG_CLK_ENABLE();
+  rng_init_status = HAL_RNG_Init(&hrng);
+
   marble_LED_init();
   marble_SW_init();
   marble_UART_init();
 
   LM75_Init();
-  eeprom_init(0);
+  eeprom_init();
   marble_apply_params();
 
   printf("** Marble init done **\r\n");
@@ -916,7 +1040,7 @@ static void SystemClock_Config(void)
    RCC_OscInitStruct.PLL.PLLM = CONFIG_CLK_PLLM;
    RCC_OscInitStruct.PLL.PLLN = CONFIG_CLK_PLLN;
    RCC_OscInitStruct.PLL.PLLP = CONFIG_CLK_PLLP;
-   RCC_OscInitStruct.PLL.PLLQ = 4;
+   RCC_OscInitStruct.PLL.PLLQ = CONFIG_CLK_PLLQ;
    if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
    {
       Error_Handler();
@@ -949,7 +1073,7 @@ void SystemClock_Config_HSI(void)
    RCC_OscInitStruct.PLL.PLLM = 13;
    RCC_OscInitStruct.PLL.PLLN = 195;
    RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-   RCC_OscInitStruct.PLL.PLLQ = 4;
+   RCC_OscInitStruct.PLL.PLLQ = 5;
    if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
    {
      Error_Handler();
@@ -1260,64 +1384,30 @@ static void MX_GPIO_Init(void)
    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
    /* Configure GPIO pin : PC15 */
-   GPIO_InitStruct.Pin = GPIO_PIN_15;
-   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-   GPIO_InitStruct.Pull = GPIO_NOPULL;
+   GPIO_InitStruct.Pin = SMBA_PIN;
+#ifdef NUCLEO
+   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING; // Fake SMBA alert mapped to user button
+   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+#else
+   //GPIO_InitStruct.Mode = GPIO_MODE_INPUT;    // TODO - Only on Marble v1.4
+   GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING; // Roll-your-own SMB Alert for I2CPM (I2C3)
+   GPIO_InitStruct.Pull = GPIO_PULLUP;
+#endif
    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+   // TODO - Only on Marble v1.4
+   HAL_NVIC_SetPriority(EXTI15_10_IRQn, 7, 7);
+   HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+   return;
 }
 
-#if 0
-static void TIM9_Init(void) {
-  // Only one general-purpose FPGA input: PA3
-  // Using TIM9 Ch2 automatic timer reset on input trigger
-  // Enable clock to TIM9 via RCC APB2 clock enable register (APB2ENR)
-  RCC->APB2ENR |= RCC_APB2ENR_TIM9EN;
-  // GOTCHA! There's a sneaky /2 prescaler enabled whenever PCLK2 prescaler
-  // is not /1 (as it is in this case).  So the input to TIM9 is probably
-  // pclk2_freq_hz/2
-  uint32_t psc = HAL_RCC_GetPCLK2Freq();  // Get PCLK2 freq
-  psc = (psc/FPGA_WATCHDOG_CLK_FREQ) - 1; // Compute prescaler value
-  TIM9->PSC = (uint16_t)(psc & 0xFFFF);
-  TIM9->ARR = 0xFFFF;               // Max ARR for init; is configurable
-  TIM9->CR1 &= ~TIM_CR1_CEN;        // counter disable
-
-  TIM9->CCER &= ~TIM_CCER_CC2E_Msk; // disable ch2
-  // SMCR
-  uint32_t reg = TIM9->SMCR;
-  reg = SET_FIELD_MASK(reg, 0 << TIM_SMCR_MSM_Pos, TIM_SMCR_MSM_Msk); // no synchronization needed
-  reg = SET_FIELD_MASK(reg, 5 << TIM_SMCR_TS_Pos, TIM_SMCR_TS_Msk);   // Filtered Timer Input 2 (TI2FP2)
-  reg = SET_FIELD_MASK(reg, 4 << TIM_SMCR_SMS_Pos, TIM_SMCR_SMS_Msk); // reset mode
-  TIM9->SMCR = reg;
-
-  // CR1
-  reg = TIM9->CR1 | TIM_CR1_ARPE_Msk | TIM_CR1_URS_Msk; // Auto-reload preload enable and prevent
-  TIM9->CR1 = reg;                                      // IRQ on setting of UG bit (software pet)
-
-  // DIER
-  TIM9->DIER |= TIM_DIER_UIE_Msk;   // Enable update interrupt?
-
-  // CCMR1
-  reg = TIM9->CCMR1;
-  reg = SET_FIELD_MASK(reg, 0xF << TIM_CCMR1_IC2F_Pos, TIM_CCMR1_IC2F_Msk); // f_sample = f_dts/32; N = 8
-  reg = SET_FIELD_MASK(reg, 0 << TIM_CCMR1_IC2PSC_Pos, TIM_CCMR1_IC2PSC_Msk); // capture on every edge
-  reg = SET_FIELD_MASK(reg, 1 << TIM_CCMR1_CC2S_Pos, TIM_CCMR1_CC2S_Msk); // ch2 input -> TI2
-  TIM9->CCMR1 = reg;
-
-  // CCER
-  reg = TIM9->CCER;
-  reg = SET_FIELD_MASK(reg, 0 << TIM_CCER_CC2P_Pos, TIM_CCER_CC2P_Msk); // non-inverted input, reset on rising edge
-  reg = SET_FIELD_MASK(reg, 1 << TIM_CCER_CC2E_Pos, TIM_CCER_CC2E_Msk); // enable ch2
-  TIM9->CCER = reg;
-
-  //TIM9->CR1 |= TIM_CR1_CEN;         // counter enable. Do not enable at startup for now.
-
+/*
   // Enable TIM1_BRK_TIM9_IRQn;
   HAL_NVIC_SetPriority(TIM1_BRK_TIM9_IRQn, 7, 7);
   HAL_NVIC_EnableIRQ(TIM1_BRK_TIM9_IRQn);
-  return;
-}
-#endif
+*/
+
 
 void FPGAWD_set_period(uint16_t preload) {
   if (preload) {
@@ -1385,6 +1475,18 @@ uint32_t fsynthGetFreq(void) {
     return (uint32_t)freq;
   }
   return 0;
+}
+
+int get_hw_rnd(uint32_t *result, int *rng_init_status_p) {
+  HAL_StatusTypeDef rc;
+  rc = HAL_RNG_GenerateRandomNumber(&hrng, result);
+  *rng_init_status_p = rng_init_status;
+  /*
+  printf("CR = 0x%08lx\r\n", hrng.Instance->CR);
+  printf("SR = 0x%08lx\r\n", hrng.Instance->SR);
+  printf("DR = 0x%08lx\r\n", hrng.Instance->DR);
+  */
+  return rc;
 }
 
 /**

@@ -72,7 +72,7 @@ if [ -z "$BITFILE" ]; then
   paths_complete=0
 fi
 
-if [ $paths_complete -eq 0 ]; then
+if [ "$paths_complete" -eq 0 ]; then
   exit 1
 fi
 
@@ -142,20 +142,8 @@ if ! "$FTDI_PATH/verifyid.sh" "$SERIAL_NUM"; then
   fi
 fi
 
-# 2. Program MMC
 echo "##################################"
-echo "Programming MMC..."
-cd "$MMC_PATH"
-if ! make marble_download; then
-  echo "Could not program marble_mmc. Is Segger J-Link attached? Is board powered?"
-  exit 1
-fi
-
-# Sleep for a few seconds to give the MMC time to boot
-sleep 5
-
-echo "##################################"
-# 3. Write IP and MAC addresses to marble_mmc based on serial number
+# 4. Write IP and MAC addresses to marble_mmc based on serial number
 echo "Write IP and MAC addresses to marble_mmc based on serial number..."
 "$SCRIPTS_PATH/config.sh" -d "$TTY_MMC" "$SERIAL_NUM"
 
@@ -169,6 +157,7 @@ if ! BITFILE="$BITFILE" ./mutil usb; then
 fi
 
 # Sleep for a few seconds to give the FPGA time to reconfigure with new IP/MAC
+echo "napping for 3 seconds.."
 sleep 3
 
 echo "##################################"
@@ -224,3 +213,4 @@ rm "$tt"
 
 exit 0
 } 2>&1 | tee "bringup_logfile_$SERIAL_NUM"
+echo "bringup DONE"

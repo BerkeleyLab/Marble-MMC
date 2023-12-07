@@ -53,4 +53,8 @@ sim_clean:
 run:
 	make -f makefile.sim BOARD=sim run
 
+.PHONY: wrap
+wrap:
+	make -f makefile.sim BOARD=sim wrap
+
 clean: marble_mini_clean marble_clean sim_clean nucleo_clean

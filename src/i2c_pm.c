@@ -5,6 +5,7 @@
 #include "i2c_pm.h"
 #include "max6639.h"
 #include "math.h"
+#include "ltm4673.h"
 
 /* ============================= Helper Macros ============================== */
 #define MAX6639_GET_TEMP_DOUBLE(rTemp, rTempExt) \
@@ -15,8 +16,17 @@ extern I2C_BUS I2C_PM;
 
 /* =========================== Static Prototypes ============================ */
 static int set_max6639_reg(int regno, int value);
+static int PMBridge_do_sanitized_xact(uint16_t *xact, int len);
+static void PMBridge_hook_read(uint8_t addr, uint8_t cmd, const uint8_t *data, int len);
+//static void PMBridge_hook_write(uint8_t addr, const uint8_t *data, int len);  // DELETEME
 
 /* ========================== Function Definitions ========================== */
+void I2C_PM_init(void) {
+  // Initialize devices as needed after system init & peripheral config
+  ltm4673_init();
+  return;
+}
+
 void I2C_PM_scan(void)
 {
    printf("Scanning I2C_PM bus:\r\n");
@@ -299,101 +309,187 @@ void I2C_PM_probe(void)
    return;
 }
 
-/* LTM4673, new power management chip
- * valid only for builds > v1.3
- *
+/* int i2c_pm_hook(uint8_t addr, uint8_t rnw, int cmd, const uint8_t *data, int len);
+ *  Callback (hook) function for side-effects of transactions on the I2C_PM bus.
+ *  In blocking mode, this function is called AFTER a successful return of the I2C_write
+ *  or I2C_read functions.  In non-blocking mode, this callback should be scheduled to
+ *  run in the I2C_transaction_complete interrupt handler and should only be called
+ *  in thread mode (not called from the ISR).
+ *  @params:
+ *    uint8_t addr: 8-bit (not 7-bit) I2C device address of the transaction
+ *    uint8_t rnw:  Transaction direction. 0=Write (central to periph), 1=Read
+ *    int cmd:      For API with explicit command/reg bytes, 0 <= cmd <= 0xff.
+ *                  For API with 2-byte commands, 0 <= cmd <= 0xffff.
+ *                  For API without command/reg bytes, cmd = -1. If a cmd byte
+ *                  is mandatory for a given device, the associated hook should
+ *                  expect data[0] = cmd_byte (or data[0:1] = cmd_halfword) with
+ *                  the transaction data continuing immediately afterward.
+ *    uint8_t *data: For Read, the data returned by peripheral. For Write, the
+ *                  data sent to peripheral.
+ *    int len:      The length of valid data in 'data' pointer.
  */
-
-int ltm_ch_status(uint8_t dev)
-{
-  if (marble_get_board_id() < Marble_v1_3) {
-    printf("LTM4673 not present; bypassed.\n");
-    return 0;
+void i2c_pm_hook(uint8_t addr, uint8_t rnw, int cmd, const uint8_t *data, int len) {
+  if (rnw) {
+    // Device-specific I2C read hooks
+    ltm4673_hook_read(addr, cmd, data, len);
+  } else {
+    // Device-specific I2C write hooks
+    ltm4673_hook_write(addr, cmd, data, len);
   }
-   const uint8_t STATUS_WORD = 0x79;
-   uint8_t i2c_dat[4];
-   for (unsigned jx = 0; jx < 4; jx++) {
-      // start selecting channel/page 0 until you finish reading
-      // data for all 4 channels
-      uint8_t page = 0x00 + jx;
-      marble_I2C_cmdsend(I2C_PM, dev, 0x00, &page, 1);
-      // marble_I2C_cmd_recv should return 0, if everything is good, see page 100
-      int rc = marble_I2C_cmdrecv(I2C_PM, dev, STATUS_WORD, i2c_dat, 2);
-      if (rc == HAL_OK) {
-          uint16_t word0 = ((unsigned int) i2c_dat[1] << 8) | i2c_dat[0];
-          if (word0) {
-              printf("BAD! LTM4673 Channel %x, Status_word r[%2.2x] = 0x%x\r\n", page, STATUS_WORD, word0);
-              return 0;
-          }
-      }
-   }
-   return 1;
+  return;
 }
 
-void ltm_read_telem(uint8_t dev)
-{
-   struct {int b; const char *m;} r_table[] = {
-      // see page 105
-      {0x88, "V     READ_VIN"},
-      {0x89, "A     READ_IIN"},
-      {0x97, "W     READ_PIN"},
-      {0x8B, "V     READ_VOUT"},
-      {0x8C, "A     READ_IOUT"},
-      {0x8D, "degC  READ_TEMPERATURE_1"},
-      {0x8E, "degC  READ_TEMPERATURE_2"},
-      {0x96, "W     READ_POUT"},
-      {0xBB, "mA    MFR_READ_IOUT"},
-      {0xC4, "A     MFR_IIN_PEAK"},
-      {0xC5, "A     MFR_IIN_MIN"},
-      {0xC6, "P     MFR_PIN_PEAK"},
-      {0xC7, "P     MFR_PIN_MIN"},
-      {0xFA, "V     MFR_IOUT_SENSE_VOLTAGE"},
-      {0xDE, "V     MFR_VIN_PEAK"},
-      {0xDD, "V     MFR_VOUT_PEAK"},
-      {0xD7, "A     MFR_IOUT_PEAK"},
-      {0xDF, "degC  MFR_TEMPERATURE_1_PEAK"},
-      {0xFC, "V     MFR_VIN_MIN"},
-      {0xFB, "V     MFR_VOUT_MIN"},
-      {0xD8, "A     MFR_IOUT_MIN"},
-      {0xFD, "degC  MFR_TEMPERATURE_1_MIN"}};
-   printf("LTM4673 Telemetry register dump:\n");
-   float L16 = 0.0001220703125;  // 2**(-13)
-   for (unsigned jx = 0; jx < 4; jx++) {
-      // start selecting channel/page 0 until you finish reading
-      // telemetry data for all 4 channels
-      uint8_t page = 0x00 + jx;
-      marble_I2C_cmdsend(I2C_PM, dev, 0x00, &page, 1);
-      printf("> Read page/channel: %x\n", page);
-      const unsigned tlen = sizeof(r_table)/sizeof(r_table[0]);
-      for (unsigned ix=0; ix<tlen; ix++) {
-          uint8_t i2c_dat[4];
-          int regno = r_table[ix].b;
-          int rc = marble_I2C_cmdrecv(I2C_PM, dev, regno, i2c_dat, 2);
-          uint16_t word0 = ((unsigned int) i2c_dat[1] << 8) | i2c_dat[0];
-          float phys_unit;
-          int mask, comp2;
-          if (rc == HAL_OK) {
-              if (ix == 3 || ix == 15 || ix == 19)
-                  phys_unit = word0*L16;  // L16 format
-              else if (ix == 8)
-                  phys_unit = word0*2.5;  // special for MFR_READ_IOUT
-              else if (ix == 13)
-                  phys_unit = word0*0.025*pow(2, -13);  // special for MFR_IOUT_SENSE_VOLTAGE
-              else {
-                  // L11 format, see page 35
-                  mask = (word0 >> 11);
-                  comp2 = pow(2, 5) - mask;
-                  phys_unit = (word0 & 0x7FF)*(1.0/(1<<comp2));
-              }
-              printf("r[%2.2x] = 0x%4.4x = %5d = %7.3f %s\r\n", regno, word0, word0, phys_unit, r_table[ix].m);
-          } else {
-              printf("r[%2.2x]    unread          (%s)\r\n", regno, r_table[ix].m);
-          }
+
+int PMBridge_xact(uint16_t *xact, int len) {
+  // Msg bytes:
+  //  | Addr + rnw | command_code | [data] ... |
+  /* ===================== Message Syntax Validation =========================
+   * Syntax Rules:
+   *  xact[0] MUST be Addr+wr (even reads always start with a write)
+   *  xact[1] MUST be command_code
+   *  if xact[2] is PMBRIDGE_XACT_REPEAT_START: (xact is read)
+   *    xact[3] MUST be Addr+r
+   *    xact[4] MUST be either PMBRIDGE_XACT_READ_ONE or PMBRIDGE_XACT_READ_BLOCK
+   *  elif xact[2] is PMBRIDGE_XACT_READ_ONE or PMBRIDGE_XACT_READ_BLOCK:
+   *    ERROR!
+   *  else: (xact is write)
+   *    xact[2:] are data to be written
+   */
+  if (len < 2) {
+    printf("Transaction shorter than min length (2)\r\n");
+    return -1;
+  }
+  int syntax_invalid = 0;
+  unsigned int read = 0;
+  // Recall I2C addresses above 8-bit 0xee (7-bit 0x77) are reserved for 10-bit addressing
+  if (xact[0] > 0xee) {
+    syntax_invalid |= (1);
+  }
+  // Even read transactions start with an I2C write
+  if (xact[0] & 1) {
+    syntax_invalid |= (1<<1);
+  }
+  // Command codes must be 1 byte (no control chars in the 1 position)
+  if (xact[1] > 0xff) {
+    syntax_invalid |= (1<<2);
+  }
+  if (len > 2) {
+    if (xact[2] == PMBRIDGE_XACT_REPEAT_START) {
+      read = 1;
+      if (len > 4) {
+        if (!(xact[3] & 0x1)) {
+          printf("Repeat Start not followed by a read\r\n");
+          syntax_invalid |= (1<<4);
+        }
+        if (xact[4] < PMBRIDGE_XACT_READ_ONE) {
+          printf("Repeat Start not followed by PMBRIDGE_XACT_READ_ONE or PMBRIDGE_XACT_READ_BLOCK\r\n");
+          syntax_invalid |= (1<<4);
+        }
+      } else {
+        printf("Repeat Start not followed by Addr+rd and PMBRIDGE_XACT_READ_ONE or PMBRIDGE_XACT_READ_BLOCK\r\n");
+        syntax_invalid |= (1<<5);
       }
-   }
+    } else if (xact[2] & 0x100) { // PMBRIDGE_XACT_READ_ONE or PMBRIDGE_XACT_READ_BLOCK
+      printf("Command code followed improperly by PMBRIDGE_XACT_READ_ONE or PMBRIDGE_XACT_READ_BLOCK\r\n");
+      syntax_invalid |= (1<<3);
+    }
+  } else {
+    // No additional syntax checks needed on SEND_BYTE protocol types
+  }
+  if (syntax_invalid) {
+    printf("Invalid transaction syntax: 0x%x\r\n", syntax_invalid);
+    return -1;
+  }
+  /* ====================== Context-Aware Sanitation ==========================
+   * Limits only enforced for WRITE transactions
+   * This step can be skipped with compile-time macro PMBUS_REMOVE_SAFEGUARDS
+   */
+#ifndef PMBUS_REMOVE_SAFEGUARDS
+  if (!read) {
+    ltm4673_apply_limits(xact, len);
+  }
+  // Add more device-specific safeguards here
+#endif
+  return PMBridge_do_sanitized_xact(xact, len);
 }
 
-/* XPR7724 is special
+/* static int PMBridge_do_sanitized_xact(uint16_t *xact, int len);
+ *  NOTE! This function assumes the transaction 'xact' has already been
+ *  sanitized (checked for syntax violations), thus certain length checks
+ *  are not made here (as they would be redundant).  Make sure to only
+ *  use this with sanitized transactions vetted by (e.g.) PMBridge_xact()
+ */
+static int PMBridge_do_sanitized_xact(uint16_t *xact, int len) {
+  // Perform I2C transaction
+  int read = 0;
+  int rval;
+  uint8_t data[PMBRIDGE_XACT_MAX_ITEMS-2];
+  if (xact[2] == PMBRIDGE_XACT_REPEAT_START) {
+    read = 1;
+    if (xact[4] == PMBRIDGE_XACT_READ_BLOCK) {
+      printf("READ_BLOCK not yet implemented. Discarding transaction.\r\n");
+      return -1;
+    }
+  }
+  if (read) {
+    rval = marble_I2C_cmdrecv(I2C_PM, (uint8_t)xact[0], (uint8_t)xact[1], data, len-4);
+    PMBridge_hook_read((uint8_t)xact[0], (uint8_t)xact[1], data, len-4);
+    if (rval != HAL_OK) {
+      printf("Read failed with code: 0x%x\r\n", rval);
+    } else {
+      // Readback
+      printf("(0x%02x) 0x%02x:", xact[0], xact[1]);
+      for (int n = 0; n < len-4; n++) {
+         printf(" 0x%02x", data[n]);
+      }
+    }
+    printf("\r\n");
+  } else {
+    for (int n = 0; n < len-1; n++) {
+      // Data to send must be uint8_t, not uint16_t
+      data[n] = (uint8_t)(xact[n+1] & 0xff);
+    }
+    rval = marble_I2C_send(I2C_PM, (uint8_t)xact[0], data, len-1);
+    //PMBridge_hook_write((uint8_t)xact[0], data, len-1);
+    if (rval != HAL_OK) {
+      printf("Write failed with code: 0x%x\r\n", rval);
+    }
+  }
+  // READ:
+  //  int marble_I2C_cmdrecv(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size) {
+  // WRITE:
+  //  int marble_I2C_cmdsend(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size) {
+  // SEND_BYTE:
+  //  int marble_I2C_send(I2C_BUS I2C_bus, uint8_t addr, const uint8_t *data, int size) {
+  //  (may also be able to use marble_I2C_cmdsend() with size=0; not sure)
+  // READ_BLOCK:
+  //  Will need custom driver.  Don't implement for now.
+  return rval;
+}
+
+/* static void PMBridge_hook_read(uint8_t addr, uint8_t cmd, const uint8_t *data, int len);
+ *  Do any side effects of an I2C (PMB) read on the PMBridge
+ */
+static void PMBridge_hook_read(uint8_t addr, uint8_t cmd, const uint8_t *data, int len) {
+  if (ltm4673_hook_read(addr, cmd, data, len)) {
+    return;
+  }
+  // Add more device-specific hooks here
+  return;
+}
+
+/* static void PMBridge_hook_write(uint8_t addr, const uint8_t *data, int len);
+ *  Do any side effects of an I2C (PMB) write on the PMBridge
+ */
+/*  TODO DELETEME
+static void PMBridge_hook_write(uint8_t addr, const uint8_t *data, int len) {
+  if (ltm4673_hook_write(addr, data, len)) {
+    return;
+  }
+}
+*/
+
+/* XRP7724 is special
  * Seems that one-byte Std Commands documented in ANP-38 apply to
  * commands < 0x4F, but there are also two-byte commands (called addresses)
  * starting with 0x8000, discussed in ANP-39, and captured in hex files

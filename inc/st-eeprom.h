@@ -88,10 +88,9 @@ FOR_ALL_EETAGS()
 #undef X
 
 /** @brief Initialize EEPROM interface to Flash memory
- *  @param initFlash Erases 'flash' memory (in simulation mode only)
  *  @returns 0 on Success, or negative errno
  */
-int eeprom_init(bool initFlash);
+int eeprom_init(void);
 
 /** @brief Reformat EEPROM to erase all settings.
  *  @returns 0 on Success, or negative errno

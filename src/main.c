@@ -8,20 +8,28 @@
 #include "rev.h"
 #include "console.h"
 #include "uart_fifo.h"
+#include "ltm4673.h"
 
 #define LED_SNAKE
 #ifdef MARBLE_V2
+
 static void mgtclk_xpoint_en(void)
 {
-   if (xrp_ch_status(XRP7724, 1)) { // CH1: 3.3V
+   if ((marble_get_pcb_rev() < Marble_v1_4) & xrp_ch_status(XRP7724, 1)) { // CH1: 3.3V
       adn4600_init();
-   } else if (ltm_ch_status(LTM4673)) {
+   } else if ((marble_get_pcb_rev() > Marble_v1_3) & ltm_ch_status(LTM4673)) {
       printf("Using LTM4673 and adn4600_init\r\n");
       adn4600_init();
    } else {
       printf("Skipping adn4600_init\r\n");
    }
 }
+#endif
+// CLOCK_USE_XTAL only used for marble-mini
+#ifdef CLOCK_USE_XTAL
+#define XTAL_IN_USE     "True"
+#else
+#define XTAL_IN_USE     "False"
 #endif
 
 #define FPGA_PUSH_DELAY_MS              (2)
@@ -77,43 +85,20 @@ void print_status_counters(void) {
   return;
 }
 
-#ifdef SIMULATION
-int main(int argc, char *argv[]) {
-  bool initialize = false;
-  for (int n = 1; n < argc; n++) {
-    if ((argv[n][0] == '-') && (argv[n][1] == 'i')) {
-      initialize = true;
-    }
-  }
-#else
 int main(void) {
-#endif
    UARTQUEUE_Init();
 #ifdef MARBLEM_V1
+   uint32_t sysclk_freq = marble_init();
    // Initialize Marble(mini) board with IRC, so it works even when
    // the XRP7724 isn't running, keeping the final 25 MHz source away.
-   const bool use_xtal = false;
-   uint32_t sysclk_freq = marble_init(use_xtal);
-   printf("marble_init with use_xtal = %d\r\n", use_xtal);
+   printf("marble_init with use_xtal = %s\r\n", XTAL_IN_USE);
    printf("system clock = %lu Hz\r\n", sysclk_freq);
 #else
-#ifdef MARBLE_V2
-   marble_init(0);
-#endif
+   marble_init();
 #endif
 
-#ifdef SIMULATION
-   console_init();
-   if (initialize) {
-     printf("Initializing flash\r\n");
-   } else {
-     printf("Restoring flash\r\n");
-   }
-   marble_init(initialize);
-#else
    // UART console service
    console_init();
-#endif
 
    /* Turn on LEDs */
    marble_LED_set(0, true);   // LD15
@@ -129,13 +114,8 @@ int main(void) {
    // Register System Timer interrupt handler
    marble_SYSTIMER_handler(timer_int_handler);
 
-#ifndef NUCLEO
-#ifdef XRP_AUTOBOOT
-   printf("XRP_AUTOBOOT\r\n");
-   marble_SLEEP_ms(300);
-   xrp_boot();
-#endif /* XRP_AUTOBOOT */
-#endif /* NUCLEO */
+   // Boot the power supply controller if needed
+   pwr_autoboot();
 
 #ifdef MARBLE_V2
    // Enable MGT clock cross-point switch if 3.3V rail is ON
@@ -153,7 +133,8 @@ int main(void) {
 
    // Send demo string over UART at 115200 BAUD
    marble_UART_send(DEMO_STRING, strlen(DEMO_STRING));
-   //printf("%s", DEMO_STRING);
+
+   I2C_PM_init();
 
    while (1) {
       // Run all system update/monitoring tasks and only then handle console
@@ -170,13 +151,13 @@ int main(void) {
           fpga_net_prog_pend=0;
         }
       }
-#ifdef SIMULATION
-      if (sim_platform_service()) {
+      console_service();
+      if (board_service()) {
+        // This exit is only used in simulation
         break;
       }
-#endif
-      console_service();
    }
+   cleanup(); // Only used for simulation
 }
 
 // This probably belongs in some other file, but which one?
