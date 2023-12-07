@@ -26,6 +26,7 @@ if [ $# -lt 0 ]; then
 fi
 
 # Mandatory Paths Check.
+paths_complete=1
 if [ -z "$MMC_PATH" ]; then
   echo "Define MMC_PATH environment variable"
   paths_complete=0
@@ -36,7 +37,7 @@ if [ -z "$LTM_SCRIPT" ]; then
   paths_complete=0
 fi
 
-if [ $paths_complete -eq 0 ]; then
+if [ "$paths_complete" -eq 0 ]; then
   exit 1
 fi
 
@@ -73,6 +74,7 @@ fi
 echo "##################################"
 
 # Sleep for a few seconds to give the MMC time to boot
+echo "napping for 5 seconds.."
 sleep 5
 
 # 2. Program LTM4673 power management chip
@@ -83,11 +85,14 @@ if ! python3 "$SCRIPTS_PATH"/ltm4673.py -d "$TTY_MMC" write -f "$LTM_SCRIPT"; th
 else
   echo "##################################"
   python3 "$SCRIPTS_PATH"/ltm4673.py -d "$TTY_MMC" store
+  echo "napping for 5 seconds.."
   sleep 5
   python3 "$SCRIPTS_PATH"/load.py -d "$TTY_MMC" "4b"
+  echo "napping for 5 seconds.."
   sleep 5
   python3 "$SCRIPTS_PATH"/load.py -d "$TTY_MMC" "4B"
   echo "Successfully programmed LTM4673!"
 fi
 
+echo "bringup_mmc DONE"
 exit 0
