@@ -23,6 +23,7 @@
 #define MAX_WATCHDOG_TIMEOUT_S        (MAX_WATCHDOG_TIMEOUT_PERIODS*MAILBOX_UPDATE_PERIOD_SECONDS)
 // Size of hash in bytes
 #define HASH_SIZE                     (8)
+#define HASH_SIZE_32                  (HASH_SIZE/4)
 
 /* ============================ Static Variables ============================ */
 typedef enum {
@@ -32,9 +33,11 @@ typedef enum {
   STATE_RESET,    // MMC is holding the FPGA reset low      (disable watchdog)
 } FPGAWD_State_t;
 
-static uint32_t remote_hash[HASH_SIZE] = {0};
-static uint32_t local_hash[HASH_SIZE] = {0};
-static uint32_t entropy[HASH_SIZE] = {0};
+static uint8_t remote_hash[HASH_SIZE] = {0};
+static uint64_t *remote_hash_64 = (uint64_t *)remote_hash;
+static uint8_t local_hash[HASH_SIZE] = {0};
+static uint64_t *local_hash_64 = (uint64_t *)local_hash;
+static uint32_t entropy[HASH_SIZE_32] = {0};
 static int rng_status = 0;
 static unsigned int poll_counter = 0;
 static unsigned int max_poll_counts = 10;
@@ -138,10 +141,10 @@ static void fpga_reset_callback(void) {
 static void pet_wdog(void) {
   printd("Watchdog pet\n");
   poll_counter = max_poll_counts;
-  for (unsigned ux=0; ux < HASH_SIZE; ux++) {
+  for (unsigned int ux=0; ux < HASH_SIZE_32; ux++) {
     // STM32 has a 4-entry FIFO for this feature, right?
     rng_status = get_hw_rnd(&(entropy[ux]));
-    printd("rnd %d %d %8.8lx\r\n", ux, rng_status, entropy[ux]);
+    printd("rnd %d %d %8.8"PRIx32"\r\n", ux, rng_status, entropy[ux]);
   }
   compute_hash();
 }
@@ -157,7 +160,9 @@ static void compute_hash(void) {
   // For now, we just copy bits from the entropy pool.
   // In the future, this can involve some fancy math.
   for (int n = 0; n < HASH_SIZE; n++) {
-    local_hash[n] = entropy[n];
+    // Yuck.  Is there a better (safe/correct) way of copying two 32-bit ints
+    // to eight bytes?
+    local_hash[n] = (entropy[(n >> 2)] >> 8*(n % 4)) & 0xff;
   }
   return;
 }
@@ -167,7 +172,7 @@ static const unsigned char *get_auth_key(void) {
 }
 
 static int vet_hash(void) {
-  uint32_t desired_mac[HASH_SIZE];
+  uint32_t desired_mac[HASH_SIZE];  // TODO FIXME
   const unsigned char *key = get_auth_key();
   int match = 1;
   for (int n = 0; n < HASH_SIZE; n++) {
@@ -180,21 +185,25 @@ static int vet_hash(void) {
     if (remote_hash[n] != desired_mac[n]) match = 0;
   }
   if (0) {
-    printf("local_hash  = %8.8"PRIx32" %8.8"PRIx32"\r\n", local_hash[0], local_hash[1]);
+    //printf("local_hash  = %8.8"PRIx32" %8.8"PRIx32"\r\n", local_hash[0], local_hash[1]);
+    printf("local_hash  = %8.8"PRIx64"\r\n", *local_hash_64);
     printf("desired_mac = %8.8"PRIx32" %8.8"PRIx32"\r\n", desired_mac[0], desired_mac[1]);
-    printf("remote_hash = %8.8"PRIx32" %8.8"PRIx32"\r\n", remote_hash[0], remote_hash[1]);
+    //printf("remote_hash = %8.8"PRIx32" %8.8"PRIx32"\r\n", remote_hash[0], remote_hash[1]);
+    printf("remote_hash = %8.8"PRIx64"\r\n", *remote_hash_64);
     printf("vet_hash match = %d\r\n", match);
   }
   return match;
 }
 
 void FPGAWD_ShowState(void) {
-  uint32_t desired_mac[HASH_SIZE];
+  uint32_t desired_mac[HASH_SIZE];  // TODO FIXME
   const unsigned char *key = get_auth_key();
   core_siphash((unsigned char *) desired_mac, (unsigned char *) local_hash, 8, key);
   printf("poll_counter = %d\r\n", poll_counter);
   printf("FPGA state  = %s\r\n", state_str(fpga_state));
-  printf("local_hash  = %8.8"PRIx32" %8.8"PRIx32"\r\n", local_hash[0], local_hash[1]);
+  //printf("local_hash  = %8.8"PRIx32" %8.8"PRIx32"\r\n", local_hash[0], local_hash[1]);
+  printf("local_hash  = %8.8"PRIx64"\r\n", *local_hash_64);
   printf("desired_mac = %8.8"PRIx32" %8.8"PRIx32"\r\n", desired_mac[0], desired_mac[1]);
-  printf("remote_hash = %8.8"PRIx32" %8.8"PRIx32"\r\n", remote_hash[0], remote_hash[1]);
+  //printf("remote_hash = %8.8"PRIx32" %8.8"PRIx32"\r\n", remote_hash[0], remote_hash[1]);
+  printf("remote_hash = %"PRIx64"\r\n", *remote_hash_64);
 }

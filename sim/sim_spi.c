@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-//#define DEBUG
+//#define DEBUG_PRINT
 #include <stdio.h>
 #include "dbg.h"
 
