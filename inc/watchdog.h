@@ -13,9 +13,9 @@ extern "C" {
 
 #include <stdint.h>
 
-uint32_t FPGAWD_GetNonce(unsigned int index);
+void FPGAWD_GetNonce(volatile uint8_t *pdata);
 void FPGAWD_DoneHandler(void);
-void FPGAWD_HandleHash(uint32_t hash, unsigned int index);
+void FPGAWD_HandleHash(const uint8_t *hash);
 void FPGAWD_Poll(void);
 int FPGAWD_SetPeriod(unsigned int period);
 int FPGAWD_GetPeriod(void);

@@ -28,7 +28,7 @@
 #define DEBUG_TX_OUT
 #define BOARD_SERVICE_SLEEP_MS       (50)
 #define SIM_FPGA_DONE_DELAY_MS      (100)
-#define SIM_FPGA_RESETS               (4)
+#define SIM_FPGA_RESETS               (0)
 
 // Defined in sim_i2c.c; declared here to avoid creating a "real" i2c_init function in marble_api.h
 void init_sim_ltm4673(void);
@@ -37,9 +37,6 @@ typedef struct {
   int toExit;
   int msgReady;
 } sim_console_state_t;
-
-// GLOBALS
-SSP_PORT SSP_FPGA;
 
 // Local static variables
 static void dummy_handler(void) {}
@@ -243,6 +240,7 @@ void marble_print_GPIO_status(void) {
 }
 
 void reset_fpga(void) {
+  enable_fpga();
   return;
 }
 
@@ -256,21 +254,6 @@ void enable_fpga(void) {
 void disable_fpga(void) {
   fpga_enabled = 0;
   return;
-}
-
-typedef void *SSP_PORT;
-
-int marble_SSP_write16(SSP_PORT ssp, uint16_t *buffer, unsigned size) {
-  // TODO - What is SSP?
-  return 0;
-}
-
-int marble_SSP_read16(SSP_PORT ssp, uint16_t *buffer, unsigned size) {
-  return 0;
-}
-
-int marble_SSP_exch16(SSP_PORT ssp, uint16_t *tx_buf, uint16_t *rx_buf, unsigned size) {
-  return 0;
 }
 
 void marble_GPIOint_handlers(void (*FPGA_DONE_handler)(void)) {

@@ -8,6 +8,7 @@
 #include "marble_api.h"
 #include "refsip.h"
 #include "common.h"
+#include "string.h"
 #include <stdio.h>
 
 // Using PRIx32/PRIx64 for cross-platform compatibility (sim vs target)
@@ -17,11 +18,11 @@
 #include "dbg.h"
 
 /* ============================= Helper Macros ============================== */
-// TODO - Get this from mailbox.h or marble_api.h
 #define MAILBOX_UPDATE_PERIOD_SECONDS (SPI_MAILBOX_PERIOD_MS/1000)
 #define MAX_WATCHDOG_TIMEOUT_PERIODS  (255)
 #define MAX_WATCHDOG_TIMEOUT_S        (MAX_WATCHDOG_TIMEOUT_PERIODS*MAILBOX_UPDATE_PERIOD_SECONDS)
-#define HASH_SIZE                     (2)
+// Size of hash in bytes
+#define HASH_SIZE                     (8)
 
 /* ============================ Static Variables ============================ */
 typedef enum {
@@ -57,9 +58,9 @@ static const char* state_str(FPGAWD_State_t ss) {
   return "BAD";
 }
 
-uint32_t FPGAWD_GetNonce(unsigned int index) {
-  if (index < HASH_SIZE) return local_hash[index];
-  else return 0;
+void FPGAWD_GetNonce(volatile uint8_t *pdata) {
+  memcpy((void *)pdata, (const void *)local_hash, HASH_SIZE);
+  return;
 }
 
 int FPGAWD_SetPeriod(unsigned int period) {
@@ -145,10 +146,10 @@ static void pet_wdog(void) {
   compute_hash();
 }
 
-void FPGAWD_HandleHash(uint32_t hash, unsigned int index) {
+void FPGAWD_HandleHash(const uint8_t *hash) {
   // Hash should be read in order from highest index to 0. See mbox.def
-  if (index < HASH_SIZE) remote_hash[index] = hash;
-  if (index == 0 && vet_hash()) pet_wdog();
+  memcpy(remote_hash, hash, HASH_SIZE);
+  if (vet_hash()) pet_wdog();
   return;
 }
 
