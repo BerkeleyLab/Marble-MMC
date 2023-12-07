@@ -8,6 +8,7 @@ import argparse
 from sys import argv
 import os
 import time
+import datetime
 import mkmbox
 import socket
 from pysiphash import uint_sip_mac, byteswap32
@@ -37,11 +38,15 @@ def word_do(ipAddr, pageNo, wordName, val):
 def refresh(ipAddr, mi):
     rval_l = byteswap32(word_do(ipAddr, 7, "WD_NONCE_L", None))
     rval_h = byteswap32(word_do(ipAddr, 7, "WD_NONCE_H", None))
-    print("Returned {:08x} {:08x}".format(rval_l, rval_h))
+    rval_s = "{:08x} {:08x}".format(rval_l, rval_h)
+    # print("Returned "+rval_s)
     oval = transform((rval_l, rval_h))  # key step
-    print("Writing  {:08x} {:08x}".format(oval[0], oval[1]))
+    oval_s = "{:08x} {:08x}".format(oval[0], oval[1])
+    # print("Writing  "+oval_s)
     rval_l = word_do(ipAddr, 8, "WD_HASH_L", byteswap32(oval[0]))
     rval_h = word_do(ipAddr, 8, "WD_HASH_H", byteswap32(oval[1]))
+    timestamp = datetime.datetime.utcnow().replace(microsecond=0).isoformat()
+    print(timestamp + "Z Handshake " + ipAddr + "  " + rval_s + " -> " + oval_s)
     # print("Returned {:x} {:x}".format(rval_l, rval_h))
     return 0
 
