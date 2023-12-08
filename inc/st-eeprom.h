@@ -64,7 +64,8 @@ typedef struct {
   X(5, overtemp,  raw, 1, {85}) \
   X(6, mgt_mux,   raw, 1, {0}) \
   X(7, fsynth,    raw, 6, {0, 0, 0, 0, 0, 0}) \
-  X(8, wd_period, raw, 1, {0})
+  X(8, wd_period, raw, 1, {0}) \
+  X(9, wd_key,    raw, 16, {'s','u','p','e','r',' ','s','e','c','r','e','t',' ','k','e','y'})
 
 typedef enum {
 #define X(N, NAME, TYPE, SIZE, ...)  ee_ ## NAME = N,

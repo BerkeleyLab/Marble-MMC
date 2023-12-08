@@ -309,6 +309,15 @@ void I2C_PM_probe(void)
    return;
 }
 
+void I2C_PM_bus_display(void)
+{
+   LM75_print(LM75_0);
+   LM75_print(LM75_1);
+   if (marble_get_board_id() < Marble_v1_3) xrp_dump(XRP7724);
+   else ltm4673_read_telem(LTM4673);
+}
+
+
 /* int i2c_pm_hook(uint8_t addr, uint8_t rnw, int cmd, const uint8_t *data, int len);
  *  Callback (hook) function for side-effects of transactions on the I2C_PM bus.
  *  In blocking mode, this function is called AFTER a successful return of the I2C_write
@@ -488,6 +497,20 @@ static void PMBridge_hook_write(uint8_t addr, const uint8_t *data, int len) {
   }
 }
 */
+
+void xrp_boot(void)
+{
+   uint8_t pwr_on=0;
+   for (int i=1; i<5; i++) {
+      pwr_on |= xrp_ch_status(XRP7724, i);
+   }
+   if (pwr_on) {
+      printf("XRP already ON. Skipping autoboot...\r\n");
+   } else {
+      xrp_go(XRP7724);
+      marble_SLEEP_ms(1000);
+   }
+}
 
 /* XRP7724 is special
  * Seems that one-byte Std Commands documented in ANP-38 apply to

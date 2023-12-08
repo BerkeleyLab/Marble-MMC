@@ -9,6 +9,7 @@
 #include "refsip.h"
 #include "common.h"
 #include "string.h"
+#include "st-eeprom.h"
 #include <stdio.h>
 
 // Using PRIx32/PRIx64 for cross-platform compatibility (sim vs target)
@@ -167,19 +168,28 @@ static void compute_hash(void) {
   return;
 }
 
+/*
 static const unsigned char *get_auth_key(void) {
   return (const unsigned char *) "super secret key";  // trailing nul ignored
 }
+*/
 
+#define KEY_SIZE                (16)
 static int vet_hash(void) {
   uint8_t desired_mac[HASH_SIZE];
-  const unsigned char *key = get_auth_key();
-  int match = 1;
+  unsigned char key[KEY_SIZE];
+  int match = eeprom_read_wd_key((volatile uint8_t *)key, KEY_SIZE);
+  if (match != 0) {
+    // Failed to retrieve key
+    return -1;
+  }
+  match = 1;
   for (int n = 0; n < HASH_SIZE; n++) {
     if (remote_hash[n] != 0) match = 0;
   }
   if (match) return 0;  // all zeros means disabled
   core_siphash((unsigned char *) desired_mac, (unsigned char *) local_hash, 8, key);
+  memset(key, 0xcc, KEY_SIZE); // Clobber key in RAM
   match = 1;
   for (int n = 0; n < HASH_SIZE; n++) {
     if (remote_hash[n] != desired_mac[n]) match = 0;
@@ -197,8 +207,15 @@ static int vet_hash(void) {
 
 void FPGAWD_ShowState(void) {
   uint8_t desired_mac[HASH_SIZE];
-  const unsigned char *key = get_auth_key();
+  //const unsigned char *key = get_auth_key();
+  unsigned char key[KEY_SIZE];
+  int rval = eeprom_read_wd_key((volatile uint8_t *)key, KEY_SIZE);
+  if (rval != 0) {
+    // Failed to retrieve key
+    return;
+  }
   core_siphash((unsigned char *) desired_mac, (unsigned char *) local_hash, 8, key);
+  memset(key, 0xcc, KEY_SIZE); // Clobber key in RAM
   printf("poll_counter = %d\r\n", poll_counter);
   printf("FPGA state  = %s\r\n", state_str(fpga_state));
   //printf("local_hash  = %8.8"PRIx32" %8.8"PRIx32"\r\n", local_hash[0], local_hash[1]);
