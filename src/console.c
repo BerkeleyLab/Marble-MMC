@@ -497,7 +497,8 @@ static int toggle_gpio(char c) {
       break;
     case 'B':
       marble_PSU_pwr(1);
-      printf("PSU Power On\r\n");
+      adn4600_init();
+      printf("PSU Power On and Configured ADN4600\r\n");
       break;
     case 'c':
       // PMOD3_5 J16[4]

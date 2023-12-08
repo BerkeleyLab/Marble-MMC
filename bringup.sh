@@ -157,8 +157,8 @@ if ! BITFILE="$BITFILE" ./mutil usb; then
 fi
 
 # Sleep for a few seconds to give the FPGA time to reconfigure with new IP/MAC
-echo "napping for 3 seconds.."
-sleep 3
+echo "napping for 5 seconds.."
+sleep 5
 
 echo "##################################"
 # Read 4 lines from FPGA frequency counter output
