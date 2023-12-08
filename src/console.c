@@ -513,7 +513,7 @@ static int toggle_gpio(char c) {
       marble_PSU_pwr(1);
       printf("PSU Powered On\r\n");
       #ifdef MARBLE_V2
-        marble_SLEEP_ms(100);
+        marble_SLEEP_ms(400);
         mgtclk_xpoint_en();
         reset_fpga();
       #endif
