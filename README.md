@@ -52,7 +52,7 @@ Build the simulated target
 Run the simulated target
 `make run`
 
-There is also a 'wrapped' verion of the sim target which redirects input/output to/from a
+There is also a 'wrapped' version of the sim target which redirects input/output to/from a
 pseudo-terminal (PTY).  This is handy for development of scripts designed to talk to the
 actual hardware over a serial port.
 `make wrap`
@@ -95,7 +95,9 @@ ls -l ftdi_eeprom/ftdi_eeprom
 
 ## Credits
 
-This code base was initially developed as a collaboration between Michal Gaska (WUT) and Larry Doolittle (LBNL), with important contribuitons from Sergio Paiagua, Vamsi Vytla and Michael Betz (LBNL).
+This code base was initially developed as a collaboration between Michal Gaska (WUT) and
+Larry Doolittle (LBNL), with important contributions from Sergio Paiagua, Vamsi Vytla,
+Keith Penney, Shreeharshini Murthy, and Michael Betz (LBNL).
 
 ## Copyright
 

@@ -209,18 +209,22 @@ void FPGAWD_ShowState(void) {
   uint8_t desired_mac[HASH_SIZE];
   //const unsigned char *key = get_auth_key();
   unsigned char key[KEY_SIZE];
+  printf("poll_counter = %d\r\n", poll_counter);
+  printf("FPGA state  = %s\r\n", state_str(fpga_state));
+  printf("local_hash  = %16.16"PRIx64"\r\n", *local_hash_64);
   int rval = eeprom_read_wd_key((volatile uint8_t *)key, KEY_SIZE);
   if (rval != 0) {
     // Failed to retrieve key
-    return;
+    printf("desired_mac unknown -- no key\r\n");
+  } else {
+    if (0) {
+      printf("key");
+      for (unsigned jx=0; jx<KEY_SIZE; jx++) printf(" %2.2x", key[jx]);
+      printf("\r\n");
+    }
+    core_siphash((unsigned char *) desired_mac, (unsigned char *) local_hash, 8, key);
+    memset(key, 0xcc, KEY_SIZE); // Clobber key in RAM
+    printf("desired_mac = %16.16"PRIx64"\r\n", *((uint64_t *)desired_mac));
   }
-  core_siphash((unsigned char *) desired_mac, (unsigned char *) local_hash, 8, key);
-  memset(key, 0xcc, KEY_SIZE); // Clobber key in RAM
-  printf("poll_counter = %d\r\n", poll_counter);
-  printf("FPGA state  = %s\r\n", state_str(fpga_state));
-  //printf("local_hash  = %8.8"PRIx32" %8.8"PRIx32"\r\n", local_hash[0], local_hash[1]);
-  printf("local_hash  = %8.8"PRIx64"\r\n", *local_hash_64);
-  printf("desired_mac = %8.8"PRIx64"\r\n", *((uint64_t *)desired_mac));
-  //printf("remote_hash = %8.8"PRIx32" %8.8"PRIx32"\r\n", remote_hash[0], remote_hash[1]);
-  printf("remote_hash = %"PRIx64"\r\n", *remote_hash_64);
+  printf("remote_hash = %16.16"PRIx64"\r\n", *remote_hash_64);
 }
