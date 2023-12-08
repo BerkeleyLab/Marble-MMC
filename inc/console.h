@@ -47,6 +47,7 @@ void UARTTXQUEUE_Init(void);
 
 int restoreIPAddr(void);
 int restoreMACAddr(void);
+void mgtclk_xpoint_en(void);
 
 #ifdef __cplusplus
 }
