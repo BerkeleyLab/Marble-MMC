@@ -169,5 +169,3 @@ void print_status_counters(void) {
 #endif
   return;
 }
-
-

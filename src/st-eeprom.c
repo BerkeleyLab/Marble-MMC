@@ -497,4 +497,32 @@ int eeprom_read_ ## NAME(volatile uint8_t *pdata, int len) { return eeprom_read_
 FOR_ALL_EETAGS()
 #undef X
 
+/* int eeprom_read_wd_key(volatile uint8_t *pdata, int len);
+ *  The whole eeprom scheme is built around an 8-byte structure with a 6-byte
+ *  payload, so this bespoke hack is necessary for any larger structures.
+ */
+int eeprom_read_wd_key(volatile uint8_t *pdata, int len) {
+  _UNUSED(len);
+  // Read part 0 (6 bytes)
+  if (eeprom_read_wd_key_0(pdata, 6) < 0) return -1;
+  // Read part 1 (6 bytes)
+  if (eeprom_read_wd_key_1((pdata+6), 6) < 0) return -1;
+  // Read part 2 (6 bytes)
+  if (eeprom_read_wd_key_2((pdata+12), 4) < 0) return -1;
+  return 0;
+}
 
+/* int eeprom_store_wd_key(const uint8_t *pdata, int len);
+ *  The whole eeprom scheme is built around an 8-byte structure with a 6-byte
+ *  payload, so this bespoke hack is necessary for any larger structures.
+ */
+int eeprom_store_wd_key(const uint8_t *pdata, int len) {
+  _UNUSED(len);
+  // Store part 0 (6 bytes)
+  if (eeprom_store_wd_key_0(pdata, 6) < 0) return -1;
+  // Store part 1 (6 bytes)
+  if (eeprom_store_wd_key_1((pdata+6), 6) < 0) return -1;
+  // Store part 2 (6 bytes)
+  if (eeprom_store_wd_key_2((pdata+12), 4) < 0) return -1;
+  return 0;
+}
