@@ -12,9 +12,6 @@
 #include "st-eeprom.h"
 #include <stdio.h>
 
-// Using PRIx32/PRIx64 for cross-platform compatibility (sim vs target)
-#include <inttypes.h>
-
 //#define DEBUG_PRINT
 #include "dbg.h"
 
@@ -35,9 +32,9 @@ typedef enum {
 } FPGAWD_State_t;
 
 static uint8_t remote_hash[HASH_SIZE] = {0};
-static uint64_t *remote_hash_64 = (uint64_t *)remote_hash;
+// static uint64_t *remote_hash_64 = (uint64_t *)remote_hash;
 static uint8_t local_hash[HASH_SIZE] = {0};
-static uint64_t *local_hash_64 = (uint64_t *)local_hash;
+// static uint64_t *local_hash_64 = (uint64_t *)local_hash;
 static uint32_t entropy[HASH_SIZE_32] = {0};
 static int rng_status = 0;
 static unsigned int poll_counter = 0;
@@ -168,13 +165,25 @@ static void compute_hash(void) {
   return;
 }
 
-/*
-static const unsigned char *get_auth_key(void) {
-  return (const unsigned char *) "super secret key";  // trailing nul ignored
-}
-*/
-
 #define KEY_SIZE                (16)
+
+#ifdef KEY_BYPASS
+#define eeprom_read_wd_key get_fake_key
+int get_fake_key(volatile uint8_t *pdata, int len) {
+  uint8_t fake[] = "super secret key";  // trailing nul ignored
+  if (len != KEY_SIZE) return -1;
+  memcpy((uint8_t *) pdata, fake, KEY_SIZE);
+  return 0;
+}
+#endif
+
+static void print64(const char *header, uint8_t *data, unsigned len)
+{
+  printf(header);
+  for (unsigned jx=0; jx<len; jx++) printf("%2.2x", data[jx]);
+  printf("\r\n");
+}
+
 static int vet_hash(void) {
   uint8_t desired_mac[HASH_SIZE];
   unsigned char key[KEY_SIZE];
@@ -195,11 +204,9 @@ static int vet_hash(void) {
     if (remote_hash[n] != desired_mac[n]) match = 0;
   }
   if (0) {
-    //printf("local_hash  = %8.8"PRIx32" %8.8"PRIx32"\r\n", local_hash[0], local_hash[1]);
-    printf("local_hash  = %8.8"PRIx64"\r\n", *local_hash_64);
-    printf("desired_mac = %8.8"PRIx64"\r\n", *((uint64_t *)desired_mac));
-    //printf("remote_hash = %8.8"PRIx32" %8.8"PRIx32"\r\n", remote_hash[0], remote_hash[1]);
-    printf("remote_hash = %8.8"PRIx64"\r\n", *remote_hash_64);
+    print64("local_hash  = ", local_hash, HASH_SIZE);
+    print64("desired_mac = ", desired_mac, HASH_SIZE);
+    print64("remote_hash = ", remote_hash, HASH_SIZE);
     printf("vet_hash match = %d\r\n", match);
   }
   return match;
@@ -211,7 +218,7 @@ void FPGAWD_ShowState(void) {
   unsigned char key[KEY_SIZE];
   printf("poll_counter = %d\r\n", poll_counter);
   printf("FPGA state  = %s\r\n", state_str(fpga_state));
-  printf("local_hash  = %16.16"PRIx64"\r\n", *local_hash_64);
+  print64("local_hash  = ", local_hash, HASH_SIZE);
   int rval = eeprom_read_wd_key((volatile uint8_t *)key, KEY_SIZE);
   if (rval != 0) {
     // Failed to retrieve key
@@ -224,7 +231,7 @@ void FPGAWD_ShowState(void) {
     }
     core_siphash((unsigned char *) desired_mac, (unsigned char *) local_hash, 8, key);
     memset(key, 0xcc, KEY_SIZE); // Clobber key in RAM
-    printf("desired_mac = %16.16"PRIx64"\r\n", *((uint64_t *)desired_mac));
+    print64("desired_mac = ", desired_mac, HASH_SIZE);
   }
-  printf("remote_hash = %16.16"PRIx64"\r\n", *remote_hash_64);
+  print64("remote_hash = ", remote_hash, HASH_SIZE);
 }
