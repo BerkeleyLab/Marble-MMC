@@ -11,7 +11,9 @@ import time
 import datetime
 import mkmbox
 import socket
-from pysiphash import uint_sip_mac, byteswap32
+from pysiphash import SipHash_2_4
+import struct
+from binascii import hexlify
 LBUS_ACCESS_FOUND = True
 SPI_MBOX_ADDR = 0x200000  # needs to match spi_mbox base_addr in static_regmap.json
 
@@ -19,7 +21,7 @@ SPI_MBOX_ADDR = 0x200000  # needs to match spi_mbox base_addr in static_regmap.j
 def transform(rval):
     tkey = bytearray()
     tkey.extend("super secret key".encode())
-    xval = uint_sip_mac(rval, tkey)
+    xval = SipHash_2_4(tkey, rval).hash_nopad()
     return xval
 
 
@@ -30,24 +32,21 @@ def word_do(ipAddr, pageNo, wordName, val):
         return None
     rvals = me.mailboxReadWrite(ipAddr, SPI_MBOX_ADDR+elementAddr, val, size=size)
     rvals = list(rvals)
-    # rvals.reverse()
-    rval = mi._combine(*rvals)
-    return rval
+    rvals.reverse()  # I was trying to get rid of reordering like this
+    return rvals
 
 
 def refresh(ipAddr, mi):
-    rval_l = byteswap32(word_do(ipAddr, 7, "WD_NONCE_L", None))
-    rval_h = byteswap32(word_do(ipAddr, 7, "WD_NONCE_H", None))
-    rval_s = "{:08x} {:08x}".format(rval_l, rval_h)
+    rvals = word_do(ipAddr, 7, "WD_NONCE", None)
+    rval_b = bytearray(rvals)
+    rval_s = hexlify(rval_b).decode()
     # print("Returned "+rval_s)
-    oval = transform((rval_l, rval_h))  # key step
-    oval_s = "{:08x} {:08x}".format(oval[0], oval[1])
+    oval = transform(rval_b)
+    oval_s = hexlify(struct.pack("Q", oval)).decode()
     # print("Writing  "+oval_s)
-    rval_l = word_do(ipAddr, 8, "WD_HASH_L", byteswap32(oval[0]))
-    rval_h = word_do(ipAddr, 8, "WD_HASH_H", byteswap32(oval[1]))
+    word_do(ipAddr, 8, "WD_HASH", oval)
     timestamp = datetime.datetime.utcnow().replace(microsecond=0).isoformat()
     print(timestamp + "Z Handshake " + ipAddr + "  " + rval_s + " -> " + oval_s)
-    # print("Returned {:x} {:x}".format(rval_l, rval_h))
     return 0
 
 

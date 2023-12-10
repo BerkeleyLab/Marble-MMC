@@ -72,15 +72,14 @@ def _int(s):
         elif 'h' in s.lower():
             hindex = s.index('h') # Assuming this method exists
             try:
-                return int(s[:hindex],16)
+                return int(s[:hindex], 16)
             except:
                 pass
     return None
 
 def _splitBytes(val, size):
-    l = []
-    for m in range(size):
-        l.append((val >> 8*m) & 0xff)
+    l = [(val >> 8*m) & 0xff for m in range(size)]
+    l.reverse()  # big-endian, network byte order
     return l
 
 def mailboxReadWrite(ipAddr, address, value, size=1, verbose=False):
@@ -89,13 +88,13 @@ def mailboxReadWrite(ipAddr, address, value, size=1, verbose=False):
     readNWrite = False
     if value is None:
         readNWrite = True
-    dev = lbus_access(ipAddr, port=803)
+    dev = lbus_access(ipAddr, port=803, allow_burst=False)
     addrs = [address]
     if readNWrite:
         vals = [None]*size
     else:
         vals = _splitBytes(value, size)
-    for n in range(1,size):
+    for n in range(1, size):
         addrs.append(address + n)
     if verbose:
         if readNWrite:
@@ -165,5 +164,4 @@ def doMailboxReadWrite(argv):
 if __name__ == "__main__":
     import sys
     sys.exit(doMailboxReadWrite(sys.argv))
-    #sys.exit(testGetPageAndName(sys.argv))
-
+    # sys.exit(testGetPageAndName(sys.argv))
