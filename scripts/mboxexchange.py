@@ -82,13 +82,16 @@ def _splitBytes(val, size):
     l.reverse()  # big-endian, network byte order
     return l
 
-def mailboxReadWrite(ipAddr, address, value, size=1, verbose=False):
+def mailboxReadWrite(ipAddr, address, value, size=1, verbose=False, port=803):
     """Write to mailbox page number 'nPage', element 'name' via lbus_access low-level protocol
     with IP address 'ipAddr'"""
+    if not LBUS_ACCESS_FOUND:
+        print("lbus_access not imported")
+        return []
     readNWrite = False
     if value is None:
         readNWrite = True
-    dev = lbus_access(ipAddr, port=803, allow_burst=False)
+    dev = lbus_access(ipAddr, port=port, allow_burst=False)
     addrs = [address]
     if readNWrite:
         vals = [None]*size
@@ -127,6 +130,8 @@ def doMailboxReadWrite(argv):
     parser.add_argument('-d', '--def_file', default=defaultDefFile, help='File name for mailbox definition file to be loaded')
     parser.add_argument('-p', '--page', default=None, help='Mailbox page number')
     parser.add_argument('-i', '--ipAddr', default=None, help='IP Address of marble board')
+    parser.add_argument('--port', default=803, help='UDP port number')
+    parser.add_argument('-x', '--hex', default=False, action="store_true",  help="Print output as hex")
     parser.add_argument('name', nargs='+', default=None, help='Mailbox entry name (and optionally value for write)')
     args = parser.parse_args()
     value = None
@@ -153,12 +158,15 @@ def doMailboxReadWrite(argv):
     if elementAddr == None:
         print("Could not find {} in page {}".format(name, nPage))
         return 1
-    rvals = mailboxReadWrite(args.ipAddr, SPI_MBOX_ADDR+elementAddr, _int(value), size=size)
+    rvals = mailboxReadWrite(args.ipAddr, SPI_MBOX_ADDR+elementAddr, _int(value), size=size, port=int(args.port))
     if value == None:
         rvals = list(rvals)
         rvals.reverse()
         rval = mi._combine(*rvals)
-        print("Returned {}".format(rval))
+        if args.hex:
+            print("Returned 0x{:x}".format(rval))
+        else:
+            print("Returned {}".format(rval))
     return 0
 
 if __name__ == "__main__":

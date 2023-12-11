@@ -5,11 +5,15 @@
 
 //#define DEBUG_PRINT
 #include <stdio.h>
+#include "sim_lass.h"
+#include "sim_api.h"
 #include "dbg.h"
 
 typedef void *SSP_PORT;
 
-#define MAILBOX_PAGES                 (32)
+#define MAILBOX_BASE              (0x200000)
+#define MAILBOX_PAGES                   (32)
+#define MAILBOX_SIZE      (16*MAILBOX_PAGES)
 
 static uint8_t mailbox[MAILBOX_PAGES][16]; // Make sure this stays > max mailbox page
 
@@ -17,6 +21,17 @@ static unsigned int npage = 0;
 
 // GLOBALS
 SSP_PORT SSP_FPGA;
+
+int sim_spi_init(void) {
+  // Build LASS memory map
+  int rval = lass_mem_add(MAILBOX_BASE, MAILBOX_SIZE, (void *)mailbox, ACCESS_BYTES);
+  if (rval) {
+    printf("Could not mailbox to LASS memory map\r\n");
+  } else {
+    printf("Added mailbox to LASS memory map\r\n");
+  }
+  return rval;
+}
 
 int marble_SSP_write16(SSP_PORT ssp, uint16_t *buffer, unsigned size) {
   if (ssp != SSP_FPGA) {
@@ -54,5 +69,3 @@ int marble_SSP_exch16(SSP_PORT ssp, uint16_t *tx_buf, uint16_t *rx_buf, unsigned
   }
   return 0;
 }
-
-

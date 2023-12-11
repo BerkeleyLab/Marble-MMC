@@ -15,6 +15,8 @@
 #include "console.h"
 #include "uart_fifo.h"
 #include "st-eeprom.h"
+#include "sim_api.h"
+#include "sim_lass.h"
 
 /*
  * On the simulated platform, the "UART" console process will be the following:
@@ -54,6 +56,25 @@ static int fpga_enabled = 1;
 static int shiftMessage(void);
 static void _sigHandler(int c);
 
+#define MAILBOX_PORT      (8003)
+uint32_t marble_init(void) {
+  _fpgaDoneTimeStart = BSP_GET_SYSTICK();
+  _systickIrqTimeStart = BSP_GET_SYSTICK();
+  _fpgaDonePend = 1;
+  signal(SIGINT, _sigHandler);
+  fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK);
+  sim_console_state.toExit = 0;
+  sim_console_state.msgReady = 0;
+  eeprom_init();
+  init_sim_ltm4673();
+  if (lass_init(MAILBOX_PORT) < 0) {
+    return -1;
+  }
+  sim_spi_init();
+  printf("Listening on port %d\r\n", MAILBOX_PORT);
+  return 0;
+}
+
 // Emulate USART_RXNE_ISR() from marble_board.c but with keyboard input from stdin
 // Also emulate USART_TXE_ISR() for printf()
 int board_service(void) {
@@ -85,6 +106,8 @@ int board_service(void) {
     marble_SysTick_Handler();
     _systickIrqTimeStart = now;
   }
+  lass_service();
+
   // Keep the system responsive, but don't hog resources
   sleep(BOARD_SERVICE_SLEEP_MS/1000);
   return sim_console_state.toExit;
@@ -130,19 +153,6 @@ static int shiftMessage(void) {
       }
     }
   }
-  return 0;
-}
-
-uint32_t marble_init(void) {
-  _fpgaDoneTimeStart = BSP_GET_SYSTICK();
-  _systickIrqTimeStart = BSP_GET_SYSTICK();
-  _fpgaDonePend = 1;
-  signal(SIGINT, _sigHandler);
-  fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK);
-  sim_console_state.toExit = 0;
-  sim_console_state.msgReady = 0;
-  eeprom_init();
-  init_sim_ltm4673();
   return 0;
 }
 

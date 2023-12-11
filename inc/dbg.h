@@ -29,6 +29,12 @@ extern "C" {
 #define printv(...)      printf(__VA_ARGS__)
 #endif /* VERBOSE_PRINT */
 
+#ifdef CHATTER
+#define printc(...)     printf(__VA_ARGS__)
+#else
+#define printc(...)
+#endif
+
 // Print the compiled date/time
 #define printt()            printf("Compiled on " __DATE__ " at " __TIME__ "\r\n");
 
