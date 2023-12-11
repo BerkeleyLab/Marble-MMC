@@ -13,7 +13,7 @@ extern "C" {
 
 #include <stdint.h>
 
-void FPGAWD_GetNonce(volatile uint8_t *pdata);
+void FPGAWD_GetNonce(uint8_t *pdata);
 void FPGAWD_DoneHandler(void);
 void FPGAWD_HandleHash(const uint8_t *hash);
 void FPGAWD_Poll(void);

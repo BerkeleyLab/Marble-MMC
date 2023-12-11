@@ -42,7 +42,7 @@ def refresh(ipAddr, mi):
     rval_s = hexlify(rval_b).decode()
     # print("Returned "+rval_s)
     oval = transform(rval_b)
-    oval_s = hexlify(struct.pack("Q", oval)).decode()
+    oval_s = hexlify(struct.pack("!Q", oval)).decode()
     # print("Writing  "+oval_s)
     word_do(ipAddr, 8, "WD_HASH", oval)
     timestamp = datetime.datetime.utcnow().replace(microsecond=0).isoformat()

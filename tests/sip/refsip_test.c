@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include <stdlib.h>
 #include "refsip.h"
 
@@ -60,37 +61,62 @@ static int sip_check(const unsigned char *key)
 	return fail;
 }
 
-#define HASH_SIZE (2)
-static int spot_check1(uint32_t local_hash[], uint32_t desired_mac[])
+static void print64(const char *header, const uint8_t *data, unsigned len)
+{
+	printf(header);
+	for (unsigned jx=0; jx<len; jx++) printf("%2.2x", data[jx]);
+	printf("\r\n");
+}
+
+#define HASH_SIZE (8)
+static int spot_check1(const unsigned char *local_nonce, const unsigned char *desired_mac)
 {
 	const unsigned char *tkey = (const unsigned char *) "super secret key";
-	uint32_t result_mac[HASH_SIZE];
-	int ok;
-	core_siphash((unsigned char *) result_mac, (unsigned char *) local_hash, 8, tkey);
-	ok = desired_mac[0] == result_mac[0] && desired_mac[1] == result_mac[1];
-	printf("desired_mac = %8.8lx %8.8lx %s\r\n", desired_mac[0], desired_mac[1], ok ? "OK" : "BAD");
+	unsigned char result_mac[HASH_SIZE];
+	int ok=1;
+	print64("in   ", local_nonce, HASH_SIZE);
+	print64("want ", desired_mac, HASH_SIZE);
+	core_siphash(result_mac, local_nonce, HASH_SIZE, tkey);
+	print64("got  ", result_mac, HASH_SIZE);
+	for (unsigned int n = 0; n < HASH_SIZE; n++) {
+		ok &= (result_mac[n] == desired_mac[n]);
+	}
+	printf("%s\n", ok ? "OK" : "BAD");
 	return !ok;
+}
+
+#define HEX(x) (isdigit(x) ? (x)-'0' : islower(x) ? (x)-'a'+10 : isupper(x) ? (x)-'A'+10 : 0)
+
+static int unhexlify(unsigned char *bytes, const char *hex, unsigned int len)
+{
+	unsigned int ix;
+	if (!bytes || !hex) return 1;
+	for (ix=0; ix<len; ix++) {
+		if (hex[2*ix] == '\0' || hex[2*ix+1] == '\0') break;
+		*bytes++ = HEX(hex[2*ix]) << 4 | HEX(hex[2*ix+1]);
+	}
+	return (ix<len);
 }
 
 static int spot_check(void)
 {
-	uint32_t local_hash[HASH_SIZE], desired_mac[HASH_SIZE];
+	unsigned char local_nonce[HASH_SIZE], desired_mac[HASH_SIZE];
 	int rc = 0;
-	local_hash[0] = 0x00000000;  local_hash[1] = 0x00000000;
-	desired_mac[0] = 0x526ea2cd;  desired_mac[1] = 0x9447a3dc;
-	if (spot_check1(local_hash, desired_mac)) rc = 1;
-	local_hash[0] = 0xd8612c21;  local_hash[1] = 0xbd33c82e;
-	desired_mac[0] = 0xd40e5c3d; desired_mac[1] = 0x0056a781;
-	if (spot_check1(local_hash, desired_mac)) rc = 1;
-	local_hash[0] = 0x6cf3f85b;  local_hash[1] = 0xfd51f6ad;
-	desired_mac[0] = 0x483a1f3a; desired_mac[1] = 0x0f8045fb;
-	if (spot_check1(local_hash, desired_mac)) rc = 1;
+	unhexlify(local_nonce, "0000000000000000", HASH_SIZE);
+	unhexlify(desired_mac, "cda26e52dca34794", HASH_SIZE);
+	if (spot_check1(local_nonce, desired_mac)) rc = 1;
+	unhexlify(local_nonce, "5bf8f36cadf651fd", HASH_SIZE);
+	unhexlify(desired_mac, "3a1f3a48fb45800f", HASH_SIZE);
+	if (spot_check1(local_nonce, desired_mac)) rc = 1;
+	unhexlify(local_nonce, "6f5ee5fc8cc08e8b", HASH_SIZE);
+	unhexlify(desired_mac, "8e763fc0499f581c", HASH_SIZE);
+	if (spot_check1(local_nonce, desired_mac)) rc = 1;
 	return rc;
 }
 
 static void usage(void)
 {
-	printf("Usage: refsip {sign, check}\n  I/O through stdin and stdout\n");
+	printf("Usage: refsip {sign, check, spot}\n  I/O through stdin and stdout\n");
 }
 
 int main(int argc, char *argv[])

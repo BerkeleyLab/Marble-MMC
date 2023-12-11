@@ -59,8 +59,8 @@ static const char* state_str(FPGAWD_State_t ss) {
   return "BAD";
 }
 
-void FPGAWD_GetNonce(volatile uint8_t *pdata) {
-  memcpy((void *)pdata, (const void *)local_hash, HASH_SIZE);
+void FPGAWD_GetNonce(uint8_t *pdata) {
+  memcpy(pdata, local_hash, HASH_SIZE);
   return;
 }
 
@@ -194,14 +194,14 @@ static int vet_hash(void) {
   }
   match = 1;
   for (int n = 0; n < HASH_SIZE; n++) {
-    if (remote_hash[n] != 0) match = 0;
+    match &= (remote_hash[n] == 0);
   }
   if (match) return 0;  // all zeros means disabled
   core_siphash((unsigned char *) desired_mac, (unsigned char *) local_hash, 8, key);
-  memset(key, 0xcc, KEY_SIZE); // Clobber key in RAM
+  memset(key, 0xcc, KEY_SIZE);  // Clobber key in RAM
   match = 1;
   for (int n = 0; n < HASH_SIZE; n++) {
-    if (remote_hash[n] != desired_mac[n]) match = 0;
+    match &= (remote_hash[n] == desired_mac[n]);
   }
   if (0) {
     print64("local_hash  = ", local_hash, HASH_SIZE);
@@ -230,7 +230,7 @@ void FPGAWD_ShowState(void) {
       printf("\r\n");
     }
     core_siphash((unsigned char *) desired_mac, (unsigned char *) local_hash, 8, key);
-    memset(key, 0xcc, KEY_SIZE); // Clobber key in RAM
+    memset(key, 0xcc, KEY_SIZE);  // Clobber key in RAM
     print64("desired_mac = ", desired_mac, HASH_SIZE);
   }
   print64("remote_hash = ", remote_hash, HASH_SIZE);
