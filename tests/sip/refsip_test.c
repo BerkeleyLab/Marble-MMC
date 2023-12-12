@@ -105,10 +105,10 @@ static int spot_check(void)
 	unhexlify(local_nonce, "0000000000000000", HASH_SIZE);
 	unhexlify(desired_mac, "cda26e52dca34794", HASH_SIZE);
 	if (spot_check1(local_nonce, desired_mac)) rc = 1;
-	unhexlify(local_nonce, "5bf8f36cadf651fd", HASH_SIZE);
+	unhexlify(local_nonce, "fd51f6ad6cf3f85b", HASH_SIZE);
 	unhexlify(desired_mac, "3a1f3a48fb45800f", HASH_SIZE);
 	if (spot_check1(local_nonce, desired_mac)) rc = 1;
-	unhexlify(local_nonce, "6f5ee5fc8cc08e8b", HASH_SIZE);
+	unhexlify(local_nonce, "8b8ec08cfce55e6f", HASH_SIZE);
 	unhexlify(desired_mac, "8e763fc0499f581c", HASH_SIZE);
 	if (spot_check1(local_nonce, desired_mac)) rc = 1;
 	return rc;

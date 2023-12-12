@@ -18,6 +18,14 @@
 #define debug 0
 #endif
 
+// handle this optimization automatically per gcc documentation
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#define NATIVE_LITTLE_ENDIAN
+#endif
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#define NATIVE_BIG_ENDIAN
+#endif
+
 #define STORE64_BE(DST, W) store64_be((DST), (W))
 static inline void
 store64_be(uint8_t dst[8], uint64_t w)
@@ -123,8 +131,8 @@ void core_siphash(unsigned char *out, const unsigned char *in,
     v1 ^= k1;
     v0 ^= k0;
     for (; in != end; in += 8) {
-        // Use big-endian because that's network byte order?
-        m = LOAD64_BE(in);
+        // Use little-endian because that's in the spec
+        m = LOAD64_LE(in);
         if (debug) printf("siphash m    %16.16"PRIx64"\n", m);
         v3 ^= m;
         SIPROUND;

@@ -35,7 +35,6 @@ def word_do(ipAddr, pageNo, wordName, val, port=803):
         return None
     rvals = me.mailboxReadWrite(ipAddr, SPI_MBOX_ADDR+elementAddr, val, size=size, port=port)
     rvals = list(rvals)
-    rvals.reverse()  # I was trying to get rid of reordering like this
     return rvals
 
 
