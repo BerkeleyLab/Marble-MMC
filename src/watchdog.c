@@ -32,9 +32,7 @@ typedef enum {
 } FPGAWD_State_t;
 
 static uint8_t remote_hash[HASH_SIZE] = {0};
-// static uint64_t *remote_hash_64 = (uint64_t *)remote_hash;
-static uint8_t local_hash[HASH_SIZE] = {0};
-// static uint64_t *local_hash_64 = (uint64_t *)local_hash;
+static uint8_t local_nonce[HASH_SIZE] = {0};
 static uint32_t entropy[HASH_SIZE_32] = {0};
 static int rng_status = 0;
 static unsigned int poll_counter = 0;
@@ -60,7 +58,7 @@ static const char* state_str(FPGAWD_State_t ss) {
 }
 
 void FPGAWD_GetNonce(uint8_t *pdata) {
-  memcpy(pdata, local_hash, HASH_SIZE);
+  memcpy(pdata, local_nonce, HASH_SIZE);
   return;
 }
 
@@ -160,7 +158,7 @@ static void compute_hash(void) {
   for (int n = 0; n < HASH_SIZE; n++) {
     // Yuck.  Is there a better (safe/correct) way of copying two 32-bit ints
     // to eight bytes?
-    local_hash[n] = (entropy[(n >> 2)] >> 8*(n % 4)) & 0xff;
+    local_nonce[n] = (entropy[(n >> 2)] >> 8*(n % 4)) & 0xff;
   }
   return;
 }
@@ -177,7 +175,7 @@ int get_fake_key(volatile uint8_t *pdata, int len) {
 }
 #endif
 
-static void print64(const char *header, uint8_t *data, unsigned len)
+static void print64(const char *header, const uint8_t *data, unsigned len)
 {
   printf(header);
   for (unsigned jx=0; jx<len; jx++) printf("%2.2x", data[jx]);
@@ -197,14 +195,14 @@ static int vet_hash(void) {
     match &= (remote_hash[n] == 0);
   }
   if (match) return 0;  // all zeros means disabled
-  core_siphash((unsigned char *) desired_mac, (unsigned char *) local_hash, 8, key);
+  core_siphash((unsigned char *) desired_mac, (unsigned char *) local_nonce, 8, key);
   memset(key, 0xcc, KEY_SIZE);  // Clobber key in RAM
   match = 1;
   for (int n = 0; n < HASH_SIZE; n++) {
     match &= (remote_hash[n] == desired_mac[n]);
   }
   if (0) {
-    print64("local_hash  = ", local_hash, HASH_SIZE);
+    print64("local_nonce = ", local_nonce, HASH_SIZE);
     print64("desired_mac = ", desired_mac, HASH_SIZE);
     print64("remote_hash = ", remote_hash, HASH_SIZE);
     printf("vet_hash match = %d\r\n", match);
@@ -218,7 +216,7 @@ void FPGAWD_ShowState(void) {
   unsigned char key[KEY_SIZE];
   printf("poll_counter = %d\r\n", poll_counter);
   printf("FPGA state  = %s\r\n", state_str(fpga_state));
-  print64("local_hash  = ", local_hash, HASH_SIZE);
+  print64("local_nonce = ", local_nonce, HASH_SIZE);
   int rval = eeprom_read_wd_key((volatile uint8_t *)key, KEY_SIZE);
   if (rval != 0) {
     // Failed to retrieve key
@@ -229,7 +227,7 @@ void FPGAWD_ShowState(void) {
       for (unsigned jx=0; jx<KEY_SIZE; jx++) printf(" %2.2x", key[jx]);
       printf("\r\n");
     }
-    core_siphash((unsigned char *) desired_mac, (unsigned char *) local_hash, 8, key);
+    core_siphash((unsigned char *) desired_mac, (unsigned char *) local_nonce, 8, key);
     memset(key, 0xcc, KEY_SIZE);  // Clobber key in RAM
     print64("desired_mac = ", desired_mac, HASH_SIZE);
   }
