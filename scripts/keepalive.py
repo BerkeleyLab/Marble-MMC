@@ -19,6 +19,10 @@ LBUS_ACCESS_FOUND = True
 SPI_MBOX_ADDR = 0x200000  # needs to match spi_mbox base_addr in static_regmap.json
 
 
+def get_ts():
+    return datetime.datetime.utcnow().replace(microsecond=0).isoformat()
+
+
 def transform(rval, key=None):
     if key is None:
         key = "super secret key".encode()
@@ -47,7 +51,7 @@ def refresh(ipAddr, mi, port=803, key=None):
     oval_s = hexlify(struct.pack("!Q", oval)).decode()
     # print("Writing  "+oval_s)
     word_do(ipAddr, 8, "WD_HASH", oval, port=port)
-    timestamp = datetime.datetime.utcnow().replace(microsecond=0).isoformat()
+    timestamp = get_ts()
     print(timestamp + "Z Handshake " + ipAddr + "  " + rval_s + " -> " + oval_s)
     return 0
 
@@ -101,7 +105,8 @@ if __name__ == "__main__":
                 if rc:
                     break
             except socket.timeout:
-                print("Disconnected?", args.ipAddr)
+                timestamp = get_ts()
+                print(timestamp + "Z Timeout   " + args.ipAddr)
             time.sleep(int(args.time))
     except KeyboardInterrupt:
         print("\nExiting")
