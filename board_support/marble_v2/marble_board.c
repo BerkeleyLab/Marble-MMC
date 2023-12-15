@@ -133,9 +133,11 @@ void marble_UART_init(void)
 void pwr_autoboot(void) {
 #ifndef NUCLEO
 #ifdef XRP_AUTOBOOT
-   printf("XRP_AUTOBOOT\r\n");
-   marble_SLEEP_ms(300);
-   xrp_boot();
+   if (marble_pcb_rev < Marble_v1_4) {
+      printf("XRP_AUTOBOOT\r\n");
+      marble_SLEEP_ms(300);
+      xrp_boot();
+   }
 #endif /* XRP_AUTOBOOT */
 #endif /* NUCLEO */
    return;
@@ -1372,8 +1374,10 @@ static void MX_GPIO_Init(void)
    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
    // TODO - Only on Marble v1.4
-   HAL_NVIC_SetPriority(EXTI15_10_IRQn, 7, 7);
-   HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+   if (0) {
+      HAL_NVIC_SetPriority(EXTI15_10_IRQn, 7, 7);
+      HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+   }
    return;
 }
 

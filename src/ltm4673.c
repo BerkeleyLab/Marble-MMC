@@ -457,6 +457,7 @@ int ltm4673_ch_status(uint8_t dev)
    const uint8_t STATUS_WORD = 0x79;
    uint8_t i2c_dat[4];
    for (unsigned jx = 0; jx < 4; jx++) {
+      marble_SLEEP_ms(200);
       // start selecting channel/page 0 until you finish reading
       // data for all 4 channels
       uint8_t page = 0x00 + jx;
