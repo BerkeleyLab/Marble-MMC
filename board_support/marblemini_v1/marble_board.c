@@ -298,6 +298,10 @@ void enable_fpga(void) {
   return;
 }
 
+void disable_fpga(void) {
+  return;
+}
+
 /************
 * GPIO interrupt setup and user-defined handlers
 ************/
@@ -357,6 +361,11 @@ void marble_MGTMUX_set(uint8_t mgt_num, bool on) {
 uint8_t marble_MGTMUX_status(void) {
   // Intentional no-op for API compatibility
   return 0xFF;
+}
+
+void marble_MGTMUX_set_all(uint8_t mgt_cfg) {
+  _UNUSED(mgt_cfg);
+  return;
 }
 
 /************
@@ -713,3 +722,26 @@ void pwr_autoboot(void) {
    // This likely also unused for Marble-Mini
    return;
 }
+
+int get_hw_rnd(uint32_t *result) {
+  // TODO
+  _UNUSED(result);
+  return 0;
+}
+
+void bsp_FPGAWD_set_period(uint16_t preload) {
+  // TODO
+  _UNUSED(preload);
+  return;
+}
+
+void bsp_FPGAWD_pet(void) {
+  // TODO
+  return;
+}
+
+void bsp_FPGAWD_ISR(void) {
+  // TODO
+  return;
+}
+

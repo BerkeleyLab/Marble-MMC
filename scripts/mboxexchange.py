@@ -72,35 +72,38 @@ def _int(s):
         elif 'h' in s.lower():
             hindex = s.index('h') # Assuming this method exists
             try:
-                return int(s[:hindex],16)
+                return int(s[:hindex], 16)
             except:
                 pass
     return None
 
 def _splitBytes(val, size):
-    l = []
-    for m in range(size):
-        l.append((val >> 8*m) & 0xff)
+    l = [(val >> 8*m) & 0xff for m in range(size)]
+    l.reverse()  # big-endian, network byte order
     return l
 
-def mailboxReadWrite(ipAddr, address, value, size = 1):
+def mailboxReadWrite(ipAddr, address, value, size=1, verbose=False, port=803):
     """Write to mailbox page number 'nPage', element 'name' via lbus_access low-level protocol
     with IP address 'ipAddr'"""
+    if not LBUS_ACCESS_FOUND:
+        print("lbus_access not imported")
+        return []
     readNWrite = False
     if value is None:
         readNWrite = True
-    dev = lbus_access(ipAddr, port=803)
+    dev = lbus_access(ipAddr, port=port, allow_burst=False)
     addrs = [address]
     if readNWrite:
         vals = [None]*size
     else:
         vals = _splitBytes(value, size)
-    for n in range(1,size):
+    for n in range(1, size):
         addrs.append(address + n)
-    if readNWrite:
-        print("Reading from address 0x{:x}".format(address))
-    else:
-        print("Writing {} to address 0x{:x}".format(value, address))
+    if verbose:
+        if readNWrite:
+            print("Reading from address 0x{:x}".format(address))
+        else:
+            print("Writing {} to address 0x{:x}".format(value, address))
     rets = dev.exchange(addrs, vals)
     return rets
 
@@ -127,6 +130,8 @@ def doMailboxReadWrite(argv):
     parser.add_argument('-d', '--def_file', default=defaultDefFile, help='File name for mailbox definition file to be loaded')
     parser.add_argument('-p', '--page', default=None, help='Mailbox page number')
     parser.add_argument('-i', '--ipAddr', default=None, help='IP Address of marble board')
+    parser.add_argument('--port', default=803, help='UDP port number')
+    parser.add_argument('-x', '--hex', default=False, action="store_true",  help="Print output as hex")
     parser.add_argument('name', nargs='+', default=None, help='Mailbox entry name (and optionally value for write)')
     args = parser.parse_args()
     value = None
@@ -153,16 +158,18 @@ def doMailboxReadWrite(argv):
     if elementAddr == None:
         print("Could not find {} in page {}".format(name, nPage))
         return 1
-    rvals = mailboxReadWrite(args.ipAddr, SPI_MBOX_ADDR+elementAddr, _int(value), size=size)
+    rvals = mailboxReadWrite(args.ipAddr, SPI_MBOX_ADDR+elementAddr, _int(value), size=size, port=int(args.port))
     if value == None:
         rvals = list(rvals)
         rvals.reverse()
         rval = mi._combine(*rvals)
-        print("Returned {}".format(rval))
+        if args.hex:
+            print("Returned 0x{:x}".format(rval))
+        else:
+            print("Returned {}".format(rval))
     return 0
 
 if __name__ == "__main__":
     import sys
     sys.exit(doMailboxReadWrite(sys.argv))
-    #sys.exit(testGetPageAndName(sys.argv))
-
+    # sys.exit(testGetPageAndName(sys.argv))

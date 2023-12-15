@@ -232,7 +232,7 @@ class MailboxInterface():
             size = 1
         else:
             size = int(size)
-        if size > 4 or size < 1:
+        if size > 16 or size < 1:
             print("Invalid size {}".format(size))
             return None
         return size
@@ -403,7 +403,13 @@ class MailboxInterface():
                         continue
                     enumName = f"{mbprefix}{name}"
                     size = paramDict.get('size', 1)
-                    if size > 1:
+                    # TODO - Add 'aspointer' boolean option to mbox.def?
+                    aspointer = paramDict.get('aspointer', False)
+                    if (size > 4) or aspointer:    # Use array-mode for sizes > 4
+                        s = "    {};".format(pinput.replace('@', f"&page[{enumName}_{size-1}]"))
+                        s = s.replace("&&", '&')  # Replace any double-ampersands
+                        self._fp(s)
+                    elif size > 1:
                         if not hasBigval:
                             # We need to instantiate an int
                             self._fp(f"    int val;")
@@ -417,10 +423,14 @@ class MailboxInterface():
                         # Assign shifted and OR'd value to temporary variable 'val'
                         self._fp("    val = (int)({});".format(v))
                         # Use the 'input' param string to return 'val' wherever it needs to go
-                        self._fp("    {};".format(pinput.replace('@', 'val')))
+                        s = "    {};".format(pinput.replace('@', 'val'))
+                        s = s.replace("&&", '&')  # Replace any double-ampersands
+                        self._fp(s)
                     else:
                         # size = 1 (nice and easy)
-                        self._fp("    {};".format(pinput.replace('@', f"page[{enumName}]")))
+                        s = "    {};".format(pinput.replace('@', f"page[{enumName}]"))
+                        s = s.replace("&&", '&')  # Replace any double-ampersands
+                        self._fp(s)
                     # Handle acks if needed
                     ack = paramDict.get('ack', None)
                     if ack is None:
@@ -465,14 +475,21 @@ class MailboxInterface():
                         continue
                     enumName = f"{mbprefix}{name}"
                     size = paramDict.get('size', 1)
-                    if size > 1:
+                    aspointer = paramDict.get('aspointer', False)  # TODO
+                    if (size > 4) or aspointer:    # Use array-mode
+                        s = "    {};".format(output.replace('@', f"&page[{enumName}_{size-1}]"))
+                        s = s.replace("&&", '&')  # Replace any double-ampersands
+                        self._fp(s)
+                    elif size > 1:
                         if not hasBigval:
                             # We need to instantiate an int
                             self._fp(f"    int val;")
                             hasBigval = True
                         # Break up into bytes
                         # First, get value
-                        self._fp("    {};".format(output.replace('@', 'val')))
+                        s = "    {};".format(output.replace('@', 'val'))
+                        s = s.replace("&&", '&')  # Replace any double-ampersands
+                        self._fp(s)
                         # Then shift, mask, and assign
                         for m in range(size):
                             byteIndex = size-m-1
@@ -481,7 +498,9 @@ class MailboxInterface():
                             self._fp(f"    page[{elementName}] = (uint8_t)((val >> {shift}) & 0xff);")
                     else:
                         # size = 1
-                        self._fp("    {};".format(output.replace('@', f"page[{enumName}]")))
+                        s = "    {};".format(output.replace('@', f"page[{enumName}]"))
+                        s = s.replace("&&", '&')  # Replace any double-ampersands
+                        self._fp(s)
             if hasOutputs:
                 self._fp("    // Write page data")
                 self._fp(f"    mbox_write_page({npage}, MB{npage}_SIZE, page);")

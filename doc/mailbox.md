@@ -50,3 +50,15 @@ Offset|Name|Size|Direction|Desc|Note
 1|MB6\_FSYNTH\_CONFIG|1|MCC=\>FPGA|Config byte of frequency synthesizer (si570). Bit 0: Enable pin polarity (0 = polarity low, 1 = polarity high). Bit 1: Temperature stability (0 = 20 ppm or 50 ppm, 1 = 7 ppm) Bits 2-5: reserved. Bits [7:6]: 0b01 = Valid config (avoid acting on invalid 0xff or 0x00).|
 2|MB6\_FSYNTH\_FREQ|4|MCC=\>FPGA|Startup frequency of frequency synthesizer (si570) in Hz.|Access by byte as: MB6\_FSYNTH\_FREQ\_x (x=0,1,2,3)
 
+# Page 7
+
+Offset|Name|Size|Direction|Desc|Note
+------|----|----|---------|----|----
+0|MB7\_WD\_NONCE|8|MCC=\>FPGA|A 64-bit nonce to be used by the remote host to produce a watchdog MAC.|Access by byte as: MB7\_WD\_NONCE\_x (x=0,1,2,3,4,5,6,7)
+
+# Page 8
+
+Offset|Name|Size|Direction|Desc|Note
+------|----|----|---------|----|----
+0|MB8\_WD\_HASH|8|FPGA=\>MMC|64-bit MAC supplied by the remote host to reset watchdog timer.|Access by byte as: MB8\_WD\_HASH\_x (x=0,1,2,3,4,5,6,7)
+

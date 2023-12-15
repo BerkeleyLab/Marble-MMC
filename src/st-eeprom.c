@@ -42,8 +42,6 @@ extern const char eeprom_size;
 
 #include "st-eeprom.h"
 
-#define MIN(x, y)         (x > y ? y : x)
-
 typedef enum {
     ee_erased = 0xff,
     ee_valid = 0x55,
@@ -71,7 +69,7 @@ static const uint8_t eeprom0_sector = 1;
 static const uint8_t eeprom1_sector = 2;
 
 static
-const ee_frame* ee_active;
+ee_frame* ee_active;
 
 static
 uint8_t count_bits_set(uint32_t v)
@@ -169,7 +167,7 @@ const ee_frame* ee_find(const ee_frame* bank, ee_tags_t tag)
 }
 
 static
-int ee_write(const ee_frame* bank, ee_tags_t tag, const ee_val_t val)
+int ee_write(ee_frame* bank, ee_tags_t tag, const ee_val_t val)
 {
     const ee_frame* prev = NULL;
 
@@ -212,7 +210,7 @@ int ee_migrate(ee_frame* __restrict__ dst, const ee_frame* __restrict__ src)
             continue;
 
         // does tag already exist in destination?
-        ee_frame* df = (ee_frame*)ee_find(dst, sf->tag);
+        const ee_frame* df = (const ee_frame*)ee_find(dst, sf->tag);
         if(!df) { // not found, migrate tag
             ret = ee_write(dst, sf->tag, sf->val);
 
@@ -221,7 +219,7 @@ int ee_migrate(ee_frame* __restrict__ dst, const ee_frame* __restrict__ src)
     }
 
     if(ret) {
-        printf("ERROR: migrating %p <- %p : %d\n", (void *)dst, (void *)src, ret);
+        printf("ERROR: migrating %p <- %p : %d\n", (void *)dst, (const void *)src, ret);
     }
     return ret;
 }
@@ -355,7 +353,7 @@ int fmc_ee_write(ee_tags_t tag, const ee_val_t val)
     if(tag==0 || tag==0xff) {
         return -EINVAL;
     }
-    const ee_frame* active = ee_active;
+    ee_frame* active = ee_active;
 
     if (active == &eeprom0_base) {
       printd("e0 active\r\n");
@@ -499,4 +497,32 @@ int eeprom_read_ ## NAME(volatile uint8_t *pdata, int len) { return eeprom_read_
 FOR_ALL_EETAGS()
 #undef X
 
+/* int eeprom_read_wd_key(volatile uint8_t *pdata, int len);
+ *  The whole eeprom scheme is built around an 8-byte structure with a 6-byte
+ *  payload, so this bespoke hack is necessary for any larger structures.
+ */
+int eeprom_read_wd_key(volatile uint8_t *pdata, int len) {
+  _UNUSED(len);
+  // Read part 0 (6 bytes)
+  if (eeprom_read_wd_key_0(pdata, 6) < 0) return -1;
+  // Read part 1 (6 bytes)
+  if (eeprom_read_wd_key_1((pdata+6), 6) < 0) return -1;
+  // Read part 2 (6 bytes)
+  if (eeprom_read_wd_key_2((pdata+12), 4) < 0) return -1;
+  return 0;
+}
 
+/* int eeprom_store_wd_key(const uint8_t *pdata, int len);
+ *  The whole eeprom scheme is built around an 8-byte structure with a 6-byte
+ *  payload, so this bespoke hack is necessary for any larger structures.
+ */
+int eeprom_store_wd_key(const uint8_t *pdata, int len) {
+  _UNUSED(len);
+  // Store part 0 (6 bytes)
+  if (eeprom_store_wd_key_0(pdata, 6) < 0) return -1;
+  // Store part 1 (6 bytes)
+  if (eeprom_store_wd_key_1((pdata+6), 6) < 0) return -1;
+  // Store part 2 (6 bytes)
+  if (eeprom_store_wd_key_2((pdata+12), 4) < 0) return -1;
+  return 0;
+}

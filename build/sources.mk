@@ -10,3 +10,6 @@ $(SOURCE_DIR)/console.c \
 $(SOURCE_DIR)/st-eeprom.c \
 $(SOURCE_DIR)/pmbus.c \
 $(SOURCE_DIR)/ltm4673.c \
+$(SOURCE_DIR)/watchdog.c \
+$(SOURCE_DIR)/refsip.c \
+$(SOURCE_DIR)/system.c \

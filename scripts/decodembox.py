@@ -8,13 +8,13 @@ import os
 import argparse
 
 import mkmbox
-def getFromLeep(ipAddr):
+def getFromLeep(ipAddr, port=803):
     try:
         import leep
     except:
         print("To use LEEP, append path to leep module to PYTHONPATH")
         return None
-    leep_addr = "leep://{}:803".format(ipAddr)
+    leep_addr = "leep://{}:{}".format(ipAddr, port)
     print("Getting from {}".format(leep_addr))
     addr = leep.open(leep_addr, timeout=5.0) # Returns LEEPDevice instance
     mbox = addr.reg_read(["spi_mbox"])[0]
@@ -52,10 +52,11 @@ def getIPAddr(s):
     if s is None:
         return "127.0.0.1"
     # IPv4
-    match = re.search('(\d+.\d+.\d+.\d+)', s)
+    match = re.search('(\d+.\d+.\d+.\d+)(:\d+)?', s)
     if match:
         print(f"{match.groups()}")
-        return match.groups()[0]
+        groups = match.groups()
+        return groups[0], groups[1].strip(':')
     return False
 
 def testGetIPAddr(argv):
@@ -78,7 +79,11 @@ def decodeMbox(argv):
     inputHelp = "Can be IP address to read device via LEEP or file name to read mailbox data from a binary file"
     parser.add_argument('-i', '--input', default=None, help=inputHelp)
     args = parser.parse_args()
-    ipAddr = getIPAddr(args.input)
+    ipAddr, port = getIPAddr(args.input)
+    if port is not None:
+        port = int(port)
+    else:
+        port = 803
     if not ipAddr:
         if not os.path.exists(args.input):
             print("{} does not look like an IP address and also doesn't appear to be an existing file.".format(args.input))
@@ -88,7 +93,7 @@ def decodeMbox(argv):
     if fromFile:
         mboxContents = getFromFile(inFilename)
     else:
-        mboxContents = getFromLeep(ipAddr)
+        mboxContents = getFromLeep(ipAddr, port)
         if mboxContents is None:
             return 1
     if args.store_file is not None:

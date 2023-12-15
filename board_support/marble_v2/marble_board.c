@@ -35,6 +35,7 @@
 #include "console.h"
 #include "st-eeprom.h"
 #include "i2c_pm.h"
+#include "watchdog.h"
 
 #define UART_ECHO
 #ifdef NUCLEO
@@ -42,6 +43,7 @@
 #else
 #define SMBA_PIN GPIO_PIN_15
 #endif
+
 
 #define PRINT_POWER_STATE(subs, on) do {\
    char s[3] = {'f', 'f', '\0'}; \
@@ -94,7 +96,6 @@ static void USART_RXNE_ISR(void);
 static void USART_TXE_ISR(void);
 static void USART_Erase_Echo(void);
 static void USART_Erase(int n);
-static void marble_apply_params(void);
 static void marble_read_pcb_rev(void);
 static int marble_MGTMUX_store(void);
 static void I2C_PM_smba_handler(void);
@@ -450,6 +451,11 @@ void reset_fpga(void)
    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, true);
 }
 
+void disable_fpga(void) {
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, false);
+  return;
+}
+
 void enable_fpga(void) {
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, true);
   return;
@@ -628,7 +634,6 @@ static int marble_MGTMUX_store(void) {
   }
   return rval;
 }
-
 
 
 /************
@@ -910,8 +915,6 @@ uint32_t marble_init(void)
   marble_UART_init();
 
   LM75_Init();
-  eeprom_init();
-  marble_apply_params();
 
   printf("** Marble init done **\r\n");
   marble_print_pcb_rev();
@@ -922,34 +925,6 @@ uint32_t marble_init(void)
 
   //marble_MDIO_init();
   return 0;
-}
-
-/*
- * static void marble_apply_params(void);
- *    Apply parameters stored in non-volatile memory.
- */
-static void marble_apply_params(void) {
-  // Fan speed
-  uint8_t val;
-  if (eeprom_read_fan_speed(&val, 1)) {
-    printf("Could not read current fan speed.\r\n");
-  } else {
-    max6639_set_fans((int)val);
-  }
-  // Over-temperature threshold
-  if (eeprom_read_overtemp(&val, 1)) {
-    printf("Could not read over-temperature threshold.\r\n");
-  } else {
-    max6639_set_overtemp(val);
-    LM75_set_overtemp((int)val);
-  }
-  // MGT MUX
-  if (eeprom_read_mgt_mux(&val, 1)) {
-    printf("Could not read MGT MUX config.\r\n");
-  } else {
-    marble_MGTMUX_set_all(val);
-  }
-  return;
 }
 
 void marble_print_pcb_rev(void) {
@@ -1406,36 +1381,7 @@ static void MX_GPIO_Init(void)
    return;
 }
 
-/*
-  // Enable TIM1_BRK_TIM9_IRQn;
-  HAL_NVIC_SetPriority(TIM1_BRK_TIM9_IRQn, 7, 7);
-  HAL_NVIC_EnableIRQ(TIM1_BRK_TIM9_IRQn);
-*/
-
-
-void FPGAWD_set_period(uint16_t preload) {
-  if (preload) {
-  // disable timer, set preload, and restart timer
-    TIM9->CR1 &= ~TIM_CR1_CEN; // disable counter
-    TIM9->ARR = preload;
-    TIM9->CR1 |= TIM_CR1_CEN;  // enable counter
-    HAL_NVIC_EnableIRQ(TIM1_BRK_TIM9_IRQn);
-  } else {
-  // If preload == 0, disable timer and interrupt
-    TIM9->ARR = 0xFFFF;
-    TIM9->CR1 &= ~TIM_CR1_CEN; // disable counter
-    HAL_NVIC_DisableIRQ(TIM1_BRK_TIM9_IRQn);
-  }
-  return;
-}
-
-void FPGAWD_pet(void) {
-  // Software pet the watchdog
-  TIM9->EGR |= TIM_EGR_UG;
-  return;
-}
-
-void FPGAWD_ISR(void) {
+void bsp_FPGAWD_ISR(void) {
   // Reset the FPGA (if preload == 0, this should never fire)
   /* Pull the PROGRAM_B pin low; it's spelled PROG_B on schematic */
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, false);
@@ -1481,10 +1427,9 @@ uint32_t fsynthGetFreq(void) {
   return 0;
 }
 
-int get_hw_rnd(uint32_t *result, int *rng_init_status_p) {
+int get_hw_rnd(uint32_t *result) {
   HAL_StatusTypeDef rc;
   rc = HAL_RNG_GenerateRandomNumber(&hrng, result);
-  *rng_init_status_p = rng_init_status;
   /*
   printf("CR = 0x%08lx\r\n", hrng.Instance->CR);
   printf("SR = 0x%08lx\r\n", hrng.Instance->SR);

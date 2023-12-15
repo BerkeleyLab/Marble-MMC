@@ -22,6 +22,7 @@ typedef enum {
 void I2C_PM_init(void);
 void I2C_PM_scan(void);
 void I2C_PM_probe(void);
+void I2C_PM_bus_display(void);
 void print_max6639(void);
 void print_max6639_decoded(void);
 int get_max6639_reg(int regno, int *value);
@@ -68,6 +69,7 @@ int LM75_read(uint8_t dev, LM75_REG reg, int *data);
 int LM75_write(uint8_t dev, LM75_REG reg, int data);
 int LM75_set_overtemp(int ot);
 
+void xrp_boot(void);
 int xrp_ch_status(uint8_t dev, uint8_t chn);
 void xrp_dump(uint8_t dev);
 void xrp_flash(uint8_t dev);

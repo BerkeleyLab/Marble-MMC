@@ -18,6 +18,7 @@
 #include "uart_fifo.h"
 #include "st-eeprom.h"
 #include "ltm4673.h"
+#include "watchdog.h"
 
 #define AUTOPUSH
 // TODO - Put this in a better place
@@ -58,7 +59,9 @@ const char *menu_str[] = {"\r\n",
   "q otemp - Set overtemperature threshold (degC)\r\n",
   "r enable - Set mailbox enable/disable (0/1, on/off)\r\n",
   "s addr_hex freq_hz config_hex - Set Si570 configuration\r\n",
-  "t pmbus_msg - Forward PMBus transaction to LTM4673\r\n"
+  "t pmbus_msg - Forward PMBus transaction to LTM4673\r\n",
+  "u period - Set/get watchdog timeout period (in seconds)\r\n",
+  "v key - Set a new 128-bit secret key (non-volatile, write only).\r\n"
 };
 #define MENU_LEN (sizeof(menu_str)/sizeof(*menu_str))
 
@@ -66,7 +69,6 @@ static uint8_t _msgCount;
 static uint8_t _fpgaEnable;
 
 // TODO - find a better home for these
-static void pm_bus_display(void);
 static int console_handle_msg(char *rx_msg, int len);
 //static int console_shift_all(uint8_t *pData);
 static int console_shift_msg(uint8_t *pData);
@@ -77,6 +79,8 @@ static int handle_msg_IP(char *rx_msg, int len);
 static int handle_msg_MAC(char *rx_msg, int len);
 static int handle_msg_fan_speed(char *rx_msg, int len);
 static int handle_msg_overtemp(char *rx_msg, int len);
+static int handle_msg_watchdog(char *rx_msg, int len);
+static int handle_msg_key(char *rx_msg, int len);
 static int handle_mailbox_enable(char *rx_msg, int len);
 static int handle_msg_MGTMUX(char *rx_msg, int len);
 //static void print_mac_ip(mac_ip_data_t *pmac_ip_data);
@@ -89,6 +93,7 @@ static int sscanfMAC(const char *s, volatile uint8_t *data, int len);
 static int sscanfFanSpeed(const char *s, int len);
 static int sscanfUnsignedDecimal(const char *s, int len);
 static int sscanfUnsignedHex(const char *s, int len);
+static int sscanfUHexExact(const char *s, int len);
 static int sscanfMGTMUX(const char *s, int len);
 static int sscanfSpace(const char *s, int len);
 static int sscanfNonSpace(const char *s, int len);
@@ -200,7 +205,7 @@ static int console_handle_msg(char *rx_msg, int len)
            break;
         case 'e':
            printf("PM bus display\r\n");
-           pm_bus_display();
+           I2C_PM_bus_display();
            break;
         case 'f':
            printf("XRP flash\r\n");
@@ -258,6 +263,12 @@ static int console_handle_msg(char *rx_msg, int len)
            break;
         case 't':
            sscanfPMBridge(rx_msg, len);
+           break;
+        case 'u':
+           handle_msg_watchdog(rx_msg, len);
+           break;
+        case 'v':
+           handle_msg_key(rx_msg, len);
            break;
         default:
            printf(unk_str);
@@ -571,30 +582,6 @@ static void ina219_test(void)
 	}
 }
 
-static void pm_bus_display(void)
-{
-	LM75_print(LM75_0);
-	LM75_print(LM75_1);
-       if (marble_get_board_id() < Marble_v1_3)
-          xrp_dump(XRP7724);
-       else
-          ltm4673_read_telem(LTM4673);
-}
-
-void xrp_boot(void)
-{
-   uint8_t pwr_on=0;
-   for (int i=1; i<5; i++) {
-      pwr_on |= xrp_ch_status(XRP7724, i);
-   }
-   if (pwr_on) {
-      printf("XRP already ON. Skipping autoboot...\r\n");
-   } else {
-      xrp_go(XRP7724);
-      marble_SLEEP_ms(1000);
-   }
-}
-
 static void print_mac(uint8_t *pdata) {
   printf("MAC: ");
   PRINT_MULTIBYTE_HEX(pdata, 6, ':');
@@ -851,6 +838,62 @@ static int sscanfUnsignedDecimal(const char *s, int len) {
   return (int)sum;
 }
 
+static int handle_msg_watchdog(char *rx_msg, int len) {
+  int index = sscanfNext(rx_msg, len);
+  int val;
+  if (index < 0) {
+    val = FPGAWD_GetPeriod();
+    if (val == 0) {
+      printf("Watchdog disabled (period = 0)\r\n");
+    } else {
+      printf("Current watchdog timeout: %d seconds\r\n", val);
+    }
+    return -1;
+  }
+  val = sscanfUnsignedDecimal((rx_msg + index), len-index);
+  if (val < 0) {
+    printf("Failed to parse\r\n");
+    return -1;
+  }
+  // Set and peg to limits
+  val = FPGAWD_SetPeriod((unsigned int)val);
+  eeprom_store_wd_period((const uint8_t *)&val, 1);
+  return 0;
+}
+
+#define KEY_LEN     (16)
+static int handle_msg_key(char *rx_msg, int len) {
+  int index = sscanfNext(rx_msg, len);
+  uint8_t key[KEY_LEN];
+  int rval;
+  int n;
+  for (n = 0; n < KEY_LEN; n++) {
+    // Parse hex string into bytes
+    rval = sscanfUHexExact((const char *)(rx_msg + index + 2*n), 2);
+    if (rval < 0) {
+      key[n] = 0xcc;
+      break;
+    }
+    key[n] = (uint8_t)rval;
+  }
+  if (n < KEY_LEN-1) {
+    // Failed to parse all 2*KEY_LEN chars
+    printf("Failed to parse %d consecutive hex characters. Key not stored.\r\n", 2*KEY_LEN);
+    return -1;
+  }
+  if (1) {
+    for (n = 0; n < 16; n++) {
+      printf("%02x ", key[n]);
+      if ((n == 7) || (n == 15)) printf("\r\n");
+    }
+  }
+  // Store non-volatile
+  eeprom_store_wd_key((const uint8_t *)key, KEY_LEN);
+  // Clobber the stack memory before exiting.
+  memset(key, 0xaa, KEY_LEN);
+  return 0;
+}
+
 /*
  * static int sscanfUnsignedHex(const char *s, int len);
  *    This function skips any non-hex characters (0-9,A-F,a-f)
@@ -877,6 +920,34 @@ static int sscanfUnsignedHex(const char *s, int len) {
     }
   }
   if (!digitsFound) {
+    return -1;
+  }
+  return (int)sum;
+}
+
+/* static int sscanfUHexExact(const char *s, int len);
+ *  This function is less permissive than sscanfUnsignedHex()
+ *  and expects to find exactly 'len' hex characters starting
+ *  from 's'.
+ *
+ *  Returns -1 if the above criterion is not met (any non-hex
+ *  chars within the first 'len' chars)
+ *
+ *  Returns the scanned value otherwise.
+ */
+static int sscanfUHexExact(const char *s, int len) {
+  int r;
+  unsigned int sum = 0;
+  int n;
+  for (n = 0; n < len; n++) {
+    r = htoi(s[n]);
+    if (r >= 0) {
+      sum = (sum * 16) + r;
+    } else {
+      break;
+    }
+  }
+  if (n < (len-1)) {
     return -1;
   }
   return (int)sum;
