@@ -10,6 +10,7 @@ import random
 import argparse
 import re
 import serial
+from serial.tools import list_ports
 
 MMC_CONSOLE_CHAR_WATCHDOG_KEY = 'v'
 DEFAULT_KEY_FILE = "mmc_key"
@@ -30,11 +31,13 @@ def get_default_key_path():
 
 DEFAULT_KEY_PATH = get_default_key_path()
 
-def get_default_key_file():
-    return os.path.join(DEFAULT_KEY_PATH, DEFAULT_KEY_FILE)
+def get_default_key_file(_id=None):
+    filename = make_filename(_id)
+    filedir = os.environ.get("MMC_KEY_PATH", DEFAULT_KEY_PATH)
+    return os.path.join(filedir, filename)
 
 def list_devs():
-    ports = serial.tools.list_ports.comports()
+    ports = list_ports.comports()
     return [p.device for p in ports]
 
 def make_filename(_id=None):
@@ -53,7 +56,6 @@ def open_file(filedir=None, _id=None, force=False):
         filedir = os.environ.get("MMC_KEY_PATH", DEFAULT_KEY_PATH)
     filename = make_filename(_id)
     # Create a new file (or overwrite existing)
-    print("joining {} and {}".format(filedir, filename))
     filepath = os.path.join(filedir, filename)
     if os.path.exists(filepath) and not force:
         print("Using existing keyfile {}.\nUse --regen to generate new key and overwrite.".format(filepath))

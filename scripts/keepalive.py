@@ -82,7 +82,9 @@ if __name__ == "__main__":
     parser.add_argument('-d', '--def_file', default=defaultDefFile,
                         help='File name for mailbox definition file to be loaded')
     parser.add_argument('-p', '--port', default=803, help="UDP port number")
-    parser.add_argument('-k', '--keyfile', default=None, help="Shared secret key file for MAC")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('-k', '--keyfile', default=None, help="Shared secret key file for MAC")
+    group.add_argument('--id', default=None, help="Board ID (i.e. serial number)")
     args = parser.parse_args()
 
     if args.ipAddr is None:
@@ -91,27 +93,34 @@ if __name__ == "__main__":
 
     mi = mkmbox.MailboxInterface(inFilename=args.def_file)
     mi.interpret()
+    keyfile = None
     if args.keyfile is not None:
+        keyfile = args.keyfile
+    elif args.id is not None:
+        import genkey
+        keyfile = genkey.get_default_key_file(args.id)
+    if keyfile is not None:
         # No TOCTOU defense here; this is only a simple misconfiguration check.
         # The user can always leak key material some other way if they want.
         try:
-            ss = os.stat(args.keyfile)
+            ss = os.stat(keyfile)
             if (ss.st_mode & 0o077) != 0:  # any r, w, x bits for group or other
-                pp = args.keyfile, ss.st_mode & 0o777
-                print("ERROR: file %s mode 0%o is too permissive" % pp)
+                pp = keyfile, ss.st_mode & 0o777
+                print("ERROR: file {} mode 0{:o} is too permissive".format(*pp))
                 exit(1)
-            fd = open(args.keyfile, "r")
+            print("Getting key from: {}".format(keyfile))
+            fd = open(keyfile, "r")
             rawkey = fd.read()
             key = hex_key(rawkey)
         except Exception as e:
             print(e)
-            print("can't get key from " + args.keyfile)
+            print("Can't get key from " + keyfile)
             exit(1)
     else:
         try:
             import genkey
             keyfile = genkey.get_default_key_file()
-            print("Getting from default: {}".format(keyfile))
+            print("Getting key from default: {}".format(keyfile))
             key = genkey.get_key_string(keyfile)
             if key is None:
                 print("Invalid keyfile: {}. Using hard-coded default key.".format(keyfile))
