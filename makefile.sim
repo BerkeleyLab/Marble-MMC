@@ -156,6 +156,10 @@ $(WRAPPER): $(BOARD)/ptywrap.c
 wrap: $(WRAPPER) $(OUTPUT_DIR)/$(PROJECT_NAME)
 	$^
 
+.PHONY: wrap_start
+wrap_start: $(WRAPPER) $(OUTPUT_DIR)/$(PROJECT_NAME)
+	$(WRAPPER) --start $(OUTPUT_DIR)/$(PROJECT_NAME)
+
 # Removes everything in the output directory
 .PHONY: clean
 clean:

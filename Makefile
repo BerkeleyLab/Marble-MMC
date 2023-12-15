@@ -57,4 +57,8 @@ run:
 wrap:
 	make -f makefile.sim BOARD=sim wrap
 
+.PHONY: wrap_start
+wrap_start:
+	make -f makefile.sim BOARD=sim wrap_start
+
 clean: marble_mini_clean marble_clean sim_clean nucleo_clean

@@ -27,7 +27,7 @@
 
 static void _parentHandler(int c);
 static void _childHandler(int c);
-static int init(void);
+static int init(int start);
 #ifdef PARENT_HEARTBEAT
 static void parent_heartbeat(void);
 #endif
@@ -98,69 +98,11 @@ static int wait_for_open3(char *name) {
   return 0;
 }
 
-#if 0
-static int wait_for_open2(char *name) {
-  int rval;
-  while (!toExit) {
-    errno = 0;
-    rval = open(name, O_RDWR);
-    if (rval < 0) {
-      //if (errno == ) {
-      perror("Errno = ");
-      if (1) {
-        rval = 0; // Call this success
-        break;
-      }
-    }
-    close(rval);
-    sleep(1);
-  }
-  return rval;
-}
-#endif
-
-#if 0
-static int wait_for_open(int fd, int timeout_ms) {
-  struct pollfd fds = {.fd=fd, .events = POLLHUP, .revents=0};
-  int rval;
-  while (!toExit) {
-    rval = poll(&fds, 1, timeout_ms);
-    if (!(fds.revents & POLLHUP)) {
-      // Break on any revents that aren't hangup
-      break;
-    }
-  }
-  if (toExit) {
-    return -1;
-  }
-  if (rval <= 0) {
-    // Timeout or error
-    if (rval == 0) {
-      fprintf(stderr, "wait_for_open Timeout\r\n");
-    } else {
-      fprintf(stderr, "wait_for_open Error: rval = %d\r\n", rval);
-    }
-    return -1;
-  }
-  if (fds.revents & POLLPRI) {
-    fprintf(stderr, "POLLPRI\r\n");
-    return 1;
-  } else {
-    fprintf(stderr, "revents = 0x%x = %s\r\n", fds.revents,
-            fds.revents & POLLHUP ? "POLLHUP" :
-            fds.revents & POLLERR ? "POLLERR" :
-            fds.revents & POLLNVAL ? "POLLNVAL" :
-            "unknown");
-  }
-  return 0;
-}
-#endif
-
-static int init(void) {
+static int init(int start) {
   toExit = 0;
   // Create PTY
   create_pty();
-  if (1) {
+  if (!start) {
     printf("Waiting for device %s\r\n", devName);
     if (0) {
       //return wait_for_open2(devName);
@@ -204,33 +146,45 @@ static void parent_heartbeat(void) {
 }
 #endif
 
+#define ARG_START     "--start"
+
 int main(int argc, char *argv[]) {
   // Collect argv[1:] in a list of null-terminated strings
   int n;
+  int start=0;
+  int m = 0;
   for (n = 1; n < argc; n++) {
-    if (n == MAX_ARGS - 1) {
+    if ((n == 1) && (!strncmp(argv[n], ARG_START, sizeof(ARG_START)/sizeof(char)))) {
+      start = 1;
+    } else if (n == MAX_ARGS - 1) {
       break;
-    }
-    if (!argv[n]) {
+    } else if (!argv[n]) {
       //printf("%d: Null pointer\r\n", n);
       break;
     } else {
       //printf("%d: %s\r\n", n, argv[n]);
-      bargv[n-1] = argv[n];
+      bargv[m++] = argv[n];
     }
   }
   // The list MUST be terminated by a NULL pointer
-  bargv[n] = NULL;
+  bargv[m] = NULL;
+  printf("ARGS: ");
+  for (n = 0; n < m; n++) {
+    printf("%s ", bargv[n]);
+  }
+  printf("\r\n");
 
   // Safely copy the binary name
-  if (argc > 1) {
+  if ((start) && (argc > 2)) {
+    strncpy(bname, argv[2], sizeof(bname));
+  } else if ((!start) && (argc > 1)) {
     strncpy(bname, argv[1], sizeof(bname));
   } else {
     printf("%s", usage);
     return 1;
   }
 
-  if (init() < 0) {
+  if (init(start) < 0) {
     shutdown();
     return 1;
   }
