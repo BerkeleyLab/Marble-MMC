@@ -147,6 +147,12 @@ static void system_apply_params(void) {
   } else {
     FPGAWD_SetPeriod((int)val);
   }
+  // Mailbox enable
+  if (eeprom_read_mbox_en(&val, 1)) {
+    printf("Could not read mailbox enable setting.\r\n");
+  } else {
+    mbox_set_enable(val);
+  }
   return;
 }
 
