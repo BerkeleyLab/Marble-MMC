@@ -26,7 +26,9 @@ sn=$(echo "$temp" | sed     -e 's/[ ][ ]*iProduct[ ][ ]*2[ ][ ]*[^ ][^ ]*//' -e 
 # Yikes! Apparently you need this '-z' option to get sed to recognize the newline char
 sn=$(echo "$sn" | sed -z -e 's/[^0-9][^0-9]*//')
 
-snum=$(printf "%06d" "$1")
+# remove the leading zeros from the input
+snum=$(echo "$1" |  sed 's/^0*//')
+snum=$(printf "%06d" "$snum")
 
 # Ensure it's called "Marble"
 if [ "$marble" != "Marble" ]; then
@@ -45,6 +47,3 @@ else
 fi
 
 exit 0
-
-
-
