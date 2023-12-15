@@ -6,6 +6,8 @@
 #include "i2c_fpga.h"
 #include "ltm4673.h"
 
+#define LED_SNAKE
+
 #ifdef MARBLE_V2
 static void mgtclk_xpoint_en(void)
 {
@@ -19,6 +21,7 @@ static void mgtclk_xpoint_en(void)
    }
 }
 #endif
+
 // CLOCK_USE_XTAL only used for marble-mini
 #ifdef CLOCK_USE_XTAL
 #define XTAL_IN_USE     "True"
