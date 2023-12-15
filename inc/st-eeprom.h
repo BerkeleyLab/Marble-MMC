@@ -63,7 +63,12 @@ typedef struct {
   X(4, fan_speed, raw, 1, {102}) \
   X(5, overtemp,  raw, 1, {85}) \
   X(6, mgt_mux,   raw, 1, {0}) \
-  X(7, fsynth,    raw, 6, {0, 0, 0, 0, 0, 0})
+  X(7, fsynth,    raw, 6, {0, 0, 0, 0, 0, 0}) \
+  X(8, wd_period, raw, 1, {0}) \
+  X(9, wd_key_0,  raw, 6, {'s','u','p','e','r',' '}) \
+  X(10,wd_key_1,  raw, 6, {'s','e','c','r','e','t'}) \
+  X(11,wd_key_2,  raw, 4, {' ','k','e','y'}) \
+  X(12,mbox_en,   raw, 1, {1})
 
 typedef enum {
 #define X(N, NAME, TYPE, SIZE, ...)  ee_ ## NAME = N,
@@ -86,6 +91,10 @@ int eeprom_store_ ## NAME(const uint8_t *pdata, int len); \
 int eeprom_read_ ## NAME(volatile uint8_t *pdata, int len);
 FOR_ALL_EETAGS()
 #undef X
+
+/* Hand-written functions are required for entries > 6 bytes */
+int eeprom_read_wd_key(volatile uint8_t *pdata, int len);
+int eeprom_store_wd_key(const uint8_t *pdata, int len);
 
 /** @brief Initialize EEPROM interface to Flash memory
  *  @returns 0 on Success, or negative errno

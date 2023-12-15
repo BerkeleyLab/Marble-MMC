@@ -128,7 +128,7 @@ uint8_t UARTQUEUE_Get(volatile uint8_t *item) {
   }
   // Copy next data from the queue to item
   for (unsigned int n = 0; n < sizeof(uint8_t); n++) {
-    *((uint8_t *)item + n) = *((uint8_t *)&(UART_queue.queue[UART_queue.pOut]) + n);
+    *((volatile uint8_t *)item + n) = *((volatile uint8_t *)&(UART_queue.queue[UART_queue.pOut]) + n);
   }
   // Wrap pOut at boundary
   if (UART_queue.pOut == UART_QUEUE_ITEMS - 1) {
@@ -243,7 +243,7 @@ uint8_t UARTTXQUEUE_Get(volatile uint8_t *item) {
   }
   // Copy next data from the queue to item
   for (unsigned int n = 0; n < sizeof(uint8_t); n++) {
-    *((uint8_t *)item + n) = *((uint8_t *)&(UARTTX_queue.queue[UARTTX_queue.pOut]) + n);
+    *((volatile uint8_t *)item + n) = *((volatile uint8_t *)&(UARTTX_queue.queue[UARTTX_queue.pOut]) + n);
   }
   // Wrap pOut at boundary
   if (UARTTX_queue.pOut == UARTTX_QUEUE_ITEMS - 1) {
@@ -319,7 +319,7 @@ static int _USART_Tx_RetryOnEmpty(uint8_t *c) {
  */
 int USART_Rx_LL_Queue(volatile char *msg, int len) {
   int n = 0;
-  while (UARTQUEUE_Get((uint8_t *)(msg + n)) != UART_QUEUE_EMPTY) {
+  while (UARTQUEUE_Get((volatile uint8_t *)(msg + n)) != UART_QUEUE_EMPTY) {
     if (n++ >= len) {
       break;
     }

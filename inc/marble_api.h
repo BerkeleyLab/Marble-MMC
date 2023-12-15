@@ -26,7 +26,7 @@ extern "C" {
 #define EEPROM_COUNT ((size_t)FLASH_SECTOR_SIZE/sizeof(ee_frame))
 
 #define DEMO_STRING                 "Marble UART Simulation\r\n"
-#define BSP_GET_SYSTICK()     (uint32_t)((uint64_t)clock()/1000)
+#define BSP_GET_SYSTICK()     (uint32_t)((uint64_t)clock()/40)
 
 # define MGT_MAX_PINS 0
 #else
@@ -70,7 +70,6 @@ extern "C" {
 #endif /* SIMULATION */
 
 #define FLASH_VOLTAGE_MV                              (3300)
-#define FPGA_WATCHDOG_CLK_FREQ                        (3276)
 
 /* = = = = System Clock Configuration = = = = */
 // System Clock Frequency = 120 MHz
@@ -98,6 +97,9 @@ extern "C" {
 #define BOARD_TYPE_MARBLE           (0x10)
 #define BOARD_TYPE_MARBLE_MINI      (0x20)
 
+// FPGA pseudo-SPI mailbox update period (in ms)
+#define SPI_MAILBOX_PERIOD_MS       (2000)
+
 // Enum for identifying Marble PCB revisions
 typedef enum {
   Marble_v1_2 = 0,
@@ -112,6 +114,16 @@ typedef enum {
   Marble_Simulator
 } Marble_PCB_Rev_t;
 
+/****
+* Top-level Application Functionality
+****/
+void system_init(void);
+
+void system_service(void);
+
+/****
+* Platform/Hardware-Specific Routines
+****/
 /* Initialize uC and peripherals before main code can run. */
 uint32_t marble_init(void);
 
@@ -201,6 +213,8 @@ void marble_print_GPIO_status(void);
 void reset_fpga(void);
 
 void enable_fpga(void);
+
+void disable_fpga(void);
 
 /****
 * SPI/SSP
@@ -293,16 +307,12 @@ void marble_SLEEP_ms(uint32_t delay);
 void marble_SLEEP_us(uint32_t delay);
 
 /************
-* FPGA Software/Hardware Watchdog
+* FPGA Watchdog Support
 ************/
-// Set period to 0 to disable
-void FPGAWD_set_period(uint16_t preload);
-// Software pet
-void FPGAWD_pet(void);
-// ISR pends FPGA reset
-void FPGAWD_ISR(void);
+// In main.c
+void reset_fpga_with_callback(void (*cb)(void));
 // RND - only on marble_v2 (STM32) for now
-int get_hw_rnd(uint32_t *result, int *rng_init_status_p);
+int get_hw_rnd(uint32_t *result);
 
 #ifdef __cplusplus
 }

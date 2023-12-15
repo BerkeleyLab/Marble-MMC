@@ -24,7 +24,7 @@ extern "C" {
  *  *   handleMsg(msg);
  */
 
-#define CONSOLE_MAX_MESSAGE_LENGTH          (32)
+#define CONSOLE_MAX_MESSAGE_LENGTH          (128)
 #define PRINT_NA() printf("Function not available on this board.\r\n")
 
 #define MAC_LENGTH    (6)
@@ -35,7 +35,6 @@ typedef struct {
   uint8_t mac[MAC_LENGTH];
 } mac_ip_data_t;
 
-void xrp_boot(void);
 int console_init(void);
 int console_service(void);
 void console_pend_msg(void);

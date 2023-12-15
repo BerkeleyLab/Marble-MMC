@@ -217,5 +217,22 @@
       "output": "@ = fsynthGetFreq()",
       "desc" : "Startup frequency of frequency synthesizer (si570) in Hz."
     }
+  ],
+# Pages 7 and 8 are used for the authenticating watchdog
+  "page7" : [
+    { "name" : "WD_NONCE",
+      "size" : 8,
+      "fmt"  : "0x{:x}",
+      "output" : "FPGAWD_GetNonce(&@)",
+      "desc" : "A 64-bit nonce to be used by the remote host to produce a watchdog MAC."
+    }
+  ],
+  "page8" : [
+    { "name" : "WD_HASH",
+      "size" : 8,
+      "fmt"  : "0x{:x}",
+      "input" : "FPGAWD_HandleHash(&@)",
+      "desc" : "64-bit MAC supplied by the remote host to reset watchdog timer."
+    }
   ]
 }

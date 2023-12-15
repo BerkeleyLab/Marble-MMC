@@ -3,7 +3,9 @@
 #include "i2c_pm.h"
 #include "mailbox.h"
 #include "max6639.h"
+#include "watchdog.h"
 #include "rev.h"
+#include "st-eeprom.h"
 
 /* ============================= Helper Macros ============================== */
 // Define SPI_SWITCH to re-route SPI bound for FPGA to PMOD for debugging
@@ -18,7 +20,7 @@
 extern SSP_PORT SSP_FPGA;
 extern SSP_PORT SSP_PMOD;
 uint16_t update_count = 0;
-static int mbox_is_disabled = 0;
+static uint8_t mbox_is_enabled = 1;
 
 /* =========================== Static Prototypes ============================ */
 static void mbox_handleI2CBusStatusMsg(uint8_t msg);
@@ -29,20 +31,38 @@ static void mbox_handleI2CBusStatusMsg(uint8_t msg);
 /* ========================== Function Definitions ========================== */
 
 void mbox_enable(void) {
-  mbox_is_disabled = 0;
+  mbox_is_enabled = 1;
+  eeprom_store_mbox_en(&mbox_is_enabled, 1);
   return;
 }
 
 void mbox_disable(void) {
-  mbox_is_disabled = 1;
+  mbox_is_enabled = 0;
+  eeprom_store_mbox_en(&mbox_is_enabled, 1);
+  return;
+}
+
+/* void mbox_set_enable(int enabled);
+ *  This function is intended for system startup
+ *  (does not write to non-volatile memory).
+ *  The console should use mbox_enable() and
+ *  mbox_disable() to ensure the bit is sticky
+ *  (non-volatile).
+ */
+void mbox_set_enable(int enabled) {
+  if (enabled) {
+    mbox_is_enabled = 1;
+  } else {
+    mbox_is_enabled = 0;
+  }
   return;
 }
 
 int mbox_get_enable(void) {
-  if (mbox_is_disabled) {
-    return 0;
+  if ((int)mbox_is_enabled) {
+    return 1;
   }
-  return 1;
+  return 0;
 }
 
 static void mbox_set_page(uint8_t page_no)
@@ -85,9 +105,11 @@ void mbox_read_page(uint8_t page_no, uint8_t page_sz, uint8_t *page) {
 
 void mbox_update(bool verbose)
 {
-  if (mbox_is_disabled) {
+  if (!mbox_is_enabled) {
     return;
   }
+
+  FPGAWD_Poll();
   _UNUSED(verbose);
   update_count++;
   // Note! Input function must come before output function or any input values will

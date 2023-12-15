@@ -107,7 +107,7 @@ static void init_sim_ltm4673_config(void);
  *  marble_board.c because this is actually emulating the behavior of the
  *  I2C hardware (which is why the 'const' qualifier is absent from data).
  *  For reads (rnw=1) the value of 'data' will not be read but may be
- *  changed, so a pointer to uninitialized memory is valid. For writes 
+ *  changed, so a pointer to uninitialized memory is valid. For writes
  *  (rnw=0), data is only read, so behaves as if qualified with 'const'.
  */
 static int i2c_emu(I2C_BUS I2C_bus, uint8_t addr, uint8_t rnw,
