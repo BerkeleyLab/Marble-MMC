@@ -1,7 +1,6 @@
 # Minimum viable keep-alive server
 # I don't like how much setup gets re-done every iteration
 # Too much chatter
-# Needs updating once the handshake logic in watchdog.c turns non-placeholder.
 
 import mboxexchange as me
 import argparse
@@ -14,6 +13,7 @@ import socket
 from pysiphash import SipHash_2_4
 import struct
 from binascii import hexlify
+import leep
 
 LBUS_ACCESS_FOUND = True
 SPI_MBOX_ADDR = 0x200000  # needs to match spi_mbox base_addr in static_regmap.json
@@ -43,6 +43,14 @@ def word_do(ipAddr, pageNo, wordName, val, port=803):
 
 
 def refresh(ipAddr, mi, port=803, key=None):
+    global SPI_MBOX_ADDR
+    leep_addr = "leep://"+str(ipAddr)+":"+str(port)
+    # print(leep_addr)
+    leep_dev = leep.open(leep_addr)
+    # print(leep_dev.codehash)
+    info = leep_dev.get_reg_info("spi_mbox")
+    SPI_MBOX_ADDR = int(info["base_addr"], base=0)
+    # print("0x%x" % SPI_MBOX_ADDR)
     rvals = word_do(ipAddr, 7, "WD_NONCE", None, port=port)
     rval_b = bytearray(rvals)
     rval_s = hexlify(rval_b).decode()

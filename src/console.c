@@ -131,6 +131,7 @@ static int console_handle_msg(char *rx_msg, int len)
   // Switch behavior based on first char
   switch (*rx_msg) {
         case '?':
+           printf("hardware board id 0x%x\r\n", marble_get_board_id());
            for (unsigned kx=0; kx<MENU_LEN; kx++) {
                printf("%s", menu_str[kx]);
            }

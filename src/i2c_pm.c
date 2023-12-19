@@ -313,7 +313,7 @@ void I2C_PM_bus_display(void)
 {
    LM75_print(LM75_0);
    LM75_print(LM75_1);
-   if (marble_get_board_id() < Marble_v1_3) xrp_dump(XRP7724);
+   if ((marble_get_board_id() & 0xf) < Marble_v1_4) xrp_dump(XRP7724);
    else ltm4673_read_telem(LTM4673);
 }
 

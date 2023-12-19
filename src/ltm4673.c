@@ -450,7 +450,7 @@ static uint16_t ltm4673_encode(uint8_t cmd, int val) {
 
 int ltm4673_ch_status(uint8_t dev)
 {
-  if (marble_get_board_id() < Marble_v1_3) {
+  if ((marble_get_board_id() & 0xf) < Marble_v1_4) {
     printf("LTM4673 not present; bypassed.\n");
     return 0;
   }
