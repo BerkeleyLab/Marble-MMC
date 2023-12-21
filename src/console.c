@@ -61,7 +61,8 @@ const char *menu_str[] = {"\r\n",
   "s addr_hex freq_hz config_hex - Set Si570 configuration\r\n",
   "t pmbus_msg - Forward PMBus transaction to LTM4673\r\n",
   "u period - Set/get watchdog timeout period (in seconds)\r\n",
-  "v key - Set a new 128-bit secret key (non-volatile, write only).\r\n"
+  "v key - Set a new 128-bit secret key (non-volatile, write only).\r\n",
+  "w - Show board/chip identification\r\n"
 };
 #define MENU_LEN (sizeof(menu_str)/sizeof(*menu_str))
 
@@ -117,7 +118,6 @@ static int console_handle_msg(char *rx_msg, int len)
   // Switch behavior based on first char
   switch (*rx_msg) {
         case '?':
-           printf("hardware board id 0x%x\r\n", marble_get_board_id());
            for (unsigned kx=0; kx<MENU_LEN; kx++) {
                printf("%s", menu_str[kx]);
            }
@@ -256,6 +256,9 @@ static int console_handle_msg(char *rx_msg, int len)
            break;
         case 'v':
            handle_msg_key(rx_msg, len);
+           break;
+        case 'w':
+           marble_print_pcb_rev();
            break;
         default:
            printf(unk_str);

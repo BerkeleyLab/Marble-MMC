@@ -56,6 +56,10 @@ static int fpga_enabled = 1;
 static int shiftMessage(void);
 static void _sigHandler(int c);
 
+void disable_all_IRQs(void) {
+  return;
+}
+
 #define MAILBOX_PORT      (8003)
 uint32_t marble_init(void) {
   _fpgaDoneTimeStart = BSP_GET_SYSTICK();

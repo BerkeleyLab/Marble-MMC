@@ -4,9 +4,19 @@ stages:
 variables:
   GIT_SUBMODULE_STRATEGY: normal
   CI_REGISTRY: mohs.dhcp.lbl.gov
-  CONTAINER_IMAGE: $CI_REGISTRY/testing_base:master
+  CONTAINER_IMAGE: $CI_REGISTRY/arm_build_image
+  DOCKER_HOST: tcp://docker:2375/
+  DOCKER_DRIVER: overlay2
 
-image: $CONTAINER_IMAGE
+image: $CONTAINER_IMAGE:$CI_COMMIT_REF_NAME
+
+services:
+  - name: mohs.dhcp.lbl.gov/docker:20.10.12-dind
+    command: ["--insecure-registry", "mohs.dhcp.lbl.gov"]
+    alias: docker
+
+include:
+  - local: .gitlab/ci/build.gitlab-ci.yml
 
 marble_mini_build:
   stage: build
