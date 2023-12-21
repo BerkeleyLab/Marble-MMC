@@ -8,7 +8,22 @@ variables:
 
 image: $CONTAINER_IMAGE
 
-lpc1776_build:
+marble_mini_build:
+  stage: build
+  script:
+    - make marble_mini && make marble_mini_clean
+
+marble_build:
   stage: build
   script:
     - make && make clean
+
+sim_build:
+  stage: build
+  script:
+    - make sim && make sim_clean
+
+nucleo_build:
+  stage: build
+  script:
+    - make nucleo && make clean
