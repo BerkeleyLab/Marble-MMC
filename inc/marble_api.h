@@ -127,10 +127,18 @@ void system_service(void);
 /* Initialize uC and peripherals before main code can run. */
 uint32_t marble_init(void);
 
+void board_init(void);
+
 int board_service(void);
 
 void pwr_autoboot(void);
 
+void mgtclk_xpoint_en(void);
+
+/* Use this function to test against PCB revisions if the
+ * board type (Marble vs. Marble-Mini) is known.
+ * E.g. marble_get_pcb_rev() < Marble_v1_4
+ */
 Marble_PCB_Rev_t marble_get_pcb_rev(void);
 
 void marble_print_pcb_rev(void);
@@ -138,7 +146,6 @@ void marble_print_pcb_rev(void);
 // The Board ID is (PCB revision) | (BOARD_TYPE_...)
 uint8_t marble_get_board_id(void);
 
-// TODO - Move these for encapsulation
 void print_status_counters(void);
 
 uint32_t marble_get_tick(void);

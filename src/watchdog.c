@@ -177,7 +177,7 @@ int get_fake_key(volatile uint8_t *pdata, int len) {
 
 static void print64(const char *header, const uint8_t *data, unsigned len)
 {
-  printf(header);
+  printf("%s",header);
   for (unsigned jx=0; jx<len; jx++) printf("%2.2x", data[jx]);
   printf("\r\n");
 }

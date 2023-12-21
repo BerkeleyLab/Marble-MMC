@@ -8,20 +8,6 @@
 
 #define LED_SNAKE
 
-#ifdef MARBLE_V2
-static void mgtclk_xpoint_en(void)
-{
-   if (xrp_ch_status(XRP7724, 1)) { // CH1: 3.3V
-      adn4600_init();
-   } else if (ltm4673_ch_status(LTM4673)) {
-      printf("Using LTM4673 and adn4600_init\r\n");
-      adn4600_init();
-   } else {
-      printf("Skipping adn4600_init\r\n");
-   }
-}
-#endif
-
 // CLOCK_USE_XTAL only used for marble-mini
 #ifdef CLOCK_USE_XTAL
 #define XTAL_IN_USE     "True"
@@ -50,10 +36,8 @@ int main(void) {
    // Boot the power supply controller if needed
    pwr_autoboot();
 
-#ifdef MARBLE_V2
-   // Enable MGT clock cross-point switch if 3.3V rail is ON
-   mgtclk_xpoint_en();
-#endif
+   // Initialize off-chip components
+   board_init();
 
    // Power FMCs
    marble_FMC_pwr(true);

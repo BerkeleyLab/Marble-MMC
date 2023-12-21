@@ -68,11 +68,15 @@ uint32_t marble_init(void) {
   eeprom_init();
   init_sim_ltm4673();
   if (lass_init(MAILBOX_PORT) < 0) {
-    return -1;
+    return 1;
   }
   sim_spi_init();
   printf("Listening on port %d\r\n", MAILBOX_PORT);
   return 0;
+}
+
+void board_init(void) {
+  return;
 }
 
 // Emulate USART_RXNE_ISR() from marble_board.c but with keyboard input from stdin

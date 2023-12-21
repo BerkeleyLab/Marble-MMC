@@ -64,9 +64,13 @@ static void timer_int_handler(void)
    live_cnt++;
 }
 
+/* void system_init(void);
+ *  Initialization of chip-agnostic MMC functionality
+ */
 void system_init(void) {
   // Initialize non-volatile memory
   eeprom_init();
+
   // Apply parameters from non-volatile memory
   system_apply_params();
 
@@ -82,8 +86,6 @@ void system_init(void) {
   // UART console service
   console_init();
 
-  // Initialize subsystems
-  I2C_PM_init();
   return;
 }
 

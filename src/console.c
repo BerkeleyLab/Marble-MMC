@@ -110,20 +110,6 @@ int console_init(void) {
   return 0;
 }
 
-#ifdef MARBLE_V2
-void mgtclk_xpoint_en(void)
-{
-   if ((marble_get_pcb_rev() < Marble_v1_4) & xrp_ch_status(XRP7724, 1)) { // CH1: 3.3V
-      adn4600_init();
-   } else if ((marble_get_pcb_rev() > Marble_v1_3) & ltm4673_ch_status(LTM4673)) {
-      printf("Using LTM4673 and adn4600_init\r\n");
-      adn4600_init();
-   } else {
-      printf("Skipping adn4600_init\r\n");
-   }
-}
-#endif
-
 static int console_handle_msg(char *rx_msg, int len)
 {
   // TODO all these should return 0 on success, 1 on failure

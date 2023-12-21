@@ -52,6 +52,9 @@ I2C_BUS I2C_FPGA;
 I2C_BUS I2C_PM;
 I2C_BUS I2C_IPMB;
 
+void board_init(void) {
+}
+
 /* int board_service(void);
  *  Call in main loop. Handles routines scheduled from interrupts.
  *  Must always return 0 (otherwise execution will terminate).
@@ -729,19 +732,8 @@ int get_hw_rnd(uint32_t *result) {
   return 0;
 }
 
-void bsp_FPGAWD_set_period(uint16_t preload) {
-  // TODO
-  _UNUSED(preload);
-  return;
-}
-
-void bsp_FPGAWD_pet(void) {
-  // TODO
-  return;
-}
-
-void bsp_FPGAWD_ISR(void) {
-  // TODO
+void mgtclk_xpoint_en(void) {
+  // Unused board compatibility
   return;
 }
 

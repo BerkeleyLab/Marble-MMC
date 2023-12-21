@@ -35,6 +35,8 @@
 #include "console.h"
 #include "st-eeprom.h"
 #include "i2c_pm.h"
+#include "i2c_fpga.h"
+#include "ltm4673.h"
 #include "watchdog.h"
 
 #define UART_ECHO
@@ -101,6 +103,20 @@ static int marble_MGTMUX_store(void);
 static void I2C_PM_smba_handler(void);
 static int i2c_hook(I2C_BUS I2C_bus, uint8_t addr, uint8_t rnw,
                     int cmd, const uint8_t *data, int len);
+
+/* void board_init(void);
+ *  Board-related (not MMC-related) initialization
+ */
+void board_init(void) {
+  // Enable clock crosspoint
+  mgtclk_xpoint_en();
+
+  // Initialize subsystems
+  I2C_PM_init();
+  LM75_Init();
+
+  return;
+}
 
 /* int board_service(void);
  *  Call in main loop. Handles routines scheduled from interrupts.
@@ -914,8 +930,6 @@ uint32_t marble_init(void)
   marble_SW_init();
   marble_UART_init();
 
-  LM75_Init();
-
   printf("** Marble init done **\r\n");
   marble_print_pcb_rev();
 
@@ -1285,7 +1299,7 @@ static void MX_GPIO_Init(void)
 
    /*Configure GPIO pins : PC7 PC8 */
    GPIO_InitStruct.Pin = GPIO_PIN_7|GPIO_PIN_8;
-   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+   GPIO_InitStruct.Mode = GPIO_MODE_INPUT; // GPIO_MODE_IT_FALLING
    GPIO_InitStruct.Pull = GPIO_NOPULL;
    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
@@ -1374,19 +1388,12 @@ static void MX_GPIO_Init(void)
    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
    // TODO - Only on Marble v1.4
+   // This is for LTM4673 PMBus Alert IRQ
    if (0) {
       HAL_NVIC_SetPriority(EXTI15_10_IRQn, 7, 7);
       HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
    }
    return;
-}
-
-void bsp_FPGAWD_ISR(void) {
-  // Reset the FPGA (if preload == 0, this should never fire)
-  /* Pull the PROGRAM_B pin low; it's spelled PROG_B on schematic */
-  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, false);
-  console_pend_FPGA_enable();
-  return;
 }
 
 int getI2CBusStatus(void) {
@@ -1436,6 +1443,20 @@ int get_hw_rnd(uint32_t *result) {
   printf("DR = 0x%08lx\r\n", hrng.Instance->DR);
   */
   return rc;
+}
+
+/* Enable MGT clock cross-point switch if 3.3V rail is ON
+ */
+void mgtclk_xpoint_en(void)
+{
+   if ((marble_get_pcb_rev() < Marble_v1_4) & xrp_ch_status(XRP7724, 1)) { // CH1: 3.3V
+      adn4600_init();
+   } else if ((marble_get_pcb_rev() > Marble_v1_3) & ltm4673_ch_status(LTM4673)) {
+      printf("Using LTM4673 and adn4600_init\r\n");
+      adn4600_init();
+   } else {
+      printf("Skipping adn4600_init\r\n");
+   }
 }
 
 /**
