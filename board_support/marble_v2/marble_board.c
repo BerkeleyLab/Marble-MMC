@@ -77,6 +77,8 @@ static Marble_PCB_Rev_t marble_pcb_rev;
 
 static int i2cBusStatus = 0;
 static int i2c_pm_alert = 0;
+static int _over_temp = 0;
+static int _pwr_good = 0;
 
 // Moved here from marble_api.h
 SSP_PORT SSP_FPGA;
@@ -103,6 +105,15 @@ static int marble_MGTMUX_store(void);
 static void I2C_PM_smba_handler(void);
 static int i2c_hook(I2C_BUS I2C_bus, uint8_t addr, uint8_t rnw,
                     int cmd, const uint8_t *data, int len);
+static void show_chip_ID(void);
+
+void disable_all_IRQs(void) {
+   // STM32F2 has 80 interrupt channels (plus the 14 in the ARM Cortex-M)
+   NVIC->ICER[0] = 0xffffffff;   // 0-31
+   NVIC->ICER[1] = 0xffffffff;   // 32-63
+   NVIC->ICER[2] = 0xffffffff;   // 64-80
+   return;
+}
 
 /* void board_init(void);
  *  Board-related (not MMC-related) initialization
@@ -122,15 +133,62 @@ void board_init(void) {
   return;
 }
 
+// PC7: OVER_TEMP (low-true)
+#define OVER_TEMP_PORT              GPIOC
+#define OVER_TEMP_PIN               GPIO_PIN_7
+#define OVER_TEMP_ASSERTED          GPIO_PIN_RESET
+#define OVER_TEMP_DEASSERTED        GPIO_PIN_SET
+// PC4: XRP_POWER_GOOD
+#define PWRGD_PORT                  GPIOC
+#define PWRGD_PIN                   GPIO_PIN_4
+#define PWRGD_ASSERTED              GPIO_PIN_SET
+#define PWRGD_DEASSERTED            GPIO_PIN_RESET
+// PD11: EN_PSU_CH
+#define EN_PSU_CH_PORT              GPIOD
+#define EN_PSU_CH_PIN               GPIO_PIN_11
+#define EN_PSU_CH_ASSERTED          GPIO_PIN_SET
+#define EN_PSU_CH_DEASSERTED        GPIO_PIN_RESET
+// PC14: PWR_RESET (low-true)
+#define PWR_RESET_PORT              GPIOC
+#define PWR_RESET_PIN               GPIO_PIN_14
+#define PWR_RESET_ASSERTED          GPIO_PIN_RESET
+#define PWR_RESET_DEASSERTED        GPIO_PIN_SET
+
 /* int board_service(void);
  *  Call in main loop. Handles routines scheduled from interrupts.
  *  Must always return 0 (otherwise execution will terminate).
  */
 int board_service(void) {
+   // Check state of OVER_TEMP pin
+   int gpio = HAL_GPIO_ReadPin(OVER_TEMP_PORT, OVER_TEMP_PIN);
+   if ((!_over_temp) && (gpio == OVER_TEMP_ASSERTED)) {
+      // Detect asserting edge
+      printf("ALERT: Over-Temperature Shutdown Detected\r\n");
+      _over_temp = 1;
+   } else if ((_over_temp) && (gpio == OVER_TEMP_DEASSERTED)) {
+      // Detect de-asserting edge
+      printf("ALERT: Over-Temperature Condition Cleared\r\n");
+      _over_temp = 0;
+   }
+   // Check state of PWRGD pin
+   gpio = HAL_GPIO_ReadPin(PWRGD_PORT, PWRGD_PIN);
+   if ((!_pwr_good) && (gpio == PWRGD_ASSERTED)) {
+      // Detect asserting edge
+      printf("ALERT: Power good. Re-initializing.\r\n");
+      board_init();
+      _pwr_good = 1;
+   } else if ((_pwr_good) && (gpio == PWRGD_DEASSERTED)) {
+      // Detect de-asserting edge
+      printf("ALERT: Lost power.\r\n");
+      _pwr_good = 0;
+   }
+#if 0
+   // This is unused at the moment.
    if (i2c_pm_alert) {
       printf("TODO - Respond to I2C_PM Alert\r\n");
       i2c_pm_alert = 0;
    }
+#endif
    return 0;
 }
 
@@ -373,10 +431,10 @@ void marble_PSU_pwr(bool on)
       SystemClock_Config_HSI(); // switch to internal clock source, external clock is powered from 3V3!
       marble_SLEEP_ms(50);
    }
-   // Sch net EN_PSU_CH
-   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_11, on);
-   // PSU reset; Power reset pin for LTM4673
-   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, on);
+   // Sch net EN_PSU_CH. Assert when on==true
+   HAL_GPIO_WritePin(EN_PSU_CH_PORT, EN_PSU_CH_PIN, on ? EN_PSU_CH_ASSERTED : EN_PSU_CH_DEASSERTED);
+   // PSU reset; Power reset pin for LTM4673. Deassert when on==true
+   HAL_GPIO_WritePin(PWR_RESET_PORT, PWR_RESET_PIN, on ? PWR_RESET_DEASSERTED : PWR_RESET_ASSERTED);
    if (on) {
       SystemClock_Config(); // switch back to external clock source
    }
@@ -976,6 +1034,8 @@ void marble_print_pcb_rev(void) {
       break;
   }
 #endif
+  show_chip_ID();
+  return;
 }
 
 Marble_PCB_Rev_t marble_get_pcb_rev(void) {
@@ -1461,6 +1521,14 @@ void mgtclk_xpoint_en(void)
    } else {
       printf("Skipping adn4600_init\r\n");
    }
+}
+
+static void show_chip_ID(void) {
+   uint32_t id = HAL_GetDEVID();
+   printf("Chip ID: DEVID 0x%04x ", (uint16_t)(id & 0xffff));
+   id = HAL_GetREVID();
+   printf("REVID 0x%04x\r\n", (uint16_t)(id & 0xffff));
+   return;
 }
 
 /**

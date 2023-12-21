@@ -117,6 +117,8 @@ typedef enum {
 /****
 * Top-level Application Functionality
 ****/
+void disable_all_IRQs(void);
+
 void system_init(void);
 
 void system_service(void);

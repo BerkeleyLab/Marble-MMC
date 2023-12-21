@@ -16,6 +16,9 @@
 #endif
 
 int main(void) {
+   // Start by disabling interrupts just in case
+   disable_all_IRQs();
+
    UARTQUEUE_Init();
 #ifdef MARBLEM_V1
    uint32_t sysclk_freq = marble_init();

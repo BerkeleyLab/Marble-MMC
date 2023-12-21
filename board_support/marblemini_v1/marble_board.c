@@ -52,7 +52,17 @@ I2C_BUS I2C_FPGA;
 I2C_BUS I2C_PM;
 I2C_BUS I2C_IPMB;
 
+void disable_all_IRQs(void) {
+   // TODO
+   return;
+}
+
+/* void board_init(void);
+ *  Board-related (not MMC-related) initialization
+ */
 void board_init(void) {
+   // TODO - Any board-specific initialization
+   return;
 }
 
 /* int board_service(void);
