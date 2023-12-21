@@ -121,6 +121,8 @@ void system_init(void);
 
 void system_service(void);
 
+void system_apply_params(void);
+
 /****
 * Platform/Hardware-Specific Routines
 ****/

@@ -115,6 +115,10 @@ void board_init(void) {
   I2C_PM_init();
   LM75_Init();
 
+  // Some non-volatile params go straight to external hardware
+  // (i.e. fan speed, overtemp threshold)
+  system_apply_params();
+
   return;
 }
 

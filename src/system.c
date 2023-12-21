@@ -27,8 +27,6 @@ static void (*fpga_reset_callback)(void) = NULL;
 static volatile bool spi_update = false;
 static uint32_t systimer_ms=1; // System timer interrupt period
 
-static void system_apply_params(void);
-
 static void fpga_done_handler(void)
 {
    fpga_prog_cnt++;
@@ -118,11 +116,11 @@ void system_service(void) {
 }
 
 /*
- * static void system_apply_params(void);
+ * void system_apply_params(void);
  *    Apply parameters stored in non-volatile memory.
  *    TODO - This is not board-specific.  Move to "system" file.
  */
-static void system_apply_params(void) {
+void system_apply_params(void) {
   // Fan speed
   uint8_t val;
   if (eeprom_read_fan_speed(&val, 1)) {
