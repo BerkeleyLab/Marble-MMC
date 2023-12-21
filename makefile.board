@@ -93,7 +93,7 @@ CFLAGS += -Wall -Wextra -Wundef -Wshadow -Wstrict-prototypes -Wwrite-strings -pe
 CFLAGS += -Wpointer-arith -Wredundant-decls -Wunreachable-code
 # to do:  -Wcast-align -Wcast-qual
 
-ASFLAGS = $(FLAGS) $(ARCH_FLAGS)
+ASFLAGS = $(FLAGS_AS) $(ARCH_FLAGS)
 LDFLAGS = $(FLAGS) $(LINKER_FLAGS) -Wextra $(ARCH_FLAGS)
 
 # Default target

@@ -1,6 +1,6 @@
 build:
   image: docker:stable
-  stage: build
+  stage: pre-build
   before_script:
     - cat /etc/hosts
     - cat /etc/resolv.conf

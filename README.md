@@ -71,7 +71,8 @@ Download to the nucleo board over its built-in ST-Link v2 SWD programmer/debugge
 `make nucleo_download`
 
 ## Program FTDI
-The FTDI works fine in its default configuration. This step just programs serial number and product name into its USB descriptors.
+The FTDI works fine in its default configuration. This step just programs serial
+number and product name into its USB descriptors.
 
 You need ftdi_eeprom from libfdti:
 

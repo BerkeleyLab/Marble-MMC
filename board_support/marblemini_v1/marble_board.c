@@ -679,6 +679,12 @@ Marble_PCB_Rev_t marble_get_pcb_rev(void) {
   return Marble_v1_2;
 }
 
+void marble_print_pcb_rev(void) {
+   // TODO
+   printf("PCB Rev: Marble-Mini\r\n");
+   return;
+}
+
 uint8_t marble_get_board_id(void) {
   // TODO - How is Marble mini PCB revision ID'd?
   //return ((uint8_t)(marble_pcb_rev & 0x0F) | BOARD_TYPE_MARBLE_MINI);
