@@ -176,6 +176,7 @@ int board_service(void) {
       // Detect asserting edge
       printf("ALERT: Power good. Re-initializing.\r\n");
       board_init();
+      reset_fpga();
       _pwr_good = 1;
    } else if ((_pwr_good) && (gpio == PWRGD_DEASSERTED)) {
       // Detect de-asserting edge
@@ -1366,6 +1367,12 @@ static void MX_GPIO_Init(void)
    GPIO_InitStruct.Mode = GPIO_MODE_INPUT; // GPIO_MODE_IT_FALLING
    GPIO_InitStruct.Pull = GPIO_NOPULL;
    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+   /* Configure GPIO pin PWRGD */
+   GPIO_InitStruct.Pin = PWRGD_PIN; // GPIO_PIN_4
+   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+   GPIO_InitStruct.Pull = GPIO_NOPULL;
+   HAL_GPIO_Init(PWRGD_PORT, &GPIO_InitStruct);
 
    /*Configure GPIO pins : PC0 - PROG_B */
    GPIO_InitStruct.Pin = GPIO_PIN_0;
