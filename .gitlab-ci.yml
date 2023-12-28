@@ -38,3 +38,9 @@ nucleo_build:
   stage: build
   script:
     - make nucleo && make clean
+
+self_test:
+  stage: build
+  script:
+    - make -C tests && make -C tests clean
+    - (cd scripts && python3 pysiphash.py)
