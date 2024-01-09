@@ -58,9 +58,9 @@ typedef enum {
   PKT_TYPE_UDP
 } pkt_type_t;
 static pkt_type_t eth_pkt_type(uint8_t *pbuf, uint32_t len);
-static void eth_respond_arp(uint8_t *pbuf, uint32_t len);
-static void eth_respond_icmp(uint8_t *pbuf, uint32_t len);
-static void eth_respond_udp(uint8_t *pbuf, uint32_t len);
+static uint32_t eth_respond_arp(uint8_t *pbuf, uint32_t len);
+static uint32_t eth_respond_icmp(uint8_t *pbuf, uint32_t len);
+static uint32_t eth_respond_udp(uint8_t *pbuf, uint32_t len);
 static int eth_send_response(uint8_t *pbuf, uint32_t len);
 static uint8_t OWN_MAC[MAC_LENGTH] = {0xce, 0xce, 0x03, 0x27, 0x04, 0x06};
 static uint8_t OWN_IP[IP_LENGTH] = {192,168,51,50};
@@ -1251,7 +1251,7 @@ static void MX_ETH_Init(void)
   /* Enable MAC and DMA transmission and reception */
   HAL_ETH_Start(&heth);
 
-#ifdef OFFLOAD_CHECKSUM
+#if 0
   ETH_DMAInitTypeDef dmaconf;
   dmaconf.DropTCPIPChecksumErrorFrame = ETH_DROPTCPIPCHECKSUMERRORFRAME_ENABLE;
   dmaconf.ReceiveStoreForward = ETH_RECEIVESTOREFORWARD_ENABLE;
@@ -1272,7 +1272,7 @@ static void MX_ETH_Init(void)
   if (HAL_ETH_ConfigDMA(&heth, &dmaconf) != HAL_OK) {
     printf("Could not configure ETH DMA\r\n");
   };
-#endif // ifdef OFFLOAD_CHECKSUM
+#endif // if 0
 #endif
 }
 
@@ -1311,6 +1311,36 @@ static void eth_handle_packet(void) {
   }
   printf("\r\n");
 
+  uint32_t handled = 0;
+  uint8_t *pktbuf = buf;
+  while (len > 0) {
+    // Handle various protocols
+    pkt_type_t pkt_type = eth_pkt_type(pktbuf, len);
+    switch (pkt_type) {
+      case PKT_TYPE_ARP:
+        handled = eth_respond_arp(pktbuf, len);
+        break;
+      case PKT_TYPE_ICMP:
+        handled = eth_respond_icmp(pktbuf, len);
+        break;
+      case PKT_TYPE_UDP:
+        handled = eth_respond_udp(pktbuf, len);
+        break;
+      default:
+        printf("Unknown packet type\r\n");
+        len = 0;
+        break;
+    }
+    pktbuf += handled;
+    len -= handled;
+    if ((uint32_t)(pktbuf-buf) > ETH_MAX_PACKET_SIZE) {
+      // Get the next descriptor
+      dmarxdesc = (ETH_DMADescTypeDef *)(dmarxdesc->Buffer2NextDescAddr);
+      buf = (uint8_t *)(dmarxdesc->Buffer1Addr);
+      pktbuf = buf;
+    }
+  }
+
   /* Release descriptors to DMA */
   /* Point to first descriptor */
   dmarxdesc = heth.RxFrameInfos.FSRxDesc;
@@ -1329,23 +1359,6 @@ static void eth_handle_packet(void) {
     heth.Instance->DMASR = ETH_DMASR_RBUS;
     /* Resume DMA reception */
     heth.Instance->DMARPDR = 0;
-  }
-
-  // Handle various protocols
-  pkt_type_t pkt_type = eth_pkt_type(buf, len);
-  switch (pkt_type) {
-    case PKT_TYPE_ARP:
-      eth_respond_arp(buf, len);
-      break;
-    case PKT_TYPE_ICMP:
-      eth_respond_icmp(buf, len);
-      break;
-    case PKT_TYPE_UDP:
-      eth_respond_udp(buf, len);
-      break;
-    default:
-      printf("Unknown packet type\r\n");
-      break;
   }
 #endif // ifdef NUCLEO
 }
@@ -1443,7 +1456,7 @@ static pkt_type_t eth_pkt_type(uint8_t *pbuf, uint32_t len) {
   return type;
 }
 
-static void eth_respond_arp(uint8_t *pbuf, uint32_t len) {
+static uint32_t eth_respond_arp(uint8_t *pbuf, uint32_t len) {
   // Use src MAC as dest MAC in ethernet header
   memcpy(pbuf, pbuf+6, 6);    // Clobber dest MAC with src MAC
   memcpy(pbuf+6, OWN_MAC, 6); // Clobber src MAC with own MAC
@@ -1457,46 +1470,49 @@ static void eth_respond_arp(uint8_t *pbuf, uint32_t len) {
   memcpy(pbuf+OFFSET_ARP_TPA, pbuf+OFFSET_ARP_SPA, 4);    // Clobber TPA with SPA
   // Add own SPA
   memcpy(pbuf+OFFSET_ARP_SPA, OWN_IP, 4);
-  // Send response
+  // Send response  TODO - What actual length should we respond with?
   eth_send_response(pbuf, len);
-  return;
+  return len;
 }
 
-static void eth_respond_icmp(uint8_t *pbuf, uint32_t len) {
+static uint32_t eth_respond_icmp(uint8_t *pbuf, uint32_t len) {
   uint8_t header_len = 4*(pbuf[OFFSET_IP_VERSION_IHL] & 0xf); // header_len = 4*IHL
   // Total len
   uint16_t total_len = ((uint16_t)pbuf[OFFSET_IP_TOTAL_LENGTH] << 8) | (uint16_t)pbuf[OFFSET_IP_TOTAL_LENGTH+1];
   if (total_len < 20) {
     printf("Invalid total_len (%d)\r\n", total_len);
-    return;
+    return len;
   }
+  // Use src MAC as dest MAC in ethernet header
+  memcpy(pbuf, pbuf+6, 6);    // Clobber dest MAC with src MAC
+  memcpy(pbuf+6, OWN_MAC, 6); // Clobber src MAC with own MAC
   // Use Source IP as Dest IP
   memcpy(pbuf+OFFSET_IP_DEST_IP, pbuf+OFFSET_IP_SRC_IP, 4);
   // Add own IP as Source IP
   memcpy(pbuf+OFFSET_IP_SRC_IP, OWN_IP, 4);
   // IPv4 payload (ICMP)
   // ICMP type code
-  if (!((pbuf[header_len+PAYLOAD_OFFSET_ICMP_TYPE] == 8) && (pbuf[header_len+PAYLOAD_OFFSET_ICMP_CODE] == 0))) {
+  if (!((pbuf[14+header_len+PAYLOAD_OFFSET_ICMP_TYPE] == 8) && (pbuf[14+header_len+PAYLOAD_OFFSET_ICMP_CODE] == 0))) {
     printf("Not an ICMP request: %d %d\r\n", pbuf[header_len+PAYLOAD_OFFSET_ICMP_TYPE], pbuf[header_len+PAYLOAD_OFFSET_ICMP_CODE]);
-    return;
+    return len;
   }
   // ICMP reply
-  pbuf[header_len+PAYLOAD_OFFSET_ICMP_TYPE] = 0;
+  pbuf[14+header_len+PAYLOAD_OFFSET_ICMP_TYPE] = 0;
   // Use the STM32 auto-checksum-inserter feature (requires the checksum field be zero'd)
   memset(&pbuf[OFFSET_IP_CHECKSUM], 0, 2);
-  memset(&pbuf[header_len+PAYLOAD_OFFSET_ICMP_CHECKSUM], 0, 2);
+  memset(&pbuf[14+header_len+PAYLOAD_OFFSET_ICMP_CHECKSUM], 0, 2);
 #ifndef OFFLOAD_CHECKSUM
   // TODO Calculate the header checksum in software
 #endif
-  // Send response
-  eth_send_response(pbuf, len);
-  return;
+  // Send response  TODO - What actual length should we respond with?
+  eth_send_response(pbuf, 14+total_len);
+  return (uint32_t)(14+total_len);
 }
 
-static void eth_respond_udp(uint8_t *pbuf, uint32_t len) {
+static uint32_t eth_respond_udp(uint8_t *pbuf, uint32_t len) {
   _UNUSED(pbuf);
   _UNUSED(len);
-  return;
+  return len;
 }
 
 #define NO_ERROR    (0)
