@@ -451,8 +451,8 @@ void si570_status()
    double rfreq = (((val[1] & 0x3f) << 8) | (val[2])) * pow(2.0, -4.0);
    rfreq += ((val[3] << 16) | (val[4] << 8) | val[5]) * pow(2.0, -28.0);
    // Nominal internal crystal frequency
-   // from datasheet, typically 114.285 MHz +/- 2000 ppm, see page 12
-   // In the future, maybe this could this come from a non-volatile mmc parameter
+   // Default, typically 114.285 MHz +/- 2000 ppm
+   // see datasheet page 12
    float fxtal = 114.285e6;
    float fout = (fxtal * rfreq)/(hs_div*n1);
 
@@ -461,4 +461,5 @@ void si570_status()
    printf("> RFREQ: %lf\r\n", rfreq);
    printf("> assume fxtal: %f MHz\r\n", fxtal*0.000001);
    printf("> guess SI570 output: %f MHz\r\n", fout*0.000001);
+   return;
 }

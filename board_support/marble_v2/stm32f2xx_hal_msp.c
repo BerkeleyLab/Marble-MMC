@@ -89,7 +89,60 @@ void HAL_ETH_MspInit(ETH_HandleTypeDef* heth)
   if(heth->Instance==ETH)
   {
   /* USER CODE BEGIN ETH_MspInit 0 */
+#ifdef NUCLEO
+    /* Peripheral clock enable */
+    __HAL_RCC_ETH_CLK_ENABLE();
+    __HAL_RCC_ETHMACTX_CLK_ENABLE();
+    __HAL_RCC_ETHMACRX_CLK_ENABLE();
 
+    __HAL_RCC_GPIOC_CLK_ENABLE();
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+    __HAL_RCC_GPIOB_CLK_ENABLE();
+    __HAL_RCC_GPIOG_CLK_ENABLE();
+    /**ETH GPIO Configuration
+    PA1     ------> ETH_REF_CLK
+    PA2     ------> ETH_MDIO
+    PA7     ------> ETH_CRS_DV
+    PB13    ------> ETH_TXD1 (ensure JP7 is placed)
+    PC1     ------> ETH_MDC
+    PC4     ------> ETH_RXD0
+    PC5     ------> ETH_RXD1
+    PG11    ------> ETH_TX_EN
+    PG13    ------> ETH_TXD0
+    */
+    GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_7;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate = GPIO_AF11_ETH;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+    GPIO_InitStruct.Pin = GPIO_PIN_13;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate = GPIO_AF11_ETH;
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+    GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_4|GPIO_PIN_5;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate = GPIO_AF11_ETH;
+    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+    GPIO_InitStruct.Pin = GPIO_PIN_11|GPIO_PIN_13;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate = GPIO_AF11_ETH;
+    HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
+
+    /* Enable the Ethernet global Interrupt */
+    HAL_NVIC_SetPriority(ETH_IRQn, 0x7, 0);
+    HAL_NVIC_EnableIRQ(ETH_IRQn);
+
+#else
   /* USER CODE END ETH_MspInit 0 */
     /* Peripheral clock enable */
     __HAL_RCC_ETH_CLK_ENABLE();
@@ -97,48 +150,25 @@ void HAL_ETH_MspInit(ETH_HandleTypeDef* heth)
     __HAL_RCC_GPIOC_CLK_ENABLE();
     __HAL_RCC_GPIOA_CLK_ENABLE();
     //__HAL_RCC_GPIOB_CLK_ENABLE();
-    /**ETH GPIO Configuration
-    PC1     ------> ETH_MDC
-    // wrong PA1     ------> ETH_REF_CLK
-    PA2     ------> ETH_MDIO
-    // wrong PA7     ------> ETH_CRS_DV
-    // wrong PC4     ------> ETH_RXD0
-    // wrong PC5     ------> ETH_RXD1
-    // wrong PB11     ------> ETH_TX_EN
-    // wrong PB12     ------> ETH_TXD0
-    // wrong PB13     ------> ETH_TXD1
-    */
-    // PC4 and PC5 are NOT part of MII interface on Marble board
-    // They are XRP pwr good input and DDR 1.5V enable output
-    //GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_4|GPIO_PIN_5;
+    // On Marble board, we only use MDIO
+    // PC1: MII_MDC
     GPIO_InitStruct.Pin = GPIO_PIN_1;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_MEDIUM;
     GPIO_InitStruct.Alternate = GPIO_AF11_ETH;
     HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-    // PA1 and PA7 are NOT part of MII interface on Marble board
-    // They are analog input
-    //GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_7;
+    // PA2: MII_MDIO
     GPIO_InitStruct.Pin = GPIO_PIN_2;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_MEDIUM;
     GPIO_InitStruct.Alternate = GPIO_AF11_ETH;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-    // PB11-13 are unused on Marble board
-    /*
-    GPIO_InitStruct.Pin = GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_13;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-    GPIO_InitStruct.Alternate = GPIO_AF11_ETH;
-    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-    */
-
   /* USER CODE BEGIN ETH_MspInit 1 */
+#endif // ifdef NUCLEO
 
   /* USER CODE END ETH_MspInit 1 */
   }

@@ -43,6 +43,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
+extern ETH_HandleTypeDef heth;
 
 /* USER CODE END PV */
 
@@ -247,6 +248,15 @@ void USART3_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
+/**
+  * @brief  This function handles Ethernet interrupt request.
+  * @param  None
+  * @retval None
+  */
+void ETH_IRQHandler(void)
+{
+  HAL_ETH_IRQHandler(&heth);
+}
 
 /* USER CODE END 1 */
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

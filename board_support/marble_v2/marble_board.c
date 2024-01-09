@@ -42,9 +42,33 @@
 #define UART_ECHO
 #ifdef NUCLEO
 #define SMBA_PIN GPIO_PIN_13
+/* Ethernet Tx DMA Descriptor */
+ETH_DMADescTypeDef  DMATxDscrTab[ETH_TXBUFNB];
+/* Ethernet Rx MA Descriptor */
+ETH_DMADescTypeDef  DMARxDscrTab[ETH_RXBUFNB];
+/* Ethernet Transmit Buffer */
+uint8_t eth_tx_buf[ETH_TXBUFNB][ETH_TX_BUF_SIZE];
+/* Ethernet Receive Buffer */
+uint8_t eth_rx_buf[ETH_RXBUFNB][ETH_RX_BUF_SIZE];
+typedef enum {
+  PKT_TYPE_UNK,
+  PKT_TYPE_ARP,
+  PKT_TYPE_ICMP,
+  PKT_TYPE_UDP
+} pkt_type_t;
+static pkt_type_t eth_pkt_type(uint8_t *pbuf, uint32_t len);
+static void eth_respond_arp(uint8_t *pbuf, uint32_t len);
+static void eth_respond_icmp(uint8_t *pbuf, uint32_t len);
+static void eth_respond_udp(uint8_t *pbuf, uint32_t len);
+static void eth_send_response(uint8_t *pbuf, uint32_t len);
+static uint8_t OWN_SHA[MAC_LENGTH] = {0xce, 0xce, 0x03, 0x27, 0x04, 0x06};
+static uint8_t OWN_SPA[IP_LENGTH] = {192,168,51,50};
+
 #else
 #define SMBA_PIN GPIO_PIN_15
 #endif
+static int eth_pkt_pending;
+static int eth_pkt_sent;
 
 
 #define PRINT_POWER_STATE(subs, on) do {\
@@ -106,6 +130,8 @@ static void I2C_PM_smba_handler(void);
 static int i2c_hook(I2C_BUS I2C_bus, uint8_t addr, uint8_t rnw,
                     int cmd, const uint8_t *data, int len);
 static void show_chip_ID(void);
+static void eth_handle_packet(void);
+static void nucleo_init(void);
 
 void disable_all_IRQs(void) {
    // STM32F2 has 80 interrupt channels (plus the 14 in the ARM Cortex-M)
@@ -130,9 +156,55 @@ void board_init(void) {
   // (i.e. fan speed, overtemp threshold)
   system_apply_params();
 
+  // Nucleo-specific init
+  nucleo_init();
+  eth_pkt_pending = 0;
+  eth_pkt_sent = 0;
+
+  // Init ethernet here after the "nucleo_init"
+  MX_ETH_Init();
+
   return;
 }
 
+static void nucleo_init(void) {
+#ifdef NUCLEO
+  mac_ip_data_t pdata;
+  int rval = eeprom_read_ip_addr(pdata.ip, IP_LENGTH);
+  if (rval == 0) {
+    memcpy(OWN_SPA, pdata.ip, IP_LENGTH);
+  }
+  rval = eeprom_read_mac_addr(pdata.mac, MAC_LENGTH);
+  if (rval == 0) {
+    memcpy(OWN_SHA, pdata.mac, MAC_LENGTH);
+  }
+#endif
+  return;
+}
+
+#ifdef NUCLEO
+// Set these to unused pins
+// PC7: OVER_TEMP (low-true)
+#define OVER_TEMP_PORT              GPIOC
+#define OVER_TEMP_PIN               GPIO_PIN_7
+#define OVER_TEMP_ASSERTED          GPIO_PIN_RESET
+#define OVER_TEMP_DEASSERTED        GPIO_PIN_SET
+// PC6: XRP_POWER_GOOD
+#define PWRGD_PORT                  GPIOC
+#define PWRGD_PIN                   GPIO_PIN_6
+#define PWRGD_ASSERTED              GPIO_PIN_SET
+#define PWRGD_DEASSERTED            GPIO_PIN_RESET
+// PD11: EN_PSU_CH
+#define EN_PSU_CH_PORT              GPIOD
+#define EN_PSU_CH_PIN               GPIO_PIN_11
+#define EN_PSU_CH_ASSERTED          GPIO_PIN_SET
+#define EN_PSU_CH_DEASSERTED        GPIO_PIN_RESET
+// PC12: PWR_RESET (low-true)
+#define PWR_RESET_PORT              GPIOC
+#define PWR_RESET_PIN               GPIO_PIN_12
+#define PWR_RESET_ASSERTED          GPIO_PIN_RESET
+#define PWR_RESET_DEASSERTED        GPIO_PIN_SET
+#else // ifdef NUCLEO
 // PC7: OVER_TEMP (low-true)
 #define OVER_TEMP_PORT              GPIOC
 #define OVER_TEMP_PIN               GPIO_PIN_7
@@ -153,6 +225,7 @@ void board_init(void) {
 #define PWR_RESET_PIN               GPIO_PIN_14
 #define PWR_RESET_ASSERTED          GPIO_PIN_RESET
 #define PWR_RESET_DEASSERTED        GPIO_PIN_SET
+#endif
 
 /* int board_service(void);
  *  Call in main loop. Handles routines scheduled from interrupts.
@@ -182,6 +255,10 @@ int board_service(void) {
       // Detect de-asserting edge
       printf("ALERT: Lost power.\r\n");
       _pwr_good = 0;
+   }
+   if (eth_pkt_pending) {
+      eth_pkt_pending = 0;
+      eth_handle_packet();
    }
 #if 0
    // This is unused at the moment.
@@ -978,7 +1055,6 @@ uint32_t marble_init(void)
   marble_read_pcb_rev();
 
   marble_PSU_pwr(true);
-  MX_ETH_Init();
   MX_I2C1_Init();
   MX_I2C3_Init();
   MX_SPI1_Init();
@@ -1150,19 +1226,15 @@ void SystemClock_Config_HSI(void)
 
 static void MX_ETH_Init(void)
 {
-   uint8_t MACAddr[6] ;
+#ifdef NUCLEO
 
   heth.Instance = ETH;
-  heth.Init.AutoNegotiation = ETH_AUTONEGOTIATION_DISABLE;
-  heth.Init.PhyAddress = PHY_USER_NAME_PHY_ADDRESS;
-  MACAddr[0] = 0x00;
-  MACAddr[1] = 0x80;
-  MACAddr[2] = 0xE1;
-  MACAddr[3] = 0x00;
-  MACAddr[4] = 0x00;
-  MACAddr[5] = 0x00;
-  heth.Init.MACAddr = &MACAddr[0];
-  heth.Init.RxMode = ETH_RXPOLLING_MODE;
+  heth.Init.AutoNegotiation = ETH_AUTONEGOTIATION_ENABLE; // ETH_AUTONEGOTIATION_DISABLE
+  heth.Init.PhyAddress = 0; // Address of PHY chip used with MDIO;
+  heth.Init.Speed = ETH_SPEED_100M;
+  heth.Init.DuplexMode = ETH_MODE_FULLDUPLEX;
+  heth.Init.MACAddr = OWN_SHA;
+  heth.Init.RxMode = ETH_RXINTERRUPT_MODE;
   heth.Init.ChecksumMode = ETH_CHECKSUM_BY_HARDWARE;
   heth.Init.MediaInterface = ETH_MEDIA_INTERFACE_RMII;
 
@@ -1170,6 +1242,220 @@ static void MX_ETH_Init(void)
   {
     Error_Handler();
   }
+
+  /* Initialize Tx Descriptors list: Chain Mode */
+  HAL_ETH_DMATxDescListInit(&heth, DMATxDscrTab, &eth_tx_buf[0][0], ETH_TXBUFNB);
+  /* Initialize Rx Descriptors list: Chain Mode  */
+  HAL_ETH_DMARxDescListInit(&heth, DMARxDscrTab, &eth_rx_buf[0][0], ETH_RXBUFNB);
+  /* Enable MAC and DMA transmission and reception */
+  HAL_ETH_Start(&heth);
+
+#endif
+}
+
+static void eth_handle_packet(void) {
+#ifdef NUCLEO
+  HAL_StatusTypeDef rval;
+  if ((rval = HAL_ETH_GetReceivedFrame_IT(&heth)) != HAL_OK) {
+    printf("Error: %d\r\n", rval);
+  }
+  uint32_t len = heth.RxFrameInfos.length;
+  /*
+  ETH_DMADescTypeDef *FSRxDesc;          //!< First Segment Rx Desc
+  ETH_DMADescTypeDef *LSRxDesc;          //!< Last Segment Rx Desc
+  uint32_t SegCount;                    //!< Segment count
+  uint32_t length;                       //!< Frame length
+  uint32_t buffer;                       //!< Frame buffer
+  */
+
+  //uint8_t *buf = (uint8_t *)heth.RxFrameInfos.buffer;
+  ETH_DMADescTypeDef *dmarxdesc = heth.RxFrameInfos.FSRxDesc;
+  printf("Eth packet. length %ld, SegCount %ld\r\n", len, heth.RxFrameInfos.SegCount);
+  uint8_t *buf = (uint8_t *)heth.RxFrameInfos.buffer;
+#if 0
+  uint8_t *buf;
+  for (uint32_t nbuf = 0; nbuf < ETH_RXBUFNB; nbuf++) {
+    buf = eth_rx_buf[nbuf];
+    printf("Buf[%ld]: ", nbuf);
+    for (int nbyte = 0; nbyte < 16; nbyte++) {
+      printf("0x%02x ", buf[nbyte]);
+    }
+    printf("\r\n");
+  }
+#endif
+  for (uint32_t nbyte = 0; nbyte < len; nbyte++) {
+    printf("0x%02x ", buf[nbyte]);
+  }
+  printf("\r\n");
+
+  /* Release descriptors to DMA */
+  /* Point to first descriptor */
+  dmarxdesc = heth.RxFrameInfos.FSRxDesc;
+  /* Set Own bit in Rx descriptors: gives the buffers back to DMA */
+  for (uint32_t i=0; i< heth.RxFrameInfos.SegCount; i++) {
+    dmarxdesc->Status |= ETH_DMARXDESC_OWN;
+    dmarxdesc = (ETH_DMADescTypeDef *)(dmarxdesc->Buffer2NextDescAddr);
+  }
+
+  /* Clear Segment_Count */
+  heth.RxFrameInfos.SegCount =0;
+
+  /* When Rx Buffer unavailable flag is set: clear it and resume reception */
+  if ((heth.Instance->DMASR & ETH_DMASR_RBUS) != (uint32_t)RESET) {
+    /* Clear RBUS ETHERNET DMA flag */
+    heth.Instance->DMASR = ETH_DMASR_RBUS;
+    /* Resume DMA reception */
+    heth.Instance->DMARPDR = 0;
+  }
+
+  // Handle various protocols
+  pkt_type_t pkt_type = eth_pkt_type(buf, len);
+  switch (pkt_type) {
+    case PKT_TYPE_ARP:
+      eth_respond_arp(buf, len);
+      break;
+    case PKT_TYPE_ICMP:
+      eth_respond_icmp(buf, len);
+      break;
+    case PKT_TYPE_UDP:
+      eth_respond_udp(buf, len);
+      break;
+    default:
+      printf("Unknown packet type\r\n");
+      break;
+  }
+#endif // ifdef NUCLEO
+}
+
+#define OFFSET_ETHERTYPE    (12)
+#define OFFSET_ARP_PTYPE    (16)
+#define OFFSET_ARP_OPER     (20)
+#define OFFSET_ARP_SHA      (22)
+#define OFFSET_ARP_SPA      (28)
+#define OFFSET_ARP_THA      (32)
+#define OFFSET_ARP_TPA      (38)
+
+static pkt_type_t eth_pkt_type(uint8_t *pbuf, uint32_t len) {
+  if (len < 60) {
+    // TODO Figure out what we really think is the min packet size
+    return PKT_TYPE_UNK;
+  }
+  pkt_type_t type = PKT_TYPE_UNK;
+  // Check ethertype
+  uint16_t ethertype = *((uint16_t *)&pbuf[OFFSET_ETHERTYPE]);
+  uint16_t gp16;
+  switch (ethertype) {
+    case 0x0608:
+      printf("ARP (big)\r\n");
+      // If PTYPE != 0x0800 (0x0008 big-endian), don't respond. Only responding to IPv4
+      gp16 = *((uint16_t *)&pbuf[OFFSET_ARP_PTYPE]);
+      if (gp16 != 0x0008) {
+        printf("Not IPv4: gp16 = 0x%x\r\n", gp16);
+        break;
+      }
+      // If ARP OPER != 0x0001 (0x0100 big-endian), don't respond
+      gp16 = *((uint16_t *)&pbuf[OFFSET_ARP_OPER]);
+      if (gp16 != 0x0100) {
+        printf("Not ARP request: gp16 = 0x%x\r\n", gp16);
+        break;
+      }
+      // Ok, we'll respond
+      type = PKT_TYPE_ARP;
+      break;
+    default:
+      printf("Ethertype = 0x%04x\r\n", ethertype);
+      break;
+  }
+  return type;
+}
+
+static void eth_respond_arp(uint8_t *pbuf, uint32_t len) {
+  // Use src MAC as dest MAC in ethernet header
+  memcpy(pbuf, pbuf+6, 6);    // Clobber dest MAC with src MAC
+  memcpy(pbuf+6, OWN_SHA, 6); // Clobber src MAC with own MAC
+  // Switch ARP OPER from 1 to 2
+  pbuf[OFFSET_ARP_OPER+1] = 2;
+  // Use SHA as THA
+  memcpy(pbuf+OFFSET_ARP_THA, pbuf+OFFSET_ARP_SHA, 6);    // Clobber THA with SHA
+  // Add own SHA
+  memcpy(pbuf+OFFSET_ARP_SHA, OWN_SHA, 6);
+  // Use SPA as TPA
+  memcpy(pbuf+OFFSET_ARP_TPA, pbuf+OFFSET_ARP_SPA, 4);    // Clobber TPA with SPA
+  // Add own SPA
+  memcpy(pbuf+OFFSET_ARP_SPA, OWN_SPA, 4);
+  // Send response
+  eth_send_response(pbuf, len);
+  return;
+}
+
+static void eth_respond_icmp(uint8_t *pbuf, uint32_t len) {
+  _UNUSED(pbuf);
+  _UNUSED(len);
+  return;
+}
+
+static void eth_respond_udp(uint8_t *pbuf, uint32_t len) {
+  _UNUSED(pbuf);
+  _UNUSED(len);
+  return;
+}
+
+static void eth_send_response(uint8_t *pbuf, uint32_t len) {
+  uint8_t *buffer = (uint8_t *)(heth.TxDesc->Buffer1Addr);
+  ETH_DMADescTypeDef *DmaTxDesc  = heth.TxDesc;
+
+  // copy frame from pbuf to driver buffers
+  // Is this buffer available? If not, goto error
+  if((DmaTxDesc->Status & ETH_DMATXDESC_OWN) != (uint32_t)RESET)
+  {
+    printf("Buffer not available\r\n");
+    goto error;
+  }
+
+  // Check if the length of data to copy is bigger than Tx buffer size
+  if ( len > (uint32_t)ETH_TX_BUF_SIZE ) {
+    printf("Too big (%ld > %ld)\r\n", len, (uint32_t)ETH_TX_BUF_SIZE);
+    goto error;
+  }
+  // Copy data to Tx buffer
+  memcpy(buffer, pbuf, len);
+
+#if 0
+  // Point to next descriptor
+  DmaTxDesc = (ETH_DMADescTypeDef *)(DmaTxDesc->Buffer2NextDescAddr);
+  // Check if the buffer is available
+  if((DmaTxDesc->Status & ETH_DMATXDESC_OWN) != (uint32_t)RESET)
+  {
+    printf("Next buffer not available?\r\n");
+    goto error;
+  }
+  buffer = (uint8_t *)(DmaTxDesc->Buffer1Addr);
+#endif
+
+  // Prepare transmit descriptors to give to DMA
+  printf("Sending frame of len %ld... ", len);
+  HAL_StatusTypeDef rval = HAL_ETH_TransmitFrame(&heth, len);
+  printf("rval = %d\r\n", rval);
+#if 1
+  for (uint32_t nbyte = 0; nbyte < len; nbyte++) {
+    printf("0x%02x ", buffer[nbyte]);
+  }
+  printf("\r\n");
+
+#endif
+
+error:
+  // When Transmit Underflow flag is set, clear it and issue a Transmit Poll Demand to resume transmission
+  if ((heth.Instance->DMASR & ETH_DMASR_TUS) != (uint32_t)RESET)
+  {
+    // Clear TUS ETHERNET DMA flag
+    heth.Instance->DMASR = ETH_DMASR_TUS;
+
+    // Resume DMA transmission
+    heth.Instance->DMATPDR = 0;
+  }
+
+  return;
 }
 
 static void MX_I2C1_Init(void)
@@ -1536,6 +1822,18 @@ static void show_chip_ID(void) {
    id = HAL_GetREVID();
    printf("REVID 0x%04x\r\n", (uint16_t)(id & 0xffff));
    return;
+}
+
+void HAL_ETH_RxCpltCallback(ETH_HandleTypeDef *pheth) {
+  _UNUSED(pheth);
+  eth_pkt_pending = 1;
+  return;
+}
+
+void HAL_ETH_TxCpltCallback(ETH_HandleTypeDef *pheth) {
+  _UNUSED(pheth);
+  eth_pkt_sent = 1;
+  return;
 }
 
 /**
