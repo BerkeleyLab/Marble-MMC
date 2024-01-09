@@ -1335,6 +1335,7 @@ static void eth_handle_packet(void) {
 #define OFFSET_ARP_THA      (32)
 #define OFFSET_ARP_TPA      (38)
 
+#ifdef NUCLEO
 static pkt_type_t eth_pkt_type(uint8_t *pbuf, uint32_t len) {
   if (len < 60) {
     // TODO Figure out what we really think is the min packet size
@@ -1457,6 +1458,7 @@ error:
 
   return;
 }
+#endif
 
 static void MX_I2C1_Init(void)
 {
