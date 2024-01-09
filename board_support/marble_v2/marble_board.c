@@ -41,6 +41,7 @@
 
 #define UART_ECHO
 #ifdef NUCLEO
+#define OFFLOAD_CHECKSUM
 #define SMBA_PIN GPIO_PIN_13
 /* Ethernet Tx DMA Descriptor */
 ETH_DMADescTypeDef  DMATxDscrTab[ETH_TXBUFNB];
@@ -60,9 +61,9 @@ static pkt_type_t eth_pkt_type(uint8_t *pbuf, uint32_t len);
 static void eth_respond_arp(uint8_t *pbuf, uint32_t len);
 static void eth_respond_icmp(uint8_t *pbuf, uint32_t len);
 static void eth_respond_udp(uint8_t *pbuf, uint32_t len);
-static void eth_send_response(uint8_t *pbuf, uint32_t len);
-static uint8_t OWN_SHA[MAC_LENGTH] = {0xce, 0xce, 0x03, 0x27, 0x04, 0x06};
-static uint8_t OWN_SPA[IP_LENGTH] = {192,168,51,50};
+static int eth_send_response(uint8_t *pbuf, uint32_t len);
+static uint8_t OWN_MAC[MAC_LENGTH] = {0xce, 0xce, 0x03, 0x27, 0x04, 0x06};
+static uint8_t OWN_IP[IP_LENGTH] = {192,168,51,50};
 
 #else
 #define SMBA_PIN GPIO_PIN_15
@@ -172,11 +173,11 @@ static void nucleo_init(void) {
   mac_ip_data_t pdata;
   int rval = eeprom_read_ip_addr(pdata.ip, IP_LENGTH);
   if (rval == 0) {
-    memcpy(OWN_SPA, pdata.ip, IP_LENGTH);
+    memcpy(OWN_IP, pdata.ip, IP_LENGTH);
   }
   rval = eeprom_read_mac_addr(pdata.mac, MAC_LENGTH);
   if (rval == 0) {
-    memcpy(OWN_SHA, pdata.mac, MAC_LENGTH);
+    memcpy(OWN_MAC, pdata.mac, MAC_LENGTH);
   }
 #endif
   return;
@@ -1233,7 +1234,7 @@ static void MX_ETH_Init(void)
   heth.Init.PhyAddress = 0; // Address of PHY chip used with MDIO;
   heth.Init.Speed = ETH_SPEED_100M;
   heth.Init.DuplexMode = ETH_MODE_FULLDUPLEX;
-  heth.Init.MACAddr = OWN_SHA;
+  heth.Init.MACAddr = OWN_MAC;
   heth.Init.RxMode = ETH_RXINTERRUPT_MODE;
   heth.Init.ChecksumMode = ETH_CHECKSUM_BY_HARDWARE;
   heth.Init.MediaInterface = ETH_MEDIA_INTERFACE_RMII;
@@ -1250,6 +1251,28 @@ static void MX_ETH_Init(void)
   /* Enable MAC and DMA transmission and reception */
   HAL_ETH_Start(&heth);
 
+#ifdef OFFLOAD_CHECKSUM
+  ETH_DMAInitTypeDef dmaconf;
+  dmaconf.DropTCPIPChecksumErrorFrame = ETH_DROPTCPIPCHECKSUMERRORFRAME_ENABLE;
+  dmaconf.ReceiveStoreForward = ETH_RECEIVESTOREFORWARD_ENABLE;
+  dmaconf.FlushReceivedFrame = ETH_FLUSHRECEIVEDFRAME_ENABLE;
+  dmaconf.TransmitStoreForward = ETH_TRANSMITSTOREFORWARD_ENABLE;
+  dmaconf.TransmitThresholdControl = ETH_TRANSMITTHRESHOLDCONTROL_40BYTES;
+  dmaconf.ForwardErrorFrames = ETH_FORWARDERRORFRAMES_DISABLE;
+  dmaconf.ForwardUndersizedGoodFrames = ETH_FORWARDUNDERSIZEDGOODFRAMES_ENABLE;
+  dmaconf.ReceiveThresholdControl = ETH_RECEIVEDTHRESHOLDCONTROL_32BYTES;
+  dmaconf.SecondFrameOperate = ETH_SECONDFRAMEOPERARTE_DISABLE;
+  dmaconf.AddressAlignedBeats = ETH_ADDRESSALIGNEDBEATS_DISABLE;
+  dmaconf.FixedBurst = ETH_FIXEDBURST_ENABLE;
+  dmaconf.RxDMABurstLength = ETH_RXDMABURSTLENGTH_32BEAT;
+  dmaconf.TxDMABurstLength = ETH_TXDMABURSTLENGTH_32BEAT;
+  dmaconf.EnhancedDescriptorFormat = ETH_DMAENHANCEDDESCRIPTOR_DISABLE;
+  dmaconf.DescriptorSkipLength = 0;
+  dmaconf.DMAArbitration = ETH_DMAARBITRATION_ROUNDROBIN_RXTX_1_1;
+  if (HAL_ETH_ConfigDMA(&heth, &dmaconf) != HAL_OK) {
+    printf("Could not configure ETH DMA\r\n");
+  };
+#endif // ifdef OFFLOAD_CHECKSUM
 #endif
 }
 
@@ -1335,6 +1358,27 @@ static void eth_handle_packet(void) {
 #define OFFSET_ARP_THA      (32)
 #define OFFSET_ARP_TPA      (38)
 
+#define OFFSET_IP_VERSION_IHL 14
+#define OFFSET_IP_DSCP_ECN   15
+#define OFFSET_IP_TOTAL_LENGTH 16
+#define OFFSET_IP_ID         18
+#define OFFSET_IP_FLAG_FRAG  20
+#define OFFSET_IP_TTL        22
+#define OFFSET_IP_PROTOCOL   23
+#define OFFSET_IP_CHECKSUM   24
+#define OFFSET_IP_SRC_IP     26
+#define OFFSET_IP_DEST_IP    30
+
+#define IP_PROTOCOL_IP    (0)
+#define IP_PROTOCOL_ICMP  (1)
+#define IP_PROTOCOL_TCP   (6)
+#define IP_PROTOCOL_UDP   (17)
+
+#define PAYLOAD_OFFSET_ICMP_TYPE (0)
+#define PAYLOAD_OFFSET_ICMP_CODE (1)
+#define PAYLOAD_OFFSET_ICMP_CHECKSUM (2)
+#define PAYLOAD_OFFSET_ICMP_REST_OF_HEADER (4)
+
 #ifdef NUCLEO
 static pkt_type_t eth_pkt_type(uint8_t *pbuf, uint32_t len) {
   if (len < 60) {
@@ -1345,9 +1389,10 @@ static pkt_type_t eth_pkt_type(uint8_t *pbuf, uint32_t len) {
   // Check ethertype
   uint16_t ethertype = *((uint16_t *)&pbuf[OFFSET_ETHERTYPE]);
   uint16_t gp16;
+  uint8_t ihl;
   switch (ethertype) {
-    case 0x0608:
-      printf("ARP (big)\r\n");
+    case 0x0608:  // ARP (big-endian)
+      printf("ARP\r\n");
       // If PTYPE != 0x0800 (0x0008 big-endian), don't respond. Only responding to IPv4
       gp16 = *((uint16_t *)&pbuf[OFFSET_ARP_PTYPE]);
       if (gp16 != 0x0008) {
@@ -1363,6 +1408,34 @@ static pkt_type_t eth_pkt_type(uint8_t *pbuf, uint32_t len) {
       // Ok, we'll respond
       type = PKT_TYPE_ARP;
       break;
+    case 0x0008:  // IPv4 (big-endian)
+      printf("IPv4\r\n");
+      // Check version (must be 4)
+      if ((pbuf[OFFSET_IP_VERSION_IHL] & 0xf0) != 0x40) {
+        break;
+      }
+      // Read header len
+      ihl = pbuf[OFFSET_IP_VERSION_IHL] & 0xf; // actually just IHL
+      if ((ihl < 5) || (ihl > 15)) {
+        printf("IHL invalid (%d)\r\n", ihl);
+        break;
+      }
+      // Protocol
+      if (pbuf[OFFSET_IP_PROTOCOL] == IP_PROTOCOL_ICMP) {
+        type = PKT_TYPE_ICMP;
+      } else if (pbuf[OFFSET_IP_PROTOCOL] == IP_PROTOCOL_UDP) {
+        type = PKT_TYPE_UDP;
+      } else {
+        printf("Unknown IP protocol %d\r\n", pbuf[OFFSET_IP_PROTOCOL]);
+        break;
+      }
+      break;
+    case 0x4208:  // WakeOnLAN (big-endian)
+      printf("WakeOnLAN\r\n");
+      break;
+    case 0xDD86:  // IPv6 (big-endian)
+      printf("IPv6\r\n");
+      break;
     default:
       printf("Ethertype = 0x%04x\r\n", ethertype);
       break;
@@ -1373,25 +1446,50 @@ static pkt_type_t eth_pkt_type(uint8_t *pbuf, uint32_t len) {
 static void eth_respond_arp(uint8_t *pbuf, uint32_t len) {
   // Use src MAC as dest MAC in ethernet header
   memcpy(pbuf, pbuf+6, 6);    // Clobber dest MAC with src MAC
-  memcpy(pbuf+6, OWN_SHA, 6); // Clobber src MAC with own MAC
+  memcpy(pbuf+6, OWN_MAC, 6); // Clobber src MAC with own MAC
   // Switch ARP OPER from 1 to 2
   pbuf[OFFSET_ARP_OPER+1] = 2;
   // Use SHA as THA
   memcpy(pbuf+OFFSET_ARP_THA, pbuf+OFFSET_ARP_SHA, 6);    // Clobber THA with SHA
   // Add own SHA
-  memcpy(pbuf+OFFSET_ARP_SHA, OWN_SHA, 6);
+  memcpy(pbuf+OFFSET_ARP_SHA, OWN_MAC, 6);
   // Use SPA as TPA
   memcpy(pbuf+OFFSET_ARP_TPA, pbuf+OFFSET_ARP_SPA, 4);    // Clobber TPA with SPA
   // Add own SPA
-  memcpy(pbuf+OFFSET_ARP_SPA, OWN_SPA, 4);
+  memcpy(pbuf+OFFSET_ARP_SPA, OWN_IP, 4);
   // Send response
   eth_send_response(pbuf, len);
   return;
 }
 
 static void eth_respond_icmp(uint8_t *pbuf, uint32_t len) {
-  _UNUSED(pbuf);
-  _UNUSED(len);
+  uint8_t header_len = 4*(pbuf[OFFSET_IP_VERSION_IHL] & 0xf); // header_len = 4*IHL
+  // Total len
+  uint16_t total_len = ((uint16_t)pbuf[OFFSET_IP_TOTAL_LENGTH] << 8) | (uint16_t)pbuf[OFFSET_IP_TOTAL_LENGTH+1];
+  if (total_len < 20) {
+    printf("Invalid total_len (%d)\r\n", total_len);
+    return;
+  }
+  // Use Source IP as Dest IP
+  memcpy(pbuf+OFFSET_IP_DEST_IP, pbuf+OFFSET_IP_SRC_IP, 4);
+  // Add own IP as Source IP
+  memcpy(pbuf+OFFSET_IP_SRC_IP, OWN_IP, 4);
+  // IPv4 payload (ICMP)
+  // ICMP type code
+  if (!((pbuf[header_len+PAYLOAD_OFFSET_ICMP_TYPE] == 8) && (pbuf[header_len+PAYLOAD_OFFSET_ICMP_CODE] == 0))) {
+    printf("Not an ICMP request: %d %d\r\n", pbuf[header_len+PAYLOAD_OFFSET_ICMP_TYPE], pbuf[header_len+PAYLOAD_OFFSET_ICMP_CODE]);
+    return;
+  }
+  // ICMP reply
+  pbuf[header_len+PAYLOAD_OFFSET_ICMP_TYPE] = 0;
+  // Use the STM32 auto-checksum-inserter feature (requires the checksum field be zero'd)
+  memset(&pbuf[OFFSET_IP_CHECKSUM], 0, 2);
+  memset(&pbuf[header_len+PAYLOAD_OFFSET_ICMP_CHECKSUM], 0, 2);
+#ifndef OFFLOAD_CHECKSUM
+  // TODO Calculate the header checksum in software
+#endif
+  // Send response
+  eth_send_response(pbuf, len);
   return;
 }
 
@@ -1401,51 +1499,44 @@ static void eth_respond_udp(uint8_t *pbuf, uint32_t len) {
   return;
 }
 
-static void eth_send_response(uint8_t *pbuf, uint32_t len) {
+#define NO_ERROR    (0)
+#define ERR_NO_BUFFER (-1)
+#define ERR_TOO_BIG (-2)
+static int eth_send_response(uint8_t *pbuf, uint32_t len) {
   uint8_t *buffer = (uint8_t *)(heth.TxDesc->Buffer1Addr);
   ETH_DMADescTypeDef *DmaTxDesc  = heth.TxDesc;
+  int error = NO_ERROR;
 
   // copy frame from pbuf to driver buffers
   // Is this buffer available? If not, goto error
   if((DmaTxDesc->Status & ETH_DMATXDESC_OWN) != (uint32_t)RESET)
   {
     printf("Buffer not available\r\n");
-    goto error;
+    error = ERR_NO_BUFFER;
   }
 
   // Check if the length of data to copy is bigger than Tx buffer size
   if ( len > (uint32_t)ETH_TX_BUF_SIZE ) {
     printf("Too big (%ld > %ld)\r\n", len, (uint32_t)ETH_TX_BUF_SIZE);
-    goto error;
+    error = ERR_TOO_BIG;
   }
-  // Copy data to Tx buffer
-  memcpy(buffer, pbuf, len);
 
-#if 0
-  // Point to next descriptor
-  DmaTxDesc = (ETH_DMADescTypeDef *)(DmaTxDesc->Buffer2NextDescAddr);
-  // Check if the buffer is available
-  if((DmaTxDesc->Status & ETH_DMATXDESC_OWN) != (uint32_t)RESET)
-  {
-    printf("Next buffer not available?\r\n");
-    goto error;
-  }
-  buffer = (uint8_t *)(DmaTxDesc->Buffer1Addr);
-#endif
+  if (error == NO_ERROR) {
+    // Copy data to Tx buffer
+    memcpy(buffer, pbuf, len);
 
-  // Prepare transmit descriptors to give to DMA
-  printf("Sending frame of len %ld... ", len);
-  HAL_StatusTypeDef rval = HAL_ETH_TransmitFrame(&heth, len);
-  printf("rval = %d\r\n", rval);
+    // Prepare transmit descriptors to give to DMA
+    printf("Sending frame of len %ld... ", len);
+    HAL_StatusTypeDef rval = HAL_ETH_TransmitFrame(&heth, len);
+    printf("rval = %d\r\n", rval);
 #if 1
-  for (uint32_t nbyte = 0; nbyte < len; nbyte++) {
-    printf("0x%02x ", buffer[nbyte]);
+    for (uint32_t nbyte = 0; nbyte < len; nbyte++) {
+      printf("0x%02x ", buffer[nbyte]);
+    }
+    printf("\r\n");
   }
-  printf("\r\n");
-
 #endif
 
-error:
   // When Transmit Underflow flag is set, clear it and issue a Transmit Poll Demand to resume transmission
   if ((heth.Instance->DMASR & ETH_DMASR_TUS) != (uint32_t)RESET)
   {
@@ -1456,7 +1547,7 @@ error:
     heth.Instance->DMATPDR = 0;
   }
 
-  return;
+  return error;
 }
 #endif
 
