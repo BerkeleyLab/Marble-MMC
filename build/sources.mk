@@ -13,3 +13,4 @@ $(SOURCE_DIR)/ltm4673.c \
 $(SOURCE_DIR)/watchdog.c \
 $(SOURCE_DIR)/refsip.c \
 $(SOURCE_DIR)/system.c \
+$(SOURCE_DIR)/lass.c \

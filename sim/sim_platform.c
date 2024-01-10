@@ -71,7 +71,7 @@ uint32_t marble_init(void) {
   sim_console_state.msgReady = 0;
   eeprom_init();
   init_sim_ltm4673();
-  if (lass_init(MAILBOX_PORT) < 0) {
+  if (sim_lass_init(MAILBOX_PORT) < 0) {
     return 1;
   }
   sim_spi_init();
@@ -114,7 +114,7 @@ int board_service(void) {
     marble_SysTick_Handler();
     _systickIrqTimeStart = now;
   }
-  lass_service();
+  sim_lass_service();
 
   // Keep the system responsive, but don't hog resources
   sleep(BOARD_SERVICE_SLEEP_MS/1000);

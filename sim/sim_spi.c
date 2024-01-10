@@ -5,7 +5,7 @@
 
 //#define DEBUG_PRINT
 #include <stdio.h>
-#include "sim_lass.h"
+#include "lass.h"
 #include "sim_api.h"
 #include "dbg.h"
 

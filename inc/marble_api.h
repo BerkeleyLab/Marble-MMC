@@ -325,6 +325,11 @@ void reset_fpga_with_callback(void (*cb)(void));
 // RND - only on marble_v2 (STM32) for now
 int get_hw_rnd(uint32_t *result);
 
+#ifdef NUCLEO
+void eth_handle_packet(void);
+void eth_dev_init(uint16_t port);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

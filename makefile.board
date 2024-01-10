@@ -43,6 +43,7 @@ include dir_list.mk
 # Nucleo build uses 'marble' settings but with NUCLEO macro defined
 ifeq ($(BOARD), nucleo)
 include $(BUILD_DIR)/marble.conf
+OTHER_SOURCES+=$(MARBLE_V2)/eth_dev.c
 USR_CFLAGS += -DNUCLEO
 else
 include $(BUILD_DIR)/$(BOARD).conf
