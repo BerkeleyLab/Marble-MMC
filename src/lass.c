@@ -16,6 +16,7 @@
 #include "dbg.h"
 
 #define RESPOND_IN_PLACE
+#define VET_LASS
 
 /* ============================= Helper Macros ============================== */
 #define LASS_CMD_WRITE        (0x00)
@@ -197,10 +198,13 @@ static int vet_mem_block(uint32_t base, uint32_t size) {
 int parse_lass(void *pkt_data, int size, volatile uint8_t **response, volatile int *response_size) {
   int do_reply = 1;
   lass_pkt_t *pkt = (lass_pkt_t *)pkt_data;
+#ifdef VET_LASS
   if ((pkt->cmd) & 0xcf) {
     // Invalid packet command - not LASS
+    printf("Invalid cmd: %d\r\n", pkt->cmd);
     return 0;
   }
+#endif
   uint32_t trans_id_0, trans_id_1;
   trans_id_0 = _get_nbytes(pkt->transaction_id, 4, 1);
   trans_id_1 = _get_nbytes((pkt->transaction_id+4), 4, 1);
@@ -210,6 +214,7 @@ int parse_lass(void *pkt_data, int size, volatile uint8_t **response, volatile i
     next = parse_lass_beat(next);
     if (next == NULL) {
       // Mangled or non-LASS
+      printf("next is NULL\r\n");
       return 0;
     }
   }
@@ -333,21 +338,28 @@ static lass_beat_t *parse_lass_beat(lass_beat_t *beat) {
   unsigned int rep_count;
   unsigned int addr;
   unsigned int data;
+#ifdef VET_LASS
   if ((beat->cmd) & 0xcf) {
     // Mangled or non-LASS
+    printf("beat->cmd = 0x%x\r\n", beat->cmd);
     return (lass_beat_t *)NULL;
   }
+#endif
   if (beat->cmd == LASS_CMD_BURST) {
     lass_burst_beat_t *beat_b = (lass_burst_beat_t *)beat;
+    rep_count = _get_rep_count(beat_b->rep_count);
+#ifdef VET_LASS
     if ((beat_b->cmd) & 0xcf) {
       // Mangled or non-LASS
+      printf("beat_b->cmd = 0x%x\r\n", beat->cmd);
       return (lass_beat_t *)NULL;
     }
-    rep_count = _get_rep_count(beat_b->rep_count);
     if (rep_count > 0x1f) {
       // Mangled or non-LASS
+      printf("rep_count = %d\r\n", rep_count);
       return (lass_beat_t *)NULL;
     }
+#endif
     addr = _get_nbytes(beat_b->addr, 3, 1);
 #ifndef RESPOND_IN_PLACE
     ack_burst(rep_count);

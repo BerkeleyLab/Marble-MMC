@@ -16,6 +16,9 @@
 #include "st-eeprom.h"
 #include "lass.h"
 
+//#define CHATTER
+#include "dbg.h"
+
 #define OFFLOAD_CHECKSUM
 typedef enum {
   PKT_TYPE_UNK,
@@ -34,6 +37,10 @@ static uint16_t lass_port = 50006;
 
 // marble_board.c
 extern ETH_HandleTypeDef heth;
+
+uint8_t *eth_get_mac(void) {
+  return OWN_MAC;
+}
 
 void eth_dev_init(uint16_t port) {
   lass_port = port;
@@ -65,23 +72,14 @@ void eth_handle_packet(void) {
 
   //uint8_t *buf = (uint8_t *)heth.RxFrameInfos.buffer;
   ETH_DMADescTypeDef *dmarxdesc = heth.RxFrameInfos.FSRxDesc;
-  printf("Eth packet. length %ld, SegCount %ld\r\n", len, heth.RxFrameInfos.SegCount);
+  printc("Eth packet. length %ld, SegCount %ld\r\n", len, heth.RxFrameInfos.SegCount);
   uint8_t *buf = (uint8_t *)heth.RxFrameInfos.buffer;
-#if 0
-  uint8_t *buf;
-  for (uint32_t nbuf = 0; nbuf < ETH_RXBUFNB; nbuf++) {
-    buf = eth_rx_buf[nbuf];
-    printf("Buf[%ld]: ", nbuf);
-    for (int nbyte = 0; nbyte < 16; nbyte++) {
-      printf("0x%02x ", buf[nbyte]);
-    }
-    printf("\r\n");
-  }
-#endif
+#ifdef ETH_PRINT_RECEIVED
   for (uint32_t nbyte = 0; nbyte < len; nbyte++) {
     printf("0x%02x ", buf[nbyte]);
   }
   printf("\r\n");
+#endif
 
   uint32_t handled = 0;
   uint8_t *pktbuf = buf;
@@ -181,7 +179,7 @@ static pkt_type_t eth_pkt_type(uint8_t *pbuf, uint32_t len) {
   uint8_t ihl;
   switch (ethertype) {
     case 0x0608:  // ARP (big-endian)
-      printf("ARP\r\n");
+      printc("ARP\r\n");
       // If PTYPE != 0x0800 (0x0008 big-endian), don't respond. Only responding to IPv4
       gp16 = *((uint16_t *)&pbuf[OFFSET_ARP_PTYPE]);
       if (gp16 != 0x0008) {
@@ -198,7 +196,7 @@ static pkt_type_t eth_pkt_type(uint8_t *pbuf, uint32_t len) {
       type = PKT_TYPE_ARP;
       break;
     case 0x0008:  // IPv4 (big-endian)
-      printf("IPv4\r\n");
+      printc("IPv4\r\n");
       // Check version (must be 4)
       if ((pbuf[OFFSET_IP_VERSION_IHL] & 0xf0) != 0x40) {
         break;
@@ -220,13 +218,13 @@ static pkt_type_t eth_pkt_type(uint8_t *pbuf, uint32_t len) {
       }
       break;
     case 0x4208:  // WakeOnLAN (big-endian)
-      printf("WakeOnLAN\r\n");
+      printc("WakeOnLAN\r\n");
       break;
     case 0xDD86:  // IPv6 (big-endian)
-      printf("IPv6\r\n");
+      printc("IPv6\r\n");
       break;
     default:
-      printf("Ethertype = 0x%04x\r\n", ethertype);
+      printc("Ethertype = 0x%04x\r\n", ethertype);
       break;
   }
   return type;
@@ -285,6 +283,7 @@ static uint32_t eth_respond_icmp(uint8_t *pbuf, uint32_t len) {
   return (uint32_t)(14+total_len);
 }
 
+#define RESPOND_IN_PLACE
 static uint32_t eth_respond_udp(uint8_t *pbuf, uint32_t len) {
   uint8_t header_len = 4*(pbuf[OFFSET_IP_VERSION_IHL] & 0xf); // header_len = 4*IHL
   // First check the port
@@ -304,7 +303,8 @@ static uint32_t eth_respond_udp(uint8_t *pbuf, uint32_t len) {
   // Payload: LASS protocol
   uint8_t *prsp;
   int rsp_size = 0;
-  int do_reply = parse_lass((void *)&pbuf[14+header_len+OFFSET_IP_PAYLOAD_UDP_DATA], len, \
+  int do_reply = parse_lass((void *)&pbuf[14+header_len+OFFSET_IP_PAYLOAD_UDP_DATA], \
+                            gp16-(header_len+OFFSET_IP_PAYLOAD_UDP_DATA), \
                             (volatile uint8_t **)&prsp, (volatile int *)&rsp_size);
   if (do_reply == 0) {
     printf("UDP payload not LASS\r\n");
@@ -327,7 +327,9 @@ static uint32_t eth_respond_udp(uint8_t *pbuf, uint32_t len) {
   pbuf[14+header_len+OFFSET_IP_PAYLOAD_UDP_SRC_PORT+1] = (uint8_t)(lass_port & 0xff);
   // Zero-out the UDP checksum to let the STM32 do its thing
   memset(&pbuf[14+header_len+OFFSET_IP_PAYLOAD_UDP_CHECKSUM], 0, 2);
-  eth_send_response(prsp, rsp_size);
+#ifdef RESPOND_IN_PLACE
+  eth_send_response(pbuf, len);
+#endif
   return 14+gp16;
 }
 
@@ -358,16 +360,18 @@ static int eth_send_response(uint8_t *pbuf, uint32_t len) {
     memcpy(buffer, pbuf, len);
 
     // Prepare transmit descriptors to give to DMA
-    printf("Sending frame of len %ld... ", len);
+    printc("Sending frame of len %ld... ", len);
     HAL_StatusTypeDef rval = HAL_ETH_TransmitFrame(&heth, len);
-    printf("rval = %d\r\n", rval);
-#if 1
+    if (rval != HAL_OK) {
+      printf("HAL_ETH_TransmitFrame failed with %d\r\n", rval);
+    }
+#ifdef ETH_PRINT_SENT
     for (uint32_t nbyte = 0; nbyte < len; nbyte++) {
       printf("0x%02x ", buffer[nbyte]);
     }
     printf("\r\n");
-  }
 #endif
+  }
 
   // When Transmit Underflow flag is set, clear it and issue a Transmit Poll Demand to resume transmission
   if ((heth.Instance->DMASR & ETH_DMASR_TUS) != (uint32_t)RESET)

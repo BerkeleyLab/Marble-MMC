@@ -328,6 +328,7 @@ int get_hw_rnd(uint32_t *result);
 #ifdef NUCLEO
 void eth_handle_packet(void);
 void eth_dev_init(uint16_t port);
+uint8_t *eth_get_mac(void);
 #endif
 
 #ifdef __cplusplus

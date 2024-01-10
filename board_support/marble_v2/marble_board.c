@@ -1215,19 +1215,20 @@ static void MX_ETH_Init(void)
 {
 #ifdef NUCLEO
 
+  uint8_t *pown_mac = eth_get_mac();
   heth.Instance = ETH;
   heth.Init.AutoNegotiation = ETH_AUTONEGOTIATION_ENABLE; // ETH_AUTONEGOTIATION_DISABLE
   heth.Init.PhyAddress = 0; // Address of PHY chip used with MDIO;
   heth.Init.Speed = ETH_SPEED_100M;
   heth.Init.DuplexMode = ETH_MODE_FULLDUPLEX;
-  heth.Init.MACAddr = OWN_MAC;
+  heth.Init.MACAddr = pown_mac;
   heth.Init.RxMode = ETH_RXINTERRUPT_MODE;
   heth.Init.ChecksumMode = ETH_CHECKSUM_BY_HARDWARE;
   heth.Init.MediaInterface = ETH_MEDIA_INTERFACE_RMII;
 
-  if (HAL_ETH_Init(&heth) != HAL_OK)
-  {
-    Error_Handler();
+  HAL_StatusTypeDef rval;
+  if ((rval = HAL_ETH_Init(&heth)) != HAL_OK) {
+    printf("Failed to init ethernet: %d\r\n", rval);
   }
 
   /* Initialize Tx Descriptors list: Chain Mode */
