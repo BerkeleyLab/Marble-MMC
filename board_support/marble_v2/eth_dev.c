@@ -231,6 +231,20 @@ static pkt_type_t eth_pkt_type(uint8_t *pbuf, uint32_t len) {
 }
 
 static uint32_t eth_respond_arp(uint8_t *pbuf, uint32_t len) {
+  // Only respond to ARP requests for our own IP
+  uint8_t dest_ip[4];
+  memcpy(dest_ip, pbuf+OFFSET_ARP_TPA, 4);
+  int is_me = 1;
+  for (int n = 0; n < 4; n++) {
+    if (dest_ip[n] != OWN_IP[n]) {
+      is_me = 0;
+      break;
+    }
+  }
+  if (!is_me) {
+    // Don't respond
+    return len;
+  }
   // Use src MAC as dest MAC in ethernet header
   memcpy(pbuf, pbuf+6, 6);    // Clobber dest MAC with src MAC
   memcpy(pbuf+6, OWN_MAC, 6); // Clobber src MAC with own MAC
