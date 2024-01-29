@@ -154,4 +154,3 @@ void ltm4673_print_limits(void);
 #endif
 
 #endif // _LTM4673_H_
-

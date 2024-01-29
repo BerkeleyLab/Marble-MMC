@@ -320,7 +320,7 @@ void marble_SLEEP_us(uint32_t delay);
 /************
 * FPGA Watchdog Support
 ************/
-// In main.c
+// In system.c
 void reset_fpga_with_callback(void (*cb)(void));
 // RND - only on marble_v2 (STM32) for now
 int get_hw_rnd(uint32_t *result);

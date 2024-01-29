@@ -78,7 +78,8 @@ static Marble_PCB_Rev_t marble_pcb_rev;
 static int i2cBusStatus = 0;
 static int i2c_pm_alert = 0;
 static int _over_temp = 0;
-static int _pwr_good = 0;
+// Assert this so that the first rising edge of PWRGOOD doesn't trigger re-init
+static int _pwr_good = 1;
 
 // Moved here from marble_api.h
 SSP_PORT SSP_FPGA;
@@ -176,7 +177,8 @@ int board_service(void) {
       // Detect asserting edge
       printf("ALERT: Power good. Re-initializing.\r\n");
       board_init();
-      reset_fpga();
+      //reset_fpga();
+      FPGAWD_SelfReset();
       _pwr_good = 1;
    } else if ((_pwr_good) && (gpio == PWRGD_DEASSERTED)) {
       // Detect de-asserting edge
@@ -522,8 +524,10 @@ bool marble_FPGAint_get(void)
    return true;
 }
 
+// TODO - Deprecated. Remove.
 void reset_fpga(void)
 {
+  printf("Deprecated reset_fpga(). Remove me!\r\n");
    /* Pull the PROGRAM_B pin low; it's spelled PROG_B on schematic */
    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, false);
    marble_SLEEP_ms(50);
