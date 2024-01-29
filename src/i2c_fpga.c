@@ -333,12 +333,12 @@ void adn4600_init()
    for (unsigned ix=0; ix<4; ix++) {
       uint8_t cmd = 0x58 + ix;
       rc = marble_I2C_cmdrecv(I2C_FPGA, ADN4600, cmd, &status, 1);
-      printf("> ADN6400 XPT Temp %d r[0x%x] = 0x%2.2x (rc=%d)\r\n", ix, cmd, status, rc);
+      printf("> ADN4600 XPT Temp %d r[0x%x] = 0x%2.2x (rc=%d)\r\n", ix, cmd, status, rc);
    }
 
    config = 1;
    rc = marble_I2C_cmdsend(I2C_FPGA, ADN4600, ADN4600_XPT_Update, &config, 1);
-   printf("> ADN6400 Update (rc=%d)\r\n", rc);
+   printf("> ADN4600 Update (rc=%d)\r\n", rc);
 }
 
 void adn4600_printStatus()
