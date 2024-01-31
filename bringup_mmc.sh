@@ -2,7 +2,6 @@
 
 # Environment Config:
 #   Mandatory Environment Variables:
-#     MMC_PATH=/path/to/marble_mmc
 #     LTM_SCRIPT=/path/to/LTM4673_reglist.txt
 #   Optional Environment Variables:
 #     TTY_MMC=/dev/ttyUSB3
@@ -20,25 +19,22 @@
 # Turn on exit on failure
 set -e
 
+fail() {
+  echo "Error: $1" >&2
+  exit 1
+}
+
+# Find directory containing this script (regardless of PWD)
+MMC_PATH="$(dirname "$(readlink -f "$0")")"
+
 if [ $# -lt 0 ]; then
   echo "Usage: bringup_mmc.sh"
   exit 2
 fi
 
 # Mandatory Paths Check.
-paths_complete=1
-if [ -z "$MMC_PATH" ]; then
-  echo "Define MMC_PATH environment variable"
-  paths_complete=0
-fi
-
 if [ -z "$LTM_SCRIPT" ]; then
-  echo "Define register list for LTM4673"
-  paths_complete=0
-fi
-
-if [ "$paths_complete" -eq 0 ]; then
-  exit 1
+  fail "Must set LTM_SCRIPT= to define register list for LTM4673"
 fi
 
 # Optional Environment Variables Check.
@@ -51,13 +47,11 @@ SCRIPTS_PATH=$MMC_PATH/scripts
 
 # Test for exist
 if [ ! -e "$MMC_PATH" ]; then
-  echo "$MMC_PATH does not exist"
-  exit 1
+  fail "MMC_PATH=$MMC_PATH does not exist"
 fi
 
 if [ ! -d "$MMC_PATH" ]; then
-  echo "$MMC_PATH is not a directory"
-  exit 1
+  fail "MMC_PATH=$MMC_PATH is not a directory"
 fi
 
 #### Marble Bringup Steps ####
@@ -66,8 +60,7 @@ fi
 echo "Programming MMC...."
 cd "$MMC_PATH"
 if ! make marble_download; then
-  echo "Could not program marble_mmc. Is Segger J-Link attached? Is board powered?"
-  exit 1
+  fail "Could not program marble_mmc. Is Segger J-Link attached? Is board powered?"
 else
   echo "Successfully programmed MMC!"
 fi
@@ -80,8 +73,7 @@ sleep 5
 # 2. Program LTM4673 power management chip
 echo "Programming LTM4673 power management chip...."
 if ! python3 "$SCRIPTS_PATH"/ltm4673.py -d "$TTY_MMC" write -f "$LTM_SCRIPT"; then
-  echo "Could not program LTM4673."
-  exit 1
+  fail "Could not program LTM4673."
 else
   echo "##################################"
   python3 "$SCRIPTS_PATH"/ltm4673.py -d "$TTY_MMC" store
