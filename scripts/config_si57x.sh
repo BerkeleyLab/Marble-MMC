@@ -3,6 +3,7 @@
 # config_si57x.sh [-d /dev/ttyUSB3] serial_number
 # Set environment variable TTY_MMC to point to whatever /dev/ttyUSBx
 # the marble_mmc enumerated as.  Defaults to /dev/ttyUSB3
+# In case no argument is given, it will try to figure it out
 
 devnext=0
 dev=
@@ -26,8 +27,14 @@ if [ -z "$snum" ]; then
     snum=$(printf "%-.2s" "$IP")
     echo "Using serial number from IP: $snum"
   else
-    echo "Usage: config_si57x.sh [-d /dev/ttyUSB3] serial_number"
-    exit 1
+    # Try to find serial number (first one)
+    snum=$(ls -l /dev/serial/by-id/ | grep "LBNL_Marble.*if03" \
+              | sed -r 's/.*Marble_0{0,6}//' | sed 's/-.*$//')
+    snum=$(echo $snum | sed 's/ .*//')
+    if [ -z "$snum" ]; then
+      echo "Usage: config_si57x.sh [-d /dev/ttyUSB3] serial_number"
+      exit 1
+    fi
   fi
 fi
 
@@ -35,7 +42,13 @@ if [ -z "$dev" ]; then
   if [ -n "$TTY_MMC" ]; then
     dev=$TTY_MMC
   else
-    dev=/dev/ttyUSB3
+    # Try to find tty associated to mmc (first one)
+    dev=$(ls -l /dev/serial/by-id/ | grep "LBNL_Marble.*if03"\
+            | sed 's/.*ttyUSB/\/dev\/ttyUSB/')
+    dev=$(echo $dev | sed 's/ .*//')
+    if [ -z "$dev" ]; then
+      dev=/dev/ttyUSB3
+    fi
   fi
 fi
 
