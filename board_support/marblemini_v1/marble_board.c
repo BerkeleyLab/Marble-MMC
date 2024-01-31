@@ -74,6 +74,10 @@ int board_service(void) {
    return 0;
 }
 
+void marble_print_status(void) {
+  return;
+}
+
 // Only used in simulation
 void cleanup(void) {
    return;

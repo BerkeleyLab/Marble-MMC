@@ -83,6 +83,11 @@ void board_init(void) {
   return;
 }
 
+void marble_print_status(void) {
+  printf("Board Status: Simulation\r\n");
+  return;
+}
+
 // Emulate USART_RXNE_ISR() from marble_board.c but with keyboard input from stdin
 // Also emulate USART_TXE_ISR() for printf()
 int board_service(void) {

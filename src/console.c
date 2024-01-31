@@ -524,7 +524,6 @@ static int toggle_gpio(char c) {
       marble_Pmod3_5_write(1);
       break;
     case 'd':
-      // PMOD3_5 J16[4]
       marble_PSU_reset_write(0);
       break;
     case 'D':

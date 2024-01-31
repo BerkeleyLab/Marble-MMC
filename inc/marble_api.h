@@ -152,6 +152,8 @@ uint8_t marble_get_board_id(void);
 
 void print_status_counters(void);
 
+void marble_print_status(void);
+
 uint32_t marble_get_tick(void);
 
 // Only used in simulation

@@ -195,6 +195,18 @@ int board_service(void) {
    return 0;
 }
 
+void marble_print_status(void) {
+  printf("Board Status:");
+  if ((_pwr_good) & (!_over_temp)) {
+    printf(" No fault.");
+  } else {
+    if (_over_temp) printf(" Over-temperature shutdown.");
+    if (!_pwr_good) printf(" Lost power (power supply PWRGD deasserted).");
+  }
+  printf("\r\n");
+  return;
+}
+
 // Only used in simulation
 void cleanup(void) {
    return;
@@ -481,18 +493,18 @@ void marble_print_GPIO_status(void) {
   state = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_14);
   printf("PSU power reset = ");
   if (state) {
-    printf("On\r\n");
+    printf("Asserted\r\n");
   } else {
-    printf("Off\r\n");
+    printf("Deasserted\r\n");
   }
   // TODO - Only on Marble v1.4
   state = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_15);
   printf("PSU power alert = ");
   if (state) {
     // LTM4673 Alert is low-true (open-drain) /Alert
-    printf("Off\r\n");
+    printf("Deasserted\r\n");
   } else {
-    printf("On\r\n");
+    printf("Asserted\r\n");
   }
   return;
 }
