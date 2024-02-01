@@ -82,19 +82,24 @@ GDB=gdb-multiarch
 #
 OPENOCD         = openocd
 
+# binutils assembler does not accept the same set of arguments as gcc
+# https://gcc.gnu.org/onlinedocs/gcc/Debugging-Options.html
+# https://sourceware.org/binutils/docs/as.html#Invoking
+AS_OPT_FLAGS ?= -g
+OPT_FLAGS ?= -g3 -ggdb
 
 # Compilation Flags
 #
 # Display all warnings. Compile functions and data into their own sections so
 # they can be discarded if unused.  The linker performs garbage collection of
 # unused input sections.
-CFLAGS = $(FLAGS) -Os -std=c11 -ffunction-sections -fdata-sections $(ARCH_FLAGS) $(USR_CFLAGS)
+CFLAGS = $(OPT_FLAGS) -Os -std=c11 -ffunction-sections -fdata-sections $(ARCH_FLAGS) $(USR_CFLAGS)
 CFLAGS += -Wall -Wextra -Wundef -Wshadow -Wstrict-prototypes -Wwrite-strings -pedantic
 CFLAGS += -Wpointer-arith -Wredundant-decls -Wunreachable-code
 # to do:  -Wcast-align -Wcast-qual
 
-ASFLAGS = $(FLAGS) $(ARCH_FLAGS)
-LDFLAGS = $(FLAGS) $(LINKER_FLAGS) -Wextra $(ARCH_FLAGS)
+ASFLAGS = $(AS_OPT_FLAGS) $(ARCH_FLAGS)
+LDFLAGS = $(OPT_FLAGS) $(LINKER_FLAGS) -Wextra $(ARCH_FLAGS)
 
 # Default target
 all: $(OUTPUT_DIR)/$(PROJECT_NAME).elf
