@@ -78,7 +78,11 @@ static Marble_PCB_Rev_t marble_pcb_rev;
 static int i2cBusStatus = 0;
 static int i2c_pm_alert = 0;
 static int _over_temp = 0;
+// PWR_GOOD sets the length of the PWRGD glitch filter. Higher values means longer.
+#define PWR_GOOD 3
+#define PWR_FAIL 0
 // Assert this so that the first rising edge of PWRGOOD doesn't trigger re-init
+static int _pwr_state = PWR_GOOD;
 static int _pwr_good = 1;
 
 // Moved here from marble_api.h
@@ -173,17 +177,25 @@ int board_service(void) {
    }
    // Check state of PWRGD pin
    gpio = HAL_GPIO_ReadPin(PWRGD_PORT, PWRGD_PIN);
-   if ((!_pwr_good) && (gpio == PWRGD_ASSERTED)) {
-      // Detect asserting edge
-      printf("ALERT: Power good. Re-initializing.\r\n");
-      board_init();
-      //reset_fpga();
-      FPGAWD_SelfReset();
-      _pwr_good = 1;
-   } else if ((_pwr_good) && (gpio == PWRGD_DEASSERTED)) {
-      // Detect de-asserting edge
-      printf("ALERT: Lost power.\r\n");
-      _pwr_good = 0;
+   if (gpio == PWRGD_ASSERTED) {
+     if (_pwr_state != PWR_GOOD) {
+       if (_pwr_state++ == PWR_GOOD) {
+         // Detect asserting edge
+         printf("ALERT: Power good. Re-initializing.\r\n");
+         board_init();
+         //reset_fpga();
+         FPGAWD_SelfReset();
+         _pwr_good = 1;
+       }
+     }
+   } else { // gpio == PWRGD_DEASSERTED
+      if (_pwr_state != PWR_FAIL) {
+        if (!_pwr_state--) {
+          // Detect de-asserting edge
+          printf("ALERT: Lost power.\r\n");
+          _pwr_good = 0;
+        }
+      }
    }
 #if 0
    // This is unused at the moment.
@@ -1387,7 +1399,8 @@ static void MX_GPIO_Init(void)
    /* Configure GPIO pin PWRGD */
    GPIO_InitStruct.Pin = PWRGD_PIN; // GPIO_PIN_4
    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-   GPIO_InitStruct.Pull = GPIO_NOPULL;
+   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+   GPIO_InitStruct.Pull = GPIO_SPEED_FREQ_LOW;
    HAL_GPIO_Init(PWRGD_PORT, &GPIO_InitStruct);
 
    /*Configure GPIO pins : PC0 - PROG_B */
