@@ -41,10 +41,10 @@ on `/dev/ttyUSB1`.
   * Current consumption should be around 200 mA
 
 # Simulated Target
-There is a simulated target included in this repo which runs the MMC firmware natively on
-the host, implementing as much hardware emulation as has been needed for development.  This
-is mostly useful for developers or anyone hoping to get familiar with the interface without
-access to a Marble board.
+There is a simulated target included in this repo which runs the MMC firmware
+natively on the host, implementing as much hardware emulation as has been
+needed for development.  This is mostly useful for developers or anyone hoping
+to get familiar with the interface without access to a Marble board.
 
 Build the simulated target
 `make sim`
@@ -52,17 +52,18 @@ Build the simulated target
 Run the simulated target
 `make run`
 
-There is also a 'wrapped' version of the sim target which redirects input/output to/from a
-pseudo-terminal (PTY).  This is handy for development of scripts designed to talk to the
-actual hardware over a serial port.
+There is also a 'wrapped' version of the sim target which redirects
+input/output to/from a pseudo-terminal (PTY).  This is handy for development
+of scripts designed to talk to the actual hardware over a serial port.
 `make wrap`
 
 # Nucleo Target
-One step closer to the real deal is the Nucleo target which runs on a Nucleo-F207ZG development
-board (https://www.st.com/en/evaluation-tools/nucleo-f207zg.html).  This is handy for tests
-that use hardware peripherals but either are dangerous or inconvenient to run on a marble.
-There are a few pin-mapping changes which can be found by looking for `#ifdef NUCLEO` macro
-tests throughout the source code (mostly in board\_support/marble\_v2/marble\_board.c).
+One step closer to the real deal is the Nucleo target which runs on a Nucleo-F207ZG
+development board (https://www.st.com/en/evaluation-tools/nucleo-f207zg.html).
+This is handy for tests that use hardware peripherals but either are dangerous
+or inconvenient to run on a Marble board.  There are a few pin-mapping changes
+which can be found by looking for `#ifdef NUCLEO` macro tests throughout the
+source code (mostly in board\_support/marble\_v2/marble\_board.c).
 
 Build the firmware targeting the nucleo.
 `make nucleo`
@@ -71,7 +72,8 @@ Download to the nucleo board over its built-in ST-Link v2 SWD programmer/debugge
 `make nucleo_download`
 
 ## Program FTDI
-The FTDI works fine in its default configuration. This step just programs serial number and product name into its USB descriptors.
+The FTDI USB link works fine in its default configuration. This step just
+programs serial number and product name into its USB descriptors.
 
 You need ftdi_eeprom from libfdti:
 
@@ -92,6 +94,48 @@ ls -l ftdi_eeprom/ftdi_eeprom
   * Enter the unique serial number in `ftdi/marble_mini.conf`
   * Make sure `lsusb -d 0403:6011` shows exactly 0 devices, then plug in the Marble-Mini, and see exactly 1 device
   * Run `ftdi/program_ftdi.sh`
+
+## Features
+
+The core USB UART command menu (implemented in `src/console.c`) is
+```
+1 - MDIO/PHY
+2 - I2C monitor
+3 - Status & counters
+4 gpio - GPIO control
+5 - Reset FPGA
+6 - Push IP&MAC
+7 - MAX6639
+8 - LM75_0
+9 - LM75_1
+a - I2C scan all ports
+b - Config ADN4600
+c - INA219 Main power supply
+d - MGT MUX - switch to QSFP 2
+e - PM bus display
+f - XRP7724 flash
+g - XRP7724 go
+h - FMC MGT MUX set
+i - timer check/cal
+j - Read SPI mailbox
+k - PCA9555 status
+l - Config PCA9555
+m d.d.d.d - Set IP Address
+n d:d:d:d:d:d - Set MAC Address
+o - SI570 status
+p speed[%] - Set fan speed (0-120 or 0%-100%)
+q otemp - Set overtemperature threshold (degC)
+r enable - Set mailbox enable/disable (1/0, on/off)
+s addr_hex freq_hz config_hex - Set Si570 configuration
+t pmbus_msg - Forward PMBus transaction to LTM4673
+u period - Set/get watchdog timeout period (in seconds)
+v key - Set a new 128-bit secret key (non-volatile, write only)
+```
+
+Addtitional documentation of features:
+
+  * [Mailbox](doc/mailbox.md)
+  * [Watchdog](watchdog.md)
 
 ## Credits
 
