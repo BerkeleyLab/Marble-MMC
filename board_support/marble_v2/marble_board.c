@@ -179,7 +179,7 @@ int board_service(void) {
    gpio = HAL_GPIO_ReadPin(PWRGD_PORT, PWRGD_PIN);
    if (gpio == PWRGD_ASSERTED) {
      if (_pwr_state != PWR_GOOD) {
-       if (_pwr_state++ == PWR_GOOD) {
+       if ((_pwr_state++ == PWR_GOOD) && (!_pwr_good)) {
          // Detect asserting edge
          printf("ALERT: Power good. Re-initializing.\r\n");
          board_init();
@@ -190,7 +190,7 @@ int board_service(void) {
      }
    } else { // gpio == PWRGD_DEASSERTED
       if (_pwr_state != PWR_FAIL) {
-        if (!_pwr_state--) {
+        if ((!_pwr_state--) && (_pwr_good)) {
           // Detect de-asserting edge
           printf("ALERT: Lost power.\r\n");
           _pwr_good = 0;
@@ -1556,6 +1556,7 @@ void mgtclk_xpoint_en(void)
       adn4600_init();
    } else {
       printf("Skipping adn4600_init\r\n");
+      _pwr_good = 0;
    }
 }
 
