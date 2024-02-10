@@ -1557,6 +1557,8 @@ void mgtclk_xpoint_en(void)
    } else {
       printf("Skipping adn4600_init\r\n");
       _pwr_good = 0;
+      // This will trigger a board_init in the main loop if PWRGD is asserted on the first check
+      _pwr_state = PWR_GOOD-1;
    }
 }
 
