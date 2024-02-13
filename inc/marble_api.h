@@ -221,6 +221,8 @@ uint8_t marble_PWR_status(void);
 
 void marble_print_GPIO_status(void);
 
+void marble_list_GPIOs(void);
+
 /****
 * FPGA reset/init control
 * Central to this whole job, may need refinement

@@ -270,6 +270,11 @@ void marble_print_GPIO_status(void) {
   return;
 }
 
+void marble_list_GPIOs(void) {
+  // TODO
+  return;
+}
+
 
 /************
 * Switches and FPGA interrupt

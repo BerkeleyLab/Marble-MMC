@@ -480,13 +480,7 @@ static void handle_gpio(const char *msg, int len) {
     marble_print_GPIO_status();
   }
   else if (!found) {
-    printf("GPIO pins, caps for on, lower case for off\r\n"
-           "?) Print state of GPIOs\r\n"
-           "a) FMC power\r\n"
-           "b) EN_PSU_CH\r\n"
-           "c) PB15 J16[4]\r\n"
-           "d) PSU reset\r\n"
-           "e) PSU alert\r\n");
+    marble_list_GPIOs();
   }
   return;
 }

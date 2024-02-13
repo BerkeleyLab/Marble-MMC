@@ -39,13 +39,15 @@
 #include "ltm4673.h"
 #include "watchdog.h"
 
+#define XRP_BYPASS_PWRGD
+#define XRP_REBOOT_DELAY    (500)
+
 #define UART_ECHO
 #ifdef NUCLEO
 #define SMBA_PIN GPIO_PIN_13
 #else
 #define SMBA_PIN GPIO_PIN_15
 #endif
-
 
 #define PRINT_POWER_STATE(subs, on) do {\
    char s[3] = {'f', 'f', '\0'}; \
@@ -84,6 +86,11 @@ static int _over_temp = 0;
 // Assert this so that the first rising edge of PWRGOOD doesn't trigger re-init
 static int _pwr_state = PWR_GOOD;
 static int _pwr_good = 1;
+
+#ifdef XRP_BYPASS_PWRGD
+static int _do_reboot = 0;
+static int _reboot_time = 0;
+#endif
 
 // Moved here from marble_api.h
 SSP_PORT SSP_FPGA;
@@ -174,6 +181,20 @@ int board_service(void) {
       // Detect de-asserting edge
       printf("ALERT: Over-Temperature Condition Cleared\r\n");
       _over_temp = 0;
+#ifdef XRP_BYPASS_PWRGD
+      _reboot_time = BSP_GET_SYSTICK();
+      _do_reboot = 1;
+   }
+   if (marble_pcb_rev <= Marble_v1_3) {
+      if ((_do_reboot) && ((BSP_GET_SYSTICK() - _reboot_time) > XRP_REBOOT_DELAY)) {
+         printf("ALERT: Re-initializing after delay.\r\n");
+         board_init();
+         FPGAWD_SelfReset();
+         _pwr_good = 1;
+         _do_reboot = 0;
+      }
+      return 0;
+#endif
    }
    // Check state of PWRGD pin
    gpio = HAL_GPIO_ReadPin(PWRGD_PORT, PWRGD_PIN);
@@ -183,7 +204,6 @@ int board_service(void) {
          // Detect asserting edge
          printf("ALERT: Power good. Re-initializing.\r\n");
          board_init();
-         //reset_fpga();
          FPGAWD_SelfReset();
          _pwr_good = 1;
        } else {
@@ -247,7 +267,7 @@ void marble_UART_init(void)
 void pwr_autoboot(void) {
 #ifndef NUCLEO
 #ifdef XRP_AUTOBOOT
-   if (marble_pcb_rev < Marble_v1_4) {
+   if (marble_pcb_rev <= Marble_v1_3) {
       printf("XRP_AUTOBOOT\r\n");
       marble_SLEEP_ms(300);
       xrp_boot();
@@ -511,21 +531,35 @@ void marble_print_GPIO_status(void) {
   state = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_15);
   printf("Pmod3_5 = %d", state);
   printf("\r\n");
-  state = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_14);
-  printf("PSU power reset = ");
-  if (state) {
-    printf("Asserted\r\n");
-  } else {
-    printf("Deasserted\r\n");
+  if (marble_pcb_rev >= Marble_v1_4) {
+    state = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_14);
+    printf("PSU power reset = ");
+    if (state) {
+      printf("Asserted\r\n");
+    } else {
+      printf("Deasserted\r\n");
+    }
+    state = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_15);
+    printf("PSU power alert = ");
+    if (state) {
+      // LTM4673 Alert is low-true (open-drain) /Alert
+      printf("Deasserted\r\n");
+    } else {
+      printf("Asserted\r\n");
+    }
   }
-  // TODO - Only on Marble v1.4
-  state = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_15);
-  printf("PSU power alert = ");
-  if (state) {
-    // LTM4673 Alert is low-true (open-drain) /Alert
-    printf("Deasserted\r\n");
-  } else {
-    printf("Asserted\r\n");
+  return;
+}
+
+void marble_list_GPIOs(void) {
+  printf("GPIO pins, caps for on, lower case for off\r\n"
+         "?) Print state of GPIOs\r\n"
+         "a) FMC power\r\n"
+         "b) EN_PSU_CH\r\n"
+         "c) PB15 J16[4]\r\n");
+  if (marble_pcb_rev >= Marble_v1_4) {
+    printf("d) PSU reset\r\n"
+           "e) PSU alert\r\n");
   }
   return;
 }
@@ -555,16 +589,6 @@ bool marble_FPGAint_get(void)
       return false;
    }
    return true;
-}
-
-// TODO - Deprecated. Remove.
-void reset_fpga(void)
-{
-  printf("Deprecated reset_fpga(). Remove me!\r\n");
-   /* Pull the PROGRAM_B pin low; it's spelled PROG_B on schematic */
-   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, false);
-   marble_SLEEP_ms(50);
-   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, true);
 }
 
 void disable_fpga(void) {
@@ -1558,9 +1582,10 @@ int get_hw_rnd(uint32_t *result) {
  */
 void mgtclk_xpoint_en(void)
 {
-   if ((marble_get_pcb_rev() < Marble_v1_4) & xrp_ch_status(XRP7724, 1)) { // CH1: 3.3V
+   if ((marble_get_pcb_rev() <= Marble_v1_3) & xrp_ch_status(XRP7724, 1)) { // CH1: 3.3V
+      printf("Using XRP7724 and adn4600_init\r\n");
       adn4600_init();
-   } else if ((marble_get_pcb_rev() > Marble_v1_3) & ltm4673_ch_status(LTM4673)) {
+   } else if ((marble_get_pcb_rev() >= Marble_v1_4) & ltm4673_ch_status(LTM4673)) {
       printf("Using LTM4673 and adn4600_init\r\n");
       adn4600_init();
    } else {

@@ -266,6 +266,11 @@ void marble_print_GPIO_status(void) {
   return;
 }
 
+void marble_list_GPIOs(void) {
+  printf("Sim list_GPIOs\r\n");
+  return;
+}
+
 void reset_fpga(void) {
   enable_fpga();
   return;
