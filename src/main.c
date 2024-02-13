@@ -5,6 +5,7 @@
 #include "i2c_pm.h"
 #include "i2c_fpga.h"
 #include "ltm4673.h"
+#include "watchdog.h"
 
 #define LED_SNAKE
 
@@ -47,7 +48,7 @@ int main(void) {
 
    if (1) {
       printf("** Policy: reset FPGA on MMC reset.  Doing it now. **\r\n");
-      reset_fpga();
+      FPGAWD_SelfReset();
       printf("**\r\n");
    }
 

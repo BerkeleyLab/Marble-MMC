@@ -471,7 +471,7 @@ static int eeprom_populate_val(ee_tags_t tag, const uint8_t *paddr, int len) {
       return rval;
     }
   } else {
-    printf("Found\r\n");
+    printd("Found\r\n");
   }
   return 0;
 }

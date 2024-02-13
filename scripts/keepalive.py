@@ -49,7 +49,12 @@ def refresh(ipAddr, mi, port=803, key=None):
     leep_dev = leep.open(leep_addr)
     # print(leep_dev.codehash)
     info = leep_dev.get_reg_info("spi_mbox")
-    SPI_MBOX_ADDR = int(info["base_addr"], base=0)
+    mbox_base_addr = info["base_addr"]
+    # print(mbox_base_addr)
+    try:
+        SPI_MBOX_ADDR = int(mbox_base_addr)
+    except TypeError:  # shouldn't happen, unless maybe a hex number leaked into final ROM
+        SPI_MBOX_ADDR = int(mbox_base_addr, base=0)
     # print("0x%x" % SPI_MBOX_ADDR)
     rvals = word_do(ipAddr, 7, "WD_NONCE", None, port=port)
     rval_b = bytearray(rvals)

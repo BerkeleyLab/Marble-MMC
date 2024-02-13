@@ -83,6 +83,15 @@ void board_init(void) {
   return;
 }
 
+void marble_print_status(void) {
+  printf("Board Status: Simulation\r\n");
+  return;
+}
+
+int marble_pwr_good(void) {
+  return 1;
+}
+
 // Emulate USART_RXNE_ISR() from marble_board.c but with keyboard input from stdin
 // Also emulate USART_TXE_ISR() for printf()
 int board_service(void) {
@@ -254,6 +263,11 @@ uint8_t marble_PWR_status(void) {
 
 void marble_print_GPIO_status(void) {
   printf("Sim print_GPIO_status\r\n");
+  return;
+}
+
+void marble_list_GPIOs(void) {
+  printf("Sim list_GPIOs\r\n");
   return;
 }
 

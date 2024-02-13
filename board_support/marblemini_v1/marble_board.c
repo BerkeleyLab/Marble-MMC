@@ -74,6 +74,15 @@ int board_service(void) {
    return 0;
 }
 
+void marble_print_status(void) {
+  return;
+}
+
+int marble_pwr_good(void) {
+  // TODO - Return current state of power supply
+  return 1;
+}
+
 // Only used in simulation
 void cleanup(void) {
    return;
@@ -258,6 +267,11 @@ uint8_t marble_PWR_status(void)
 void marble_print_GPIO_status(void) {
   // TODO
   printf("TODO Unimplemented\r\n");
+  return;
+}
+
+void marble_list_GPIOs(void) {
+  // TODO
   return;
 }
 

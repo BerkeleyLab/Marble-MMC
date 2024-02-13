@@ -89,10 +89,16 @@ void FPGAWD_Poll(void) {
   if (--poll_counter == 0) {
     printd("poll_counter reached 0\r\n");
     if (fpga_state == STATE_USER) {
-      reset_fpga_with_callback(fpga_reset_callback);
-      fpga_state = STATE_RESET;
+      printf("Watchdog timeout: resetting to golden image.\r\n");
+      FPGAWD_SelfReset();
     }
   }
+  return;
+}
+
+void FPGAWD_SelfReset(void) {
+  reset_fpga_with_callback(fpga_reset_callback);
+  fpga_state = STATE_RESET;
   return;
 }
 
@@ -126,11 +132,8 @@ void FPGAWD_DoneHandler(void) {
 /* Encapsulation necessitates this kind of structure
  */
 static void fpga_reset_callback(void) {
-  printf("Watchdog timeout: resetting to golden image.\r\n");
-  if (fpga_state == STATE_RESET) {
-    fpga_state = STATE_BOOT;
-    poll_counter = 0;
-  }
+  fpga_state = STATE_BOOT;
+  poll_counter = 0;
   return;
 }
 

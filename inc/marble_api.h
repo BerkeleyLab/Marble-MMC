@@ -152,6 +152,10 @@ uint8_t marble_get_board_id(void);
 
 void print_status_counters(void);
 
+void marble_print_status(void);
+
+int marble_pwr_good(void);
+
 uint32_t marble_get_tick(void);
 
 // Only used in simulation
@@ -216,6 +220,8 @@ typedef enum {
 uint8_t marble_PWR_status(void);
 
 void marble_print_GPIO_status(void);
+
+void marble_list_GPIOs(void);
 
 /****
 * FPGA reset/init control
@@ -320,7 +326,7 @@ void marble_SLEEP_us(uint32_t delay);
 /************
 * FPGA Watchdog Support
 ************/
-// In main.c
+// In system.c
 void reset_fpga_with_callback(void (*cb)(void));
 // RND - only on marble_v2 (STM32) for now
 int get_hw_rnd(uint32_t *result);
