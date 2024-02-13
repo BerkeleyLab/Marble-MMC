@@ -179,23 +179,27 @@ int board_service(void) {
    gpio = HAL_GPIO_ReadPin(PWRGD_PORT, PWRGD_PIN);
    if (gpio == PWRGD_ASSERTED) {
      if (_pwr_state != PWR_GOOD) {
-       if ((_pwr_state++ == PWR_GOOD) && (!_pwr_good)) {
+       if (((++_pwr_state) == PWR_GOOD) && (_pwr_good == 0)) {
          // Detect asserting edge
          printf("ALERT: Power good. Re-initializing.\r\n");
          board_init();
          //reset_fpga();
          FPGAWD_SelfReset();
          _pwr_good = 1;
+       } else {
+         //printf("PWR STATE CHANGE: _pwr_state = %d;  _pwr_good = %d\r\n", _pwr_state, _pwr_good);
        }
      }
    } else { // gpio == PWRGD_DEASSERTED
-      if (_pwr_state != PWR_FAIL) {
-        if ((!_pwr_state--) && (_pwr_good)) {
-          // Detect de-asserting edge
-          printf("ALERT: Lost power.\r\n");
-          _pwr_good = 0;
-        }
-      }
+     if (_pwr_state != PWR_FAIL) {
+       if (((--_pwr_state) == 0) && (_pwr_good > 0)) {
+         // Detect de-asserting edge
+         printf("ALERT: Lost power.\r\n");
+         _pwr_good = 0;
+       } else {
+         //printf("PWR STATE CHANGE: _pwr_state = %d;  _pwr_good = %d\r\n", _pwr_state, _pwr_good);
+       }
+     }
    }
 #if 0
    // This is unused at the moment.
@@ -208,6 +212,7 @@ int board_service(void) {
 }
 
 void marble_print_status(void) {
+  printf("_pwr_state = %d\r\n", _pwr_state);
   printf("Board Status:");
   if ((_pwr_good) & (!_over_temp)) {
     printf(" No fault.");
@@ -217,6 +222,10 @@ void marble_print_status(void) {
   }
   printf("\r\n");
   return;
+}
+
+int marble_pwr_good(void) {
+  return _pwr_good;
 }
 
 // Only used in simulation

@@ -154,6 +154,8 @@ void print_status_counters(void);
 
 void marble_print_status(void);
 
+int marble_pwr_good(void);
+
 uint32_t marble_get_tick(void);
 
 // Only used in simulation

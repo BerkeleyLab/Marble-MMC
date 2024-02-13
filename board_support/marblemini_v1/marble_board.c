@@ -78,6 +78,11 @@ void marble_print_status(void) {
   return;
 }
 
+int marble_pwr_good(void) {
+  // TODO - Return current state of power supply
+  return 1;
+}
+
 // Only used in simulation
 void cleanup(void) {
    return;
