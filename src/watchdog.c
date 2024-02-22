@@ -236,3 +236,7 @@ void FPGAWD_ShowState(void) {
   }
   print64("remote_hash = ", remote_hash, HASH_SIZE);
 }
+
+int FPGAWD_GetState(void) {
+  return (int)fpga_state;
+}

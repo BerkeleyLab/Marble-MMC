@@ -79,7 +79,12 @@
       "fmt"  : "%d",
       "output" : "@ = mbox_get_update_count()"
     },
-    { "name" : "PAD2"},
+    { "name" : "WD_STATE",
+      "size" : 1,
+      "desc" : "Watchdog bitfile state. 0=STATE_BOOT, 1=STATE_GOLDEN, 2=STATE_USER",
+      "fmt"  : "%d",
+      "output" : "@ = FPGAWD_GetState()"
+    },
     { "name" : "PAD3"},
     { "name" : "LM75_0",
       "size" : 2,

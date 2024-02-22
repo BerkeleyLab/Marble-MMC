@@ -13,12 +13,13 @@ Offset|Name|Size|Direction|Desc|Note
 Offset|Name|Size|Direction|Desc|Note
 ------|----|----|---------|----|----
 0|MB3\_COUNT|2|MCC=\>FPGA|Mailbox update counter|Access by byte as: MB3\_COUNT\_x (x=0,1)
-6|MB3\_LM75\_0|2|MCC=\>FPGA|Returns LM75\_0 temperature in units of 0.5degC|Access by byte as: MB3\_LM75\_0\_x (x=0,1)
-8|MB3\_LM75\_1|2|MCC=\>FPGA|Returns LM75\_1 temperature in units of 0.5degC|Access by byte as: MB3\_LM75\_1\_x (x=0,1)
-10|MB3\_FMC\_ST|1|MCC=\>FPGA|Returns bitfield. 0=FMC1\_PWR, 1=FMC1\_FUSE, 2=FMC2\_PWR, 3=FMC1\_FUSE|
-11|MB3\_PWR\_ST|1|MCC=\>FPGA|Returns bitfield. 0=PSU\_EN, 1=~POE\_PRESENT, 2=OTEMP|
-12|MB3\_MGTMUX\_ST|1|MCC=\>FPGA|Returns bitfield of mux pin states. 0=MUX0\_MMC, 1=MUX1\_MMC, 2=MUX2\_MMC|
-14|MB3\_GIT32|4|MCC=\>FPGA|32-bit git commit ID|Access by byte as: MB3\_GIT32\_x (x=0,1,2,3)
+2|MB3\_WD\_STATE|1|MCC=\>FPGA|Watchdog bitfile state. 0=STATE\_BOOT, 1=STATE\_GOLDEN, 2=STATE\_USER|
+4|MB3\_LM75\_0|2|MCC=\>FPGA|Returns LM75\_0 temperature in units of 0.5degC|Access by byte as: MB3\_LM75\_0\_x (x=0,1)
+6|MB3\_LM75\_1|2|MCC=\>FPGA|Returns LM75\_1 temperature in units of 0.5degC|Access by byte as: MB3\_LM75\_1\_x (x=0,1)
+8|MB3\_FMC\_ST|1|MCC=\>FPGA|Returns bitfield. 0=FMC1\_PWR, 1=FMC1\_FUSE, 2=FMC2\_PWR, 3=FMC1\_FUSE|
+9|MB3\_PWR\_ST|1|MCC=\>FPGA|Returns bitfield. 0=PSU\_EN, 1=~POE\_PRESENT, 2=OTEMP|
+10|MB3\_MGTMUX\_ST|1|MCC=\>FPGA|Returns bitfield of mux pin states. 0=MUX0\_MMC, 1=MUX1\_MMC, 2=MUX2\_MMC|
+12|MB3\_GIT32|4|MCC=\>FPGA|32-bit git commit ID|Access by byte as: MB3\_GIT32\_x (x=0,1,2,3)
 
 # Page 4
 
