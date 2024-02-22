@@ -265,7 +265,7 @@ int board_service(void) {
          FPGAWD_SelfReset();
          _pwr_good = 1;
        } else {
-         //printf("PWR STATE CHANGE: _pwr_state = %d;  _pwr_good = %d\r\n", _pwr_state, _pwr_good);
+         printf("PWR STATE CHANGE: _pwr_state = %d;  _pwr_good = %d\r\n", _pwr_state, _pwr_good);
        }
      }
    } else { // gpio == PWRGD_DEASSERTED
@@ -275,7 +275,7 @@ int board_service(void) {
          printf("ALERT: Lost power.\r\n");
          _pwr_good = 0;
        } else {
-         //printf("PWR STATE CHANGE: _pwr_state = %d;  _pwr_good = %d\r\n", _pwr_state, _pwr_good);
+         printf("PWR STATE CHANGE: _pwr_state = %d;  _pwr_good = %d\r\n", _pwr_state, _pwr_good);
        }
      }
    }
@@ -1129,9 +1129,6 @@ uint32_t marble_init(void)
 }
 
 void marble_print_pcb_rev(void) {
-#ifdef NUCLEO
-  printf("PCB Rev: Nucleo\r\n");
-#else
   switch (marble_pcb_rev) {
     case Marble_v1_3:
       printf("PCB Rev: Marble v1.3\r\n");
@@ -1154,11 +1151,16 @@ void marble_print_pcb_rev(void) {
     case Marble_v1_9:
       printf("PCB Rev: Marble v1.9\r\n");
       break;
+    case Marble_Nucleo:
+      printf("PCB Rev: Nucleo\r\n");
+      break;
+    case Marble_Simulator:
+      printf("PCB Rev: Simulator\r\n");
+      break;
     default:
       printf("PCB Rev: Marble v1.2\r\n");
       break;
   }
-#endif
   show_chip_ID();
   return;
 }
@@ -1175,6 +1177,9 @@ uint8_t marble_get_board_id(void) {
 // bits 12-15 end up reversed and shifted, as in: (MSB->LSB) |b12|b13|b14|b15|
 #define MARBLE_PCB_REV_XFORM(gpio_idr)    ((__RBIT(gpio_idr) >> 16) & 0xF)
 static void marble_read_pcb_rev(void) {
+#ifdef NUCLEO
+  marble_pcb_rev = Marble_Nucleo;
+#else
   uint32_t pcbid = MARBLE_PCB_REV_XFORM(GPIOD->IDR);
   // Explicit case check rather than simple cast to catch unenumerated values
   // in 'default'
@@ -1204,6 +1209,7 @@ static void marble_read_pcb_rev(void) {
       marble_pcb_rev = Marble_v1_2;
       break;
   }
+#endif
   return;
 }
 
@@ -1493,16 +1499,30 @@ static void MX_GPIO_Init(void)
    HAL_GPIO_WritePin(GPIOE, GPIO_PIN_5, true);
    HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
-   /*Configure GPIO pins : PC7 PC8 */
+   /*Configure GPIO pins : PC8 */
    GPIO_InitStruct.Pin = GPIO_PIN_7|GPIO_PIN_8;
    GPIO_InitStruct.Mode = GPIO_MODE_INPUT; // GPIO_MODE_IT_FALLING
    GPIO_InitStruct.Pull = GPIO_NOPULL;
    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
+   /*Configure GPIO pins : OVER_TEMP_PIN */
+   GPIO_InitStruct.Pin = OVER_TEMP_PIN;
+   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+#ifdef NUCLEO
+   GPIO_InitStruct.Pull = GPIO_PULLUP;
+#else
+   GPIO_InitStruct.Pull = GPIO_NOPULL;
+#endif
+   HAL_GPIO_Init(OVER_TEMP_PORT, &GPIO_InitStruct);
+
    /* Configure GPIO pin PWRGD */
    GPIO_InitStruct.Pin = PWRGD_PIN; // GPIO_PIN_4
    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+#ifdef NUCLEO
+   GPIO_InitStruct.Pull = GPIO_PULLUP;
+#else
    GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+#endif
    GPIO_InitStruct.Pull = GPIO_SPEED_FREQ_LOW;
    HAL_GPIO_Init(PWRGD_PORT, &GPIO_InitStruct);
 
