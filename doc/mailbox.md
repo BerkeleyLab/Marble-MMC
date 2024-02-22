@@ -7,6 +7,7 @@
 Offset|Name|Size|Direction|Desc|Note
 ------|----|----|---------|----|----
 0|MB2\_FMC\_MGT\_CTL|1|FPGA=\>MMC|Input is bitfield. See scripts/README.md mgtmux\_mbox.sh.|
+1|MB2\_FMC\_PWR|1|FPGA=\>MMC|Turn power to FMC on/off.  Bit 1: 1=Use, 0=Ignore. Bit 0: 1=Power On, 0=Power Off. Bits 2-7: Reserved. Set to 0.|
 
 # Page 3
 
@@ -41,7 +42,7 @@ Offset|Name|Size|Direction|Desc|Note
 
 Offset|Name|Size|Direction|Desc|Note
 ------|----|----|---------|----|----
-0|MB5\_I2C\_BUS\_STATUS|1|MMC\<=\>FPGA|Returns logical OR of all I2C function return values. Write nonzero value to clear status.|
+0|MB5\_I2C\_BUS\_STATUS|1|MMC\<=\>FPGA|Returns logical OR of all I2C function return values. Write 1 to clear status.|
 
 # Page 6
 
