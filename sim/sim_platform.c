@@ -241,6 +241,11 @@ bool marble_FPGAint_get(void) {
   return 0;
 }
 
+void marble_FMC_set_pwr(uint8_t mgt_msg) {
+  _UNUSED(mgt_msg);
+  return;
+}
+
 void marble_FMC_pwr(bool on) {
   return;
 }

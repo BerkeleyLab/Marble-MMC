@@ -68,6 +68,13 @@
       "desc" : "Input is bitfield. See scripts/README.md mgtmux_mbox.sh.",
       "input" : "marble_MGTMUX_config(@, 0, 0)",
       "ack"  : "@ & 0x55"
+    },
+    { "name" : "FMC_PWR",
+      "type" : "int",
+      "fmt"  : "0x{:x}",
+      "desc" : "Turn power to FMC on/off.  Bit 1: 1=Use, 0=Ignore. Bit 0: 1=Power On, 0=Power Off. Bits 2-7: Reserved. Set to 0.",
+      "input" : "marble_FMC_set_pwr(@)",
+      "ack"  : "@ & 0x55"
     }
   ],
 # Page 3 contains only outputs (MMC => FPGA)
@@ -199,7 +206,7 @@
       "fmt"  : "0b{:b}",
       "output": "@ = (uint8_t)getI2CBusStatus()",
       "input" : "mbox_handleI2CBusStatusMsg(@)",
-      "desc" : "Returns logical OR of all I2C function return values. Write nonzero value to clear status."
+      "desc" : "Returns logical OR of all I2C function return values. Write 1 to clear status."
     }
   ],
 # Page 6 contains only outputs (MMC => FPGA)

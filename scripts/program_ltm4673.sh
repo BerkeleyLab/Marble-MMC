@@ -4,6 +4,7 @@
 # the marble_mmc enumerated as.
 
 filenext=0
+doStore=0
 filename=
 dev=
 for arg in "$@"; do
@@ -12,6 +13,8 @@ for arg in "$@"; do
     filenext=0
   elif [ "$arg" = "-f" ]; then
     filenext=1
+  elif [ "$arg" = "-s" ]; then
+    doStore=1
   else
     dev=$arg
   fi
@@ -32,5 +35,6 @@ if [ -z "$filename" ]; then
 else
   python3 "$SCRIPT_DIR/ltm4673.py" -d "$dev" write -f "$filename"
 fi
+python3 "$SCRIPT_DIR/ltm4673.py" -d "$dev" store
 
 exit 0

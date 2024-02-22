@@ -216,6 +216,11 @@ void marble_Pmod3_5_write(bool on) {
 /************
 * FMC & PSU
 ************/
+void marble_FMC_set_pwr(uint8_t mgt_msg) {
+   // TODO
+   _UNUSED(mgt_msg);
+   return;
+}
 
 /* Set FMC power */
 void marble_FMC_pwr(bool on)

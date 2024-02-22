@@ -733,30 +733,30 @@ void marble_I2C_PM_clear_alert(void) {
 ************/
 static const uint16_t mgtmux_pins[MGT_MAX_PINS] = {GPIO_PIN_8, GPIO_PIN_9, GPIO_PIN_10};
 
+void marble_FMC_set_pwr(uint8_t mgt_msg) {
+  if ((mgt_msg == 0) || (mgt_msg == 0xff)) {
+    // Nothing to do; early exit
+    return;
+  }
+  if (mgt_msg & 0x2) {
+    marble_FMC_pwr(mgt_msg & 1);
+  }
+  return;
+}
+
 void marble_MGTMUX_config(uint8_t mgt_msg, uint8_t store, uint8_t print) {
   // Control of FMC power and MGT mux based on mailbox entry MB2_FMC_MGT_CTL
   // Currently addressed as 0x200020 = 2097184 in test_marble_family
-  // [1] - FMC_SEL,      [0] - ON/OFF
-  // [3] - MGT_MUX1_SEL, [2] - ON/OFF
-  // [5] - MGT_MUX2_SEL, [4] - ON/OFF
-  // [7] - MGT_MUX3_SEL, [6] - ON/OFF
-  if ((mgt_msg & 0xaa) == 0) {
+  // [1] - FMC_PWR,      [0] - USE/IGNORE
+  // [3] - MGT_MUX1_SEL, [2] - USE/IGNORE
+  // [5] - MGT_MUX2_SEL, [4] - USE/IGNORE
+  // [7] - MGT_MUX3_SEL, [6] - USE/IGNORE
+  if ((mgt_msg == 0) || (mgt_msg == 0xff)) {
     // Nothing to do; early exit
     return;
   }
   if (print) {
     printf("Setting ");
-  }
-  if (mgt_msg & 0x2) {
-    if (print) {
-      printf("FMC_Pwr=");
-      if (mgt_msg & 0x1) {
-        printf("ON ");
-      } else {
-        printf("OFF ");
-      }
-    }
-    marble_FMC_pwr(mgt_msg & 1);
   }
   uint8_t v;
   if (mgt_msg & 0x8) {

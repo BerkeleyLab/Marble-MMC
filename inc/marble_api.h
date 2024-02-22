@@ -196,6 +196,8 @@ bool marble_FPGAint_get(void);
 /****
 * FMC & PSU
 ****/
+void marble_FMC_set_pwr(uint8_t mgt_msg);
+
 void marble_FMC_pwr(bool on);
 
 typedef enum {
