@@ -21,8 +21,8 @@ That's it.  This feature won't get in your way.
 
 ## Theory
 
-To guarantee a non-spoofable watchdog, a secret has to be shared
-between the microcontroller and a secure server.  That server is likely
+To guarantee a non-spoofable watchdog, a secret has to be shared between
+the microcontroller and a secure "keepalive" server.  That server is likely
 outside the bounds of the normal application control software, and needs
 a network route to the FPGA chassis.  In response to a "random number"
 (nonce) generated in the microcontroller, the server computes a secure
@@ -44,17 +44,17 @@ enough control to turn things off.
 
 3. The chain of hardware and software somehow prevents operators from
 exercising normal control over the board -- e.g., loading another bitfile.
-Then those operators can intentionally halt the watchdog server.  After
+Then those operators can intentionally halt the keepalive server.  After
 the configured timeout: boom!  The board reboots to safe mode.
 
 The FPGA hardware and gateware needed to make the watchdog work are:
 
 1. SPI link to the microcontroller
 
-2. Ethernet link to the outside work
+2. Ethernet link to the outside world
 
 3. A passive array of mailbox registers, with access shared between
-the SPI link and a UDP read/write protocol.
+the SPI link and a UDP read/write protocol
 
 Gateware for all of this is provided in an example project
 (`projects/test_marble_family`) in
@@ -88,7 +88,7 @@ _can_ type (or cut-and-paste) a 16-digit hex number at the console,
 the python script `scripts/genkey.py` is provided to give a robust
 and useful interface.
 
-A proof-of-concept server is provided in `scripts/keepalive.py`.
+A proof-of-concept keepalive server is provided in `scripts/keepalive.py`.
 
 If all of this seems needlessly complicated, well, (a) maybe you
 don't need it, and (b) feel free to deploy another fail-safe reboot
@@ -148,7 +148,7 @@ Key loaded to MMC
 
 SUCCESS
 
-$ # Run the watchdog server for a particular board
+$ # Run the keepalive server for a particular board
 $ PYTHONPATH=path/to/bedrock/badger python3 scripts/keepalive.py -i $IP --id 204
 Getting from: /home/$USER/.marble_mmc_keys/mmc_key_204
 2023-12-15T06:42:12Z Handshake 127.0.0.1  15c32a4a5c01ee39 -> 2213978af621190e
