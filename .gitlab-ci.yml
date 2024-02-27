@@ -23,21 +23,30 @@ marble_mini_build:
   stage: build
   script:
     - make marble_mini && make marble_mini_clean
+  artifacts:
+    paths:
+      - out_marble_mini/marble_mmc_lpc1776.*
 
 marble_build:
   stage: build
   script:
     - make && make clean
-
-sim_build:
-  stage: build
-  script:
-    - make sim && make sim_clean
+  artifacts:
+    paths:
+      - out_marble/marble_mmc_stm32f2.*
 
 nucleo_build:
   stage: build
   script:
     - make nucleo && make clean
+  artifacts:
+    paths:
+      - out_nucleo/marble_mmc_stm32f2_nucleo.*
+
+sim_build:
+  stage: build
+  script:
+    - make sim && make sim_clean
 
 self_test:
   stage: build
