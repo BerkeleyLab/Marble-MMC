@@ -23,6 +23,8 @@ void I2C_PM_init(void);
 void I2C_PM_scan(void);
 void I2C_PM_probe(void);
 void I2C_PM_bus_display(void);
+int max6639_set_tach_en(uint8_t tach_en);
+uint8_t max6639_get_tach_en(void);
 void print_max6639(void);
 void print_max6639_decoded(void);
 int get_max6639_reg(int regno, int *value);
