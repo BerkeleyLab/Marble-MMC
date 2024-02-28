@@ -25,7 +25,7 @@ static void PMBridge_hook_read(uint8_t addr, uint8_t cmd, const uint8_t *data, i
 void I2C_PM_init(void) {
   // Initialize devices as needed after system init & peripheral config
   ltm4673_init();
-  max6639_init();
+  //max6639_init();
   return;
 }
 
