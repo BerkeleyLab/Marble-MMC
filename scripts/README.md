@@ -1,6 +1,8 @@
 # Scripts and Usage
 
-[config.sh](#configsh)
+[config_ip_mac.sh](#config_ip_mac)
+
+[config_si57x.sh](#config_si57x)
 
 [decodembox.py](#decodemboxpy)
 
@@ -24,9 +26,24 @@
 
 [testscript.txt](#testscripttxt)
 
-## config.sh
+## config_ip_mac.sh
+Configure the IP and Mac information via MMC console. The ttyUSBx can be specified
+via the -d argument or let the script detect it. The serial_number is used to
+distinguish the Marble version and the required configuration string. It's optional
+and it can be detected by the script too.
+
 ```sh
-config.sh [-d /dev/ttyUSB3] serial_number
+config_ip_mac.sh [-d /dev/ttyUSB3] [serial_number]
+```
+
+## config_si57x.sh
+Configure the Si570 parameters via MMC console. The ttyUSBx can be specified via the
+-d argument or let the script detect it. The serial_number is used to distinguish
+the Marble version and the required configuration string. It's optional and it can
+be detected by the script too.
+
+```sh
+config_si57x.sh [-d /dev/ttyUSB3] [serial_number]
 ```
 
 ## decodembox.py
