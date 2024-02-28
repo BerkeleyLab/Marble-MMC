@@ -25,7 +25,7 @@ static void PMBridge_hook_read(uint8_t addr, uint8_t cmd, const uint8_t *data, i
 void I2C_PM_init(void) {
   // Initialize devices as needed after system init & peripheral config
   ltm4673_init();
-  //max6639_init();
+  max6639_init();
   return;
 }
 
@@ -45,10 +45,13 @@ void I2C_PM_scan(void)
 }
 
 static int max6639_init(void) {
-  // Default value = 0x41 (/THERM to full-speed enabl, Fan PWM freq LSB 1)
-  // Disable pulse stretching (0x41 | 1<<5)
-  int rc = set_max6639_reg(MAX6639_FAN1_CONFIG3, 0x61);
-  rc |= set_max6639_reg(MAX6639_FAN2_CONFIG3, 0x61);
+  int rc=0;
+  if (0) {  // temporarily disabled, to avoid breaking tach reading
+    // Default value = 0x41 (/THERM to full-speed enabl, Fan PWM freq LSB 1)
+    // Disable pulse stretching (0x41 | 1<<5)
+    rc = set_max6639_reg(MAX6639_FAN1_CONFIG3, 0x61);
+    rc |= set_max6639_reg(MAX6639_FAN2_CONFIG3, 0x61);
+  }
   return rc;
 }
 
