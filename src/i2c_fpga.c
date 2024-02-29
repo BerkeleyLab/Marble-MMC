@@ -82,7 +82,14 @@ void ina219_debug(uint8_t addr)
 {
    uint16_t value = 0;
    bool rc;
-   printf("> INA219 debug at address %2.2xh\r\n", (unsigned) addr);
+   printf("> Readout INA219 at address %2.2xh ", (unsigned) addr);
+   if (addr == INA219_0) {
+     printf("(Main nominal +12V input)\r\n");
+   } else if (addr == INA219_FMC1) {
+     printf("(Nominal +12V supply to FMC1)\r\n");
+   } else if (addr == INA219_FMC2) {
+     printf("(Nominal +12V supply to FMC2)\r\n");
+   }
    rc = wireReadRegister(addr, INA_REG_CONFIG, &value);
    printf("Register %d value 0x%4.4x (%d)\r\n", INA_REG_CONFIG, value, rc);
    rc = wireReadRegister(addr, INA_REG_SHUNTVOLTAGE, &value);
@@ -326,12 +333,12 @@ void adn4600_init()
    for (unsigned ix=0; ix<4; ix++) {
       uint8_t cmd = 0x58 + ix;
       rc = marble_I2C_cmdrecv(I2C_FPGA, ADN4600, cmd, &status, 1);
-      printf("> ADN6400 XPT Temp %d r[0x%x] = 0x%2.2x (rc=%d)\r\n", ix, cmd, status, rc);
+      printf("> ADN4600 XPT Temp %d r[0x%x] = 0x%2.2x (rc=%d)\r\n", ix, cmd, status, rc);
    }
 
    config = 1;
    rc = marble_I2C_cmdsend(I2C_FPGA, ADN4600, ADN4600_XPT_Update, &config, 1);
-   printf("> ADN6400 Update (rc=%d)\r\n", rc);
+   printf("> ADN4600 Update (rc=%d)\r\n", rc);
 }
 
 void adn4600_printStatus()

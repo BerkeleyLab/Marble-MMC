@@ -5,22 +5,9 @@
 #include "i2c_pm.h"
 #include "i2c_fpga.h"
 #include "ltm4673.h"
+#include "watchdog.h"
 
 #define LED_SNAKE
-
-#ifdef MARBLE_V2
-static void mgtclk_xpoint_en(void)
-{
-   if (xrp_ch_status(XRP7724, 1)) { // CH1: 3.3V
-      adn4600_init();
-   } else if (ltm4673_ch_status(LTM4673)) {
-      printf("Using LTM4673 and adn4600_init\r\n");
-      adn4600_init();
-   } else {
-      printf("Skipping adn4600_init\r\n");
-   }
-}
-#endif
 
 // CLOCK_USE_XTAL only used for marble-mini
 #ifdef CLOCK_USE_XTAL
@@ -30,6 +17,9 @@ static void mgtclk_xpoint_en(void)
 #endif
 
 int main(void) {
+   // Start by disabling interrupts just in case
+   disable_all_IRQs();
+
    UARTQUEUE_Init();
 #ifdef MARBLEM_V1
    uint32_t sysclk_freq = marble_init();
@@ -50,17 +40,15 @@ int main(void) {
    // Boot the power supply controller if needed
    pwr_autoboot();
 
-#ifdef MARBLE_V2
-   // Enable MGT clock cross-point switch if 3.3V rail is ON
-   mgtclk_xpoint_en();
-#endif
+   // Initialize off-chip components
+   board_init();
 
    // Power FMCs
    marble_FMC_pwr(true);
 
    if (1) {
       printf("** Policy: reset FPGA on MMC reset.  Doing it now. **\r\n");
-      reset_fpga();
+      FPGAWD_SelfReset();
       printf("**\r\n");
    }
 

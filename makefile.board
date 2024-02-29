@@ -44,6 +44,7 @@ include dir_list.mk
 ifeq ($(BOARD), nucleo)
 include $(BUILD_DIR)/marble.conf
 USR_CFLAGS += -DNUCLEO
+PROJECT_NAME:=$(PROJECT_NAME)_nucleo
 else
 include $(BUILD_DIR)/$(BOARD).conf
 endif
@@ -93,11 +94,13 @@ CFLAGS += -Wall -Wextra -Wundef -Wshadow -Wstrict-prototypes -Wwrite-strings -pe
 CFLAGS += -Wpointer-arith -Wredundant-decls -Wunreachable-code
 # to do:  -Wcast-align -Wcast-qual
 
-ASFLAGS = $(FLAGS) $(ARCH_FLAGS)
+ASFLAGS = $(FLAGS_AS) $(ARCH_FLAGS)
 LDFLAGS = $(FLAGS) $(LINKER_FLAGS) -Wextra $(ARCH_FLAGS)
 
+OUTPUT_ELF=$(OUTPUT_DIR)/$(PROJECT_NAME).elf
 # Default target
-all: $(OUTPUT_DIR)/$(PROJECT_NAME).elf
+all: $(OUTPUT_ELF)
+$(info OUTPUT_ELF=$(OUTPUT_ELF))
 
 # Create a definitive list of sources for the project by
 # combining OTHER_SOURCES with sources.mk
@@ -181,7 +184,7 @@ $(OUTPUT_DIR)/%.o: %.s
 # / linker was run with -g) is created, alongside .hex and .bin files. A just
 # about human-readable .map is also created.
 #
-$(OUTPUT_DIR)/$(PROJECT_NAME).elf: $(OBJECTS) $(LINKERS) gdbscript
+$(OUTPUT_ELF): $(OBJECTS) $(LINKERS) gdbscript
 	@$(SED) -i 's/^file.*$$/file $(OUTPUT_DIR)\/$(PROJECT_NAME)\.elf/' gdbscript
 	@$(ECHO)
 	@$(ECHO) 'Linking $@...'
@@ -216,7 +219,7 @@ sources:
 #
 .PHONY: download
 download: all
-	$(OPENOCD) -f $(PROG_DIR)/ocd/$(OCD_CONF) -c "program $(OUTPUT_DIR)/$(PROJECT_NAME).elf reset exit"
+	$(OPENOCD) -f $(PROG_DIR)/ocd/$(OCD_CONF) -c "program $(OUTPUT_ELF) reset exit"
 
 .PHONY: reset
 reset:
@@ -244,7 +247,7 @@ gdbscript:
 .PHONY: gdb
 gdb:
 	$(GDB) -ex "target remote | $(OPENOCD) -f $(PROG_DIR)/ocd/$(OCD_CONF) -c 'gdb_port pipe; log_output $(PROG_DIR)/openocd.log'" \
-				 -x $(PROG_DIR)/gdbscript_stm32 $(OUTPUT_DIR)/$(PROJECT_NAME).elf
+				 -x $(PROG_DIR)/gdbscript_stm32 $(OUTPUT_ELF)
 
 # Removes everything in the output directory
 #

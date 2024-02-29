@@ -56,6 +56,10 @@ static int fpga_enabled = 1;
 static int shiftMessage(void);
 static void _sigHandler(int c);
 
+void disable_all_IRQs(void) {
+  return;
+}
+
 #define MAILBOX_PORT      (8003)
 uint32_t marble_init(void) {
   _fpgaDoneTimeStart = BSP_GET_SYSTICK();
@@ -68,11 +72,24 @@ uint32_t marble_init(void) {
   eeprom_init();
   init_sim_ltm4673();
   if (lass_init(MAILBOX_PORT) < 0) {
-    return -1;
+    return 1;
   }
   sim_spi_init();
   printf("Listening on port %d\r\n", MAILBOX_PORT);
   return 0;
+}
+
+void board_init(void) {
+  return;
+}
+
+void marble_print_status(void) {
+  printf("Board Status: Simulation\r\n");
+  return;
+}
+
+int marble_pwr_good(void) {
+  return 1;
 }
 
 // Emulate USART_RXNE_ISR() from marble_board.c but with keyboard input from stdin
@@ -246,6 +263,11 @@ uint8_t marble_PWR_status(void) {
 
 void marble_print_GPIO_status(void) {
   printf("Sim print_GPIO_status\r\n");
+  return;
+}
+
+void marble_list_GPIOs(void) {
+  printf("Sim list_GPIOs\r\n");
   return;
 }
 

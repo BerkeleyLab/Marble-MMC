@@ -27,10 +27,11 @@ static void (*fpga_reset_callback)(void) = NULL;
 static volatile bool spi_update = false;
 static uint32_t systimer_ms=1; // System timer interrupt period
 
-static void system_apply_params(void);
-
 static void fpga_done_handler(void)
 {
+   if (!marble_pwr_good()) {
+      return;
+   }
    fpga_prog_cnt++;
    fpga_net_prog_pend=1;
    fpga_done_tickval = BSP_GET_SYSTICK();
@@ -64,9 +65,13 @@ static void timer_int_handler(void)
    live_cnt++;
 }
 
+/* void system_init(void);
+ *  Initialization of chip-agnostic MMC functionality
+ */
 void system_init(void) {
   // Initialize non-volatile memory
   eeprom_init();
+
   // Apply parameters from non-volatile memory
   system_apply_params();
 
@@ -82,8 +87,6 @@ void system_init(void) {
   // UART console service
   console_init();
 
-  // Initialize subsystems
-  I2C_PM_init();
   return;
 }
 
@@ -116,11 +119,11 @@ void system_service(void) {
 }
 
 /*
- * static void system_apply_params(void);
+ * void system_apply_params(void);
  *    Apply parameters stored in non-volatile memory.
  *    TODO - This is not board-specific.  Move to "system" file.
  */
-static void system_apply_params(void) {
+void system_apply_params(void) {
   // Fan speed
   uint8_t val;
   if (eeprom_read_fan_speed(&val, 1)) {
@@ -165,6 +168,7 @@ void reset_fpga_with_callback(void (*cb)(void)) {
 }
 
 void print_status_counters(void) {
+  marble_print_status();
   printf("Live counter: %u\r\n", live_cnt);
   printf("FPGA prog counter: %d\r\n", fpga_prog_cnt);
   FPGAWD_ShowState();

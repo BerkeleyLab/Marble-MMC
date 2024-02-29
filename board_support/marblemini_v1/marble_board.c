@@ -52,6 +52,19 @@ I2C_BUS I2C_FPGA;
 I2C_BUS I2C_PM;
 I2C_BUS I2C_IPMB;
 
+void disable_all_IRQs(void) {
+   // TODO
+   return;
+}
+
+/* void board_init(void);
+ *  Board-related (not MMC-related) initialization
+ */
+void board_init(void) {
+   // TODO - Any board-specific initialization
+   return;
+}
+
 /* int board_service(void);
  *  Call in main loop. Handles routines scheduled from interrupts.
  *  Must always return 0 (otherwise execution will terminate).
@@ -59,6 +72,15 @@ I2C_BUS I2C_IPMB;
 int board_service(void) {
    // TODO - Any board-specific maintenance for the main loop
    return 0;
+}
+
+void marble_print_status(void) {
+  return;
+}
+
+int marble_pwr_good(void) {
+  // TODO - Return current state of power supply
+  return 1;
 }
 
 // Only used in simulation
@@ -245,6 +267,11 @@ uint8_t marble_PWR_status(void)
 void marble_print_GPIO_status(void) {
   // TODO
   printf("TODO Unimplemented\r\n");
+  return;
+}
+
+void marble_list_GPIOs(void) {
+  // TODO
   return;
 }
 
@@ -666,6 +693,12 @@ Marble_PCB_Rev_t marble_get_pcb_rev(void) {
   return Marble_v1_2;
 }
 
+void marble_print_pcb_rev(void) {
+   // TODO
+   printf("PCB Rev: Marble-Mini\r\n");
+   return;
+}
+
 uint8_t marble_get_board_id(void) {
   // TODO - How is Marble mini PCB revision ID'd?
   //return ((uint8_t)(marble_pcb_rev & 0x0F) | BOARD_TYPE_MARBLE_MINI);
@@ -729,19 +762,8 @@ int get_hw_rnd(uint32_t *result) {
   return 0;
 }
 
-void bsp_FPGAWD_set_period(uint16_t preload) {
-  // TODO
-  _UNUSED(preload);
-  return;
-}
-
-void bsp_FPGAWD_pet(void) {
-  // TODO
-  return;
-}
-
-void bsp_FPGAWD_ISR(void) {
-  // TODO
+void mgtclk_xpoint_en(void) {
+  // Unused board compatibility
   return;
 }
 

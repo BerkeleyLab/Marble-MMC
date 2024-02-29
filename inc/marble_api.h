@@ -117,9 +117,13 @@ typedef enum {
 /****
 * Top-level Application Functionality
 ****/
+void disable_all_IRQs(void);
+
 void system_init(void);
 
 void system_service(void);
+
+void system_apply_params(void);
 
 /****
 * Platform/Hardware-Specific Routines
@@ -127,10 +131,18 @@ void system_service(void);
 /* Initialize uC and peripherals before main code can run. */
 uint32_t marble_init(void);
 
+void board_init(void);
+
 int board_service(void);
 
 void pwr_autoboot(void);
 
+void mgtclk_xpoint_en(void);
+
+/* Use this function to test against PCB revisions if the
+ * board type (Marble vs. Marble-Mini) is known.
+ * E.g. marble_get_pcb_rev() < Marble_v1_4
+ */
 Marble_PCB_Rev_t marble_get_pcb_rev(void);
 
 void marble_print_pcb_rev(void);
@@ -138,8 +150,11 @@ void marble_print_pcb_rev(void);
 // The Board ID is (PCB revision) | (BOARD_TYPE_...)
 uint8_t marble_get_board_id(void);
 
-// TODO - Move these for encapsulation
 void print_status_counters(void);
+
+void marble_print_status(void);
+
+int marble_pwr_good(void);
 
 uint32_t marble_get_tick(void);
 
@@ -205,6 +220,8 @@ typedef enum {
 uint8_t marble_PWR_status(void);
 
 void marble_print_GPIO_status(void);
+
+void marble_list_GPIOs(void);
 
 /****
 * FPGA reset/init control
@@ -309,7 +326,7 @@ void marble_SLEEP_us(uint32_t delay);
 /************
 * FPGA Watchdog Support
 ************/
-// In main.c
+// In system.c
 void reset_fpga_with_callback(void (*cb)(void));
 // RND - only on marble_v2 (STM32) for now
 int get_hw_rnd(uint32_t *result);

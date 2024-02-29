@@ -35,7 +35,12 @@
 #include "console.h"
 #include "st-eeprom.h"
 #include "i2c_pm.h"
+#include "i2c_fpga.h"
+#include "ltm4673.h"
 #include "watchdog.h"
+
+#define XRP_BYPASS_PWRGD
+#define XRP_REBOOT_DELAY    (500)
 
 #define UART_ECHO
 #ifdef NUCLEO
@@ -43,7 +48,6 @@
 #else
 #define SMBA_PIN GPIO_PIN_15
 #endif
-
 
 #define PRINT_POWER_STATE(subs, on) do {\
    char s[3] = {'f', 'f', '\0'}; \
@@ -75,6 +79,18 @@ static Marble_PCB_Rev_t marble_pcb_rev;
 
 static int i2cBusStatus = 0;
 static int i2c_pm_alert = 0;
+static int _over_temp = 0;
+// PWR_GOOD sets the length of the PWRGD glitch filter. Higher values means longer.
+#define PWR_GOOD 3
+#define PWR_FAIL 0
+// Assert this so that the first rising edge of PWRGOOD doesn't trigger re-init
+static int _pwr_state = PWR_GOOD;
+static int _pwr_good = 1;
+
+#ifdef XRP_BYPASS_PWRGD
+static int _do_reboot = 0;
+static int _reboot_time = 0;
+#endif
 
 // Moved here from marble_api.h
 SSP_PORT SSP_FPGA;
@@ -101,17 +117,135 @@ static int marble_MGTMUX_store(void);
 static void I2C_PM_smba_handler(void);
 static int i2c_hook(I2C_BUS I2C_bus, uint8_t addr, uint8_t rnw,
                     int cmd, const uint8_t *data, int len);
+static void show_chip_ID(void);
+
+void disable_all_IRQs(void) {
+   // STM32F2 has 80 interrupt channels (plus the 14 in the ARM Cortex-M)
+   NVIC->ICER[0] = 0xffffffff;   // 0-31
+   NVIC->ICER[1] = 0xffffffff;   // 32-63
+   NVIC->ICER[2] = 0xffffffff;   // 64-80
+   return;
+}
+
+/* void board_init(void);
+ *  Board-related (not MMC-related) initialization
+ */
+void board_init(void) {
+  // Enable clock crosspoint
+  mgtclk_xpoint_en();
+
+  // Initialize subsystems
+  I2C_PM_init();
+  LM75_Init();
+
+  // Some non-volatile params go straight to external hardware
+  // (i.e. fan speed, overtemp threshold)
+  system_apply_params();
+
+  return;
+}
+
+// PC7: OVER_TEMP (low-true)
+#define OVER_TEMP_PORT              GPIOC
+#define OVER_TEMP_PIN               GPIO_PIN_7
+#define OVER_TEMP_ASSERTED          GPIO_PIN_RESET
+#define OVER_TEMP_DEASSERTED        GPIO_PIN_SET
+// PC4: XRP_POWER_GOOD
+#define PWRGD_PORT                  GPIOC
+#define PWRGD_PIN                   GPIO_PIN_4
+#define PWRGD_ASSERTED              GPIO_PIN_SET
+#define PWRGD_DEASSERTED            GPIO_PIN_RESET
+// PD11: EN_PSU_CH
+#define EN_PSU_CH_PORT              GPIOD
+#define EN_PSU_CH_PIN               GPIO_PIN_11
+#define EN_PSU_CH_ASSERTED          GPIO_PIN_SET
+#define EN_PSU_CH_DEASSERTED        GPIO_PIN_RESET
+// PC14: PWR_RESET (low-true)
+#define PWR_RESET_PORT              GPIOC
+#define PWR_RESET_PIN               GPIO_PIN_14
+#define PWR_RESET_ASSERTED          GPIO_PIN_RESET
+#define PWR_RESET_DEASSERTED        GPIO_PIN_SET
 
 /* int board_service(void);
  *  Call in main loop. Handles routines scheduled from interrupts.
  *  Must always return 0 (otherwise execution will terminate).
  */
 int board_service(void) {
+   // Check state of OVER_TEMP pin
+   int gpio = HAL_GPIO_ReadPin(OVER_TEMP_PORT, OVER_TEMP_PIN);
+   if ((!_over_temp) && (gpio == OVER_TEMP_ASSERTED)) {
+      // Detect asserting edge
+      printf("ALERT: Over-Temperature Shutdown Detected\r\n");
+      _over_temp = 1;
+   } else if ((_over_temp) && (gpio == OVER_TEMP_DEASSERTED)) {
+      // Detect de-asserting edge
+      printf("ALERT: Over-Temperature Condition Cleared\r\n");
+      _over_temp = 0;
+#ifdef XRP_BYPASS_PWRGD
+      _reboot_time = BSP_GET_SYSTICK();
+      _do_reboot = 1;
+   }
+   if (marble_pcb_rev <= Marble_v1_3) {
+      if ((_do_reboot) && ((BSP_GET_SYSTICK() - _reboot_time) > XRP_REBOOT_DELAY)) {
+         printf("ALERT: Re-initializing after delay.\r\n");
+         board_init();
+         FPGAWD_SelfReset();
+         _pwr_good = 1;
+         _do_reboot = 0;
+      }
+      return 0;
+#endif
+   }
+   // Check state of PWRGD pin
+   gpio = HAL_GPIO_ReadPin(PWRGD_PORT, PWRGD_PIN);
+   if (gpio == PWRGD_ASSERTED) {
+     if (_pwr_state != PWR_GOOD) {
+       if (((++_pwr_state) == PWR_GOOD) && (_pwr_good == 0)) {
+         // Detect asserting edge
+         printf("ALERT: Power good. Re-initializing.\r\n");
+         board_init();
+         FPGAWD_SelfReset();
+         _pwr_good = 1;
+       } else {
+         //printf("PWR STATE CHANGE: _pwr_state = %d;  _pwr_good = %d\r\n", _pwr_state, _pwr_good);
+       }
+     }
+   } else { // gpio == PWRGD_DEASSERTED
+     if (_pwr_state != PWR_FAIL) {
+       if (((--_pwr_state) == 0) && (_pwr_good > 0)) {
+         // Detect de-asserting edge
+         printf("ALERT: Lost power.\r\n");
+         _pwr_good = 0;
+       } else {
+         //printf("PWR STATE CHANGE: _pwr_state = %d;  _pwr_good = %d\r\n", _pwr_state, _pwr_good);
+       }
+     }
+   }
+#if 0
+   // This is unused at the moment.
    if (i2c_pm_alert) {
       printf("TODO - Respond to I2C_PM Alert\r\n");
       i2c_pm_alert = 0;
    }
+#endif
    return 0;
+}
+
+void marble_print_status(void) {
+  printf("_pwr_state = %d\r\n", _pwr_state);
+  printf("Board Status:");
+  if ((_pwr_good) & (!_over_temp)) {
+    printf(" No fault.");
+  } else {
+    if (_over_temp) printf(" Over-temperature shutdown.");
+    if (!_pwr_good) printf(" Lost power (power supply PWRGD deasserted).");
+  }
+  printf("\r\n");
+  return;
+}
+
+int marble_pwr_good(void) {
+  return _pwr_good;
 }
 
 // Only used in simulation
@@ -133,7 +267,7 @@ void marble_UART_init(void)
 void pwr_autoboot(void) {
 #ifndef NUCLEO
 #ifdef XRP_AUTOBOOT
-   if (marble_pcb_rev < Marble_v1_4) {
+   if (marble_pcb_rev <= Marble_v1_3) {
       printf("XRP_AUTOBOOT\r\n");
       marble_SLEEP_ms(300);
       xrp_boot();
@@ -353,10 +487,10 @@ void marble_PSU_pwr(bool on)
       SystemClock_Config_HSI(); // switch to internal clock source, external clock is powered from 3V3!
       marble_SLEEP_ms(50);
    }
-   // Sch net EN_PSU_CH
-   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_11, on);
-   // PSU reset; Power reset pin for LTM4673
-   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, on);
+   // Sch net EN_PSU_CH. Assert when on==true
+   HAL_GPIO_WritePin(EN_PSU_CH_PORT, EN_PSU_CH_PIN, on ? EN_PSU_CH_ASSERTED : EN_PSU_CH_DEASSERTED);
+   // PSU reset; Power reset pin for LTM4673. Deassert when on==true
+   HAL_GPIO_WritePin(PWR_RESET_PORT, PWR_RESET_PIN, on ? PWR_RESET_DEASSERTED : PWR_RESET_ASSERTED);
    if (on) {
       SystemClock_Config(); // switch back to external clock source
    }
@@ -397,21 +531,35 @@ void marble_print_GPIO_status(void) {
   state = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_15);
   printf("Pmod3_5 = %d", state);
   printf("\r\n");
-  state = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_14);
-  printf("PSU power reset = ");
-  if (state) {
-    printf("On\r\n");
-  } else {
-    printf("Off\r\n");
+  if (marble_pcb_rev >= Marble_v1_4) {
+    state = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_14);
+    printf("PSU power reset = ");
+    if (state) {
+      printf("Asserted\r\n");
+    } else {
+      printf("Deasserted\r\n");
+    }
+    state = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_15);
+    printf("PSU power alert = ");
+    if (state) {
+      // LTM4673 Alert is low-true (open-drain) /Alert
+      printf("Deasserted\r\n");
+    } else {
+      printf("Asserted\r\n");
+    }
   }
-  // TODO - Only on Marble v1.4
-  state = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_15);
-  printf("PSU power alert = ");
-  if (state) {
-    // LTM4673 Alert is low-true (open-drain) /Alert
-    printf("Off\r\n");
-  } else {
-    printf("On\r\n");
+  return;
+}
+
+void marble_list_GPIOs(void) {
+  printf("GPIO pins, caps for on, lower case for off\r\n"
+         "?) Print state of GPIOs\r\n"
+         "a) FMC power\r\n"
+         "b) EN_PSU_CH\r\n"
+         "c) PB15 J16[4]\r\n");
+  if (marble_pcb_rev >= Marble_v1_4) {
+    printf("d) PSU reset\r\n"
+           "e) PSU alert\r\n");
   }
   return;
 }
@@ -441,14 +589,6 @@ bool marble_FPGAint_get(void)
       return false;
    }
    return true;
-}
-
-void reset_fpga(void)
-{
-   /* Pull the PROGRAM_B pin low; it's spelled PROG_B on schematic */
-   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, false);
-   marble_SLEEP_ms(50);
-   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, true);
 }
 
 void disable_fpga(void) {
@@ -914,8 +1054,6 @@ uint32_t marble_init(void)
   marble_SW_init();
   marble_UART_init();
 
-  LM75_Init();
-
   printf("** Marble init done **\r\n");
   marble_print_pcb_rev();
 
@@ -958,6 +1096,8 @@ void marble_print_pcb_rev(void) {
       break;
   }
 #endif
+  show_chip_ID();
+  return;
 }
 
 Marble_PCB_Rev_t marble_get_pcb_rev(void) {
@@ -1285,9 +1425,16 @@ static void MX_GPIO_Init(void)
 
    /*Configure GPIO pins : PC7 PC8 */
    GPIO_InitStruct.Pin = GPIO_PIN_7|GPIO_PIN_8;
-   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+   GPIO_InitStruct.Mode = GPIO_MODE_INPUT; // GPIO_MODE_IT_FALLING
    GPIO_InitStruct.Pull = GPIO_NOPULL;
    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+   /* Configure GPIO pin PWRGD */
+   GPIO_InitStruct.Pin = PWRGD_PIN; // GPIO_PIN_4
+   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+   GPIO_InitStruct.Pull = GPIO_SPEED_FREQ_LOW;
+   HAL_GPIO_Init(PWRGD_PORT, &GPIO_InitStruct);
 
    /*Configure GPIO pins : PC0 - PROG_B */
    GPIO_InitStruct.Pin = GPIO_PIN_0;
@@ -1374,19 +1521,12 @@ static void MX_GPIO_Init(void)
    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
    // TODO - Only on Marble v1.4
+   // This is for LTM4673 PMBus Alert IRQ
    if (0) {
       HAL_NVIC_SetPriority(EXTI15_10_IRQn, 7, 7);
       HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
    }
    return;
-}
-
-void bsp_FPGAWD_ISR(void) {
-  // Reset the FPGA (if preload == 0, this should never fire)
-  /* Pull the PROGRAM_B pin low; it's spelled PROG_B on schematic */
-  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, false);
-  console_pend_FPGA_enable();
-  return;
 }
 
 int getI2CBusStatus(void) {
@@ -1436,6 +1576,32 @@ int get_hw_rnd(uint32_t *result) {
   printf("DR = 0x%08lx\r\n", hrng.Instance->DR);
   */
   return rc;
+}
+
+/* Enable MGT clock cross-point switch if 3.3V rail is ON
+ */
+void mgtclk_xpoint_en(void)
+{
+   if ((marble_get_pcb_rev() <= Marble_v1_3) & xrp_ch_status(XRP7724, 1)) { // CH1: 3.3V
+      printf("Using XRP7724 and adn4600_init\r\n");
+      adn4600_init();
+   } else if ((marble_get_pcb_rev() >= Marble_v1_4) & ltm4673_ch_status(LTM4673)) {
+      printf("Using LTM4673 and adn4600_init\r\n");
+      adn4600_init();
+   } else {
+      printf("Skipping adn4600_init\r\n");
+      _pwr_good = 0;
+      // This will trigger a board_init in the main loop if PWRGD is asserted on the first check
+      _pwr_state = PWR_GOOD-1;
+   }
+}
+
+static void show_chip_ID(void) {
+   uint32_t id = HAL_GetDEVID();
+   printf("Chip ID: DEVID 0x%04x ", (uint16_t)(id & 0xffff));
+   id = HAL_GetREVID();
+   printf("REVID 0x%04x\r\n", (uint16_t)(id & 0xffff));
+   return;
 }
 
 /**

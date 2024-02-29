@@ -20,6 +20,8 @@ void FPGAWD_Poll(void);
 int FPGAWD_SetPeriod(unsigned int period);
 int FPGAWD_GetPeriod(void);
 void FPGAWD_ShowState(void);
+void FPGAWD_SelfReset(void);
+int FPGAWD_GetState(void);
 
 #ifdef __cplusplus
 }

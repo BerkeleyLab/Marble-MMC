@@ -15,6 +15,7 @@
 extern I2C_BUS I2C_PM;
 
 /* =========================== Static Prototypes ============================ */
+static int max6639_init(void);
 static int set_max6639_reg(int regno, int value);
 static int PMBridge_do_sanitized_xact(uint16_t *xact, int len);
 static void PMBridge_hook_read(uint8_t addr, uint8_t cmd, const uint8_t *data, int len);
@@ -24,6 +25,7 @@ static void PMBridge_hook_read(uint8_t addr, uint8_t cmd, const uint8_t *data, i
 void I2C_PM_init(void) {
   // Initialize devices as needed after system init & peripheral config
   ltm4673_init();
+  max6639_init();
   return;
 }
 
@@ -40,6 +42,17 @@ void I2C_PM_scan(void)
       }
    }
    printf("\r\n");
+}
+
+static int max6639_init(void) {
+  int rc=0;
+  if (0) {  // temporarily disabled, to avoid breaking tach reading
+    // Default value = 0x41 (/THERM to full-speed enabl, Fan PWM freq LSB 1)
+    // Disable pulse stretching (0x41 | 1<<5)
+    rc = set_max6639_reg(MAX6639_FAN1_CONFIG3, 0x61);
+    rc |= set_max6639_reg(MAX6639_FAN2_CONFIG3, 0x61);
+  }
+  return rc;
 }
 
 int max6639_set_overtemp(uint8_t ot) {
@@ -313,7 +326,7 @@ void I2C_PM_bus_display(void)
 {
    LM75_print(LM75_0);
    LM75_print(LM75_1);
-   if ((marble_get_board_id() & 0xf) < Marble_v1_4) xrp_dump(XRP7724);
+   if (marble_get_pcb_rev() < Marble_v1_4) xrp_dump(XRP7724);
    else ltm4673_read_telem(LTM4673);
 }
 

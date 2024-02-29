@@ -89,10 +89,16 @@ void FPGAWD_Poll(void) {
   if (--poll_counter == 0) {
     printd("poll_counter reached 0\r\n");
     if (fpga_state == STATE_USER) {
-      reset_fpga_with_callback(fpga_reset_callback);
-      fpga_state = STATE_RESET;
+      printf("Watchdog timeout: resetting to golden image.\r\n");
+      FPGAWD_SelfReset();
     }
   }
+  return;
+}
+
+void FPGAWD_SelfReset(void) {
+  reset_fpga_with_callback(fpga_reset_callback);
+  fpga_state = STATE_RESET;
   return;
 }
 
@@ -126,11 +132,8 @@ void FPGAWD_DoneHandler(void) {
 /* Encapsulation necessitates this kind of structure
  */
 static void fpga_reset_callback(void) {
-  printf("Watchdog timeout: resetting to golden image.\r\n");
-  if (fpga_state == STATE_RESET) {
-    fpga_state = STATE_BOOT;
-    poll_counter = 0;
-  }
+  fpga_state = STATE_BOOT;
+  poll_counter = 0;
   return;
 }
 
@@ -177,7 +180,7 @@ int get_fake_key(volatile uint8_t *pdata, int len) {
 
 static void print64(const char *header, const uint8_t *data, unsigned len)
 {
-  printf(header);
+  printf("%s",header);
   for (unsigned jx=0; jx<len; jx++) printf("%2.2x", data[jx]);
   printf("\r\n");
 }
@@ -232,4 +235,8 @@ void FPGAWD_ShowState(void) {
     print64("desired_mac = ", desired_mac, HASH_SIZE);
   }
   print64("remote_hash = ", remote_hash, HASH_SIZE);
+}
+
+int FPGAWD_GetState(void) {
+  return (int)fpga_state;
 }

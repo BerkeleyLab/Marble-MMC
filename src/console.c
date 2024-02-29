@@ -30,38 +30,39 @@ const char unk_str[] = "> Unknown option\r\n";
 const char *menu_str[] = {"\r\n",
   "Build based on git commit " GIT_REV "\r\n",
   "Menu:\r\n",
+  "0 - Show board/chip identification\r\n"
   "1 - MDIO/PHY\r\n",
   "2 - I2C monitor\r\n",
   "3 - Status & counters\r\n",
   "4 gpio - GPIO control\r\n",
   "5 - Reset FPGA\r\n",
   "6 - Push IP&MAC\r\n",
-  "7 - MAX6639\r\n",
-  "8 - LM75_0\r\n",             // Do I want to elaborate this option?
-  "9 - LM75_1\r\n",
+  "7 - Readout MAX6639 (Thermometer and fan controller).\r\n",
+  "8 - Readout LM75_0 (Thermometer, U29)\r\n",
+  "9 - Readout LM75_1 (Thermometer, U28)\r\n",
   "a - I2C scan all ports\r\n",
-  "b - Config ADN4600\r\n",
-  "c - INA219 Main power supply\r\n",
+  "b - Config ADN4600 (Clock mux)\r\n",
+  "c - Readout INA219 (Current monitors)\r\n",
   "d - MGT MUX - switch to QSFP 2\r\n",
-  "e - PM bus display\r\n",
-  "f - XRP7724 flash\r\n",
-  "g - XRP7724 go\r\n",
+  "e - I2C_PM bus display\r\n",
+  "f - Flash XRP7724 (Power supply, Marble v1.1-1.3)\r\n",
+  "g - Enable XRP7724\r\n",
   //"h - XRP7724 hex input\r\n",
   "h - FMC MGT MUX set\r\n",
-  "i - timer check/cal\r\n",
+  "i - Timer check/cal\r\n",
   "j - Read SPI mailbox\r\n",
-  "k - PCA9555 status\r\n",
+  "k - Readout PCA9555 (I2C GPIO expanders U34 and U39)\r\n",
   "l - Config PCA9555\r\n",
   "m d.d.d.d - Set IP Address\r\n",
   "n d:d:d:d:d:d - Set MAC Address\r\n",
-  "o - SI570 status\r\n",
+  "o - SI570 (Frequency synthesizer) status\r\n",
   "p speed[%] - Set fan speed (0-120 or 0%-100%)\r\n",
   "q otemp - Set overtemperature threshold (degC)\r\n",
   "r enable - Set mailbox enable/disable (1/0, on/off)\r\n",
   "s addr_hex freq_hz config_hex - Set Si570 configuration\r\n",
   "t pmbus_msg - Forward PMBus transaction to LTM4673\r\n",
   "u period - Set/get watchdog timeout period (in seconds)\r\n",
-  "v key - Set a new 128-bit secret key (non-volatile, write only).\r\n"
+  "v key - Set a new 128-bit secret key (non-volatile, write only).\r\n",
 };
 #define MENU_LEN (sizeof(menu_str)/sizeof(*menu_str))
 
@@ -110,20 +111,6 @@ int console_init(void) {
   return 0;
 }
 
-#ifdef MARBLE_V2
-void mgtclk_xpoint_en(void)
-{
-   if ((marble_get_pcb_rev() < Marble_v1_4) & xrp_ch_status(XRP7724, 1)) { // CH1: 3.3V
-      adn4600_init();
-   } else if ((marble_get_pcb_rev() > Marble_v1_3) & ltm4673_ch_status(LTM4673)) {
-      printf("Using LTM4673 and adn4600_init\r\n");
-      adn4600_init();
-   } else {
-      printf("Skipping adn4600_init\r\n");
-   }
-}
-#endif
-
 static int console_handle_msg(char *rx_msg, int len)
 {
   // TODO all these should return 0 on success, 1 on failure
@@ -131,10 +118,12 @@ static int console_handle_msg(char *rx_msg, int len)
   // Switch behavior based on first char
   switch (*rx_msg) {
         case '?':
-           printf("hardware board id 0x%x\r\n", marble_get_board_id());
            for (unsigned kx=0; kx<MENU_LEN; kx++) {
                printf("%s", menu_str[kx]);
            }
+           break;
+        case '0':
+           marble_print_pcb_rev();
            break;
         case '1':
            phy_print();
@@ -149,7 +138,8 @@ static int console_handle_msg(char *rx_msg, int len)
            handle_gpio(rx_msg, len);
            break;
         case '5':
-           reset_fpga();
+           printf("Resetting FPGA\r\n");
+           FPGAWD_SelfReset();
            break;
         case '6':
            print_this_ip();
@@ -162,17 +152,10 @@ static int console_handle_msg(char *rx_msg, int len)
            print_max6639_decoded();
            break;
         case '8':
-           // Demonstrate setting over-temperature register and Interrupt mode
-           //LM75_write(LM75_0, LM75_OS, 100*2);
-           //LM75_write(LM75_0, LM75_CFG, LM75_CFG_COMP_INT);
-           //LM75_print(LM75_0);
            LM75_print_decoded(LM75_0);
            break;
         case '9':
-           // Demonstrate setting over-temperature register
-           //LM75_write(LM75_1, LM75_OS, 100*2);
            LM75_print_decoded(LM75_1);
-           //LM75_print(LM75_1);
            break;
         case 'a':
            printf("I2C scanner\r\n");
@@ -191,7 +174,7 @@ static int console_handle_msg(char *rx_msg, int len)
 #endif
            break;
         case 'c':
-           printf("INA test\r\n");
+           printf("Readout INA219\r\n");
            ina219_test();
            break;
         case 'd':
@@ -208,12 +191,14 @@ static int console_handle_msg(char *rx_msg, int len)
            printf("PM bus display\r\n");
            I2C_PM_bus_display();
            break;
+#if 0
         case 'f':
            printf("XRP flash\r\n");
            xrp_flash(XRP7724);
            break;
+#endif
         case 'g':
-           printf("XRP go\r\n");
+           printf("Enabling XRP7724\r\n");
            xrp_boot();
            break;
 #if 0
@@ -495,13 +480,7 @@ static void handle_gpio(const char *msg, int len) {
     marble_print_GPIO_status();
   }
   else if (!found) {
-    printf("GPIO pins, caps for on, lower case for off\r\n"
-           "?) Print state of GPIOs\r\n"
-           "a) FMC power\r\n"
-           "b) EN_PSU_CH\r\n"
-           "c) PB15 J16[4]\r\n"
-           "d) PSU reset\r\n"
-           "e) PSU alert\r\n");
+    marble_list_GPIOs();
   }
   return;
 }
@@ -527,7 +506,8 @@ static int toggle_gpio(char c) {
       #ifdef MARBLE_V2
         marble_SLEEP_ms(800);
         mgtclk_xpoint_en();
-        reset_fpga();
+        // TODO - Does this trigger a double-reset? The PWRGOOD line should assert soon after this.
+        FPGAWD_SelfReset();
       #endif
       break;
     case 'c':
@@ -538,7 +518,6 @@ static int toggle_gpio(char c) {
       marble_Pmod3_5_write(1);
       break;
     case 'd':
-      // PMOD3_5 J16[4]
       marble_PSU_reset_write(0);
       break;
     case 'D':
@@ -570,17 +549,17 @@ void console_print_mac_ip(void) {
 
 static void ina219_test(void)
 {
-	switch_i2c_bus(6);
-	if (1) {
-		ina219_debug(INA219_0);
-		ina219_debug(INA219_FMC1);
-		ina219_debug(INA219_FMC2);
-	} else {
-		ina219_init();
-		//printf("Main bus: %dV, %dmA", getBusVoltage_V(INA219_0), getCurrentAmps(INA219_0));
-		getBusVoltage_V(INA219_0);
-		getCurrentAmps(INA219_0);
-	}
+  switch_i2c_bus(6);
+  if (1) {
+    ina219_debug(INA219_0);
+    ina219_debug(INA219_FMC1);
+    ina219_debug(INA219_FMC2);
+  } else {
+    ina219_init();
+    //printf("Main bus: %dV, %dmA", getBusVoltage_V(INA219_0), getCurrentAmps(INA219_0));
+    getBusVoltage_V(INA219_0);
+    getCurrentAmps(INA219_0);
+  }
 }
 
 static void print_mac(uint8_t *pdata) {
