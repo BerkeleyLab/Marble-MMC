@@ -63,6 +63,7 @@ const char *menu_str[] = {"\r\n",
   "t pmbus_msg - Forward PMBus transaction to LTM4673\r\n",
   "u period - Set/get watchdog timeout period (in seconds)\r\n",
   "v key - Set a new 128-bit secret key (non-volatile, write only).\r\n",
+  "w enable - Set fan tachometer enable/disable (1/0, on/off)\r\n",
 };
 #define MENU_LEN (sizeof(menu_str)/sizeof(*menu_str))
 
@@ -76,6 +77,7 @@ static int console_shift_msg(uint8_t *pData);
 static void ina219_test(void);
 static void handle_gpio(const char *msg, int len);
 static int toggle_gpio(char c);
+static uint8_t parse_boolean(char *rx_msg, int len);
 static int handle_msg_IP(char *rx_msg, int len);
 static int handle_msg_MAC(char *rx_msg, int len);
 static int handle_msg_fan_speed(char *rx_msg, int len);
@@ -83,6 +85,7 @@ static int handle_msg_overtemp(char *rx_msg, int len);
 static int handle_msg_watchdog(char *rx_msg, int len);
 static int handle_msg_key(char *rx_msg, int len);
 static int handle_mailbox_enable(char *rx_msg, int len);
+static int handle_tach_enable(char *rx_msg, int len);
 static int handle_msg_MGTMUX(char *rx_msg, int len);
 //static void print_mac_ip(mac_ip_data_t *pmac_ip_data);
 static void print_mac(uint8_t *pdata);
@@ -256,6 +259,9 @@ static int console_handle_msg(char *rx_msg, int len)
         case 'v':
            handle_msg_key(rx_msg, len);
            break;
+        case 'w':
+           handle_tach_enable(rx_msg, len);
+           break;
         default:
            printf(unk_str);
            break;
@@ -348,14 +354,72 @@ static int handle_msg_overtemp(char *rx_msg, int len) {
   return 0;
 }
 
+static int handle_tach_enable(char *rx_msg, int len) {
+  uint8_t rval = parse_boolean(rx_msg, len);
+  uint8_t tach_en;
+  if (rval == 0x01) {
+    // Query
+    tach_en = max6639_get_tach_en();
+    if (tach_en) {
+      printf("Fan tachometer (PWM pulse stretching) enabled\r\n");
+    } else {
+      printf("Fan tachometer (PWM pulse stretching) disabled\r\n");
+    }
+    return 0;
+  } else if (rval == 0x02) {
+    // Disable
+    printf("Disabling fan tachometer (PWM pulse stretching)\r\n");
+    tach_en = 0;
+  } else if (rval == 0x03) {
+    // Enable
+    printf("Enabling fan tachometer (PWM pulse stretching)\r\n");
+    tach_en = 1;
+  } else {
+    // Bad parsing
+    printf("Failed to parse\r\n");
+    return 1;
+  }
+  max6639_set_tach_en(tach_en);
+  eeprom_store_tach_en((const uint8_t *)&tach_en, 1);
+  return 0;
+}
+
 static int handle_mailbox_enable(char *rx_msg, int len) {
-  //  Msg   Action
-  //  r 0   Disable
-  //  r 1   Enable
-  //  r ?   Print status
-  //  r     Print status
-  //  r on  Enable
-  //  r off Disable
+  uint8_t rval = parse_boolean(rx_msg, len);
+  int en;
+  if (rval == 0x01) {
+    // Query
+    en = mbox_get_enable();
+    if (en) {
+      printf("Mailbox enabled\r\n");
+    } else {
+      printf("Mailbox disabled\r\n");
+    }
+  } else if (rval == 0x02) {
+    // Disable
+    printf("Disabling mailbox update\r\n");
+    mbox_disable();
+  } else if (rval == 0x03) {
+    // Enable
+    printf("Enabling mailbox update\r\n");
+    mbox_enable();
+  } else {
+    // Bad parsing
+    printf("Failed to parse\r\n");
+    return 1;
+  }
+  return 0;
+}
+
+static uint8_t parse_boolean(char *rx_msg, int len) {
+  //  Msg   Action        retval
+  //        Bad parsing   0x00
+  //  r ?   Print status  0x01
+  //  r     Print status  0x01
+  //  r 0   Disable       0x02
+  //  r 1   Enable        0x03
+  //  r off Disable       0x02
+  //  r on  Enable        0x03
   int en = 0;
   int query = 0;
   char c;
@@ -408,23 +472,15 @@ static int handle_mailbox_enable(char *rx_msg, int len) {
     query = 1;
   }
   if ((doParse < 2) && (!query)) {
-    printf("Failed to parse\r\n");
-    return 1;
+    return 0;
   }
   if (query) {
-    en = mbox_get_enable();
-    if (en) {
-      printf("Mailbox enabled\r\n");
-    } else {
-      printf("Mailbox disabled\r\n");
-    }
+    return 0x01;
   } else {
     if (en) {
-      printf("Enabling mailbox update\r\n");
-      mbox_enable();
+      return 0x03;
     } else {
-      printf("Disabling mailbox update\r\n");
-      mbox_disable();
+      return 0x02;
     }
   }
   return 0;

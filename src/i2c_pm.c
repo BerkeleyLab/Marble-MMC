@@ -6,6 +6,7 @@
 #include "max6639.h"
 #include "math.h"
 #include "ltm4673.h"
+#include "st-eeprom.h"
 
 /* ============================= Helper Macros ============================== */
 #define MAX6639_GET_TEMP_DOUBLE(rTemp, rTempExt) \
@@ -45,13 +46,28 @@ void I2C_PM_scan(void)
 }
 
 static int max6639_init(void) {
-  int rc=0;
-  if (0) {  // temporarily disabled, to avoid breaking tach reading
-    // Default value = 0x41 (/THERM to full-speed enabl, Fan PWM freq LSB 1)
-    // Disable pulse stretching (0x41 | 1<<5)
-    rc = set_max6639_reg(MAX6639_FAN1_CONFIG3, 0x61);
-    rc |= set_max6639_reg(MAX6639_FAN2_CONFIG3, 0x61);
+  uint8_t tach_en = max6639_get_tach_en();
+  max6639_set_tach_en(tach_en);
+  return 0;
+}
+
+uint8_t max6639_get_tach_en(void) {
+  uint8_t tach_en = 0;
+  int rc = eeprom_read_tach_en(&tach_en, 1);
+  if (rc) {
+    tach_en = 1;
   }
+  return (int)tach_en;
+}
+
+int max6639_set_tach_en(uint8_t tach_en) {
+  // Restrict to 1 bit
+  uint8_t pstretch_disable = (~tach_en) & 1;
+  // Default value = 0x41 (/THERM to full-speed enabl, Fan PWM freq LSB 1)
+  // Disable pulse stretching (0x41 | 1<<5)
+  uint8_t config = 0x41 | (pstretch_disable << 5);
+  int rc = set_max6639_reg(MAX6639_FAN1_CONFIG3, config);
+  rc |= set_max6639_reg(MAX6639_FAN2_CONFIG3, config);
   return rc;
 }
 
