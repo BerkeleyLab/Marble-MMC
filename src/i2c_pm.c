@@ -20,7 +20,7 @@ static int max6639_init(void);
 static int set_max6639_reg(int regno, int value);
 static int PMBridge_do_sanitized_xact(uint16_t *xact, int len);
 static void PMBridge_hook_read(uint8_t addr, uint8_t cmd, const uint8_t *data, int len);
-//static void PMBridge_hook_write(uint8_t addr, const uint8_t *data, int len);  // DELETEME
+static void PMBridge_hook_write(uint8_t addr, const uint8_t *data, int len);
 
 /* ========================== Function Definitions ========================== */
 void I2C_PM_init(void) {
@@ -488,7 +488,7 @@ static int PMBridge_do_sanitized_xact(uint16_t *xact, int len) {
       data[n] = (uint8_t)(xact[n+1] & 0xff);
     }
     rval = marble_I2C_send(I2C_PM, (uint8_t)xact[0], data, len-1);
-    //PMBridge_hook_write((uint8_t)xact[0], data, len-1);
+    PMBridge_hook_write((uint8_t)xact[0], data, len-1);
     if (rval != HAL_OK) {
       printf("Write failed with code: 0x%x\r\n", rval);
     }
@@ -509,7 +509,7 @@ static int PMBridge_do_sanitized_xact(uint16_t *xact, int len) {
  *  Do any side effects of an I2C (PMB) read on the PMBridge
  */
 static void PMBridge_hook_read(uint8_t addr, uint8_t cmd, const uint8_t *data, int len) {
-  if (ltm4673_hook_read(addr, cmd, data, len)) {
+  if (ltm4673_pmbridge_hook_read(addr, cmd, data, len)) {
     return;
   }
   // Add more device-specific hooks here
@@ -519,13 +519,11 @@ static void PMBridge_hook_read(uint8_t addr, uint8_t cmd, const uint8_t *data, i
 /* static void PMBridge_hook_write(uint8_t addr, const uint8_t *data, int len);
  *  Do any side effects of an I2C (PMB) write on the PMBridge
  */
-/*  TODO DELETEME
 static void PMBridge_hook_write(uint8_t addr, const uint8_t *data, int len) {
-  if (ltm4673_hook_write(addr, data, len)) {
+  if (ltm4673_pmbridge_hook_write(addr, -1, data, len)) {
     return;
   }
 }
-*/
 
 void xrp_boot(void)
 {

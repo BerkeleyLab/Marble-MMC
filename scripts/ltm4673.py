@@ -1576,6 +1576,29 @@ def handle_store(args):
     return load_rval
 
 
+def handle_telem(args):
+    if args.dev is None:
+        print("No valid device handed to handle_telem")
+        return False
+    print("Reading telemetry data")
+    import load
+    # Might be able to shorten this more. But uart is slow, ain't it?
+    load.INTERCOMMAND_SLEEP = 0.01
+    # Get the lines in PMBridge syntax to read telemetry registers
+    lines = read_telem()
+    # Perform the write to the serial device
+    load_rval = load.loadCommands(args.dev, args.baud, lines, do_print=args.verbose, do_log=True)
+    # Just waiting on load via the "get_log" command
+    log = load.get_log()
+    readback, compare_pass = parse_readback(log, compare_prog=None, do_print=True)
+    #print(readback)
+    if load_rval == 0:
+        print("Success")
+    else:
+        print("Failed to load transaction to MMC console")
+    return load_rval
+
+
 def main(argv):
     import load
     # 100ms between commands for conservative program timing constraints
@@ -1605,6 +1628,9 @@ def main(argv):
 
     parser_store = subparsers.add_parser("store", help="Store existing configuration to LTM4673 EEPROM")
     parser_store.set_defaults(handler=handle_store)
+
+    parser_store = subparsers.add_parser("telemetry", help="Read LTM4673 telemetry registers.")
+    parser_store.set_defaults(handler=handle_telem)
     args = parser.parse_args()
     return args.handler(args)
 
