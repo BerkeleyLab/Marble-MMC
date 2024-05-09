@@ -239,5 +239,56 @@
       "input" : "FPGAWD_HandleHash(&@)",
       "desc" : "64-bit MAC supplied by the remote host to reset watchdog timer."
     }
+  ],
+# Page 9 contains only outputs (MMC => FPGA)
+  "page9" : [
+    { "name" : "VOUT_1V0",
+      "size" : 2,
+      "fmt"  : "{} V",
+      "output" : "@ = PM_GetTelem(VOUT_1V0)",
+      "desc" : "Voltage of the 1V0 rail measured internally by the power supply."
+    },
+    { "name" : "IOUT_1V0",
+      "size" : 2,
+      "fmt"  : "{} A",
+      "output" : "@ = PM_GetTelem(IOUT_1V0)",
+      "desc" : "Output current from the 1V0 rail measured internally by the power supply."
+    },
+    { "name" : "VOUT_1V8",
+      "size" : 2,
+      "fmt"  : "{} V",
+      "output" : "@ = PM_GetTelem(VOUT_1V8)",
+      "desc" : "Voltage of the 1V8 rail measured internally by the power supply."
+    },
+    { "name" : "IOUT_1V8",
+      "size" : 2,
+      "fmt"  : "{} A",
+      "output" : "@ = PM_GetTelem(IOUT_1V8)",
+      "desc" : "Output current from the 1V8 rail measured internally by the power supply."
+    },
+    { "name" : "VOUT_2V5",
+      "size" : 2,
+      "fmt"  : "{} V",
+      "output" : "@ = PM_GetTelem(VOUT_2V5)",
+      "desc" : "Voltage of the 2V5 rail measured internally by the power supply."
+    },
+    { "name" : "IOUT_2V5",
+      "size" : 2,
+      "fmt"  : "{} A",
+      "output" : "@ = PM_GetTelem(IOUT_2V5)",
+      "desc" : "Output current from the 2V5 rail measured internally by the power supply."
+    },
+    { "name" : "VOUT_3V3",
+      "size" : 2,
+      "fmt"  : "{} V",
+      "output" : "@ = PM_GetTelem(VOUT_3V3)",
+      "desc" : "Voltage of the 3V3 rail measured internally by the power supply."
+    },
+    { "name" : "IOUT_3V3",
+      "size" : 2,
+      "fmt"  : "{} A",
+      "output" : "@ = PM_GetTelem(IOUT_3V3)",
+      "desc" : "Output current from the 3V3 rail measured internally by the power supply."
+    }
   ]
 }

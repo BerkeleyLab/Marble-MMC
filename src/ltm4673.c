@@ -557,6 +557,26 @@ void ltm4673_read_telem(uint8_t dev) {
    return;
 }
 
+void ltm4673_update_telem(uint8_t dev, volatile uint16_t *pdata) {
+  uint8_t page;
+  uint8_t i2c_dat[4];
+  uint16_t rval;
+  // For each page
+  for (unsigned int npage = 0; npage < 4; npage++) {
+    page = (uint8_t)(npage & 0xff);
+    marble_I2C_cmdsend(I2C_PM, dev, 0x00, &page, 1);
+    // Read voltage
+    marble_I2C_cmdrecv(I2C_PM, dev, LTM4673_READ_VOUT, i2c_dat, 2);
+    rval = 10+(2*npage); // TODO
+    *(&pdata[2*npage]) = rval;
+    // Read current
+    marble_I2C_cmdrecv(I2C_PM, dev, LTM4673_READ_IOUT, i2c_dat, 2);
+    rval = 10+(2*npage)+1; // TODO
+    *(&pdata[2*npage+1]) = rval;
+  }
+  return;
+}
+
 int ltm4673_hook_write(uint8_t addr, int cmd, const uint8_t *data, int len) {
   int matched = 0;
   // Look for LTM4673 writes

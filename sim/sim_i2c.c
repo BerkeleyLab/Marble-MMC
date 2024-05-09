@@ -175,7 +175,7 @@ static int i2c_emu_ltm4673(uint8_t rnw, int reg, uint8_t *data, int len) {
       // LSB-to-MSB
       regval |= (data[n] << 8*(n-offset));
     }
-    printf("Writing 0x%x to page %d, reg 0x%x\r\n", regval, page, reg);
+    //printf("Writing 0x%x to page %d, reg 0x%x\r\n", regval, page, reg);
     if (page == 0xff) {
       // Write to all pages
       ltm4673.page0[(uint8_t)(reg & 0xff)] = regval;

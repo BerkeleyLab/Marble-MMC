@@ -14,6 +14,7 @@
 
 /* ============================ Static Variables ============================ */
 extern I2C_BUS I2C_PM;
+static uint16_t _telem_data[PM_NUM_TELEM_ENUM];
 
 /* =========================== Static Prototypes ============================ */
 static int max6639_init(void);
@@ -1026,6 +1027,18 @@ void xrp_hex_in(uint8_t dev)
    if (1) {
       xrp_reg_write_check(dev, 0x0E, 0x0001);  // Set the XRP7724 to operate mode
    }
+}
+
+void PM_UpdateTelem(void) {
+  ltm4673_update_telem(LTM4673, _telem_data);
+  return;
+}
+
+int PM_GetTelem(PM_telem_enum_t elem) {
+  if (elem < PM_NUM_TELEM_ENUM) {
+    return _telem_data[elem];
+  }
+  return -1;
 }
 
 // Didn't work when tested; why?

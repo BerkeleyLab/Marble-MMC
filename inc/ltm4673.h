@@ -149,6 +149,7 @@ int ltm4673_hook_read(uint8_t addr, int cmd, const uint8_t *data, int len);
 int ltm4673_hook_write(uint8_t addr, int cmd, const uint8_t *data, int len);
 int ltm4673_pmbridge_hook_write(uint8_t addr, int cmd, const uint8_t *data, int len);
 int ltm4673_pmbridge_hook_read(uint8_t addr, int cmd, const uint8_t *data, int len);
+void ltm4673_update_telem(uint8_t dev, volatile uint16_t *pdata);
 
 void ltm4673_print_limits(void);
 #ifdef __cplusplus
