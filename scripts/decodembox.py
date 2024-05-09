@@ -50,14 +50,19 @@ def getFromFile(filename):
 
 def getIPAddr(s):
     if s is None:
-        return ("127.0.0.1", 803)
+        return "127.0.0.1", 803
     # IPv4
     match = re.search('(\d+.\d+.\d+.\d+)(:\d+)?', s)
     if match:
-        print(f"{match.groups()}")
         groups = match.groups()
-        return groups[0], groups[1].strip(':')
-    return ("127.0.0.1", 803)
+        ip = groups[0]
+        port = groups[1]
+        if port is None:
+            port = 803
+        else:
+            port = int(port.strip(':'))
+        return ip, port
+    return "127.0.0.1", 803
 
 def testGetIPAddr(argv):
     if len(argv) < 2:

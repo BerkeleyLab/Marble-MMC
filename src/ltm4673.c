@@ -561,17 +561,23 @@ void ltm4673_update_telem(uint8_t dev, volatile uint16_t *pdata) {
   uint8_t page;
   uint8_t i2c_dat[4];
   uint16_t rval;
+  // Recall:  LTM4673_READ_VOUT is LTM4673_ENCODING_L16
+  //          LTM4673_READ_IOUT is LTM4673_ENCODING_L11
   // For each page
   for (unsigned int npage = 0; npage < 4; npage++) {
     page = (uint8_t)(npage & 0xff);
     marble_I2C_cmdsend(I2C_PM, dev, 0x00, &page, 1);
     // Read voltage
     marble_I2C_cmdrecv(I2C_PM, dev, LTM4673_READ_VOUT, i2c_dat, 2);
-    rval = 10+(2*npage); // TODO
+    rval = ((uint16_t)i2c_dat[1] << 8) | (uint16_t)i2c_dat[0];
+    // Recall: LTM4673_READ_VOUT is LTM4673_ENCODING_L16
+    rval = (uint16_t)(l16_to_mv_int(rval) & 0xffff);
     *(&pdata[2*npage]) = rval;
     // Read current
     marble_I2C_cmdrecv(I2C_PM, dev, LTM4673_READ_IOUT, i2c_dat, 2);
-    rval = 10+(2*npage)+1; // TODO
+    rval = ((uint16_t)i2c_dat[1] << 8) | (uint16_t)i2c_dat[0];
+    // Recall: LTM4673_READ_IOUT is LTM4673_ENCODING_L11
+    rval = (uint16_t)(l11_to_mv_int(rval) & 0xffff);
     *(&pdata[2*npage+1]) = rval;
   }
   return;

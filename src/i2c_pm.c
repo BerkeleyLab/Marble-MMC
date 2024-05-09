@@ -1030,7 +1030,9 @@ void xrp_hex_in(uint8_t dev)
 }
 
 void PM_UpdateTelem(void) {
-  ltm4673_update_telem(LTM4673, _telem_data);
+  if (marble_get_pcb_rev() > Marble_v1_3) {
+    ltm4673_update_telem(LTM4673, _telem_data);
+  } // TODO - xrp telemetry support for Marble <= 1.3
   return;
 }
 
