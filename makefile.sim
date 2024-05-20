@@ -53,10 +53,10 @@ CXX	:= g++
 OBJCOPY	:= objcopy
 SIZE	:= size
 
-GCC_BASE_FLAGS = -std=c11 -pedantic -Wall
-GCC_BASE_FLAGS += -Wextra -Wundef -Wshadow -Wstrict-prototypes -Wwrite-strings
+GCC_BASE_FLAGS = -std=c11 -Wall -Wextra -Wshadow -Wundef -pedantic
+GCC_BASE_FLAGS += -Wstrict-prototypes -Wwrite-strings
 GCC_BASE_FLAGS += -Wpointer-arith -Wredundant-decls -Wunreachable-code
-# to do:  -Wcast-align -Wcast-qual
+# to do:  -Wcast-align -Wcast-qual -Wmissing-prototypes
 
 # Compilation Flags
 #

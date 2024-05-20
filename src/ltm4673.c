@@ -548,9 +548,9 @@ void ltm4673_read_telem(uint8_t dev) {
               } else {
                   phys_unit = (float)word0;
               }
-              printf("r[%2.2x] = 0x%4.4x = %5d = %7.3f %s\r\n", regno, word0, word0, phys_unit, r_table[ix].m);
+              printf("r[%2.2x] = 0x%4.4x = %5d = %7.3f %s\r\n", (unsigned) regno, word0, word0, phys_unit, r_table[ix].m);
           } else {
-              printf("r[%2.2x]    unread          (%s)\r\n", regno, r_table[ix].m);
+              printf("r[%2.2x]    unread          (%s)\r\n", (unsigned) regno, r_table[ix].m);
           }
       }
    }

@@ -18,11 +18,11 @@ static int sip_sign(const unsigned char *key)
 	unsigned int ix=0;
 	unsigned char msg[1024], hash[8];
 	while (EOF != (c=getchar())) {
-		printf("%2.2x\n", c);
+		printf("%2.2x\n", (unsigned) c);
 		if (ix<sizeof msg) msg[ix++] = c;
 	}
 	if (ix%8 != 0) {
-		printf("error: byte count not a mult of 8: %d\n", ix);
+		printf("error: byte count not a mult of 8: %u\n", ix);
 		return 1;
 	}
 	core_siphash(hash, msg, ix, key);

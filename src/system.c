@@ -170,7 +170,7 @@ void reset_fpga_with_callback(void (*cb)(void)) {
 void print_status_counters(void) {
   marble_print_status();
   printf("Live counter: %u\r\n", live_cnt);
-  printf("FPGA prog counter: %d\r\n", fpga_prog_cnt);
+  printf("FPGA prog counter: %u\r\n", fpga_prog_cnt);
   FPGAWD_ShowState();
   printf("FMC status: %x\r\n", marble_FMC_status());
   printf("PWR status: %x\r\n", marble_PWR_status());
