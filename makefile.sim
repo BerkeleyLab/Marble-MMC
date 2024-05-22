@@ -64,6 +64,9 @@ GCC_BASE_FLAGS += -Wpointer-arith -Wredundant-decls -Wunreachable-code
 # they can be discarded if unused.  The linker performs garbage collection of
 # unused input sections.
 CFLAGS = $(FLAGS) -Os $(GCC_BASE_FLAGS) -Wno-unused-parameter -ffunction-sections -fdata-sections $(ARCH_FLAGS) $(USR_CFLAGS)
+CFLAGS += -Wstrict-prototypes -Wmissing-prototypes -Wwrite-strings
+CFLAGS += -Wpointer-arith -Wcast-align -Wcast-qual -Wredundant-decls -Wunreachable-code
+CFLAGS += -Wformat -Wformat-signedness
 
 ASFLAGS = $(FLAGS) $(ARCH_FLAGS)
 LDFLAGS = $(FLAGS) $(LINKER_FLAGS) -Wextra $(ARCH_FLAGS)

@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include "sim_lass.h"
 #include "sim_api.h"
+#include "marble_api.h"
 #include "dbg.h"
 
 typedef void *SSP_PORT;
