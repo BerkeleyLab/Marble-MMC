@@ -1116,11 +1116,20 @@ def attempt_limit_break(factor=0.1):
     return lines
 
 
-def xact_store_eeprom(factor=0.1):
+def xact_store_eeprom():
     """Get the transaction for storing to EEPROM."""
     xacts = []
     xacts.append(write(PAGE, 0xff))
     xacts.append(write(STORE_USER_ALL, 0x00))
+    lines = translate_mmc(xacts)
+    return lines
+
+
+def xact_restore_eeprom():
+    """Get the transaction for storing to EEPROM."""
+    xacts = []
+    xacts.append(write(PAGE, 0xff))
+    xacts.append(write(RESTORE_USER_ALL, 0x00))
     lines = translate_mmc(xacts)
     return lines
 
@@ -1556,15 +1565,27 @@ def handle_limits(args):
 
 
 def handle_store(args):
+    return _handle_store_restore(args, restore=False)
+
+
+def handle_restore(args):
+    return _handle_store_restore(args, restore=True)
+
+
+def _handle_store_restore(args, restore=False):
     if args.dev is None:
-        print("No valid device handed to handle_store")
+        print("No valid device")
         return False
-    print("Attempting store to EEPROM")
     import load
     # Need to sleep 0.5s after issuing the STORE_USER_ALL command.
     load.INTERCOMMAND_SLEEP = 0.5
     # Get the lines in PMBridge syntax to store to EEPROM
-    lines = xact_store_eeprom()
+    if restore:
+        print("Attempting restore from EEPROM")
+        lines = xact_restore_eeprom()
+    else:
+        print("Attempting store to EEPROM")
+        lines = xact_store_eeprom()
     # Perform the write to the serial device
     load_rval = load.loadCommands(args.dev, args.baud, lines, do_print=args.verbose, do_log=False)
     # Just waiting on load via the "get_log" command
@@ -1628,6 +1649,9 @@ def main(argv):
 
     parser_store = subparsers.add_parser("store", help="Store existing configuration to LTM4673 EEPROM")
     parser_store.set_defaults(handler=handle_store)
+
+    parser_store = subparsers.add_parser("restore", help="Restore (reload) configuration from LTM4673 EEPROM")
+    parser_store.set_defaults(handler=handle_restore)
 
     parser_store = subparsers.add_parser("telemetry", help="Read LTM4673 telemetry registers.")
     parser_store.set_defaults(handler=handle_telem)
