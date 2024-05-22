@@ -214,6 +214,129 @@ commands = {
 for name, arg in commands.items():
     globals()[name] = arg[0]
 
+def _hexint(s):
+    n = int(s)
+    if n > 10:
+        return hex(n)
+    return str(n)
+
+_decoder = {
+    # Register: bitlist
+    STATUS_WORD: (
+        #bitlow, bithigh, field name, field description, decoding function
+        (15,15, "Status_word_vout", "An output voltage fault or warning has occurred. See STATUS_VOUT.", _hexint),
+        (14,14, "Status_word_iout", "An output current fault or warning has occurred. See STATUS_IOUT.", _hexint),
+        (13,13, "Status_word_input", "An input voltage fault or warning has occurred. See STATUS_INPUT.", _hexint),
+        (12,12, "Status_word_mfr", "A manufacturer specific fault has occurred. See STATUS_MFR._SPECIFIC.", _hexint),
+        (11,11, "Status_word_power_not_good", " The PWRGD pin, if enabled, is negated. Power is not good.", _hexint),
+        (7, 7,  "Status_word_busy", "Device busy when PMBus command received. See OPERATION: Processing Commands.", _hexint),
+        (6, 6,  "Status_word_off", "This bit is asserted if the unit is not providing power to the output, regardless" \
+                + " of the reason, including simply not being enabled.", _hexint),
+        (5, 5,  "Status_word_vout_ov", "An output overvoltage fault has occurred.", _hexint),
+        (4, 4,  "Status_word_iout_oc", "An output overcurrent fault has occurred.", _hexint),
+        (3, 3,  "Status_word_vin_uv", "A VIN undervoltage fault has occurred.", _hexint),
+        (2, 2,  "Status_word_temp", "A temperature fault or warning has occurred. See STATUS_TEMPERATURE.", _hexint),
+        (1, 1,  "Status_word_cml", "A communication, memory or logic fault has occurred. See STATUS_CML.", _hexint),
+        (0, 0,  "Status_word_high_byte", "A fault/warning not listed in b[7:1] has occurred.", _hexint),
+        ),
+    STATUS_VOUT: (
+        (7,7, "Status_vout_ov_fault", "Overvoltage fault.", _hexint),
+        (6,6, "Status_vout_ov_warn", "Overvoltage warning.", _hexint),
+        (5,5, "Status_vout_uv_warn", "Undervoltage warning", _hexint),
+        (4,4, "Status_vout_uv_fault", "Undervoltage fault.", _hexint),
+        (3,3, "Status_vout_max_warn",
+            "VOUT_MAX warning. An attempt has been made to set the output voltage to a value higher than allowed by" \
+            + " the VOUT_MAX command", _hexint),
+        (2,2, "Status_vout_ton_max_fault", "TON_MAX_FAULT sequencing fault.", _hexint),
+        ),
+    STATUS_IOUT: (
+        (7,7, "Status_iout_oc_fault", "Overcurrent fault.", _hexint),
+        (5,5, "Status_iout_oc_warn", "Overcurrent warning", _hexint),
+        (4,4, "Status_iout_uc_fault", "Undercurrent fault.", _hexint),
+        ),
+    STATUS_TEMPERATURE: (
+        (7,7, "Status_temperature_ot_fault", "Overtemperature fault.", _hexint),
+        (6,6, "Status_temperature_ot_warn", "Overtemperature warning.", _hexint),
+        (5,5, "Status_temperature_ut_warn", "Undertemperature warning.", _hexint),
+        (4,4, "Status_temperature_ut_fault", "Undertemperature fault.", _hexint),
+        ),
+    STATUS_MFR_SPECIFIC: (
+        (7, 7, "Status_mfr_discharge", "1 = a VOUT discharge fault occurred while attempting to enter the ON state.", _hexint),
+        (6, 6, "Status_mfr_fault1_in",
+            "This channel attempted to turn on while the FAULT1 pin was asserted low, or this channel has shut down" \
+            + " at least once in response to a FAULT1 pin asserting low since the last CONTROL pin toggle, OPERATION" \
+            + " command ON/OFF cycle or CLEAR_FAULTS command.", _hexint),
+        (5, 5, "Status_mfr_fault0_in",
+            "This channel attempted to turn on while the FAULT0 pin was asserted low, or this channel has shut down" \
+            + "at least once in response to a FAULT0 pin asserting low since the last CONTROL pin toggle, OPERATION" \
+            + " command ON/OFF cycle or CLEAR_FAULTS command.", _hexint),
+        (4, 4, "Status_mfr_servo_target_reached", "Servo target has been reached.", _hexint),
+        (3, 3, "Status_mfr_dac_connected", "DAC is connected and driving VDAC pin.", _hexint),
+        (2, 2, "Status_mfr_dac_saturated", "A previous servo operation terminated with maximum or minimum DAC value.", _hexint),
+        (1, 1, "Status_mfr_auxfaultb_faulted_off", "AUXFAULT has been de-asserted due to a VOUT or IOUT fault.", _hexint),
+        (0, 0, "Status_mfr_watchdog_fault", "1 = A watchdog fault has occurred. 0 = No watchdog fault has occurred.", _hexint),
+        ),
+    STATUS_INPUT: (
+        (7,7, "Status_input_ov_fault", "VIN overvoltage fault", _hexint),
+        (6,6, "Status_input_ov_warn", "VIN overvoltage warning", _hexint),
+        (5,5, "Status_input_uv_warn", "VIN undervoltage warning", _hexint),
+        (4,4, "Status_input_uv_fault", "VIN undervoltage fault", _hexint),
+        (3,3, "Status_input_off", "Unit is off for insufficient input voltage.", _hexint),
+        ),
+    STATUS_CML: (
+        (7,7, "Status_cml_cmd_fault", "1 = An illegal or unsupported command fault has occurred. 0 = No fault has occurred.", _hexint),
+        (6,6, "Status_cml_data_fault", "1 = Illegal or unsupported data received. 0 = No fault has occurred.", _hexint),
+        (5,5, "Status_cml_pec_fault", "1 = A packet error check fault has occurred. 0 = No fault has occurred.", _hexint),
+        (4,4, "Status_cml_memory_fault", "1 = A fault has occurred in the EEPROM. 0 = No fault has occurred.", _hexint),
+        (1,1, "Status_cml_pmbus_fault", "1 = A communication fault other than ones listed in this table has occurred. 0 = No fault has occurred.", _hexint),
+        ),
+    MFR_PADS: (
+        (15,15, "Mfr_pads_pwrgd_drive", "0 = PWRGD pad is being driven low by this chip. 1 = PWRGD pad is not being driven low by this chip.", _hexint),
+        (14,14, "Mfr_pads_alertb_drive", "0 = ALERT pad is being driven low by this chip. 1 = ALERT pad is not being driven low by this chip.", _hexint),
+        (12,13, "Mfr_pads_faultb_drive[1:0]", "bit[1] used for FAULT0 pad, bit[0] used for FAULT1 pad",
+            lambda x: " ".join(["FAULT{} pad is {}being driven low by this chip.".format(b, "not " if (x & (1<<b)) else "") for b in range(2)])),
+        (8,9, "Mfr_pads_asel1[1:0]", "11: Logic high detected on ASEL1 input pad. 10: ASEL1 input pad is floating. 01: Reserved. 00: Logic low detected on ASEL1 input pad.", _hexint),
+        (7,6, "Mfr_pads_asel0[1:0]", "11: Logic high detected on ASEL0 input pad. 10: ASEL0 input pad is floating. 01: Reserved. 00: Logic low detected on ASEL0 input pad.", _hexint),
+        (5,5, "Mfr_pads_control1", "1: Logic high detected on CONTROL1 pad. 0: Logic low detected on CONTROL1 pad.", _hexint),
+        (4,4, "Mfr_pads_control0", "1: Logic high detected on CONTROL0 pad. 0: Logic low detected on CONTROL0 pad.", _hexint),
+        (3,2, "Mfr_pads_faultb[1:0]", "bit[1] used for FAULT0 pad, bit[0] used for FAULT1 pad as follows: 1: Logic high detected on FAULT pad. 0: Logic low detected on FAULT pad.", _hexint),
+        (1,1, "Mfr_pads_control2", "1: Logic high detected on CONTROL2 pad. 0: Logic low detected on CONTROL2 pad.", _hexint),
+        (0,0, "Mfr_pads_control3", "1: Logic high detected on CONTROL3 pad. 0: Logic low detected on CONTROL3 pad.", _hexint),
+        ),
+    MFR_COMMON: (
+        (7,7," Mfr_common_alertb", "Returns alert status. 1: ALERT is de-asserted high. 0: ALERT is asserted low.", _hexint),
+        (6,6," Mfr_common_busyb", "Returns device busy status. 1: The device is available to process PMBus commands. 0: The device is busy and will NACK PMBus commands.", _hexint),
+        (1,1," Mfr_common_share_clk", "Returns the status of the share-clock pin. 1: Share-clock pin is being held low. 0: Share-clock pin is active.", _hexint),
+        (0,0," Mfr_common_write_protect", "Returns the status of the write-protect pin. 1: Write-protect pin is high. 0: Write-protect pin is low.", _hexint),
+        ),
+}
+
+
+def _slice(val, low, high):
+    _low = min(low, high)
+    _high = max(low, high)
+    return (val & ((1 << _high)-1)) >> _low
+
+
+def decode_bits(reg, val, verbose=False):
+    bitlist = _decoder.get(reg, None)
+    regname = get_command_name(reg)
+    indent = " "*2
+    if bitlist is None:
+        decoded = _hexint(val)
+    else:
+        ll = [""] # Start with a newline
+        for bitlow, bithigh, field_name, desc, fn in bitlist:
+            v = _slice(val, bitlow, bithigh)
+            if verbose:
+                # TODO use 'desc' somehow
+                ss = "{}: {}".format(field_name, fn(v))
+            else:
+                ss = "{}: {}".format(field_name, fn(v))
+            ll.append(indent + ss)
+        decoded = "\n".join(ll)
+    return regname, decoded
+
 
 def get_command_name(cmd_byte):
     for name, arg in commands.items():
@@ -940,6 +1063,31 @@ def read_telem():
     return lines
 
 
+def read_status():
+    # Non-paged registers
+    xacts = [
+        write(PAGE, 0xff),
+        read(STATUS_INPUT),
+        read(STATUS_CML),
+        read(MFR_PADS),
+        read(MFR_COMMON),
+    ]
+    # Paged registers
+    cmds = (
+        STATUS_WORD,
+        STATUS_VOUT,
+        STATUS_IOUT,
+        STATUS_TEMPERATURE,
+        STATUS_MFR_SPECIFIC,
+    )
+    for page in range(4):
+        xacts.append(write(PAGE, page))
+        for cmd in cmds:
+            xacts.append(read(cmd))
+    lines = translate_mmc(xacts)
+    return lines
+
+
 def _init_sim_mem():
     print("void init_sim_ltm4673(void) {")
     page0 = [0]*0x100
@@ -1469,6 +1617,7 @@ def handle_read(args):
     compare_rval = int(not compare_pass)
     return load_rval | compare_rval
 
+
 def test_to_si(argv):
     if len(argv) < 1:
         print("float plz")
@@ -1620,6 +1769,36 @@ def handle_telem(args):
     return load_rval
 
 
+def handle_status(args):
+    if args.dev is None:
+        print("No valid device handed to handle_telem")
+        return False
+    # TODO - Use args.clear_faults
+    print("Reading status registers")
+    import load
+    load.INTERCOMMAND_SLEEP = 0.01
+    # Get the lines in PMBridge syntax to read telemetry registers
+    lines = read_status()
+    # Perform the write to the serial device
+    load_rval = load.loadCommands(args.dev, args.baud, lines, do_print=args.verbose, do_log=True)
+    # Just waiting on load via the "get_log" command
+    log = load.get_log()
+    readback, compare_pass = parse_readback(log, compare_prog=None, do_print=False)
+    # TODO parse status bits
+    #print(readback)
+    for page, regvals in readback:
+        print("PAGE: {}".format(_hexint(page)))
+        for regnum, val in regvals:
+            regname, decoded = decode_bits(regnum, val)
+            print("{}:{}".format(regname, decoded))
+            #print("  {}: {}".format(regnum, val))
+    if load_rval == 0:
+        print("Success")
+    else:
+        print("Failed to load transaction to MMC console")
+    return load_rval
+
+
 def main(argv):
     import load
     # 100ms between commands for conservative program timing constraints
@@ -1650,11 +1829,16 @@ def main(argv):
     parser_store = subparsers.add_parser("store", help="Store existing configuration to LTM4673 EEPROM")
     parser_store.set_defaults(handler=handle_store)
 
-    parser_store = subparsers.add_parser("restore", help="Restore (reload) configuration from LTM4673 EEPROM")
-    parser_store.set_defaults(handler=handle_restore)
+    parser_restore = subparsers.add_parser("restore", help="Restore (reload) configuration from LTM4673 EEPROM")
+    parser_restore.set_defaults(handler=handle_restore)
 
-    parser_store = subparsers.add_parser("telemetry", help="Read LTM4673 telemetry registers.")
-    parser_store.set_defaults(handler=handle_telem)
+    parser_telem = subparsers.add_parser("telemetry", help="Read LTM4673 telemetry registers.")
+    parser_telem.set_defaults(handler=handle_telem)
+
+    parser_status = subparsers.add_parser("status", help="Read LTM4673 status registers.")
+    parser_limits.add_argument("-c", "--clear_faults", default=False, action="store_true", help="Clear faults before reading status")
+    parser_status.set_defaults(handler=handle_status)
+
     args = parser.parse_args()
     return args.handler(args)
 
