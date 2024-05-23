@@ -65,8 +65,9 @@ GCC_BASE_FLAGS += -Wpointer-arith -Wredundant-decls -Wunreachable-code
 # unused input sections.
 CFLAGS = $(FLAGS) -Os $(GCC_BASE_FLAGS) -Wno-unused-parameter -ffunction-sections -fdata-sections $(ARCH_FLAGS) $(USR_CFLAGS)
 CFLAGS += -Wstrict-prototypes -Wmissing-prototypes -Wwrite-strings
-CFLAGS += -Wpointer-arith -Wcast-align -Wcast-qual -Wredundant-decls -Wunreachable-code
+CFLAGS += -Wpointer-arith -Wcast-align -Wredundant-decls -Wunreachable-code
 CFLAGS += -Wformat -Wformat-signedness
+# to do: -Wcast-qual
 
 ASFLAGS = $(FLAGS) $(ARCH_FLAGS)
 LDFLAGS = $(FLAGS) $(LINKER_FLAGS) -Wextra $(ARCH_FLAGS)
