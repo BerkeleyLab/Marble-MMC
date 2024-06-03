@@ -10,6 +10,7 @@ extern "C" {
 #endif
 
 int sim_spi_init(void);
+void init_sim_ltm4673(void);
 
 #ifdef __cplusplus
 }

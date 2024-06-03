@@ -215,7 +215,7 @@ static int console_handle_msg(char *rx_msg, int len)
            break;
         case 'i':
            for (unsigned ix=0; ix<10; ix++) {
-              printf("%d\r\n", ix);
+              printf("%u\r\n", ix);
               marble_SLEEP_ms(1000);
            }
            break;
@@ -1119,7 +1119,7 @@ static int sscanfFSynth(const char *s, int len) {
       printf("Could not interpret input\r\n");
       return -1;
     }
-    printf("I2C Addr = 0x%x, Freq = %d Hz, Config = 0x%x\r\n", i2c_addr, freq, config);
+    printf("I2C Addr = 0x%x, Freq = %d Hz, Config = 0x%x\r\n", (unsigned) i2c_addr, freq, (unsigned) config);
     FSYNTH_ASSEMBLE(data, i2c_addr, freq, config);
     eeprom_store_fsynth((const uint8_t *)data, 6);
   }

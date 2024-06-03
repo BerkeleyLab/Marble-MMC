@@ -12,7 +12,7 @@ void I2C_FPGA_scan(void)
    printf("Scanning I2C_FPGA bus:\r\n");
    for (unsigned j = 0; j < 8; j++)
    {
-      printf("\r\nI2C switch port: %d\r\n", j);
+      printf("\r\nI2C switch port: %u\r\n", j);
       switch_i2c_bus(j);
       marble_SLEEP_ms(100);
       for (unsigned i = 1; i < 128; i++)
@@ -333,7 +333,7 @@ void adn4600_init()
    for (unsigned ix=0; ix<4; ix++) {
       uint8_t cmd = 0x58 + ix;
       rc = marble_I2C_cmdrecv(I2C_FPGA, ADN4600, cmd, &status, 1);
-      printf("> ADN4600 XPT Temp %d r[0x%x] = 0x%2.2x (rc=%d)\r\n", ix, cmd, status, rc);
+      printf("> ADN4600 XPT Temp %u r[0x%x] = 0x%2.2x (rc=%d)\r\n", ix, cmd, status, rc);
    }
 
    config = 1;
@@ -348,7 +348,7 @@ void adn4600_printStatus()
    for (unsigned ix = 0; ix < 8; ix++) {
       uint8_t cmd = ADN4600_XPT_Status0 + ix;
       marble_I2C_cmdrecv(I2C_FPGA, ADN4600, cmd, &status, 1);
-      printf("> ADN4600 reg: %x: Output number: %d, Connected input: [%d]\r\n", cmd, ix, status);
+      printf("> ADN4600 reg: %x: Output number: %u, Connected input: [%d]\r\n", cmd, ix, status);
    }
 }
 
@@ -386,7 +386,7 @@ void pca9555_config()
    // Reset U39 P1_7, P1_3 and P0_0, and turn on LED LD13
    uint8_t data[3];
 
-   printf("Configuring PCA9555 at address 0x%02x\r\n", PCA9555_1);
+   printf("Configuring PCA9555 at address 0x%02x\r\n", (unsigned) PCA9555_1);
    data[0] = 0x6;  // Config reg (6) and (7)
    data[1] = 0xFE; // Configure P0_0 (SI570_OE) and P0_1 (unused) as output (set those bits to 0)
    data[2] = 0x73; // Configure P1_7 (CLKMUX_RST), P1_2, (LD14), and P1_3 (LD13) as outputs
@@ -406,15 +406,15 @@ void pca9555_config()
    data[2] = 0x80; // Write one to P1_7 and zero to P1_3 (LED 13 should be ON)
    marble_I2C_send(I2C_FPGA, PCA9555_1, data, 3);
    printf("> reg: %x: value: %x\r\n", data[0], data[1]);
-   printf("> reg: %x: value: %x\r\n", data[0]+1, data[2]);
+   printf("> reg: %x: value: %x\r\n", data[0]+1U, data[2]);
 
-   printf("Configuring PCA9555 at address 0x%02x\r\n", PCA9555_0);
+   printf("Configuring PCA9555 at address 0x%02x\r\n", (unsigned) PCA9555_0);
    data[0] = 0x6; // Config regs 6(port 0) and 7(port 1)
    data[1] = 0x37; // Configure P0_7, P0_6 and P0_3 as outputs (set those bits to 0)
    data[2] = 0x37; // Configure P1_7, P1_6 and P0_3 as outputs (set those bits to 0)
    marble_I2C_send(I2C_FPGA, PCA9555_0, data, 3);
    printf("> reg: %x: value: %x\r\n", data[0], data[1]);
-   printf("> reg: %x: value: %x\r\n", data[0]+1, data[2]);
+   printf("> reg: %x: value: %x\r\n", data[0]+1U, data[2]);
    marble_SLEEP_ms(100);
 
    data[0] = 0x2; // P1 and P2
@@ -422,7 +422,7 @@ void pca9555_config()
    data[2] = 0x48; // Write ones to P1_7 and P1_3
    marble_I2C_send(I2C_FPGA, PCA9555_0, data, 3);
    printf("> reg: %x: value: %x\r\n", data[0], data[1]);
-   printf("> reg: %x: value: %x\r\n", data[0]+1, data[2]);
+   printf("> reg: %x: value: %x\r\n", data[0]+1U, data[2]);
 }
 
 // Compute the current SI570 Frequency

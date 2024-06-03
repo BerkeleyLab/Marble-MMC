@@ -2,10 +2,10 @@ vpath %.c ../../src
 
 CFLAGS = --std=c99 -pedantic -O2 -I../../inc
 CFLAGS += -DDEBUG
-CFLAGS += -Wall -Wextra -Wundef -Wshadow -Wstrict-prototypes -Wwrite-strings -pedantic
-CFLAGS += -Wmissing-prototypes
+CFLAGS += -Wall -Wextra -Wshadow -Wundef -pedantic
+CFLAGS += -Wstrict-prototypes -Wmissing-prototypes -Wwrite-strings
 CFLAGS += -Wpointer-arith -Wcast-align -Wcast-qual -Wredundant-decls -Wunreachable-code
-CFLAGS += -Wformat=0
+CFLAGS += -Wformat -Wformat-signedness
 
 all: refsip_run
 

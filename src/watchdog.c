@@ -69,7 +69,7 @@ int FPGAWD_SetPeriod(unsigned int period) {
   if (max_poll_counts == 0) {
     printf("Disabling watchdog\r\n");
   } else {
-    printf("Setting watchdog timeout to %d seconds.\r\n", (max_poll_counts+1)*MAILBOX_UPDATE_PERIOD_SECONDS);
+    printf("Setting watchdog timeout to %u seconds.\r\n", (max_poll_counts+1)*MAILBOX_UPDATE_PERIOD_SECONDS);
   }
   printd("Setting poll_counter to %d\r\n", max_poll_counts);
   poll_counter = max_poll_counts;
@@ -217,7 +217,7 @@ void FPGAWD_ShowState(void) {
   uint8_t desired_mac[HASH_SIZE];
   //const unsigned char *key = get_auth_key();
   unsigned char key[KEY_SIZE];
-  printf("poll_counter = %d\r\n", poll_counter);
+  printf("poll_counter = %u\r\n", poll_counter);
   printf("FPGA state  = %s\r\n", state_str(fpga_state));
   print64("local_nonce = ", local_nonce, HASH_SIZE);
   int rval = eeprom_read_wd_key((volatile uint8_t *)key, KEY_SIZE);

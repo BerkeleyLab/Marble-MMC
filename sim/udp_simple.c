@@ -88,7 +88,7 @@ int udp_receive_meta(eth_packet_t *pkt) {
     pkt->ipv4.checksum = 0;
     *(uint32_t *)&(pkt->ipv4.source) = src_addr.sin_addr.s_addr;
     //pkt->ipv4.destination = {0, 0, 0, 0};
-    printf("rc = 0x%x\r\n", rc);
+    printf("rc = 0x%x\r\n", (unsigned)rc);
     pkt->udp.length = htons(rc);
     printf("udp.length = 0x%x\r\n", pkt->udp.length);
     pkt->udp.destinationPort = udp_port;
