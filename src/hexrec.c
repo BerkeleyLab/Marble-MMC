@@ -5,7 +5,7 @@
 #ifdef SELFTEST
 int xrp_push_low(uint8_t dev, uint16_t addr, const uint8_t data[], unsigned len);
 int xrp_set2(uint8_t dev, uint16_t addr, uint8_t data);
-int xrp_read2(uint8_t dev, uint16_t addr);
+unsigned int xrp_read2(uint8_t dev, uint16_t addr);
 int xrp_srecord(uint8_t dev, const uint8_t data[]);
 int xrp_program_static(uint8_t dev);
 int xrp_file(uint8_t dev);
@@ -30,7 +30,7 @@ static int xrp_push_high(uint8_t dev, uint16_t addr, const uint8_t data[], unsig
       unsigned addr1 = addr + jx;
       if (addr1 == 0xD022) continue;
       if (addr1 == 0xFFAD) continue;  // Undocumented, ask MaxLinear about this
-      int v = xrp_read2(dev, addr1);
+      unsigned int v = xrp_read2(dev, addr1);
       if (v != data[jx]) {
           printf(" fault %2.2x != %2.2x\n", v, data[jx]);
           rc = 1;
@@ -50,7 +50,7 @@ int xrp_srecord(uint8_t dev, const uint8_t data[])
    uint16_t addr = (((unsigned) data[1]) << 8) | data[2];
    unsigned rtype = data[3];  // record type
    if (rtype != 0) {
-      printf("rtype %d\n", rtype);
+      printf("rtype %u\n", rtype);
       return 2;
    }
    if (addr < 0x8000) {
@@ -296,10 +296,10 @@ int xrp_set2(uint8_t dev, uint16_t addr, uint8_t data)
    return 0;
 }
 
-int xrp_read2(uint8_t dev, uint16_t addr)
+unsigned int xrp_read2(uint8_t dev, uint16_t addr)
 {
    (void) dev;  // unused in test framework
-   int rv = 0;
+   unsigned int rv = 0;
    if (addr > 32768) rv = vmem[addr-32768];
    return rv;
 }

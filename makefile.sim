@@ -53,10 +53,10 @@ CXX	:= g++
 OBJCOPY	:= objcopy
 SIZE	:= size
 
-GCC_BASE_FLAGS = -std=c11 -pedantic -Wall
-GCC_BASE_FLAGS += -Wextra -Wundef -Wshadow -Wstrict-prototypes -Wwrite-strings
+GCC_BASE_FLAGS = -std=c11 -Wall -Wextra -Wshadow -Wundef -pedantic
+GCC_BASE_FLAGS += -Wstrict-prototypes -Wwrite-strings
 GCC_BASE_FLAGS += -Wpointer-arith -Wredundant-decls -Wunreachable-code
-# to do:  -Wcast-align -Wcast-qual
+# to do:  -Wcast-align -Wcast-qual -Wmissing-prototypes
 
 # Compilation Flags
 #
@@ -64,6 +64,10 @@ GCC_BASE_FLAGS += -Wpointer-arith -Wredundant-decls -Wunreachable-code
 # they can be discarded if unused.  The linker performs garbage collection of
 # unused input sections.
 CFLAGS = $(FLAGS) -Os $(GCC_BASE_FLAGS) -Wno-unused-parameter -ffunction-sections -fdata-sections $(ARCH_FLAGS) $(USR_CFLAGS)
+CFLAGS += -Wstrict-prototypes -Wmissing-prototypes -Wwrite-strings
+CFLAGS += -Wpointer-arith -Wcast-align -Wredundant-decls -Wunreachable-code
+CFLAGS += -Wformat -Wformat-signedness
+# to do: -Wcast-qual
 
 ASFLAGS = $(FLAGS) $(ARCH_FLAGS)
 LDFLAGS = $(FLAGS) $(LINKER_FLAGS) -Wextra $(ARCH_FLAGS)

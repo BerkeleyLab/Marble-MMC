@@ -464,7 +464,7 @@ static lass_beat_t *print_lass_beat(lass_beat_t *beat) {
     print_nbytes(beat_b->addr, 3, 1);
     printf("\r\n");
     for (unsigned int n = 0; n < rep_count; n++) {
-      printf("    data%d = 0x", n);
+      printf("    data%u = 0x", n);
       print_nbytes((beat_b->data) + 4*n, 4, 1);
       printf("\r\n");
     }

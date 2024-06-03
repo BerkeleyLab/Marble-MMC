@@ -33,7 +33,7 @@
 #define SIM_FPGA_RESETS               (0)
 
 // Defined in sim_i2c.c; declared here to avoid creating a "real" i2c_init function in marble_api.h
-void init_sim_ltm4673(void);
+//void init_sim_ltm4673(void);
 
 typedef struct {
   int toExit;
@@ -338,19 +338,6 @@ void marble_SLEEP_us(uint32_t delay) {
 
 uint32_t marble_get_tick(void) {
   return BSP_GET_SYSTICK();
-}
-
-void bsp_FPGAWD_set_period(uint16_t preload) {
-  _UNUSED(preload);
-  return;
-}
-
-void bsp_FPGAWD_pet(void) {
-  return;
-}
-
-void bsp_FPGAWD_ISR(void) {
-  return;
 }
 
 uint8_t fsynthGetAddr(void) {
