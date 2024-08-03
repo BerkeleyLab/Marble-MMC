@@ -60,6 +60,30 @@
 #    "rev.h",
 #    "max6639.h"
 #  ],
+# Page 0 contains metadata information
+  "page0" : [
+    { "name" : "MAGIC_NUMBER",
+      "size" : 2,
+      "type" : "int",
+      "desc" : "Mailbox magic number",
+      "fmt"  : "%x",
+      "output" : "@ = 0xA15B"
+    },
+    { "name" : "VERSION_MAJOR",
+      "size" : 1,
+      "type" : "int",
+      "desc" : "Mailbox major version",
+      "fmt"  : "%d",
+      "output" : "@ = 1"
+    },
+    { "name" : "VERSION_MINOR",
+      "size" : 1,
+      "type" : "int",
+      "desc" : "Mailbox minor version",
+      "fmt"  : "%d",
+      "output" : "@ = 0"
+    }
+  ],
 # Page 2 contains only inputs (MMC <= FPGA)
   "page2" : [
     { "name" : "FMC_MGT_CTL",
