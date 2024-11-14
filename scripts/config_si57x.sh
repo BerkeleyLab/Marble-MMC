@@ -65,6 +65,8 @@ if [ $snum > 0 ]; then
   fi
 fi
 
+# Temporarely workaround to exclude current content in the buffer
+printf '\b%.0s' {1..100} >> $dev
 python3 $SCRIPT_DIR/load.py -d "$dev" "$si570_configuration_string"
 
 exit 0
