@@ -12,10 +12,11 @@ VARIANT_D = -DMARBLE_LPC1776 -DMARBLEM_V1
 PYTHON = python3
 CC = arm-none-eabi-gcc
 CFLAGS = -mcpu=cortex-m3 --std=c99 -O2 -I. -I ../inc $(VARIANT_D)
-CFLAGS += -Wall -Wextra -Wundef -Wshadow -Wstrict-prototypes -Wwrite-strings -pedantic
-CFLAGS += -Wmissing-prototypes
+CFLAGS += -Wall -Wextra -Wshadow -Wundef -pedantic
+CFLAGS += -Wstrict-prototypes -Wmissing-prototypes -Wwrite-strings
 CFLAGS += -Wpointer-arith -Wcast-align -Wcast-qual -Wredundant-decls -Wunreachable-code
-# Too strict for now: -Wconversion
+CFLAGS += -Wformat -Wformat-signedness
+# to do: -Wconversion
 vpath %.c ../src
 vpath %.def ../inc
 MKMBOX = ../scripts/mkmbox.py

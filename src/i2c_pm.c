@@ -88,7 +88,7 @@ static int set_max6639_reg(int regno, int value)
    return rc;
 }
 
-int get_max6639_reg(int regno, int *value)
+int get_max6639_reg(int regno, unsigned int *value)
 {
    uint8_t i2c_dat[4];
    uint8_t addr = MAX6639;
@@ -116,7 +116,7 @@ int max6639_set_fans(int speed)
 void print_max6639(void)
 {
    char p_buf[40];
-   int value;
+   unsigned int value;
    // ix is the MAX6639 register address
    for (unsigned ix=0; ix<64; ix++) {
       if (get_max6639_reg(ix, &value) != 0) {
@@ -139,7 +139,7 @@ void print_max6639(void)
 
 void print_max6639_decoded(void)
 {
-  int vTemp, vTempExt;
+  unsigned int vTemp, vTempExt;
   double temp;
   int rTemp, rTempExt;
   int rval;
@@ -167,7 +167,7 @@ void print_max6639_decoded(void)
 #define X(nReg, desc) \
   do{ \
     get_max6639_reg(nReg, &vTemp); \
-    printf("  %s (0x%X) = 0x%X\n", desc, nReg, vTemp); \
+    printf("  %s (0x%X) = 0x%X\n", desc, (unsigned) nReg, vTemp); \
   }while(0);
   MAX6639_FOR_EACH_REGISTER();
 #undef X
@@ -258,8 +258,8 @@ void LM75_print_decoded(uint8_t dev)
   }
 #define X(name, val) \
   do{ \
-    LM75_read(dev, val, &vTemp); \
-    printf("  %s (0x%X) = %d\n", #name, val, vTemp); \
+    LM75_read(dev, (unsigned) val, &vTemp); \
+    printf("  %s (0x%X) = %d\n", #name, (unsigned) val, vTemp); \
   }while(0);
   LM75_FOR_EACH_REGISTER()
 #undef X
@@ -398,19 +398,19 @@ int PMBridge_xact(uint16_t *xact, int len) {
     printf("Transaction shorter than min length (2)\r\n");
     return -1;
   }
-  int syntax_invalid = 0;
+  unsigned int syntax_invalid = 0;
   unsigned int read = 0;
   // Recall I2C addresses above 8-bit 0xee (7-bit 0x77) are reserved for 10-bit addressing
   if (xact[0] > 0xee) {
-    syntax_invalid |= (1);
+    syntax_invalid |= (1U);
   }
   // Even read transactions start with an I2C write
   if (xact[0] & 1) {
-    syntax_invalid |= (1<<1);
+    syntax_invalid |= (1U<<1);
   }
   // Command codes must be 1 byte (no control chars in the 1 position)
   if (xact[1] > 0xff) {
-    syntax_invalid |= (1<<2);
+    syntax_invalid |= (1U<<2);
   }
   if (len > 2) {
     if (xact[2] == PMBRIDGE_XACT_REPEAT_START) {
@@ -418,19 +418,19 @@ int PMBridge_xact(uint16_t *xact, int len) {
       if (len > 4) {
         if (!(xact[3] & 0x1)) {
           printf("Repeat Start not followed by a read\r\n");
-          syntax_invalid |= (1<<4);
+          syntax_invalid |= (1U<<4);
         }
         if (xact[4] < PMBRIDGE_XACT_READ_ONE) {
           printf("Repeat Start not followed by PMBRIDGE_XACT_READ_ONE or PMBRIDGE_XACT_READ_BLOCK\r\n");
-          syntax_invalid |= (1<<4);
+          syntax_invalid |= (1U<<4);
         }
       } else {
         printf("Repeat Start not followed by Addr+rd and PMBRIDGE_XACT_READ_ONE or PMBRIDGE_XACT_READ_BLOCK\r\n");
-        syntax_invalid |= (1<<5);
+        syntax_invalid |= (1U<<5);
       }
     } else if (xact[2] & 0x100) { // PMBRIDGE_XACT_READ_ONE or PMBRIDGE_XACT_READ_BLOCK
       printf("Command code followed improperly by PMBRIDGE_XACT_READ_ONE or PMBRIDGE_XACT_READ_BLOCK\r\n");
-      syntax_invalid |= (1<<3);
+      syntax_invalid |= (1U<<3);
     }
   } else {
     // No additional syntax checks needed on SEND_BYTE protocol types
@@ -474,7 +474,7 @@ static int PMBridge_do_sanitized_xact(uint16_t *xact, int len) {
     rval = marble_I2C_cmdrecv(I2C_PM, (uint8_t)xact[0], (uint8_t)xact[1], data, len-4);
     PMBridge_hook_read((uint8_t)xact[0], (uint8_t)xact[1], data, len-4);
     if (rval != HAL_OK) {
-      printf("Read failed with code: 0x%x\r\n", rval);
+      printf("Read failed with code: 0x%x\r\n", (unsigned) rval);
     } else {
       // Readback
       printf("(0x%02x) 0x%02x:", xact[0], xact[1]);
@@ -491,7 +491,7 @@ static int PMBridge_do_sanitized_xact(uint16_t *xact, int len) {
     rval = marble_I2C_send(I2C_PM, (uint8_t)xact[0], data, len-1);
     PMBridge_hook_write((uint8_t)xact[0], data, len-1);
     if (rval != HAL_OK) {
-      printf("Write failed with code: 0x%x\r\n", rval);
+      printf("Write failed with code: 0x%x\r\n", (unsigned) rval);
     }
   }
   // READ:
@@ -574,7 +574,7 @@ int xrp_set2(uint8_t dev, uint16_t addr, uint8_t data)
    return rc;
 }
 
-int xrp_read2(uint8_t dev, uint16_t addr)
+unsigned int xrp_read2(uint8_t dev, uint16_t addr)
 {
   if (marble_get_pcb_rev() > Marble_v1_3) {
     printf("XRP7724 not present; bypassed.\n");
@@ -597,7 +597,7 @@ void xrp_dump(uint8_t dev)
   }
    // https://www.maxlinear.com/appnote/anp-38.pdf
    printf("XRP7724 dump [%2.2x]\r\n", dev);
-   struct {int a; const char *n;} r_table[] = {
+   struct {unsigned int a; const char *n;} r_table[] = {
       {0x02, "HOST_STS"},
       {0x05, "FAULT_STATUS"},
       {0x09, "STATUS"},
@@ -620,11 +620,11 @@ void xrp_dump(uint8_t dev)
    const unsigned tlen = sizeof(r_table)/sizeof(r_table[0]);
    for (unsigned ix=0; ix<tlen; ix++) {
       uint8_t i2c_dat[4];
-      int regno = r_table[ix].a;
+      unsigned int regno = r_table[ix].a;
       int rc = marble_I2C_cmdrecv(I2C_PM, dev, regno, i2c_dat, 2);
       if (rc == HAL_OK) {
           unsigned value = (((unsigned) i2c_dat[0]) << 8) | i2c_dat[1];
-          printf("r[%2.2x] = 0x%4.4x = %5d   (%s)\r\n", regno, value, value, r_table[ix].n);
+          printf("r[%2.2x] = 0x%4.4x = %5u   (%s)\r\n", regno, value, value, r_table[ix].n);
       } else {
           printf("r[%2.2x]    unread          (%s)\r\n", regno, r_table[ix].n);
       }
@@ -660,7 +660,7 @@ static int xrp_reg_write(uint8_t dev, uint8_t regno, uint16_t d)
    i2c_dat[1] = d & 0xff;
    int rc = marble_I2C_cmdsend(I2C_PM, dev, regno, i2c_dat, 2);
    if (rc != HAL_OK) {
-      printf("r[%2.2x] wrote 0x%4.4x,  rc = %d (want %d)\n", regno, d, rc, HAL_OK);
+      printf("r[%2.2x] wrote 0x%4.4x,  rc = %d (want %d)\n", regno, d, rc, (int) HAL_OK);
    }
    return rc;
 }
@@ -679,7 +679,7 @@ static int xrp_reg_write_check(uint8_t dev, uint8_t regno, uint16_t d)
    int rc = marble_I2C_cmdrecv(I2C_PM, dev, regno, i2c_dat, 2);
    if (rc == HAL_OK) {
       unsigned value = (((unsigned) i2c_dat[0]) << 8) | i2c_dat[1];
-      printf("r[%2.2x] = 0x%4.4x = %5d  (hope for 0x%4.4x)\n", regno, value, value, d);
+      printf("r[%2.2x] = 0x%4.4x = %5u  (hope for 0x%4.4x)\n", regno, value, value, d);
       return value == d;
    } else {
       printf("r[%2.2x]    unread\n", regno);
@@ -807,7 +807,7 @@ static int xrp_process_flash(uint8_t dev, int page_no, int cmd, int mode, int dw
       rc = marble_I2C_cmdsend(I2C_PM, dev, 0x4D, i2c_dat, 2);
       if (rc != HAL_OK) return 1;
       marble_SLEEP_ms(50);
-      int outer, status, busy;
+      unsigned int outer, status, busy;
       for (outer=0; outer < 10; outer++) {
          i2c_dat[0] = 0;  i2c_dat[1] = page_no;
          rc = marble_I2C_cmdsend(I2C_PM, dev, cmd, i2c_dat, 2);
@@ -835,12 +835,12 @@ static int xrp_process_flash(uint8_t dev, int page_no, int cmd, int mode, int dw
       }
       printf("Status OK\n");
       // final check
-      int v = xrp_read2(dev, 0x8068);  // YFLASHPGMDELAY
+      unsigned int v = xrp_read2(dev, 0x8068);  // YFLASHPGMDELAY
       if (v == 0xff) {
          printf("Page %d complete\n", page_no);
          return 0;  // Success
       }
-      printf("YFLASHPGMDELAY = 0x%2.2x after programming; Fault %d!\n", v, retry);
+      printf("YFLASHPGMDELAY = 0x%2.2x after programming; Fault %u!\n", v, retry);
    }
    return 1;  // "Abort - Erasing the Flash has failed"
 }
@@ -859,7 +859,7 @@ static int xrp_program_page(uint8_t dev, unsigned page_no, uint8_t data[], unsig
    // On to Figure 5: Program Flash Image
    xrp_set2(dev, 0x8068, 0xff);  // YFLASHPGMDELAY
    marble_SLEEP_ms(12);
-   int v = xrp_read2(dev, 0x8068);  // YFLASHPGMDELAY
+   unsigned int v = xrp_read2(dev, 0x8068);  // YFLASHPGMDELAY
    if (v != 0xff) {
       printf("YFLASHPGMDELAY = 0x%2.2x before programming; Fault!\n", v);
       return 1;
@@ -992,7 +992,7 @@ void xrp_go(uint8_t dev)
    printf("xrp_program_static rc = %d\n", rc);
    if (rc) return;
    // read random byte from 0x8000, should match
-   int v = xrp_read2(dev, 0x8000);
+   unsigned int v = xrp_read2(dev, 0x8000);
    if (v != 0x93) {
       printf("write corrupted (0x93 != 0x%2.2x)\n", v);
       return;
@@ -1018,7 +1018,7 @@ void xrp_hex_in(uint8_t dev)
    printf("xrp_file rc = %d\n", rc);
    if (rc) return;
    // read random byte from 0x8000, should match
-   int v = xrp_read2(dev, 0x8000);
+   unsigned int v = xrp_read2(dev, 0x8000);
    if (v != 0x95) {
       printf("write corrupted (0x95 != 0x%2.2x)\n", v);
       return;

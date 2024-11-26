@@ -40,7 +40,7 @@ int max6639_set_tach_en(uint8_t tach_en);
 uint8_t max6639_get_tach_en(void);
 void print_max6639(void);
 void print_max6639_decoded(void);
-int get_max6639_reg(int regno, int *value);
+int get_max6639_reg(int regno, unsigned int *value);
 int return_max6639_reg(int regno);
 void i2c_pm_hook(uint8_t addr, uint8_t rnw, int cmd, const uint8_t *data, int len);
 int PM_GetTelem(PM_telem_enum_t elem);
@@ -100,7 +100,7 @@ int max6639_set_overtemp(uint8_t ot);
 /* communication between i2c_pm and hexrec */
 int xrp_push_low(uint8_t dev, uint16_t addr, const uint8_t data[], unsigned len);
 int xrp_set2(uint8_t dev, uint16_t addr, uint8_t data);
-int xrp_read2(uint8_t dev, uint16_t addr);
+unsigned int xrp_read2(uint8_t dev, uint16_t addr);
 int xrp_srecord(uint8_t dev, const uint8_t data[]);
 int xrp_program_static(uint8_t dev);
 int xrp_file(uint8_t dev);
