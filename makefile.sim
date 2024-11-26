@@ -81,6 +81,8 @@ SOURCES := $(SIM_SOURCES)
 include $(BUILD_DIR)/sources.mk
 SOURCES := $(filter-out $(IGNORES), $(SOURCES))
 
+$(info OLED_SOURCES=$(OLED_SOURCES))
+
 # Translate this list of sources into a list of required objects
 # in the output directory
 objects = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(patsubst %.s,%.o,$(SOURCES))))

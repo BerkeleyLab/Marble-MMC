@@ -75,17 +75,20 @@ extern "C" {
 // System Clock Frequency = 120 MHz
 #ifdef NUCLEO
 // HSE input is 8 MHz from onboard ST-Link MCO
+#define FREQUENCY_HSE          (8000000)
 #define CONFIG_CLK_PLLM              (8)
 #define CONFIG_CLK_PLLN            (240)
 #define CONFIG_CLK_PLLP    RCC_PLLP_DIV2
 #define CONFIG_CLK_PLLQ              (5)
 #else
 // HSE input on Marble is 25 MHz from WhiteRabbit module
+#define FREQUENCY_HSE         (25000000)
 #define CONFIG_CLK_PLLM             (20)
 #define CONFIG_CLK_PLLN            (192)
 #define CONFIG_CLK_PLLP    RCC_PLLP_DIV2
 #define CONFIG_CLK_PLLQ              (5)
 #endif
+#define FREQUENCY_SYSCLK    (((FREQUENCY_HSE/CONFIG_CLK_PLLM)*CONFIG_CLK_PLLN)/CONFIG_CLK_PLLP)
 
 #define UART_MSG_TERMINATOR                           ('\n')
 #define UART_MSG_ABORT                                (27)  // esc

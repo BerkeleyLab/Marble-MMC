@@ -145,8 +145,7 @@ static int console_handle_msg(char *rx_msg, int len)
            FPGAWD_SelfReset();
            break;
         case '6':
-           print_this_ip();
-           print_this_mac();
+           console_print_mac_ip();
            console_push_fpga_mac_ip();
            printf("DONE\r\n");
            break;
@@ -594,6 +593,8 @@ int console_push_fpga_mac_ip(void) {
     printf("Could not find one of IP or MAC address\r\n");
     return rval;
   }
+  set_last_ip(pdata.ip);
+  set_last_mac(pdata.mac);
   return push_fpga_mac_ip(&pdata);
 }
 
@@ -649,6 +650,7 @@ static void print_this_ip(void) {
     printf("Could not find IP address\r\n");
     return;
   }
+  set_last_ip(ip);
   print_ip(ip);
   return;
 }
@@ -1324,6 +1326,31 @@ static int PMBridgeConsumeArg(const char *s, int len, volatile int *arg) {
 void console_pend_FPGA_enable(void) {
   _fpgaEnable = 1;
   return;
+}
+
+static uint8_t last_ip_addr[IP_LENGTH] = {0, 0, 0, 0};
+static uint8_t last_mac_addr[MAC_LENGTH] = {0, 0, 0, 0, 0, 0};
+
+void set_last_ip(const uint8_t *ip) {
+  //printf("Setting ip: ");
+  //PRINT_MULTIBYTE_DEC(ip, 4, '.');
+  memcpy((void *)last_ip_addr, (void *)ip, (size_t)IP_LENGTH/sizeof(uint8_t));
+  //printf("last_ip_addr = ");
+  //PRINT_MULTIBYTE_DEC(last_ip_addr, 4, '.');
+  return;
+}
+
+uint8_t *get_last_ip(void) {
+  return last_ip_addr;
+}
+
+void set_last_mac(const uint8_t *mac) {
+  memcpy((void *)last_mac_addr, (void *)mac, (size_t)MAC_LENGTH/sizeof(uint8_t));
+  return;
+}
+
+uint8_t *get_last_mac(void) {
+  return last_mac_addr;
 }
 
 #ifdef DEBUG_ENABLE_ERRNO_DECODE

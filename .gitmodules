@@ -1,0 +1,3 @@
+[submodule "submodules/oled"]
+	path = submodules/oled
+	url = ../../llrf-projects/oled.git

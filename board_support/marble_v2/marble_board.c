@@ -39,6 +39,11 @@
 #include "ltm4673.h"
 #include "watchdog.h"
 
+#define UI_BOARD
+#ifdef UI_BOARD
+#include "display.h"
+#endif
+
 #define XRP_BYPASS_PWRGD
 #define XRP_REBOOT_DELAY    (500)
 
@@ -142,6 +147,10 @@ void board_init(void) {
   // (i.e. fan speed, overtemp threshold)
   system_apply_params();
 
+#ifdef UI_BOARD
+  display_init();
+#endif
+
   return;
 }
 
@@ -228,6 +237,9 @@ int board_service(void) {
       i2c_pm_alert = 0;
    }
 #endif
+#ifdef UI_BOARD
+   display_update();
+#endif
    return 0;
 }
 
@@ -260,7 +272,9 @@ void marble_UART_init(void)
    //MX_USART1_UART_Init();
    CONSOLE_USART_Init();
    /* PD5, PD6 - UART4 (Pmod3_7/3_6) */
-   MX_USART2_UART_Init();
+   // This is disabled to use Pmod3 to drive UI board
+   // It only had development use anyhow
+   //MX_USART2_UART_Init();
    i2cBusStatus = 0;
 }
 
@@ -1043,7 +1057,7 @@ uint32_t marble_init(void)
   MX_I2C1_Init();
   MX_I2C3_Init();
   MX_SPI1_Init();
-  MX_SPI2_Init();
+  //MX_SPI2_Init();
 
   // RNG
   hrng.Instance = RNG;
@@ -1294,8 +1308,8 @@ static void MX_SPI2_Init(void)
    hspi2.Instance = SPI2;
    hspi2.Init.Mode = SPI_MODE_MASTER;
    hspi2.Init.Direction = SPI_DIRECTION_2LINES;
-   hspi2.Init.DataSize = SPI_DATASIZE_16BIT;
-   hspi2.Init.CLKPolarity = SPI_POLARITY_HIGH;
+   hspi2.Init.DataSize = SPI_DATASIZE_8BIT;
+   hspi2.Init.CLKPolarity = SPI_POLARITY_LOW;
    hspi2.Init.CLKPhase = SPI_PHASE_1EDGE;
    hspi2.Init.NSS = SPI_NSS_SOFT;
    hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_128;
