@@ -71,3 +71,16 @@ Offset|Name|Size|Direction|Desc|Note
 ------|----|----|---------|----|----
 0|MB8\_WD\_HASH|8|FPGA=\>MMC|64-bit MAC supplied by the remote host to reset watchdog timer.|Access by byte as: MB8\_WD\_HASH\_x (x=0,1,2,3,4,5,6,7)
 
+# Page 9
+
+Offset|Name|Size|Direction|Desc|Note
+------|----|----|---------|----|----
+0|MB9\_VOUT\_1V0|2|MCC=\>FPGA|Voltage of the 1V0 rail measured internally by the power supply.|Access by byte as: MB9\_VOUT\_1V0\_x (x=0,1)
+2|MB9\_IOUT\_1V0|2|MCC=\>FPGA|Output current from the 1V0 rail measured internally by the power supply.|Access by byte as: MB9\_IOUT\_1V0\_x (x=0,1)
+4|MB9\_VOUT\_1V8|2|MCC=\>FPGA|Voltage of the 1V8 rail measured internally by the power supply.|Access by byte as: MB9\_VOUT\_1V8\_x (x=0,1)
+6|MB9\_IOUT\_1V8|2|MCC=\>FPGA|Output current from the 1V8 rail measured internally by the power supply.|Access by byte as: MB9\_IOUT\_1V8\_x (x=0,1)
+8|MB9\_VOUT\_2V5|2|MCC=\>FPGA|Voltage of the 2V5 rail measured internally by the power supply.|Access by byte as: MB9\_VOUT\_2V5\_x (x=0,1)
+10|MB9\_IOUT\_2V5|2|MCC=\>FPGA|Output current from the 2V5 rail measured internally by the power supply.|Access by byte as: MB9\_IOUT\_2V5\_x (x=0,1)
+12|MB9\_VOUT\_3V3|2|MCC=\>FPGA|Voltage of the 3V3 rail measured internally by the power supply.|Access by byte as: MB9\_VOUT\_3V3\_x (x=0,1)
+14|MB9\_IOUT\_3V3|2|MCC=\>FPGA|Output current from the 3V3 rail measured internally by the power supply.|Access by byte as: MB9\_IOUT\_3V3\_x (x=0,1)
+

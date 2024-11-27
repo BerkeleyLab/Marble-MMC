@@ -108,7 +108,7 @@ void mbox_update(bool verbose)
   if (!mbox_is_enabled) {
     return;
   }
-
+  PM_UpdateTelem();
   FPGAWD_Poll();
   _UNUSED(verbose);
   update_count++;
