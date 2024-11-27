@@ -7,6 +7,8 @@ import re
 import os
 import argparse
 
+JSON_TOP_DIR="mailbox"
+
 import mkmbox
 def getFromLeep(ipAddr, port=803):
     try:
@@ -20,6 +22,46 @@ def getFromLeep(ipAddr, port=803):
     mbox = addr.reg_read(["spi_mbox"])[0]
     addr.sock.close()
     return mbox
+
+def get_MSB(l, offset, size):
+    ll = [(x & 0xff) for x in l[offset:offset+size]]
+    return int.from_bytes(bytes(ll))
+
+def get_4(l, offset):
+    return get_MSB(l, offset, 4)
+
+def load_json(filename):
+    import json
+    return json.load(filename)
+
+def getJsonMapFromHash(_hash, topdir=JSON_TOP_DIR):
+    if not os.path.exists(topdir):
+        print("{} doesn't exist".format(topdir))
+        return None
+    filename = "mailbox_map_{:08x}.json".format(_hash)
+    files = os.path.listdir(topdir)
+    if filename not in files:
+        return None
+    filepath = os.path.join(topdir, filename)
+    dd = load_json(filepath)
+    return dd
+
+def decode(mbox_dump):
+    # The only hard-coded number we need is the MBOX_HASH index
+    mbox_hash_index = 76
+    mhash = get_4(mbox_dump, mbox_hash_index)
+    print("HASH = 0x{:x}".format(mhash))
+    mmap = getJsonMapFromHash(mhash)
+    val_dict = {}
+    if mmap is None:
+        return None
+    for regname, reg_dict in mmap:
+        aw = reg_dict["addr_width"]
+        base = reg_dict["base_addr"]
+        size = 1<<aw
+        val = get_MSB(mbox_dump, base, size)
+        val_dict["regname"] = val
+    return val_dict
 
 def _storeToFile(filename, mbox):
     n = 0
@@ -50,14 +92,19 @@ def getFromFile(filename):
 
 def getIPAddr(s):
     if s is None:
-        return "127.0.0.1"
+        return "127.0.0.1", 803
     # IPv4
     match = re.search('(\d+.\d+.\d+.\d+)(:\d+)?', s)
     if match:
-        print(f"{match.groups()}")
         groups = match.groups()
-        return groups[0], groups[1].strip(':')
-    return False
+        ip = groups[0]
+        port = groups[1]
+        if port is None:
+            port = 803
+        else:
+            port = int(port.strip(':'))
+        return ip, port
+    return "127.0.0.1", 803
 
 def testGetIPAddr(argv):
     if len(argv) < 2:
@@ -96,6 +143,7 @@ def decodeMbox(argv):
         mboxContents = getFromLeep(ipAddr, port)
         if mboxContents is None:
             return 1
+    decode(mboxContents)
     if args.store_file is not None:
         print("Storing raw data to {}".format(args.store_file))
         _storeToFile(args.store_file, mboxContents)

@@ -14,13 +14,14 @@
 
 /* ============================ Static Variables ============================ */
 extern I2C_BUS I2C_PM;
+static uint16_t _telem_data[PM_NUM_TELEM_ENUM];
 
 /* =========================== Static Prototypes ============================ */
 static int max6639_init(void);
 static int set_max6639_reg(int regno, int value);
 static int PMBridge_do_sanitized_xact(uint16_t *xact, int len);
 static void PMBridge_hook_read(uint8_t addr, uint8_t cmd, const uint8_t *data, int len);
-//static void PMBridge_hook_write(uint8_t addr, const uint8_t *data, int len);  // DELETEME
+static void PMBridge_hook_write(uint8_t addr, const uint8_t *data, int len);
 
 /* ========================== Function Definitions ========================== */
 void I2C_PM_init(void) {
@@ -488,7 +489,7 @@ static int PMBridge_do_sanitized_xact(uint16_t *xact, int len) {
       data[n] = (uint8_t)(xact[n+1] & 0xff);
     }
     rval = marble_I2C_send(I2C_PM, (uint8_t)xact[0], data, len-1);
-    //PMBridge_hook_write((uint8_t)xact[0], data, len-1);
+    PMBridge_hook_write((uint8_t)xact[0], data, len-1);
     if (rval != HAL_OK) {
       printf("Write failed with code: 0x%x\r\n", (unsigned) rval);
     }
@@ -509,7 +510,7 @@ static int PMBridge_do_sanitized_xact(uint16_t *xact, int len) {
  *  Do any side effects of an I2C (PMB) read on the PMBridge
  */
 static void PMBridge_hook_read(uint8_t addr, uint8_t cmd, const uint8_t *data, int len) {
-  if (ltm4673_hook_read(addr, cmd, data, len)) {
+  if (ltm4673_pmbridge_hook_read(addr, cmd, data, len)) {
     return;
   }
   // Add more device-specific hooks here
@@ -519,13 +520,11 @@ static void PMBridge_hook_read(uint8_t addr, uint8_t cmd, const uint8_t *data, i
 /* static void PMBridge_hook_write(uint8_t addr, const uint8_t *data, int len);
  *  Do any side effects of an I2C (PMB) write on the PMBridge
  */
-/*  TODO DELETEME
 static void PMBridge_hook_write(uint8_t addr, const uint8_t *data, int len) {
-  if (ltm4673_hook_write(addr, data, len)) {
+  if (ltm4673_pmbridge_hook_write(addr, -1, data, len)) {
     return;
   }
 }
-*/
 
 void xrp_boot(void)
 {
@@ -1028,6 +1027,20 @@ void xrp_hex_in(uint8_t dev)
    if (1) {
       xrp_reg_write_check(dev, 0x0E, 0x0001);  // Set the XRP7724 to operate mode
    }
+}
+
+void PM_UpdateTelem(void) {
+  if (marble_get_pcb_rev() > Marble_v1_3) {
+    ltm4673_update_telem(LTM4673, _telem_data);
+  } // TODO - xrp telemetry support for Marble <= 1.3
+  return;
+}
+
+int PM_GetTelem(PM_telem_enum_t elem) {
+  if (elem < PM_NUM_TELEM_ENUM) {
+    return _telem_data[elem];
+  }
+  return -1;
 }
 
 // Didn't work when tested; why?
