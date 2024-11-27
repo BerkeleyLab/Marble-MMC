@@ -78,6 +78,7 @@ def handle_args(args):
     load.INTERCOMMAND_SLEEP = 0.1
     load_rval = 0
     if len(xacts) > 0:
+        print("Attempting voltage override. Ensure write-protect switch (SW4) is off.")
         lines = ltm4673.translate_mmc(xacts)
         # Perform the write to the serial device
         load_rval = load.loadCommands(args.dev, args.baud, lines, do_print=args.verbose, do_log=False)

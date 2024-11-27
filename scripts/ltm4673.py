@@ -1762,6 +1762,9 @@ def handle_telem(args):
     log = load.get_log()
     readback, compare_pass = parse_readback(log, compare_prog=None, do_print=True)
     #print(readback)
+    if len(readback) == 0:
+        print(f"Failed to read from tty.  Is {args.dev} open in another terminal application?")
+        return load_rval
     if load_rval == 0:
         print("Success")
     else:
@@ -1771,7 +1774,7 @@ def handle_telem(args):
 
 def handle_status(args):
     if args.dev is None:
-        print("No valid device handed to handle_telem")
+        print("No valid device handed to handle_status")
         return False
     # TODO - Use args.clear_faults
     print("Reading status registers")
@@ -1836,7 +1839,7 @@ def main(argv):
     parser_telem.set_defaults(handler=handle_telem)
 
     parser_status = subparsers.add_parser("status", help="Read LTM4673 status registers.")
-    parser_limits.add_argument("-c", "--clear_faults", default=False, action="store_true", help="Clear faults before reading status")
+    parser_status.add_argument("-c", "--clear_faults", default=False, action="store_true", help="Clear faults before reading status")
     parser_status.set_defaults(handler=handle_status)
 
     args = parser.parse_args()
