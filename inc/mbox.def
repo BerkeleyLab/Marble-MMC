@@ -107,7 +107,7 @@
       "size" : 1,
       "desc" : "Watchdog bitfile state. 0=STATE_BOOT, 1=STATE_GOLDEN, 2=STATE_USER",
       "fmt"  : "%d",
-      "output" : "@ = FPGAWD_GetState()"
+      "output" : "@ = (int)FPGAWD_GetState()"
     },
     { "name" : "PAD3"},
     { "name" : "LM75_0",
@@ -116,7 +116,7 @@
       "fmt"  : "{:.1f} degC",
       "scale": 0.5,
       "desc" : "Returns LM75_0 temperature in units of 0.5degC",
-      "output" : "LM75_read(LM75_0, LM75_TEMP, (int *)&@)"
+      "output" : "@ = LM75_get_temperature(LM75_0)"
     },
     { "name" : "LM75_1",
       "size" : 2,
@@ -124,7 +124,7 @@
       "fmt"  : "{:.1f} degC",
       "scale": 0.5,
       "desc" : "Returns LM75_1 temperature in units of 0.5degC",
-      "output" : "LM75_read(LM75_1, LM75_TEMP, (int *)&@)"
+      "output" : "@ = LM75_get_temperature(LM75_1)"
     },
     { "name" : "FMC_ST",
       "type" : "int",

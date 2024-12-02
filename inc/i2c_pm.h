@@ -19,17 +19,21 @@ typedef enum {
 // Note that the MAX6639 has a hard-coded 5degC hysteresis
 #define TEMPERATURE_HYST_DEGC           (5)
 
+/* ============================= Helper Macros ============================== */
+#define MAX6639_GET_TEMP_DOUBLE(rTemp, rTempExt) \
+   ((double)(((uint16_t)rTemp << 3) | (uint16_t)rTempExt >> 5)/8)
+
 void I2C_PM_init(void);
 void I2C_PM_scan(void);
 void I2C_PM_probe(void);
 void I2C_PM_bus_display(void);
+void i2c_pm_hook(uint8_t addr, uint8_t rnw, int cmd, const uint8_t *data, int len);
 int max6639_set_tach_en(uint8_t tach_en);
 uint8_t max6639_get_tach_en(void);
-void print_max6639(void);
 void print_max6639_decoded(void);
 int get_max6639_reg(int regno, unsigned int *value);
 int return_max6639_reg(int regno);
-void i2c_pm_hook(uint8_t addr, uint8_t rnw, int cmd, const uint8_t *data, int len);
+int max6639_get_cached_temp(int regno);
 
 #define LM75_FOR_EACH_REGISTER() \
   X(LM75_TEMP, 0) \
@@ -70,6 +74,8 @@ void LM75_Init(void);
 int LM75_read(uint8_t dev, LM75_REG reg, int *data);
 int LM75_write(uint8_t dev, LM75_REG reg, int data);
 int LM75_set_overtemp(int ot);
+int LM75_get_temperature(uint8_t dev);
+int LM75_get_cached_temperature(uint8_t dev);
 
 void xrp_boot(void);
 int xrp_ch_status(uint8_t dev, uint8_t chn);
