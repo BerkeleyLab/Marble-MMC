@@ -9,7 +9,20 @@ typedef enum {
    MAX6639 = 0x58,
    XRP7724 = 0x50,
    LTM4673 = 0xC0
-} I2C_SLAVE;
+} I2C_PERIPHERAL;
+
+// I'm assigning explicit values here being extra paranoid
+typedef enum {
+  VOUT_1V0=0,
+  IOUT_1V0=1,
+  VOUT_1V8=2,
+  IOUT_1V8=3,
+  VOUT_2V5=4,
+  IOUT_2V5=5,
+  VOUT_3V3=6,
+  IOUT_3V3=7,
+  PM_NUM_TELEM_ENUM=8,
+} PM_telem_enum_t;
 
 #define I2C_NUM 5
 
@@ -34,6 +47,9 @@ void print_max6639_decoded(void);
 int get_max6639_reg(int regno, unsigned int *value);
 int return_max6639_reg(int regno);
 int max6639_get_cached_temp(int regno);
+void i2c_pm_hook(uint8_t addr, uint8_t rnw, int cmd, const uint8_t *data, int len);
+int PM_GetTelem(PM_telem_enum_t elem);
+void PM_UpdateTelem(void);
 
 #define LM75_FOR_EACH_REGISTER() \
   X(LM75_TEMP, 0) \

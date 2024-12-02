@@ -812,6 +812,19 @@ int marble_I2C_send(I2C_BUS I2C_bus, uint8_t addr, const uint8_t *data, int size
      printf("*** I2C_send TIMEOUT\r\n");
    } else if (rc == HAL_BUSY) {
      printf("*** I2C_send BUSY\r\n");
+   } else if (rc == HAL_ERROR) {
+     printf("*** I2C_send ERROR: ");
+     switch (((I2C_HandleTypeDef *)I2C_bus)->ErrorCode) {
+       case HAL_I2C_ERROR_NONE:     printf("No error"); break;
+       case HAL_I2C_ERROR_BERR:     printf("Bus error (BERR)"); break;
+       case HAL_I2C_ERROR_ARLO:     printf("Arbitration lost (ARLO)"); break;
+       case HAL_I2C_ERROR_AF:       printf("No ACK received (AF)"); break;
+       case HAL_I2C_ERROR_OVR:      printf("Overrun error (OVR)"); break;
+       case HAL_I2C_ERROR_DMA:      printf("DMA transfer error"); break;
+       case HAL_I2C_ERROR_TIMEOUT:  printf("Timeout error"); break;
+       default: printf("Unknown error code: 0x%lx", ((I2C_HandleTypeDef *)I2C_bus)->ErrorCode); break;
+     }
+     printf("\r\n");
    }
    i2cBusStatus |= rc;
    if (rc == HAL_OK) {
