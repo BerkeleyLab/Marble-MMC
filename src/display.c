@@ -302,41 +302,41 @@ static void xformat_ip_addr(uint32_t packed_ip, char *ps, int maxlen) {
 void display_update(void) {
   static uint32_t last_update = 0;
   static Board_Status_t status = BOARD_STATUS_GOOD;
+  Board_Status_t new_status = marble_get_status();
   // Check encoder knob
-  uint8_t buttons = uiBoardPoll();
   int refresh = 0;
-  if (buttons & 1) {
-    // Turn left; decrease page number
-    //setLed(1); // red
-    if (current_page == PAGE_FIRST) {
-      current_page = PAGE_LAST;
-    } else {
-      --current_page;
+  if (new_status == BOARD_STATUS_GOOD) {
+    uint8_t buttons = uiBoardPoll();
+    // Only checking encoder (button/knob) when power good
+    if (buttons & 1) {
+      // Turn left; decrease page number
+      if (current_page == PAGE_FIRST) {
+        current_page = PAGE_LAST;
+      } else {
+        --current_page;
+      }
+      display_enable();
+      refresh = 1;
+    } else if (buttons & 2) {
+      // Turn right; increase page number
+      if (current_page == PAGE_LAST) {
+        current_page = PAGE_FIRST;
+      } else {
+        ++current_page;
+      }
+      display_enable();
+      refresh = 1;
+    } else if (buttons & 4) {
+      display_toggle();
     }
-    display_enable();
-    refresh = 1;
-  } else if (buttons & 2) {
-    // Turn right; increase page number
-    //setLed(2); // green
-    if (current_page == PAGE_LAST) {
-      current_page = PAGE_FIRST;
-    } else {
-      ++current_page;
-    }
-    display_enable();
-    refresh = 1;
-  } else if (buttons & 4) {
-    //setLed(0); // off
-    display_toggle();
-  }
-  if (!display_enabled) {
-    return;
   }
   if (do_update(last_update) || refresh) {
-    Board_Status_t new_status = marble_get_status();
     if (new_status == BOARD_STATUS_GOOD) {
-      update_page(refresh);
+      if (display_enabled) {
+        update_page(refresh);
+      }
     } else {
+      display_enable();
       if (status != new_status) {
         update_display_error(1);
       }
@@ -344,8 +344,10 @@ void display_update(void) {
     last_update = BSP_GET_SYSTICK();
     status = new_status;
   }
-  display_timeout();
-  update_led();
+  if (display_enabled) {
+    display_timeout();
+    update_led();
+  }
   return;
 }
 
@@ -379,7 +381,6 @@ static void update_page(int refresh) {
 
 static void update_display_error(int refresh) {
   if (refresh) {
-    display_enable();
     fill(0);
   }
   static Board_Status_t last_status = BOARD_STATUS_GOOD;
@@ -387,7 +388,7 @@ static void update_display_error(int refresh) {
   if (refresh) {
     lv_update_label(&label_error, "ERROR");
   }
-  if (status != last_status) {
+  if (refresh || (status != last_status)) {
     if (status == BOARD_STATUS_GOOD) {
       lv_update_label(&label_error_state, "OK");
     } else if (status == BOARD_STATUS_OVERTEMP) {
