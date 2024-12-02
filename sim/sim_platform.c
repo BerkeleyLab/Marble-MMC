@@ -92,6 +92,10 @@ int marble_pwr_good(void) {
   return 1;
 }
 
+Board_Status_t marble_get_status(void) {
+  return BOARD_STATUS_GOOD;
+}
+
 // Emulate USART_RXNE_ISR() from marble_board.c but with keyboard input from stdin
 // Also emulate USART_TXE_ISR() for printf()
 int board_service(void) {

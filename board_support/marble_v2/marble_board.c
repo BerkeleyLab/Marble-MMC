@@ -260,6 +260,12 @@ int marble_pwr_good(void) {
   return _pwr_good;
 }
 
+Board_Status_t marble_get_status(void) {
+  if (_over_temp) return BOARD_STATUS_OVERTEMP;
+  if (!_pwr_good) return BOARD_STATUS_POWERDOWN;
+  return BOARD_STATUS_GOOD;
+}
+
 // Only used in simulation
 void cleanup(void) {
    return;

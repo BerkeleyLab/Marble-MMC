@@ -1059,7 +1059,7 @@ void PM_UpdateTelem(void) {
 
 int PM_GetTelem(PM_telem_enum_t elem) {
   if (elem < PM_NUM_TELEM_ENUM) {
-    return _telem_data[elem];
+    return (int)_telem_data[elem];
   }
   return -1;
 }

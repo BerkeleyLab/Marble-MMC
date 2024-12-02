@@ -117,6 +117,12 @@ typedef enum {
   Marble_Simulator
 } Marble_PCB_Rev_t;
 
+typedef enum {
+  BOARD_STATUS_GOOD = 0,
+  BOARD_STATUS_OVERTEMP,
+  BOARD_STATUS_POWERDOWN,
+} Board_Status_t;
+
 /****
 * Top-level Application Functionality
 ****/
@@ -158,6 +164,8 @@ void print_status_counters(void);
 void marble_print_status(void);
 
 int marble_pwr_good(void);
+
+Board_Status_t marble_get_status(void);
 
 uint32_t marble_get_tick(void);
 

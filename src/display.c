@@ -23,6 +23,10 @@
 #define USE_FONT_17
 // TODO - Warning! The lv_font_roboto_12 font is not monospace, so ensuring any
 //        future value fits inside the initial bounding box is somewhat tedious.
+// Set to 1 to enable current monitoring of FMC cards.
+// This violates the "don't spam the I2C bus" policy of the MMC, so it's disabled
+// by default and may be removed completely.
+#define ENABLE_FMC_CURRENT_CHECK         (0)
 // ==========================================================
 
 extern lv_font_t lv_font_roboto_12, lv_font_roboto_mono_17, lv_font_fa;
@@ -30,7 +34,9 @@ extern lv_font_t lv_font_roboto_12, lv_font_roboto_mono_17, lv_font_fa;
 typedef enum {
   PAGE_STATE=0,
   PAGE_POWER,
+#if ENABLE_FMC_CURRENT_CHECK
   PAGE_FMC,
+#endif
   PAGE_TEMPERATURE,
   NUMBER_OF_PAGES, // Keep me at the end
 } display_page_t;
@@ -70,6 +76,20 @@ static t_label label_test_12;
 static t_label label_test_17;
 */
 
+// =================== ERROR Overlay ========================
+// NOTE! The error overlay only works if the UI board is supplied with an alternate
+// source of 3.3V, as the +3V3 net it connects to via the Pmod is disabled when the
+// board state is one of these shutdown conditions
+static t_label label_error;
+static const char label_error_init[] = "ERROR";
+#define LABEL_ERROR_SIZE     (sizeof(label_error_init)/sizeof(char))
+
+static t_label label_error_state;
+static const char label_error_state_ot[] = "Over-Temperature Shutdown";
+#define LABEL_ERROR_STATE_OT_SIZE     (sizeof(label_error_state_ot)/sizeof(char))
+static const char label_error_state_pd[] = "Power Lost";
+#define LABEL_ERROR_STATE_PD_SIZE     (sizeof(label_error_state_pd)/sizeof(char))
+
 // ===================== Page STATE =========================
 // Marble v1.4
 static t_label label_marble;
@@ -80,8 +100,6 @@ static t_label label_ip;
 // MAC: aa:bb:cc:dd:ee:ff
 static t_label label_mac;
 
-//User Image
-//Golden Image
 //Over-Temperature
 //Powerdown
 //                                      "Marble v1.4 Golden Image"
@@ -97,42 +115,53 @@ static const char label_mac_init[] = "MAC: xx:xx:xx:xx:xx:xx";
 // ==========================================================
 
 // ===================== Page POWER =========================
-/*
-static t_label label_temp;
-static const char label_temp_init[] = "TEMP:              ";
-#define LABEL_TEMP_SIZE     (sizeof(label_temp_init)/sizeof(char))
-*/
 
 static t_label label_power_12V;
-static const char label_power_12V_init[] = "Input (12V): 12.0V @ 3.00A";
+#define LABEL_POWER_12V_FMT                "Input (12V): %4.2fV @ %3.2fA"
+static const char label_power_12V_init[] = "Input (12V): 12.00V @ 3.00A";
 #define LABEL_POWER_12V_SIZE     (sizeof(label_power_12V_init)/sizeof(char))
 
 static t_label label_power_3V3;
+#define LABEL_POWER_3V3_FMT                "3V3: %3.2fV @ %3.2fA"
 static const char label_power_3V3_init[] = "3V3: 3.30V @ 1.00A";
 #define LABEL_POWER_3V3_SIZE     (sizeof(label_power_3V3_init)/sizeof(char))
 
 static t_label label_power_2V5;
+#define LABEL_POWER_2V5_FMT                "2V5: %3.2fV @ %3.2fA"
 static const char label_power_2V5_init[] = "2V5: 2.50V @ 1.00A";
 #define LABEL_POWER_2V5_SIZE     (sizeof(label_power_2V5_init)/sizeof(char))
 
 static t_label label_power_1V8;
+#define LABEL_POWER_1V8_FMT                "1V8: %3.2fV @ %3.2fA"
 static const char label_power_1V8_init[] = "1V8: 1.80V @ 1.00A";
 #define LABEL_POWER_1V8_SIZE     (sizeof(label_power_1V8_init)/sizeof(char))
 
 static t_label label_power_1V0;
+#define LABEL_POWER_1V0_FMT                "1V0: %3.2fV @ %3.2fA"
 static const char label_power_1V0_init[] = "1V0: 1.00V @ 1.00A";
 #define LABEL_POWER_1V0_SIZE     (sizeof(label_power_1V0_init)/sizeof(char))
 
 // ==========================================================
 
 // ======================= Page FMC =========================
+// If !ENABLE_FMC_CURRENT_CHECK, FMC state is displayed on the "POWER" page
 static t_label label_fmc_1;
-static const char label_fmc_1_init[] = "FMC1: Disabled (0.00A)";
-#define LABEL_FMC_1_SIZE     (sizeof(label_fmc_1_init)/sizeof(char))
-
 static t_label label_fmc_2;
+
+#if ENABLE_FMC_CURRENT_CHECK
+static const char label_fmc_1_init[] = "FMC1: Disabled (0.00A)";
 static const char label_fmc_2_init[] = "FMC2: Disabled (0.00A)";
+#else
+static const char label_fmc_1_disabled[] = "FMC1: Disabled";
+static const char label_fmc_2_disabled[] = "FMC2: Disabled";
+static const char label_fmc_1_enabled[] = "FMC1: Enabled";
+static const char label_fmc_2_enabled[] = "FMC2: Enabled";
+static const char *label_fmc_1_init = label_fmc_1_disabled;
+static const char *label_fmc_2_init = label_fmc_2_disabled;
+#endif
+
 #define LABEL_FMC_2_SIZE     (sizeof(label_fmc_2_init)/sizeof(char))
+#define LABEL_FMC_1_SIZE     (sizeof(label_fmc_1_init)/sizeof(char))
 
 // ==========================================================
 
@@ -141,45 +170,58 @@ static const char label_fmc_2_init[] = "FMC2: Disabled (0.00A)";
    |LM75_0 Temp: 25.3 C        LM75_1 Temp: 25.3 C            |
    |MAX6639 Ch1 Temp: 25.3 C   MAX6639 Ch2 Temp: 25.3 C       |
  */
+//Note: The 'degree' symbol in lv_font_roboto_12 uses encoding (U+B0)
+//      which is the result after UTF decoding.  The expected UTF-8 multi-byte
+//      encoding for this value is \xC2\xB0.
+//      I use octal \302\260 instead of hex \xC2\xB0 because of the char 'C' that
+//      immediately follows.
+//      And the "init" label contains a '@@' in its place to add extra space
+//      and ensure that the non-monospace font gives us enough space for any
+//      value in the numeric portion.
+
 static t_label label_temperature_lm75_0_label;
 static const char label_temperature_lm75_0_label_init[] = "LM75 (U29):";
 static t_label label_temperature_lm75_0;
-#define LABEL_TEMPERATURE_LM75_0_FMT                "%4.1f C"
-static const char label_temperature_lm75_0_init[] = "25.3 C@";
+#define LABEL_TEMPERATURE_LM75_0_FMT                "%4.1f \302\260C"
+static const char label_temperature_lm75_0_init[] = "25.3 @@C";
 #define LABEL_TEMPERATURE_LM75_0_SIZE (sizeof(label_temperature_lm75_0_init)/sizeof(char))
 
 static t_label label_temperature_lm75_1_label;
 static const char label_temperature_lm75_1_label_init[] = "LM75 (U28):";
 static t_label label_temperature_lm75_1;
-#define LABEL_TEMPERATURE_LM75_1_FMT                "%4.1f C"
-static const char label_temperature_lm75_1_init[] = "25.3 C@";
+#define LABEL_TEMPERATURE_LM75_1_FMT                "%4.1f \302\260C"
+static const char label_temperature_lm75_1_init[] = "25.3 @@C";
 #define LABEL_TEMPERATURE_LM75_1_SIZE (sizeof(label_temperature_lm75_1_init)/sizeof(char))
 
 static t_label label_temperature_max6639_1_label;
 static const char label_temperature_max6639_1_label_init[] = "FPGA (U1):";
 static t_label label_temperature_max6639_1;
-#define LABEL_TEMPERATURE_MAX6639_1_FMT                "%4.1f C"
-static const char label_temperature_max6639_1_init[] = "25.3 C@";
+#define LABEL_TEMPERATURE_MAX6639_1_FMT                "%4.1f \302\260C"
+static const char label_temperature_max6639_1_init[] = "25.3 @@C";
 #define LABEL_TEMPERATURE_MAX6639_1_SIZE (sizeof(label_temperature_max6639_1_init)/sizeof(char))
 
 static t_label label_temperature_max6639_2_label;
 static const char label_temperature_max6639_2_label_init[] = "Fan Ctrlr (U27):";
 static t_label label_temperature_max6639_2;
-#define LABEL_TEMPERATURE_MAX6639_2_FMT                "%4.1f C"
-static const char label_temperature_max6639_2_init[] = "25.3 C@";
+#define LABEL_TEMPERATURE_MAX6639_2_FMT                "%4.1f \302\260C"
+static const char label_temperature_max6639_2_init[] = "25.3 @@C";
 #define LABEL_TEMPERATURE_MAX6639_2_SIZE (sizeof(label_temperature_max6639_2_init)/sizeof(char))
 
 // ==========================================================
 
 //static void xformat_ip_addr(uint32_t packed_ip, char *ps, int maxlen);
 static void update_page(int refresh);
+static void init_display_error(void);
 static void init_page_state(void);
 static void init_page_power(void);
-static void init_page_fmc(void);
 static void init_page_temperature(void);
+static void update_display_error(int refresh);
 static int update_page_state(int refresh);
 static int update_page_power(int refresh);
+#if ENABLE_FMC_CURRENT_CHECK
+static void init_page_fmc(void);
 static int update_page_fmc(int refresh);
+#endif
 static int update_page_temperature(int refresh);
 static void display_enable(void);
 static void display_disable(void);
@@ -191,6 +233,7 @@ static void format_ip_addr(uint8_t *ip, char *ps, int maxlen);
 static void format_mac_addr(uint8_t *mac, char *ps, int maxlen);
 static int array_updated_uint8_t(volatile uint8_t *old, const uint8_t *new, int len);
 static int array_updated_int(volatile int *old, const int *new, int len);
+static void update_led(void);
 
 /*
 static void print_str(const char *ss, int len);
@@ -258,6 +301,7 @@ static void xformat_ip_addr(uint32_t packed_ip, char *ps, int maxlen) {
 
 void display_update(void) {
   static uint32_t last_update = 0;
+  static Board_Status_t status = BOARD_STATUS_GOOD;
   // Check encoder knob
   uint8_t buttons = uiBoardPoll();
   int refresh = 0;
@@ -289,10 +333,19 @@ void display_update(void) {
     return;
   }
   if (do_update(last_update) || refresh) {
-    update_page(refresh);
+    Board_Status_t new_status = marble_get_status();
+    if (new_status == BOARD_STATUS_GOOD) {
+      update_page(refresh);
+    } else {
+      if (status != new_status) {
+        update_display_error(1);
+      }
+    }
     last_update = BSP_GET_SYSTICK();
+    status = new_status;
   }
   display_timeout();
+  update_led();
   return;
 }
 
@@ -307,9 +360,11 @@ static void update_page(int refresh) {
     case PAGE_POWER:
       refresh |= update_page_power(refresh);
       break;
+#if ENABLE_FMC_CURRENT_CHECK
     case PAGE_FMC:
       refresh |= update_page_fmc(refresh);
       break;
+#endif
     case PAGE_TEMPERATURE:
       refresh |= update_page_temperature(refresh);
       break;
@@ -319,6 +374,33 @@ static void update_page(int refresh) {
   if (refresh) {
     send_fb();
   }
+  return;
+}
+
+static void update_display_error(int refresh) {
+  if (refresh) {
+    display_enable();
+    fill(0);
+  }
+  static Board_Status_t last_status = BOARD_STATUS_GOOD;
+  Board_Status_t status = marble_get_status();
+  if (refresh) {
+    lv_update_label(&label_error, "ERROR");
+  }
+  if (status != last_status) {
+    if (status == BOARD_STATUS_GOOD) {
+      lv_update_label(&label_error_state, "OK");
+    } else if (status == BOARD_STATUS_OVERTEMP) {
+      lv_update_label(&label_error_state, label_error_state_ot);
+    } else if (status == BOARD_STATUS_POWERDOWN) {
+      lv_update_label(&label_error_state, label_error_state_pd);
+    }
+    refresh = 1;
+  }
+  if (refresh) {
+    send_fb();
+  }
+  last_status = status;
   return;
 }
 
@@ -371,16 +453,105 @@ static int update_page_state(int refresh) {
 }
 
 static int update_page_power(int refresh) {
-  //lv_update_label(&label_temp, "PAGE_POWER");
   int rval = 0;
-  lv_update_label(&label_power_12V, "Input (12V): 12.0x @ 3.00y"); // TODO
-  lv_update_label(&label_power_3V3, "3V3: 3.00x @ 1.00y"); // TODO
-  lv_update_label(&label_power_2V5, "2V5: 2.50x @ 1.00y"); // TODO
-  lv_update_label(&label_power_1V8, "1V8: 1.80x @ 1.00y"); // TODO
-  lv_update_label(&label_power_1V0, "1V0: 1.00x @ 1.00y"); // TODO
+  static int vin=0, iin=0;
+  static int v3V3=0, i3V3=0;
+  static int v2V5=0, i2V5=0;
+  static int v1V8=0, i1V8=0;
+  static int v1V0=0, i1V0=0;
+  // 12V
+  int newv = PM_GetTelem(VIN);
+  int newi = PM_GetTelem(IIN);
+  if (refresh || (newv != vin) || (newi != iin)) {
+    vin = newv;
+    iin = newi;
+    char label[LABEL_POWER_12V_SIZE];
+    snprintf(label, LABEL_POWER_12V_SIZE, LABEL_POWER_12V_FMT, (float)(newv/1000.0), (float)(newi/1000.0));
+    lv_update_label(&label_power_12V, label);
+    rval = 1;
+  }
+  // 3V3
+  newv = PM_GetTelem(VOUT_3V3);
+  newi = PM_GetTelem(IOUT_3V3);
+  if (refresh || (newv != v3V3) || (newi != i3V3)) {
+    v3V3 = newv;
+    i3V3 = newi;
+    char label[LABEL_POWER_3V3_SIZE];
+    snprintf(label, LABEL_POWER_3V3_SIZE, LABEL_POWER_3V3_FMT, (float)(newv/1000.0), (float)(newi/1000.0));
+    lv_update_label(&label_power_3V3, label);
+    rval = 1;
+  }
+  // 2V5
+  newv = PM_GetTelem(VOUT_2V5);
+  newi = PM_GetTelem(IOUT_2V5);
+  if (refresh || (newv != v2V5) || (newi != i2V5)) {
+    v2V5 = newv;
+    i2V5 = newi;
+    char label[LABEL_POWER_2V5_SIZE];
+    snprintf(label, LABEL_POWER_2V5_SIZE, LABEL_POWER_2V5_FMT, (float)(newv/1000.0), (float)(newi/1000.0));
+    lv_update_label(&label_power_2V5, label);
+    rval = 1;
+  }
+  // 1V8
+  newv = PM_GetTelem(VOUT_1V8);
+  newi = PM_GetTelem(IOUT_1V8);
+  if (refresh || (newv != v1V8) || (newi != i1V8)) {
+    v1V8 = newv;
+    i1V8 = newi;
+    char label[LABEL_POWER_1V8_SIZE];
+    snprintf(label, LABEL_POWER_1V8_SIZE, LABEL_POWER_1V8_FMT, (float)(newv/1000.0), (float)(newi/1000.0));
+    lv_update_label(&label_power_1V8, label);
+    rval = 1;
+  }
+  // 1V0
+  newv = PM_GetTelem(VOUT_1V0);
+  newi = PM_GetTelem(IOUT_1V0);
+  if (refresh || (newv != v1V0) || (newi != i1V0)) {
+    v1V0 = newv;
+    i1V0 = newi;
+    char label[LABEL_POWER_1V0_SIZE];
+    snprintf(label, LABEL_POWER_1V0_SIZE, LABEL_POWER_1V0_FMT, (float)(newv/1000.0), (float)(newi/1000.0));
+    lv_update_label(&label_power_1V0, label);
+    rval = 1;
+  }
+#if ENABLE_FMC_CURRENT_CHECK == 0
+  // FMC
+  static uint8_t fmc_status = 0;
+  uint8_t new_fmc_status = marble_FMC_status();
+  // FMC1
+  uint8_t mask = (1 << M_FMC_STATUS_FMC1_PWR);
+  uint8_t new_fmc = (new_fmc_status & mask) ^ (fmc_status & mask);
+  if (new_fmc_status & mask) {
+    if (refresh || new_fmc) {
+      lv_update_label(&label_fmc_1, label_fmc_1_enabled);
+      rval = 1;
+    }
+  } else {
+    if (new_fmc_status != fmc_status) {
+      lv_update_label(&label_fmc_1, label_fmc_1_disabled);
+      rval = 1;
+    }
+  }
+  // FMC2
+  mask = (1 << M_FMC_STATUS_FMC2_PWR);
+  new_fmc = (new_fmc_status & mask) ^ (fmc_status & mask);
+  if (new_fmc_status & mask) {
+    if (refresh || new_fmc) {
+      lv_update_label(&label_fmc_2, label_fmc_2_enabled);
+      rval = 1;
+    }
+  } else {
+    if (new_fmc_status != fmc_status) {
+      lv_update_label(&label_fmc_2, label_fmc_2_disabled);
+      rval = 1;
+    }
+  }
+  fmc_status = new_fmc_status;
+#endif
   return rval;
 }
 
+#if ENABLE_FMC_CURRENT_CHECK
 static int update_page_fmc(int refresh) {
   int rval = 0;
   // TODO - Use external load on FMC1/2 to check calibration of INA219_SHUNT_VOLTAGE_TO_CURRENT()
@@ -391,7 +562,8 @@ static int update_page_fmc(int refresh) {
   // FMC1
   uint8_t mask = (1 << M_FMC_STATUS_FMC1_PWR);
   uint8_t new_fmc = (new_fmc_status & mask) ^ (fmc_status & mask);
-  uint16_t new_fmc_current = ina219_getShuntVoltage(INA219_FMC1);
+  uint16_t new_fmc_current=0;
+  new_fmc_current = ina219_getShuntVoltage(INA219_FMC1);
   if (new_fmc_status & mask) {
     if (refresh || new_fmc || (new_fmc_current != fmc1_current)) {
       float fmc1_current_amps = INA219_SHUNT_VOLTAGE_TO_CURRENT(new_fmc_current);
@@ -429,6 +601,7 @@ static int update_page_fmc(int refresh) {
   fmc_status = new_fmc_status;
   return rval;
 }
+#endif
 
 static int update_page_temperature(int refresh) {
   int rval = 0;
@@ -497,9 +670,12 @@ void display_init(void) {
   printf("17pt: dx = %d; dy = %d\r\n", label_test_17.x1-label_test_17.x0, label_test_17.y1-label_test_17.y0);
   */
 
+  init_display_error();
   init_page_state();
   init_page_power();
+#if ENABLE_FMC_CURRENT_CHECK
   init_page_fmc();
+#endif
   init_page_temperature();
   update_page(1); // force refresh
   send_fb();
@@ -507,8 +683,18 @@ void display_init(void) {
   return;
 }
 
+static void init_display_error(void) {
+  lv_init_label(&label_error,       DISPLAY_WIDTH/2, LINE_SPACING_17/2, &lv_font_roboto_mono_17, label_error_init, LV_CENTER, false);
+  if (LABEL_ERROR_STATE_OT_SIZE > LABEL_ERROR_STATE_PD_SIZE) {
+    lv_init_label(&label_error_state, DISPLAY_WIDTH/2, 1*LINE_SPACING_17 + LINE_SPACING_17/2, &lv_font_roboto_mono_17, label_error_state_ot, LV_CENTER, false);
+  } else {
+    lv_init_label(&label_error_state, DISPLAY_WIDTH/2, 1*LINE_SPACING_17 + LINE_SPACING_17/2, &lv_font_roboto_mono_17, label_error_state_pd, LV_CENTER, false);
+  }
+  return;
+}
+
 static void init_page_state(void) {
-  // PAGE_STATE (draw)
+  // PAGE_STATE
   lv_init_label(&label_marble, 0, 0*LINE_SPACING, &DEFAULT_FONT, label_marble_init, LV_LEFT, false);
   lv_init_label(&label_ip,     0, 1*LINE_SPACING, &DEFAULT_FONT, label_ip_init,     LV_LEFT, false);
   lv_init_label(&label_mac,    0, 2*LINE_SPACING, &DEFAULT_FONT, label_mac_init,    LV_LEFT, false);
@@ -517,21 +703,31 @@ static void init_page_state(void) {
 
 static void init_page_power(void) {
   // PAGE_POWER
-  lv_init_label(&label_power_12V,           0,  0*LINE_SPACING_12, &lv_font_roboto_12, label_power_12V_init, LV_LEFT, false);
-  lv_init_label(&label_power_3V3,           0,  1*LINE_SPACING_12, &lv_font_roboto_12, label_power_3V3_init, LV_LEFT, false);
-  lv_init_label(&label_power_1V8,           0,  2*LINE_SPACING_12, &lv_font_roboto_12, label_power_1V8_init, LV_LEFT, false);
+  lv_init_label(&label_power_12V,            0, 0*LINE_SPACING_12, &lv_font_roboto_12, label_power_12V_init, LV_LEFT, false);
+  lv_init_label(&label_power_3V3,            0, 1*LINE_SPACING_12, &lv_font_roboto_12, label_power_3V3_init, LV_LEFT, false);
+  lv_init_label(&label_power_1V8,            0, 2*LINE_SPACING_12, &lv_font_roboto_12, label_power_1V8_init, LV_LEFT, false);
+#if ENABLE_FMC_CURRENT_CHECK == 0
+  lv_init_label(&label_fmc_1,                0, 3*LINE_SPACING_12, &lv_font_roboto_12, label_fmc_1_init, LV_LEFT, false);
+  int max_width = MAX(MAX(label_power_3V3.x1, label_power_1V8.x1), label_fmc_1.x1);
+#else
   int max_width = MAX(label_power_3V3.x1, label_power_1V8.x1);
-  lv_init_label(&label_power_2V5, max_width+12,  1*LINE_SPACING_12, &lv_font_roboto_12, label_power_2V5_init, LV_LEFT, false);
-  lv_init_label(&label_power_1V0, max_width+12,  2*LINE_SPACING_12, &lv_font_roboto_12, label_power_1V0_init, LV_LEFT, false);
+#endif
+  lv_init_label(&label_power_2V5, max_width+12, 1*LINE_SPACING_12, &lv_font_roboto_12, label_power_2V5_init, LV_LEFT, false);
+  lv_init_label(&label_power_1V0, max_width+12, 2*LINE_SPACING_12, &lv_font_roboto_12, label_power_1V0_init, LV_LEFT, false);
+#if ENABLE_FMC_CURRENT_CHECK == 0
+  lv_init_label(&label_fmc_2,     max_width+12, 3*LINE_SPACING_12, &lv_font_roboto_12, label_fmc_2_init, LV_LEFT, false);
+#endif
   return;
 }
 
+#if ENABLE_FMC_CURRENT_CHECK
 static void init_page_fmc(void) {
   // PAGE_FMC
   lv_init_label(&label_fmc_1, 0, 0*LINE_SPACING, &DEFAULT_FONT, label_fmc_1_init, LV_LEFT, false);
   lv_init_label(&label_fmc_2, 0, 1*LINE_SPACING, &DEFAULT_FONT, label_fmc_2_init, LV_LEFT, false);
   return;
 }
+#endif
 
 static void init_page_temperature(void) {
   // PAGE_TEMPERATURE
@@ -539,7 +735,8 @@ static void init_page_temperature(void) {
   lv_init_label(&label_temperature_lm75_1_label,    0, 1*LINE_SPACING_12, &lv_font_roboto_12, label_temperature_lm75_1_label_init,    LV_LEFT, false);
   lv_init_label(&label_temperature_max6639_1_label, 0, 2*LINE_SPACING_12, &lv_font_roboto_12, label_temperature_max6639_1_label_init, LV_LEFT, false);
   lv_init_label(&label_temperature_max6639_2_label, 0, 3*LINE_SPACING_12, &lv_font_roboto_12, label_temperature_max6639_2_label_init, LV_LEFT, false);
-  int xmax = MAX(MAX(label_temperature_lm75_0_label.x1, label_temperature_lm75_1_label.x1), MAX(label_temperature_max6639_1.x1, label_temperature_max6639_2.x1));
+  int xmax = MAX(MAX(label_temperature_lm75_0_label.x1, label_temperature_lm75_1_label.x1),
+                 MAX(label_temperature_max6639_1_label.x1, label_temperature_max6639_2_label.x1));
   lv_init_label(&label_temperature_lm75_0,     xmax+4, 0*LINE_SPACING_12, &lv_font_roboto_12, label_temperature_lm75_0_init,    LV_LEFT, false);
   lv_init_label(&label_temperature_lm75_1,     xmax+4, 1*LINE_SPACING_12, &lv_font_roboto_12, label_temperature_lm75_1_init,    LV_LEFT, false);
   lv_init_label(&label_temperature_max6639_1,  xmax+4, 2*LINE_SPACING_12, &lv_font_roboto_12, label_temperature_max6639_1_init, LV_LEFT, false);
@@ -645,4 +842,24 @@ static int array_updated_int(volatile int *old, const int *new, int len) {
     //printf("  Identical\r\n");
   }
   return diff;
+}
+
+#define ERROR_LED_TIME_ON_MS     (500)
+#define ERROR_LED_TIME_OFF_MS   (1000)
+static void update_led(void) {
+  static uint32_t blink_time = 0;
+  uint32_t now = BSP_GET_SYSTICK();
+  Board_Status_t status = marble_get_status();
+  if (status == BOARD_STATUS_GOOD) {
+    setLed(0); // off
+    return;
+  }
+  if ((now-blink_time) < ERROR_LED_TIME_ON_MS) {
+    setLed(1); // red
+  } else if ((now-blink_time) < ERROR_LED_TIME_OFF_MS) {
+    setLed(0); // off
+  } else {
+    blink_time = now;
+  }
+  return;
 }

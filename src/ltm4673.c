@@ -558,6 +558,7 @@ void ltm4673_read_telem(uint8_t dev) {
 }
 
 void ltm4673_update_telem(uint8_t dev, volatile uint16_t *pdata) {
+  #define COMBINE_BYTES16(p) (((uint16_t)p[1] << 8) | (uint16_t)p[0])
   uint8_t page;
   uint8_t i2c_dat[4];
   uint16_t rval;
@@ -569,17 +570,28 @@ void ltm4673_update_telem(uint8_t dev, volatile uint16_t *pdata) {
     marble_I2C_cmdsend(I2C_PM, dev, 0x00, &page, 1);
     // Read voltage
     marble_I2C_cmdrecv(I2C_PM, dev, LTM4673_READ_VOUT, i2c_dat, 2);
-    rval = ((uint16_t)i2c_dat[1] << 8) | (uint16_t)i2c_dat[0];
+    rval = COMBINE_BYTES16(i2c_dat);
     // Recall: LTM4673_READ_VOUT is LTM4673_ENCODING_L16
     rval = (uint16_t)(l16_to_mv_int(rval) & 0xffff);
     *(&pdata[2*npage]) = rval;
     // Read current
     marble_I2C_cmdrecv(I2C_PM, dev, LTM4673_READ_IOUT, i2c_dat, 2);
-    rval = ((uint16_t)i2c_dat[1] << 8) | (uint16_t)i2c_dat[0];
+    rval = COMBINE_BYTES16(i2c_dat);
     // Recall: LTM4673_READ_IOUT is LTM4673_ENCODING_L11
     rval = (uint16_t)(l11_to_mv_int(rval) & 0xffff);
     *(&pdata[2*npage+1]) = rval;
   }
+  // LTM4673_READ_VIN, LTM4673_READ_IIN are identical on all pages
+  // They are both LTM4673_ENCODING_L11
+  marble_I2C_cmdrecv(I2C_PM, dev, LTM4673_READ_VIN, i2c_dat, 2);
+  rval = COMBINE_BYTES16(i2c_dat);
+  rval = (uint16_t)(l11_to_mv_int(rval) & 0xffff);
+  *(&pdata[8]) = rval;
+  marble_I2C_cmdrecv(I2C_PM, dev, LTM4673_READ_IIN, i2c_dat, 2);
+  rval = COMBINE_BYTES16(i2c_dat);
+  rval = (uint16_t)(l11_to_mv_int(rval) & 0xffff);
+  *(&pdata[9]) = rval;
+  #undef COMBINE_BYTES
   return;
 }
 
