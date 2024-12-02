@@ -6,7 +6,6 @@ extern "C" {
 #endif
 
 #include "marble_api.h"
-#include "stm32f2xx_hal.h"
 
 //-----------------------------
 // Settings related to UI board (oled)
@@ -40,6 +39,9 @@ typedef enum {
 #define INIT_CPHA_MASK    (1 << INIT_CPHA_BIT)
 #define INIT_LSB_MASK     (1 << INIT_LSB_BIT)
 
+#ifdef MARBLE_V2
+#include "stm32f2xx_hal.h"
+
 #define F_CLK                   FREQUENCY_SYSCLK
 // Using the same SPI controller for OLED and I/O
 #define OLED_SPI                            SPI2
@@ -51,6 +53,18 @@ typedef enum {
 // Let's set it to 1.875 MHz (f_APBclk/16) for now
 #define OLED_SPI_CLKDIV  SPI_BAUDRATEPRESCALER_16
 #define IO_SPI_CLKDIV            OLED_SPI_CLKDIV
+
+#else // ndef MARBLE_V2
+
+// TODO - Currently no support for UI board on Marble Mini
+#define F_CLK                   FREQUENCY_SYSCLK
+// Using the same SPI controller for OLED and I/O
+#define OLED_SPI                             (0)
+#define IO_SPI                               (0)
+#define OLED_SPI_CLKDIV                      (0)
+#define IO_SPI_CLKDIV            OLED_SPI_CLKDIV
+
+#endif // ifdef MARBLE_V2
 
 // These are not needed
 #define IO_GPIO

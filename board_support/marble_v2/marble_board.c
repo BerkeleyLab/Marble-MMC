@@ -109,10 +109,10 @@ static void MX_ETH_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_I2C3_Init(void);
 static void MX_SPI1_Init(void);
-static void MX_SPI2_Init(void);
+//static void MX_SPI2_Init(void);
 //static void MX_USART1_UART_Init(void);
 static void CONSOLE_USART_Init(void);
-static void MX_USART2_UART_Init(void);
+//static void MX_USART2_UART_Init(void);
 static void USART_RXNE_ISR(void);
 static void USART_TXE_ISR(void);
 static void USART_Erase_Echo(void);
@@ -1303,6 +1303,7 @@ static void MX_SPI1_Init(void)
    SSP_FPGA = &hspi1;
 }
 
+/*
 static void MX_SPI2_Init(void)
 {
    hspi2.Instance = SPI2;
@@ -1323,6 +1324,7 @@ static void MX_SPI2_Init(void)
    }
    SSP_PMOD = &hspi2;
 }
+*/
 
 static void SPI_CSB_SET(SSP_PORT ssp, bool set)
 {
@@ -1375,6 +1377,7 @@ static void CONSOLE_USART_Init(void) {
   return;
 }
 
+/*
 static void MX_USART2_UART_Init(void)
 {
    huart2.Instance = USART2;
@@ -1390,6 +1393,7 @@ static void MX_USART2_UART_Init(void)
       Error_Handler();
    }
 }
+*/
 
 static void MX_GPIO_Init(void)
 {

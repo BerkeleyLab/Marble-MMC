@@ -107,9 +107,6 @@ $(info OUTPUT_ELF=$(OUTPUT_ELF))
 # combining OTHER_SOURCES with sources.mk
 SOURCES := $(OTHER_SOURCES)
 include $(BUILD_DIR)/sources.mk
-# OLED (ui_board) sources
-SOURCES += $(OLED_SOURCES)
-INCLUDES += $(OLED_LIB_DIR)
 # Translate this list of sources into a list of required objects
 # in the output directory
 objects = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(patsubst %.s,%.o,$(SOURCES))))
