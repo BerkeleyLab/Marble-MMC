@@ -18,55 +18,56 @@ extern "C" {
 #include "system.h"
 
 #ifdef SIMULATION
-#include <stddef.h>
-#include <errno.h>
-#include <time.h>
+  #include <stddef.h>
+  #include <errno.h>
+  #include <time.h>
 
-#define SIM_FLASH_FILENAME                           "flash.bin"
-#define FLASH_SECTOR_SIZE                                  (256)
-#define EEPROM_COUNT ((size_t)FLASH_SECTOR_SIZE/sizeof(ee_frame))
+  #define SIM_FLASH_FILENAME                           "flash.bin"
+  #define FLASH_SECTOR_SIZE                                  (256)
+  #define EEPROM_COUNT ((size_t)FLASH_SECTOR_SIZE/sizeof(ee_frame))
 
-#define DEMO_STRING                 "Marble UART Simulation\r\n"
-#define BSP_GET_SYSTICK()     (uint32_t)((uint64_t)clock()/40)
+  #define DEMO_STRING                 "Marble UART Simulation\r\n"
+  #define BSP_GET_SYSTICK()     (uint32_t)((uint64_t)clock()/40)
 
-# define MGT_MAX_PINS 0
-#else
+  #define MGT_MAX_PINS 0
 
-#ifdef MARBLEM_V1
-# define MGT_MAX_PINS 0
-# define DEMO_STRING           "Marble Mini v1 UART Console\r\n"
-#else
-# ifdef MARBLE_V2
-#  define MGT_MAX_PINS 3
-#  define DEMO_STRING               "Marble v2 UART Console\r\n"
-# endif /* MARBLE_V2 */
-#endif /* MARBLEM_V1 */
+#else /* ndef SIMULATION */
 
-#ifdef NUCLEO
-#define CONSOLE_USART                                    USART3
-#else
-#define CONSOLE_USART                                    USART1
-#endif
+  #ifdef MARBLEM_V1
+    #define MGT_MAX_PINS 0
+    #define DEMO_STRING           "Marble Mini v1 UART Console\r\n"
+  #else /* ndef MARBLEM_V1 */
+    #ifdef MARBLE_V2
+    #define MGT_MAX_PINS 3
+    #define DEMO_STRING               "Marble v2 UART Console\r\n"
+    #endif /* MARBLE_V2 */
+  #endif /* MARBLEM_V1 */
 
-#ifdef RTEMS_SUPPORT
-#include <rtems.h>
-// Optionally be more specific and only include the file where these are defined
-//#include <rtems/rtems/intr.h>
-#define INTERRUPTS_DISABLE()  do { \
-  rtems_interrupt_level level; \
-  rtems_interrupt_disable(level); \
-} while (0)
-#define INTERRUPTS_ENABLE()   do { \
-  rtems_interrupt_enable(level); \
-} while (0)
-#define BSP_GET_SYSTICK()       (0) // TODO
-#else /* ndef RTEMS_SUPPORT */
-//#define INTERRUPTS_DISABLE                     __disable_irq
-#define INTERRUPTS_DISABLE()                    __set_PRIMASK(1)
-//#define INTERRUPTS_ENABLE                       __enable_irq
-#define INTERRUPTS_ENABLE()                     __set_PRIMASK(0)
-#define BSP_GET_SYSTICK()                      marble_get_tick()
-#endif  /* RTEMS_SUPPORT */
+  #ifdef NUCLEO
+    #define CONSOLE_USART                                    USART3
+  #else /* ndef NUCLEO */
+    #define CONSOLE_USART                                    USART1
+  #endif /* NUCLEO */
+
+  #ifdef RTEMS_SUPPORT
+    #include <rtems.h>
+    // Optionally be more specific and only include the file where these are defined
+    //#include <rtems/rtems/intr.h>
+    #define INTERRUPTS_DISABLE()  do { \
+      rtems_interrupt_level level; \
+      rtems_interrupt_disable(level); \
+    } while (0)
+    #define INTERRUPTS_ENABLE()   do { \
+      rtems_interrupt_enable(level); \
+    } while (0)
+    #define BSP_GET_SYSTICK()       (0) // TODO
+  #else /* ndef RTEMS_SUPPORT */
+    //#define INTERRUPTS_DISABLE                     __disable_irq
+    #define INTERRUPTS_DISABLE()                    __set_PRIMASK(1)
+    //#define INTERRUPTS_ENABLE                       __enable_irq
+    #define INTERRUPTS_ENABLE()                     __set_PRIMASK(0)
+    #define BSP_GET_SYSTICK()                      marble_get_tick()
+  #endif  /* RTEMS_SUPPORT */
 
 #endif /* SIMULATION */
 
@@ -75,20 +76,20 @@ extern "C" {
 /* = = = = System Clock Configuration = = = = */
 // System Clock Frequency = 120 MHz
 #ifdef NUCLEO
-// HSE input is 8 MHz from onboard ST-Link MCO
-#define FREQUENCY_HSE          (8000000)
-#define CONFIG_CLK_PLLM              (8)
-#define CONFIG_CLK_PLLN            (240)
-#define CONFIG_CLK_PLLP    RCC_PLLP_DIV2
-#define CONFIG_CLK_PLLQ              (5)
-#else
-// HSE input on Marble is 25 MHz from WhiteRabbit module
-#define FREQUENCY_HSE         (25000000)
-#define CONFIG_CLK_PLLM             (20)
-#define CONFIG_CLK_PLLN            (192)
-#define CONFIG_CLK_PLLP    RCC_PLLP_DIV2
-#define CONFIG_CLK_PLLQ              (5)
-#endif
+  // HSE input is 8 MHz from onboard ST-Link MCO
+  #define FREQUENCY_HSE          (8000000)
+  #define CONFIG_CLK_PLLM              (8)
+  #define CONFIG_CLK_PLLN            (240)
+  #define CONFIG_CLK_PLLP    RCC_PLLP_DIV2
+  #define CONFIG_CLK_PLLQ              (5)
+#else /* ndef NUCLEO */
+  // HSE input on Marble is 25 MHz from WhiteRabbit module
+  #define FREQUENCY_HSE         (25000000)
+  #define CONFIG_CLK_PLLM             (20)
+  #define CONFIG_CLK_PLLN            (192)
+  #define CONFIG_CLK_PLLP    RCC_PLLP_DIV2
+  #define CONFIG_CLK_PLLQ              (5)
+#endif /* NUCLEO */
 #define FREQUENCY_SYSCLK    (((FREQUENCY_HSE/CONFIG_CLK_PLLM)*CONFIG_CLK_PLLN)/CONFIG_CLK_PLLP)
 
 #define UART_MSG_TERMINATOR                           ('\n')
@@ -210,7 +211,11 @@ Pmod3_7 PD5     8
 
 /* Set all Pmod data pins at slow GPIO push/pull output */
 void marble_pmod_config_outputs(void);
+void marble_pmod_config_inputs(void);
 void marble_pmod_set_gpio(uint8_t pinnum, bool state);
+void marble_pmod_timer_enable(void);
+void marble_pmod_timer_disable(void);
+void marble_pmod_timer_config(void);
 
 /****
 * FPGA int

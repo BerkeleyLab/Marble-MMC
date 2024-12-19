@@ -40,6 +40,10 @@ int system_set_pmod_mode(pmod_mode_t mode);
 /* Get the Pmod usage mode */
 pmod_mode_t system_get_pmod_mode(void);
 
+// Frequency of underlying Pmod LED timer in Hz
+#define FREQUENCY_PMOD_TIMER      (128)
+void system_pmod_led_isr(void);
+
 /* (Re-)Initialize the Pmod subsystem selected by pmod_mode */
 //void pmod_subsystem_init(void);
 

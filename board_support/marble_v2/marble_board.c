@@ -39,6 +39,24 @@
 #include "ltm4673.h"
 #include "watchdog.h"
 
+#define AHBCLK_DIV        (RCC_SYSCLK_DIV1)
+#define APB1CLK_DIV       (RCC_HCLK_DIV4)
+#define APB2CLK_DIV       (RCC_HCLK_DIV2)
+
+#define AHB_CLK_DIV(CLK_DIV) (CLK_DIV == RCC_SYSCLK_DIV1   ? 1   : CLK_DIV == RCC_SYSCLK_DIV2   ? 2   : \
+                              CLK_DIV == RCC_SYSCLK_DIV4   ? 4   : CLK_DIV == RCC_SYSCLK_DIV8   ? 8   : \
+                              CLK_DIV == RCC_SYSCLK_DIV16  ? 16  : CLK_DIV == RCC_SYSCLK_DIV64  ? 64  : \
+                              CLK_DIV == RCC_SYSCLK_DIV128 ? 128 : CLK_DIV == RCC_SYSCLK_DIV256 ? 256 : 512)
+ 
+#define APB_CLK_DIV(CLK_DIV) (CLK_DIV == RCC_HCLK_DIV1 ? 1 : CLK_DIV == RCC_HCLK_DIV2 ? 2 : \
+                              CLK_DIV == RCC_HCLK_DIV4 ? 4 : CLK_DIV == RCC_HCLK_DIV8 ? 8 : 16)
+
+#define FREQUENCY_AHBCLK     (FREQUENCY_SYSCLK/AHB_CLK_DIV(AHBCLK_DIV))
+#define FREQUENCY_APB1CLK    (FREQUENCY_AHBCLK/APB_CLK_DIV(APB1CLK_DIV))
+#define FREQUENCY_APB2CLK    (FREQUENCY_AHBCLK/APB_CLK_DIV(APB2CLK_DIV))
+#define FREQUENCY_APB1TIM    APB1CLK_DIV == RCC_HCLK_DIV1 ? FREQUENCY_APB1CLK : 2*FREQUENCY_APB1CLK
+#define FREQUENCY_APB2TIM    APB2CLK_DIV == RCC_HCLK_DIV1 ? FREQUENCY_APB2CLK : 2*FREQUENCY_APB2CLK
+
 #define XRP_BYPASS_PWRGD
 #define XRP_REBOOT_DELAY    (500)
 
@@ -118,6 +136,9 @@ static void I2C_PM_smba_handler(void);
 static int i2c_hook(I2C_BUS I2C_bus, uint8_t addr, uint8_t rnw,
                     int cmd, const uint8_t *data, int len);
 static void show_chip_ID(void);
+static void pmod_timer_interrupt_enable(void);
+static void pmod_timer_interrupt_disable(void);
+static void pmod_config_direction(uint32_t direction);
 
 void disable_all_IRQs(void) {
    // STM32F2 has 80 interrupt channels (plus the 14 in the ARM Cortex-M)
@@ -1192,9 +1213,9 @@ static void SystemClock_Config(void)
    RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                                |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
    RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
-   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
+   RCC_ClkInitStruct.AHBCLKDivider = AHBCLK_DIV;
+   RCC_ClkInitStruct.APB1CLKDivider = APB1CLK_DIV;
+   RCC_ClkInitStruct.APB2CLKDivider = APB2CLK_DIV;
 
    if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK)
    {
@@ -1640,9 +1661,24 @@ static void show_chip_ID(void) {
 
 void marble_pmod_config_outputs(void) {
   printf("marble_pmod_config_outputs\r\n");
+  pmod_config_direction(GPIO_MODE_OUTPUT_PP);
+  return;
+}
+
+void marble_pmod_config_inputs(void) {
+  printf("marble_pmod_config_inputs\r\n");
+  pmod_config_direction(GPIO_MODE_INPUT);
+  return;
+}
+
+static void pmod_config_direction(uint32_t direction) {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Mode = direction;
+  if (direction == GPIO_MODE_OUTPUT_PP) {
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+  } else {
+    GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  }
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   // PB9, PB10, PB14, PB15
   GPIO_InitStruct.Pin = GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_14|GPIO_PIN_15;
@@ -1653,6 +1689,88 @@ void marble_pmod_config_outputs(void) {
   // PD5, PD6
   GPIO_InitStruct.Pin = GPIO_PIN_5|GPIO_PIN_6;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+  return;
+}
+
+#define PMOD_TIMER      (TIM2)
+/* TIM2 hangs off APB1 bus
+ * APBx timer clocks comes from:
+ *  sysclk -> AHB prescaler -> APB prescaler -> APBx conditional doubler
+ *  If APB prescaler = 1, then APBx doubler = 1x, else 2x
+ *  FREQUENCY_APB1TIM
+ *  ratio = PMOD_TIMER_RATIO
+ *  PSC = (ratio >> 16) + 1
+ *  ARR = ratio / PSC
+ */
+
+#define PMOD_TIMER_RATIO          (FREQUENCY_APB1TIM/FREQUENCY_PMOD_TIMER)
+
+static void pmod_timer_interrupt_enable(void) {
+  HAL_NVIC_SetPriority(TIM2_IRQn, 7, 7);
+  HAL_NVIC_EnableIRQ(TIM2_IRQn);
+  return;
+}
+
+static void pmod_timer_interrupt_disable(void) {
+  HAL_NVIC_DisableIRQ(TIM2_IRQn);
+  return;
+}
+
+void marble_pmod_mode_gpio(void) {
+  marble_pmod_config_inputs();
+  return;
+}
+
+void marble_pmod_timer_enable(void) {
+  printf("Timer enable\r\n");
+  pmod_timer_interrupt_enable();
+  uint32_t cr1 = PMOD_TIMER->CR1;
+  cr1 |= TIM_CR1_CEN;
+  PMOD_TIMER->CR1 = cr1;
+  return;
+}
+
+void marble_pmod_timer_disable(void) {
+  printf("Timer disable\r\n");
+  uint32_t cr1 = PMOD_TIMER->CR1;
+  cr1 &= ~TIM_CR1_CEN;
+  PMOD_TIMER->CR1 = cr1;
+  pmod_timer_interrupt_disable();
+  return;
+}
+
+void marble_pmod_timer_config(void) {
+  //PMOD_TIMER->CR1
+  //PMOD_TIMER->CR2
+  //PMOD_TIMER->SMCR
+  //PMOD_TIMER->DIER
+  //PMOD_TIMER->SR
+  //PMOD_TIMER->EGR
+  //PMOD_TIMER->CCMR1
+  //PMOD_TIMER->CCMR2
+  //PMOD_TIMER->CCER
+  //PMOD_TIMER->CNT
+  //PMOD_TIMER->PSC
+  //PMOD_TIMER->ARR
+  //PMOD_TIMER->RCR
+  //PMOD_TIMER->CCR1
+  //PMOD_TIMER->CCR2
+  //PMOD_TIMER->CCR3
+  //PMOD_TIMER->CCR4
+  //PMOD_TIMER->BDTR
+  //PMOD_TIMER->DCR
+  //PMOD_TIMER->DMAR
+  //PMOD_TIMER->OR
+  __HAL_RCC_TIM2_CLK_ENABLE();
+  // Set the prescaler and auto-reload register
+  uint16_t scratch = (PMOD_TIMER_RATIO >> 16) + 1;
+  PMOD_TIMER->PSC = (uint32_t)scratch;
+  PMOD_TIMER->ARR = (uint32_t)(PMOD_TIMER_RATIO/scratch);
+  printf("Configuring TIM2 with PSC = %d, ARR = %d\r\n", scratch, PMOD_TIMER_RATIO/scratch);
+  // Enable interrupt on underflow event (UEV)
+  PMOD_TIMER->DIER = TIM_DIER_UIE;
+  // Enable downcounter mode
+  PMOD_TIMER->CR1 = TIM_CR1_DIR;
   return;
 }
 
@@ -1675,6 +1793,13 @@ static uint16_t pmod_gpio_pins[] =       {GPIO_PIN_9, GPIO_PIN_3, GPIO_PIN_2, GP
 void marble_pmod_set_gpio(uint8_t pinnum, bool state) {
   if (pinnum > 7) return;
   HAL_GPIO_WritePin(pmod_gpio_ports[pinnum], pmod_gpio_pins[pinnum], state ? GPIO_PIN_SET : GPIO_PIN_RESET);
+  return;
+}
+
+void TIM2_IRQHandler(void) {
+  // Clear the update interrupt flag (ok, all interrupt flags)
+  PMOD_TIMER->SR = 0;
+  system_pmod_led_isr();
   return;
 }
 

@@ -42,6 +42,9 @@ static void fpga_done_handler(void);
 static void timer_int_handler(void);
 static void system_apply_internal_params(void);
 static void system_apply_external_params(void);
+static void system_pmod_mode_disabled(void);
+static void system_pmod_mode_ui_board(void);
+static void system_pmod_mode_led(void);
 
 /* =========================== Exported Functions =========================== */
 /* void system_init(void);
@@ -246,26 +249,57 @@ pmod_mode_t system_get_pmod_mode(void) {
   return pmod_mode;
 }
 
+static void system_pmod_mode_disabled(void) {
+  marble_pmod_config_inputs();
+  marble_pmod_timer_disable();
+  return;
+}
+
+static void system_pmod_mode_ui_board(void) {
+#ifdef MARBLE_V2
+  display_init();
+#endif
+  marble_pmod_timer_disable();
+  return;
+}
+
+static void system_pmod_mode_led(void) {
+  marble_pmod_config_outputs();
+  marble_pmod_timer_config();
+  marble_pmod_timer_enable();
+  return;
+}
+
 static void pmod_subsystem_init(void) {
   switch (pmod_mode) {
     case PMOD_MODE_DISABLED:
       // Nothing to do
+      system_pmod_mode_disabled();
       break;
     case PMOD_MODE_UI_BOARD:
-#ifdef MARBLE_V2
-      display_init();
-#endif
+      system_pmod_mode_ui_board();
       break;
     case PMOD_MODE_LED:
-      marble_pmod_config_outputs();
-      // Unimplemented
+      system_pmod_mode_led();
       break;
-    case PMOD_MODE_GPIO:
-      marble_pmod_config_outputs();
-      // Unimplemented
-      break;
+    //case PMOD_MODE_GPIO: // Unimplemented
     default:
+      system_pmod_mode_disabled();
       break;
+  }
+  return;
+}
+
+void system_pmod_led_isr(void) {
+  static int isr_cnt = 0;
+  static bool gpio_state = 0;
+  if (isr_cnt == (FREQUENCY_PMOD_TIMER/8)-1) {
+    isr_cnt = 0;
+    marble_pmod_set_gpio(0, gpio_state);
+    marble_pmod_set_gpio(4, gpio_state);
+    gpio_state = !gpio_state;
+  } else {
+    ++isr_cnt;
   }
   return;
 }
@@ -330,5 +364,3 @@ static void pmod_subsystem_service(void) {
   }
   return;
 }
-
-
