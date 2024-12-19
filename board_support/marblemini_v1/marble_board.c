@@ -767,8 +767,18 @@ int get_hw_rnd(uint32_t *result) {
   return 0;
 }
 
-void mgtclk_xpoint_en(void) {
+int mgtclk_xpoint_en(void) {
   // Unused board compatibility
+  return 0;
+}
+
+void marble_pmod_config_outputs(void) {
+  return;
+}
+
+void marble_pmod_set_gpio(uint8_t pinnum, bool state) {
+  _UNUSED(pinnum);
+  _UNUSED(state);
   return;
 }
 

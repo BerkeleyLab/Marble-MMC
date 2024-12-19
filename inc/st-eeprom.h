@@ -1,12 +1,12 @@
 #ifndef ST_EEPROM_H
 #define ST_EEPROM_H
 
-#include <stdlib.h>
-#include <stdint.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#include <stdlib.h>
+#include <stdint.h>
 
 typedef uint8_t ee_tag_t;
 typedef uint8_t ee_val_t[6];
@@ -69,7 +69,8 @@ typedef struct {
   X(10,wd_key_1,  raw, 6, {'s','e','c','r','e','t'}) \
   X(11,wd_key_2,  raw, 4, {' ','k','e','y'}) \
   X(12,mbox_en,   raw, 1, {1}) \
-  X(13,tach_en,   raw, 1, {1})
+  X(13,tach_en,   raw, 1, {1}) \
+  X(14,pmod_mode, raw, 1, {0})
 
 typedef enum {
 #define X(N, NAME, TYPE, SIZE, ...)  ee_ ## NAME = N,

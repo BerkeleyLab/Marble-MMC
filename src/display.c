@@ -209,7 +209,6 @@ static const char label_temperature_max6639_2_init[] = "25.3 @@C";
 
 // ==========================================================
 
-//static void xformat_ip_addr(uint32_t packed_ip, char *ps, int maxlen);
 static void update_page(int refresh);
 static void init_display_error(void);
 static void init_page_state(void);
@@ -234,70 +233,6 @@ static void format_mac_addr(uint8_t *mac, char *ps, int maxlen);
 static int array_updated_uint8_t(volatile uint8_t *old, const uint8_t *new, int len);
 static int array_updated_int(volatile int *old, const int *new, int len);
 static void update_led(void);
-
-/*
-static void print_str(const char *ss, int len);
-static char xitoa(uint8_t i);
-
-static void print_str(const char *ss, int len) {
-  for (int n=0; n<len; n++) {
-    draw_char(ss[n]);
-  }
-  return;
-}
-
-static char xitoa(uint8_t i) {
-  if (i <= 9) {
-    //printf("  xitoa(%d) = %c\r\n", i, (char)'0'+i);
-    return (char)('0' + i);
-  }
-  return ' ';
-}
-*/
-
-/*
-static void xformat_ip_addr(uint32_t packed_ip, char *ps, int maxlen) {
-  uint8_t ip_byte;
-  uint8_t higher_digit = 0;
-  char *orig_ps = ps;
-  for (int ndigit=0; ndigit<4; ndigit=ndigit+1) {
-    ip_byte = (packed_ip >> 8*(3-ndigit)) & 0xff;
-    //printf("ndigit = %d, ip_byte = %d\r\n", ndigit, ip_byte);
-    if (ip_byte/100 > 0) {
-      higher_digit = 1;
-      *(ps++) = xitoa(ip_byte/100);
-      if ((ps - orig_ps) > maxlen) {
-        return;
-      }
-      //++ps;
-      ip_byte = ip_byte - 100*(ip_byte/100);
-    }
-    if (higher_digit || (ip_byte/10 > 0)) {
-      *(ps++) = xitoa(ip_byte/10);
-      if ((ps - orig_ps) > maxlen) {
-        return;
-      }
-      //++ps;
-      ip_byte = ip_byte - 10*(ip_byte/10);
-    }
-    *(ps++) = xitoa(ip_byte);
-    if ((ps - orig_ps) > maxlen) {
-      return;
-    }
-    //++ps;
-    if (ndigit < 3) {
-      *(ps++) = '.';
-      if ((ps - orig_ps) > maxlen) {
-        return;
-      }
-    }
-  }
-  while ((ps - orig_ps) < maxlen) {
-    *(ps++) = ' ';
-  }
-  return;
-}
-*/
 
 void display_update(void) {
   static uint32_t last_update = 0;
@@ -327,6 +262,7 @@ void display_update(void) {
       display_enable();
       refresh = 1;
     } else if (buttons & 4) {
+      // Push button, toggle ON/OFF
       display_toggle();
     }
   }

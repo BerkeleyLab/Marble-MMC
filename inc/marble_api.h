@@ -15,6 +15,7 @@ extern "C" {
 #include <stdbool.h>
 #include <stdint.h>
 #include "common.h"
+#include "system.h"
 
 #ifdef SIMULATION
 #include <stddef.h>
@@ -128,12 +129,6 @@ typedef enum {
 ****/
 void disable_all_IRQs(void);
 
-void system_init(void);
-
-void system_service(void);
-
-void system_apply_params(void);
-
 /****
 * Platform/Hardware-Specific Routines
 ****/
@@ -146,7 +141,7 @@ int board_service(void);
 
 void pwr_autoboot(void);
 
-void mgtclk_xpoint_en(void);
+int mgtclk_xpoint_en(void);
 
 /* Use this function to test against PCB revisions if the
  * board type (Marble vs. Marble-Mini) is known.
@@ -158,8 +153,6 @@ void marble_print_pcb_rev(void);
 
 // The Board ID is (PCB revision) | (BOARD_TYPE_...)
 uint8_t marble_get_board_id(void);
-
-void print_status_counters(void);
 
 void marble_print_status(void);
 
@@ -198,6 +191,26 @@ void marble_Pmod3_5_write(bool on);
 * Push-Buttons
 ****/
 bool marble_SW_get(void);
+
+/****
+* Pmod J16
+****/
+/*
+Signal  Portbit J16 Pin
+-----------------------
+Pmod3_0 PB9     1
+Pmod3_1 PC3     3
+Pmod3_2 PC2     5
+Pmod3_3 PB10    7
+Pmod3_4 PB14    2
+Pmod3_5 PB15    4
+Pmod3_6 PD6     6
+Pmod3_7 PD5     8
+*/
+
+/* Set all Pmod data pins at slow GPIO push/pull output */
+void marble_pmod_config_outputs(void);
+void marble_pmod_set_gpio(uint8_t pinnum, bool state);
 
 /****
 * FPGA int
@@ -337,8 +350,6 @@ void marble_SLEEP_us(uint32_t delay);
 /************
 * FPGA Watchdog Support
 ************/
-// In system.c
-void reset_fpga_with_callback(void (*cb)(void));
 // RND - only on marble_v2 (STM32) for now
 int get_hw_rnd(uint32_t *result);
 

@@ -47,7 +47,6 @@ const char *menu_str[] = {"\r\n",
   "e - I2C_PM bus display\r\n",
   "f - Flash XRP7724 (Power supply, Marble v1.1-1.3)\r\n",
   "g - Enable XRP7724\r\n",
-  //"h - XRP7724 hex input\r\n",
   "h - FMC MGT MUX set\r\n",
   "i - Timer check/cal\r\n",
   "j - Read SPI mailbox\r\n",
@@ -64,6 +63,7 @@ const char *menu_str[] = {"\r\n",
   "u period - Set/get watchdog timeout period (in seconds)\r\n",
   "v key - Set a new 128-bit secret key (non-volatile, write only).\r\n",
   "w enable - Set fan tachometer enable/disable (1/0, on/off)\r\n",
+  "x mode - Set MMC Pmod usage mode\r\n",
 };
 #define MENU_LEN (sizeof(menu_str)/sizeof(*menu_str))
 
@@ -86,6 +86,7 @@ static int handle_msg_watchdog(char *rx_msg, int len);
 static int handle_msg_key(char *rx_msg, int len);
 static int handle_mailbox_enable(char *rx_msg, int len);
 static int handle_tach_enable(char *rx_msg, int len);
+static int handle_pmod_mode(char *rx_msg, int len);
 static int handle_msg_MGTMUX(char *rx_msg, int len);
 //static void print_mac_ip(mac_ip_data_t *pmac_ip_data);
 static void print_mac(uint8_t *pdata);
@@ -102,12 +103,13 @@ static int sscanfMGTMUX(const char *s, int len);
 static int sscanfSpace(const char *s, int len);
 static int sscanfNonSpace(const char *s, int len);
 static int sscanfNext(const char *s, int len);
-static int sscanfFSynth(const char *s, int len);
-static int sscanfPMBridge(const char *s, int len);
+static int handle_msg_fsynth(const char *s, int len);
+static int handle_msg_pmbridge(const char *s, int len);
 static int PMBridgeConsumeArg(const char *s, int len, volatile int *arg);
 static int xatoi(char c);
 static int htoi(char c);
 static void console_print_fsynth(void);
+static const char *pmod_mode_string(pmod_mode_t mode);
 
 int console_init(void) {
   _msgCount = 0;
@@ -203,12 +205,6 @@ static int console_handle_msg(char *rx_msg, int len)
            printf("Enabling XRP7724\r\n");
            xrp_boot();
            break;
-#if 0
-        case 'h':
-           printf("XRP hex input\r\n");
-           xrp_hex_in(XRP7724);
-           break;
-#endif
         case 'h':
            handle_msg_MGTMUX(rx_msg, len);
            break;
@@ -247,10 +243,10 @@ static int console_handle_msg(char *rx_msg, int len)
            handle_mailbox_enable(rx_msg, len);
            break;
         case 's':
-           sscanfFSynth(rx_msg, len);
+           handle_msg_fsynth(rx_msg, len);
            break;
         case 't':
-           sscanfPMBridge(rx_msg, len);
+           handle_msg_pmbridge(rx_msg, len);
            break;
         case 'u':
            handle_msg_watchdog(rx_msg, len);
@@ -260,6 +256,9 @@ static int console_handle_msg(char *rx_msg, int len)
            break;
         case 'w':
            handle_tach_enable(rx_msg, len);
+           break;
+        case 'x':
+           handle_pmod_mode(rx_msg, len);
            break;
         default:
            printf(unk_str);
@@ -1086,7 +1085,7 @@ static int sscanfNext(const char *s, int len) {
   return -1;
 }
 
-static int sscanfFSynth(const char *s, int len) {
+static int handle_msg_fsynth(const char *s, int len) {
   // Input string format:
   //  s cc 40000 1
   int i2c_addr = -1;
@@ -1145,8 +1144,71 @@ static void console_print_fsynth(void) {
   return;
 }
 
+static const char *pmod_mode_string(pmod_mode_t mode) {
+  switch (mode) {
+    case PMOD_MODE_DISABLED:
+      return "Disabled";
+    case PMOD_MODE_UI_BOARD:
+      return "OLED UI Board";
+    case PMOD_MODE_LED:
+      return "Indicator LEDs";
+    case PMOD_MODE_GPIO:
+      return "Slow GPIO";
+    default:
+      break;
+  }
+  return "Unknown";
+}
 
-/* static int sscanfPMBridge(const char *s, int len);
+static int handle_pmod_mode(char *rx_msg, int len) {
+  // Parse messages:
+  //   "x"      -> Query pmod_mode
+  //   "x?"     -> Query pmod_mode
+  //   "x ?"    -> Query pmod_mode
+  //   "x 0"    -> Set pmod_mode = PMOD_MODE_DISABLED
+  //   "x 1"    -> Set pmod_mode = PMOD_MODE_UI_BOARD
+  //   "x 2"    -> Set pmod_mode = PMOD_MODE_LED
+  //   "x 3"    -> Set pmod_mode = PMOD_MODE_GPIO
+  //   "x 4"    -> Invalid; error
+  int query = 0;
+  int index = sscanfNext(rx_msg+1, len) + 1;
+  int mode = -1;
+  const char *modestr;
+  pmod_mode_t pmod_mode;
+  if ((len < 2) || (index <= 0) || (index == len)) {
+    query = 1;
+  } else if (rx_msg[index] == '?') {
+    query = 1;
+  } else {
+    mode = sscanfUnsignedDecimal(rx_msg+index, len-index);
+  }
+  if (query) {
+    pmod_mode = system_get_pmod_mode();
+    modestr = pmod_mode_string(pmod_mode);
+    printf("Current Pmod mode: %s\r\n", modestr);
+    printf("  Options:\r\n");
+    printf("  --------\r\n");
+    for (int n=0; n<PMOD_MODE_SIZE; n++) {
+      printf("    %d: %s\r\n", n, pmod_mode_string((pmod_mode_t)n));
+    }
+    return 0;
+  } else if ((mode < 0) || (mode >= PMOD_MODE_SIZE)) {
+    printf("Invalid option. Valid choices are (%d-%d).\r\n", PMOD_MODE_DISABLED, PMOD_MODE_SIZE-1);
+    return -1;
+  } else {
+    printf("Setting Pmod mode to: %s... ", pmod_mode_string((pmod_mode_t)mode));
+    // Re-using index as rval
+    if ((index = system_set_pmod_mode(mode)) == 0) {
+      printf("\r\n");
+    } else {
+      printf("Failed. Error code %d\r\n", index);
+      return -1;
+    }
+  }
+  return 0;
+}
+
+/* static int handle_msg_pmbridge(const char *s, int len);
  *  Parse a line from the user representing a PMBus transaction
  *  Syntax: x command
  */
@@ -1158,7 +1220,7 @@ static void console_print_fsynth(void) {
     0xHH: Use hex value 0xHH as the next transaction byte
     DDD : Use decimal value DDD as the next transaction byte
 */
-static int sscanfPMBridge(const char *s, int len) {
+static int handle_msg_pmbridge(const char *s, int len) {
   // Skip the first character (command char)
   int ptr = sscanfNext(s, len);
   int ptrinc;

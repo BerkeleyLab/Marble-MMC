@@ -365,3 +365,13 @@ int get_hw_rnd(uint32_t *result) {
 void marble_MGTMUX_set_all(uint8_t mgt_cfg) {
   _UNUSED(mgt_cfg);
 }
+
+void marble_pmod_config_outputs(void) {
+  return;
+}
+
+void marble_pmod_set_gpio(uint8_t pinnum, bool state) {
+  _UNUSED(pinnum);
+  _UNUSED(state);
+  return;
+}

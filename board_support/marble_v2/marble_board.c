@@ -39,11 +39,6 @@
 #include "ltm4673.h"
 #include "watchdog.h"
 
-#define UI_BOARD
-#ifdef UI_BOARD
-#include "display.h"
-#endif
-
 #define XRP_BYPASS_PWRGD
 #define XRP_REBOOT_DELAY    (500)
 
@@ -136,20 +131,21 @@ void disable_all_IRQs(void) {
  *  Board-related (not MMC-related) initialization
  */
 void board_init(void) {
-  // Enable clock crosspoint
-  mgtclk_xpoint_en();
-
   // Initialize subsystems
   I2C_PM_init();
-  LM75_Init();
 
-  // Some non-volatile params go straight to external hardware
-  // (i.e. fan speed, overtemp threshold)
-  system_apply_params();
+  // Enable clock crosspoint, checking power good in the process
+  if (mgtclk_xpoint_en() == 0) {
 
-#ifdef UI_BOARD
-  display_init();
-#endif
+    LM75_Init();
+
+    // Some non-volatile params go straight to external hardware
+    // (i.e. fan speed, overtemp threshold)
+    //system_apply_params();
+
+    // This needs to wait for system parameters and external +3V3 power available
+    system_off_chip_init();
+  }
 
   return;
 }
@@ -212,9 +208,9 @@ int board_service(void) {
        if (((++_pwr_state) == PWR_GOOD) && (_pwr_good == 0)) {
          // Detect asserting edge
          printf("ALERT: Power good. Re-initializing.\r\n");
+         _pwr_good = 1;
          board_init();
          FPGAWD_SelfReset();
-         _pwr_good = 1;
        } else {
          //printf("PWR STATE CHANGE: _pwr_state = %d;  _pwr_good = %d\r\n", _pwr_state, _pwr_good);
        }
@@ -236,9 +232,6 @@ int board_service(void) {
       printf("TODO - Respond to I2C_PM Alert\r\n");
       i2c_pm_alert = 0;
    }
-#endif
-#ifdef UI_BOARD
-   display_update();
 #endif
    return 0;
 }
@@ -1616,9 +1609,11 @@ int get_hw_rnd(uint32_t *result) {
 }
 
 /* Enable MGT clock cross-point switch if 3.3V rail is ON
+ * Returns 0 if power good.
  */
-void mgtclk_xpoint_en(void)
+int mgtclk_xpoint_en(void)
 {
+  int rval=0;
    if ((marble_get_pcb_rev() <= Marble_v1_3) & xrp_ch_status(XRP7724, 1)) { // CH1: 3.3V
       printf("Using XRP7724 and adn4600_init\r\n");
       adn4600_init();
@@ -1630,7 +1625,9 @@ void mgtclk_xpoint_en(void)
       _pwr_good = 0;
       // This will trigger a board_init in the main loop if PWRGD is asserted on the first check
       _pwr_state = PWR_GOOD-1;
+      rval = 1;
    }
+   return rval;
 }
 
 static void show_chip_ID(void) {
@@ -1639,6 +1636,46 @@ static void show_chip_ID(void) {
    id = HAL_GetREVID();
    printf("REVID 0x%04x\r\n", (uint16_t)(id & 0xffff));
    return;
+}
+
+void marble_pmod_config_outputs(void) {
+  printf("marble_pmod_config_outputs\r\n");
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  // PB9, PB10, PB14, PB15
+  GPIO_InitStruct.Pin = GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_14|GPIO_PIN_15;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  // PC2, PC3
+  GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_3;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+  // PD5, PD6
+  GPIO_InitStruct.Pin = GPIO_PIN_5|GPIO_PIN_6;
+  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+  return;
+}
+
+/*
+Signal  Portbit J16 Pin
+-----------------------
+Pmod3_0 PB9     1
+Pmod3_1 PC3     3
+Pmod3_2 PC2     5
+Pmod3_3 PB10    7
+Pmod3_4 PB14    2
+Pmod3_5 PB15    4
+Pmod3_6 PD6     6
+Pmod3_7 PD5     8
+*/
+/*                                        Pmod3_0     Pmod3_1     Pmod3_2     Pmod3_3      Pmod3_4      Pmod3_5      Pmod3_6     Pmod3_7  */
+static GPIO_TypeDef *pmod_gpio_ports[] = {GPIOB,      GPIOC,      GPIOC,      GPIOB,       GPIOB,       GPIOB,       GPIOD,      GPIOD};
+static uint16_t pmod_gpio_pins[] =       {GPIO_PIN_9, GPIO_PIN_3, GPIO_PIN_2, GPIO_PIN_10, GPIO_PIN_14, GPIO_PIN_15, GPIO_PIN_6, GPIO_PIN_5};
+
+void marble_pmod_set_gpio(uint8_t pinnum, bool state) {
+  if (pinnum > 7) return;
+  HAL_GPIO_WritePin(pmod_gpio_ports[pinnum], pmod_gpio_pins[pinnum], state ? GPIO_PIN_SET : GPIO_PIN_RESET);
+  return;
 }
 
 /**
