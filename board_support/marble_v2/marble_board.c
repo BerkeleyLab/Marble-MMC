@@ -1716,11 +1716,6 @@ static void pmod_timer_interrupt_disable(void) {
   return;
 }
 
-void marble_pmod_mode_gpio(void) {
-  marble_pmod_config_inputs();
-  return;
-}
-
 void marble_pmod_timer_enable(void) {
   printf("Timer enable\r\n");
   pmod_timer_interrupt_enable();

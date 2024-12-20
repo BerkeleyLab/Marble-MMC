@@ -776,9 +776,28 @@ void marble_pmod_config_outputs(void) {
   return;
 }
 
+void marble_pmod_config_inputs(void) {
+  return;
+}
+
 void marble_pmod_set_gpio(uint8_t pinnum, bool state) {
   _UNUSED(pinnum);
   _UNUSED(state);
+  return;
+}
+
+void marble_pmod_timer_enable(void) {
+  // TODO
+  return;
+}
+
+void marble_pmod_timer_disable(void) {
+  // TODO
+  return;
+}
+
+void marble_pmod_timer_config(void) {
+  // TODO
   return;
 }
 
