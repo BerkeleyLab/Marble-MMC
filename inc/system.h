@@ -44,6 +44,13 @@ pmod_mode_t system_get_pmod_mode(void);
 #define FREQUENCY_PMOD_TIMER      (128)
 void system_pmod_led_isr(void);
 
+/* Helper function for the mailbox to avoid reading the Pmod LEDs page
+   if the feature isn't even enabled. */
+int system_pmod_leds_enabled(void);
+
+/* The mailbox uses this function to update LED values */
+void system_handle_pmod_led(int val, int pin);
+
 /* (Re-)Initialize the Pmod subsystem selected by pmod_mode */
 //void pmod_subsystem_init(void);
 

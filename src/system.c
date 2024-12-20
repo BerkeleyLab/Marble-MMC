@@ -19,10 +19,42 @@
 
 #include <stdio.h>
 
+//#define DEBUG_PRINT
+#include "dbg.h"
 
 #define LED_SNAKE
 #define FPGA_PUSH_DELAY_MS              (2)
 #define FPGA_RESET_DURATION_MS         (50)
+
+#define PMOD_LED_NCHANS     (8)
+#define PMOD_LED_CHANMASK   ((1<<PMOD_LED_NCHANS)-1)
+#define PMOD_LED_UPDATE_NONCONST(pin, val) do { \
+  pmod_led_nonconst = (pmod_led_nonconst & ~(1 << pin)) | (PMOD_LED_NONCONST(val) << pin);\
+  } while (0)
+
+#define PMOD_LED_CONST(v)     ((v == 0x00) || ((v >> 3) == 0x1f))
+#define PMOD_LED_NONCONST(v)  ((v != 0x00) && ((v >> 3) != 0x1f))
+/* Our timer system will be a counter from 0-255
+ * Each pin will have a count mask which will select a smaller
+ * portion of the count window for higher frequencies
+ * Each pin will have an "on window" and an "off window"
+ * These will be conveyed by a "assert" count and a "deassert" count
+ * If assert_count == deassert_count == 0, then const OFF
+ * If assert_count == deassert_count != 0, then const ON
+ */
+#define PMOD_LED_COUNTS     (256)
+// {inv, duty[1:0], phase[1:0], freq[2:0]}
+#define PMOD_LED_FREQ(val)    (val & 0x7)
+#define PMOD_LED_PHASE(val)   ((val >> 3) & 0x3)
+#define PMOD_LED_DUTY(val)    ((val >> 5) & 0x3)
+#define PMOD_LED_INV(val)     ((val >> 7) & 0x1)
+
+typedef struct {
+  uint8_t count_on;
+  uint8_t count_off;
+  uint8_t modulo;
+} pmod_led_t;
+
 /* ============================ Static Variables ============================ */
 static unsigned int live_cnt=0;
 static unsigned int fpga_prog_cnt=0;
@@ -33,7 +65,15 @@ static int fpga_reset = 0;
 static void (*fpga_reset_callback)(void) = NULL;
 static volatile bool spi_update = false;
 static uint32_t systimer_ms=1; // System timer interrupt period
+
 static pmod_mode_t pmod_mode = PMOD_MODE_DISABLED;
+static bool pmod_leds_timer_en = 0;
+static uint8_t pmod_leds_raw[PMOD_LED_NCHANS];
+static pmod_led_t pmod_leds[PMOD_LED_NCHANS];
+// Let's keep a bitmask of the "non-constant" LEDs.  If this ever
+// reaches zero, we can disable the timer.
+static unsigned int pmod_led_nonconst=0;
+static const uint8_t pmod_led_modulo_map[] = {0, 128, 85, 64, 51, 43, 37, 32};
 
 /* ====================== Static Function Prototypes ======================== */
 static void pmod_subsystem_init(void);
@@ -45,6 +85,10 @@ static void system_apply_external_params(void);
 static void system_pmod_mode_disabled(void);
 static void system_pmod_mode_ui_board(void);
 static void system_pmod_mode_led(void);
+static void system_pmod_led_init(void);
+static void system_pmod_timer_disable(void);
+static void system_pmod_timer_enable(void);
+static void pmod_led_counts(uint8_t val, volatile pmod_led_t *pled);
 
 /* =========================== Exported Functions =========================== */
 /* void system_init(void);
@@ -87,6 +131,8 @@ void system_off_chip_init(void) {
   // Pmod subsystem (UI Board, LEDs, GPIOs, etc)
   pmod_subsystem_init();
 
+  // Init static values for LED subsystem
+  system_pmod_led_init();
   return;
 }
 
@@ -251,7 +297,7 @@ pmod_mode_t system_get_pmod_mode(void) {
 
 static void system_pmod_mode_disabled(void) {
   marble_pmod_config_inputs();
-  marble_pmod_timer_disable();
+  system_pmod_timer_disable();
   return;
 }
 
@@ -259,14 +305,23 @@ static void system_pmod_mode_ui_board(void) {
 #ifdef MARBLE_V2
   display_init();
 #endif
-  marble_pmod_timer_disable();
+  system_pmod_timer_disable();
+  return;
+}
+
+static void system_pmod_led_init(void) {
+  for (int n=0; n<PMOD_LED_NCHANS; n++) {
+    pmod_leds[n].count_on = 0;
+    pmod_leds[n].count_off = 0;
+    pmod_leds[n].modulo = 1;
+  }
   return;
 }
 
 static void system_pmod_mode_led(void) {
   marble_pmod_config_outputs();
   marble_pmod_timer_config();
-  marble_pmod_timer_enable();
+  system_pmod_timer_enable();
   return;
 }
 
@@ -292,16 +347,138 @@ static void pmod_subsystem_init(void) {
 
 void system_pmod_led_isr(void) {
   static int isr_cnt = 0;
-  static bool gpio_state = 0;
-  if (isr_cnt == (FREQUENCY_PMOD_TIMER/8)-1) {
+  if (isr_cnt == (PMOD_LED_COUNTS-1)) {
     isr_cnt = 0;
-    marble_pmod_set_gpio(0, gpio_state);
-    marble_pmod_set_gpio(4, gpio_state);
-    gpio_state = !gpio_state;
   } else {
     ++isr_cnt;
   }
+  uint8_t led_cnt;
+  for (int n=0; n<PMOD_LED_NCHANS; n++) {
+    if (pmod_leds[n].modulo == 1) {
+      // Skipping const LEDs
+      continue;
+    }
+    led_cnt = (uint8_t)isr_cnt % pmod_leds[n].modulo;
+    if (led_cnt == pmod_leds[n].count_on) {
+      marble_pmod_set_gpio((uint8_t)n, 1);
+    } else if (led_cnt == pmod_leds[n].count_off) {
+      marble_pmod_set_gpio((uint8_t)n, 0);
+    }
+  }
   return;
+}
+
+void system_handle_pmod_led(int val, int pin) {
+  pin = pin & PMOD_LED_CHANMASK; // limit 0-7
+  if ((val & 0xff) == pmod_leds_raw[pin]) {
+    // Early exit.  No change; nothing to do.
+    return;
+  }
+  // Value changed!
+  printd("  Pmod pin %d 0x%x -> 0x%x\r\n", pin, pmod_leds_raw[pin], (val & 0xff));
+  pmod_leds_raw[pin] = (uint8_t)(val & 0xff);
+  PMOD_LED_UPDATE_NONCONST(pin, val);
+  printd("  pmod_led_nonconst = 0x%x\r\n", pmod_led_nonconst);
+  if (!pmod_leds_timer_en) {
+    // If the timer is disabled, check to see if we need to enable it
+    if (PMOD_LED_NONCONST(val)) {
+      // We have a blinky. Enable the timer.
+      printd("We have a blinky. Enable the timer\r\n");
+      system_pmod_timer_enable();
+    }
+  } else {
+    // If the timer is enabled, we can disable it if all leds are const
+    if (pmod_led_nonconst == 0) {
+      printd("All const. Disabling the timer.\r\n");
+      system_pmod_timer_disable();
+    }
+  }
+  if (PMOD_LED_CONST(val)) {
+    bool state = (val == 0x00) || (val == 0xff) ? 0 : 1;
+    printd("Constant pin. Setting GPIO manually to %d\r\n", state);
+    // If the timer is disabled, we need to set the GPIO manually here
+    // We also know that this value must be constant (or else the timer would be enabled)
+    marble_pmod_set_gpio((uint8_t)pin, state);
+    // Finally update the pmod_led_t struct
+    pmod_leds[pin].count_on = state;
+    pmod_leds[pin].count_off = state;
+    pmod_leds[pin].modulo = 1; // Little code that says "skip me, I'm constant"
+  } else {
+    // Blinky. Update the struct accordingly
+    pmod_led_counts((uint8_t)val, &pmod_leds[pin]);
+  }
+  return;
+}
+
+/* Parse the Pmod LED state encoded in byte val into "modulo", "count_on", and "count_off" values.*/
+static void pmod_led_counts(uint8_t val, volatile pmod_led_t *pled) {
+  int xx = PMOD_LED_FREQ(val);
+  uint8_t modulo = pmod_led_modulo_map[xx];
+  pled->modulo = modulo;
+  uint8_t offset = 0;
+  xx = PMOD_LED_PHASE(val);
+  uint8_t duration = 0;
+  switch (xx) {
+    case 1:
+      offset = modulo/4;
+      break;
+    case 2:
+      offset = modulo/2;
+      break;
+    case 3:
+      offset = 3*modulo/4;
+      break;
+    default:
+      break;
+  }
+  xx = PMOD_LED_DUTY(val);
+  switch (xx) {
+    case 0:
+      duration = modulo/8;
+      break;
+    case 1:
+      duration = modulo/4;
+      break;
+    case 2:
+      duration = 3*modulo/8;
+      break;
+    case 3:
+      duration = modulo/2;
+      break;
+    default:
+      break;
+  }
+  uint8_t count_on = offset;
+  uint8_t count_off = (offset + duration) % modulo;
+  if (PMOD_LED_INV(val)) {
+    // Swap 'em
+    pled->count_on = count_off;
+    pled->count_off = count_on;
+  } else {
+    pled->count_on = count_on;
+    pled->count_off = count_off;
+  }
+  printd("Pin gets modulo %d, count_on = %d, count_off = %d\r\n", modulo, pled->count_on, pled->count_off);
+  return;
+}
+
+static void system_pmod_timer_disable(void) {
+  marble_pmod_timer_disable();
+  pmod_leds_timer_en = 0;
+  return;
+}
+
+static void system_pmod_timer_enable(void) {
+  marble_pmod_timer_enable();
+  pmod_leds_timer_en = 1;
+  return;
+}
+
+int system_pmod_leds_enabled(void) {
+  if (pmod_mode == PMOD_MODE_LED) {
+    return 1;
+  }
+  return 0;
 }
 
 /* ============================ Static Functions ============================ */

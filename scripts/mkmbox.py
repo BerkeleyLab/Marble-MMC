@@ -141,6 +141,7 @@ class MailboxInterface():
         self._reader = JSONHack(self._filename)
         self._includes = []
         self._fd = None # For _fp method
+        self._control = {}
 
     def load(self):
         return self._reader.load()
@@ -191,6 +192,26 @@ class MailboxInterface():
         """Return the 4 least-significant bytes of the SHA-256 hash in hex-ASCII string form."""
         return self.getHashHex()[0:8]
 
+    def _handleControl(self, cdict):
+        for page, paramdict in cdict.items():
+            npage = self._extractNumber(page)
+            if npage is None:
+                raise Exception("{} is an invalid key for the \"control\" dict!".format(page))
+            self._control[npage] = paramdict
+        return
+
+    def _read_if(self, npage):
+        paramdict = self._control.get(npage, None)
+        if paramdict is None:
+            return None
+        return paramdict.get("read_if", None)
+
+    def _write_if(self, npage):
+        paramdict = self._control.get(npage, None)
+        if paramdict is None:
+            return None
+        return paramdict.get("write_if", None)
+
     def interpret(self):
         jdict = self.load()
         self._pageNumbers = []
@@ -198,6 +219,9 @@ class MailboxInterface():
         for page, mlist in jdict.items():
             if page == "include":
                 self._includes = mlist
+                continue
+            if page == "control":
+                self._handleControl(mlist) # 'mlist' is actually a dict, but who cares
                 continue
             npage = self._extractNumber(page)
             if npage == None:
@@ -394,7 +418,12 @@ class MailboxInterface():
                     if not hasInputs:
                         # Delay opening the code block until we know it has inputs.
                         # If the page doesn't have inputs, will not generate the block
-                        self._fp(f"  {{\n    // Page {npage}")
+                        read_if = self._read_if(npage)
+                        if read_if is None:
+                            self._fp("  {")
+                        else:
+                            self._fp(f"  if ({read_if}) {{")
+                        self._fp(f"    // Page {npage}")
                         self._fp(f"    uint8_t page[MB{npage}_SIZE];")
                         self._fp(f"    mbox_read_page({npage}, MB{npage}_SIZE, page);")
                     hasInputs = True
@@ -467,7 +496,12 @@ class MailboxInterface():
                     if not hasOutputs:
                         # Delay opening the code block until we know it has outputs.
                         # If the page doesn't have outputs, will not generate the block
-                        self._fp(f"  {{\n    // Page {npage}")
+                        write_if = self._write_if(npage)
+                        if write_if is None:
+                            self._fp("  {")
+                        else:
+                            self._fp(f"  if ({write_if}) {{")
+                        self._fp(f"    // Page {npage}")
                         self._fp(f"    uint8_t page[MB{npage}_SIZE];")
                     hasOutputs = True
                     if not hasattr(output, 'replace'):

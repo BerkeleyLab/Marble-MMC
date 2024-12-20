@@ -1660,13 +1660,13 @@ static void show_chip_ID(void) {
 }
 
 void marble_pmod_config_outputs(void) {
-  printf("marble_pmod_config_outputs\r\n");
+  //printf("marble_pmod_config_outputs\r\n");
   pmod_config_direction(GPIO_MODE_OUTPUT_PP);
   return;
 }
 
 void marble_pmod_config_inputs(void) {
-  printf("marble_pmod_config_inputs\r\n");
+  //printf("marble_pmod_config_inputs\r\n");
   pmod_config_direction(GPIO_MODE_INPUT);
   return;
 }
@@ -1717,7 +1717,7 @@ static void pmod_timer_interrupt_disable(void) {
 }
 
 void marble_pmod_timer_enable(void) {
-  printf("Timer enable\r\n");
+  //printf("Timer enable\r\n");
   pmod_timer_interrupt_enable();
   uint32_t cr1 = PMOD_TIMER->CR1;
   cr1 |= TIM_CR1_CEN;
@@ -1726,7 +1726,7 @@ void marble_pmod_timer_enable(void) {
 }
 
 void marble_pmod_timer_disable(void) {
-  printf("Timer disable\r\n");
+  //printf("Timer disable\r\n");
   uint32_t cr1 = PMOD_TIMER->CR1;
   cr1 &= ~TIM_CR1_CEN;
   PMOD_TIMER->CR1 = cr1;
@@ -1761,7 +1761,7 @@ void marble_pmod_timer_config(void) {
   uint16_t scratch = (PMOD_TIMER_RATIO >> 16) + 1;
   PMOD_TIMER->PSC = (uint32_t)scratch;
   PMOD_TIMER->ARR = (uint32_t)(PMOD_TIMER_RATIO/scratch);
-  printf("Configuring TIM2 with PSC = %d, ARR = %d\r\n", scratch, PMOD_TIMER_RATIO/scratch);
+  //printf("Configuring TIM2 with PSC = %d, ARR = %d\r\n", scratch, PMOD_TIMER_RATIO/scratch);
   // Enable interrupt on underflow event (UEV)
   PMOD_TIMER->DIER = TIM_DIER_UIE;
   // Enable downcounter mode
