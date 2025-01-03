@@ -42,7 +42,7 @@
  * If assert_count == deassert_count == 0, then const OFF
  * If assert_count == deassert_count != 0, then const ON
  */
-#define PMOD_LED_COUNTS     (256)
+#define PMOD_LED_COUNTS       (256)
 // {inv, duty[1:0], phase[1:0], freq[2:0]}
 #define PMOD_LED_FREQ(val)    (val & 0x7)
 #define PMOD_LED_PHASE(val)   ((val >> 3) & 0x3)

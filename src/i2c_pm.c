@@ -64,7 +64,7 @@ uint8_t max6639_get_tach_en(void) {
 int max6639_set_tach_en(uint8_t tach_en) {
   // Restrict to 1 bit
   uint8_t pstretch_disable = (~tach_en) & 1;
-  // Default value = 0x41 (/THERM to full-speed enabl, Fan PWM freq LSB 1)
+  // Default value = 0x41 (/THERM to full-speed enable, Fan PWM freq LSB 1)
   // Disable pulse stretching (0x41 | 1<<5)
   uint8_t config = 0x41 | (pstretch_disable << 5);
   int rc = set_max6639_reg(MAX6639_FAN1_CONFIG3, config);

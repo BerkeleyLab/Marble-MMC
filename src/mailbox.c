@@ -8,7 +8,7 @@
 #include "st-eeprom.h"
 
 /* ============================= Helper Macros ============================== */
-// Define SPI_SWITCH to re-route SPI bound for FPGA to PMOD for debugging
+// Define SPI_SWITCH to re-route SPI bound for FPGA to Pmod for debugging
 //#define SPI_SWITCH
 #ifdef SPI_SWITCH
 #define SSP_TARGET        SSP_PMOD

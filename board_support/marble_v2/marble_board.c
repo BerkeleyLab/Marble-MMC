@@ -47,7 +47,7 @@
                               CLK_DIV == RCC_SYSCLK_DIV4   ? 4   : CLK_DIV == RCC_SYSCLK_DIV8   ? 8   : \
                               CLK_DIV == RCC_SYSCLK_DIV16  ? 16  : CLK_DIV == RCC_SYSCLK_DIV64  ? 64  : \
                               CLK_DIV == RCC_SYSCLK_DIV128 ? 128 : CLK_DIV == RCC_SYSCLK_DIV256 ? 256 : 512)
- 
+
 #define APB_CLK_DIV(CLK_DIV) (CLK_DIV == RCC_HCLK_DIV1 ? 1 : CLK_DIV == RCC_HCLK_DIV2 ? 2 : \
                               CLK_DIV == RCC_HCLK_DIV4 ? 4 : CLK_DIV == RCC_HCLK_DIV8 ? 8 : 16)
 

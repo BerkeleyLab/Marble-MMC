@@ -73,7 +73,7 @@ Bit Slice   Function
 `[4:3]`     Phase
 `[2:0]`     Freq
 
-In verilog syntax, the bitmask is:
+In Verilog syntax, the bitmask is:
 ```verilog
 wire [7:0] bitmask = {duty[2:0], phase[1:0], freq[2:0]};
 ```

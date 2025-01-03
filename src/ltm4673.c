@@ -475,7 +475,7 @@ int ltm4673_ch_status(uint8_t dev)
 }
 
 static int ltm4673_vet_status_word(uint16_t stat) {
-  // These strings are straight out of LTM4673 Datashset Rev. A. Section "PMBus COMMAND DESCRIPTION"
+  // These strings are straight out of LTM4673 Datasheet Rev. A. Section "PMBus COMMAND DESCRIPTION"
   // Subsection "STATUS_WORD" (pg 100)
   if (stat) {
     printf("LTM4673 Status 0x%04x:\r\n", stat);

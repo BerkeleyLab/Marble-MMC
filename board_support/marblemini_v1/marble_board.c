@@ -479,7 +479,7 @@ int marble_I2C_probe(I2C_BUS I2C_bus, uint8_t addr) {
 }
 
 /* Generic I2C send function with selectable I2C bus and 8-bit I2C addresses (R/W bit = 0) */
-/* For compatiblity with STM32 code base (!?),
+/* For compatibility with STM32 code base (!?),
  * return 0 on success, 1 on failure */
 int marble_I2C_send(I2C_BUS I2C_bus, uint8_t addr, const uint8_t *data, int size) {
    addr = addr >> 1;
@@ -603,7 +603,7 @@ static void marble_SSP_init(LPC_SSP_T *ssp)
 
 int marble_SSP_write16(SSP_PORT ssp, uint16_t *buffer, unsigned size)
 {
-   return Chip_SSP_WriteFrames_Blocking(ssp, (uint8_t*) buffer, size*2); // API expectes length in bytes
+   return Chip_SSP_WriteFrames_Blocking(ssp, (uint8_t*) buffer, size*2); // API expected length in bytes
 }
 
 int marble_SSP_read16(SSP_PORT ssp, uint16_t *buffer, unsigned size)
