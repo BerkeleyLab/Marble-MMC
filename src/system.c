@@ -73,6 +73,19 @@ static pmod_led_t pmod_leds[PMOD_LED_NCHANS];
 // Let's keep a bitmask of the "non-constant" LEDs.  If this ever
 // reaches zero, we can disable the timer.
 static unsigned int pmod_led_nonconst=0;
+/*
+Blink state machine is 256 time intervals.  Using modulo math, we
+can approximate a linear frequency range with the non-power-of-two
+divisions creating a small frequency/duty-cycle dither.
+256/1 = modulo 256    ->    2s = 0.5Hz
+256/2 = modulo 128    ->    1s = 1.0Hz
+256/3 = modulo 85     -> 0.66s = 1.5Hz
+256/4 = modulo 64     -> 0.50s = 2.0Hz
+256/5 = modulo 51     -> 0.40s = 2.5Hz
+256/6 = modulo 43     -> 0.33s = 3.0Hz
+256/7 = modulo 37     -> 0.29s = 3.5Hz
+256/8 = modulo 32     -> 0.25s = 4.0Hz
+ */
 static const uint8_t pmod_led_modulo_map[] = {0, 128, 85, 64, 51, 43, 37, 32};
 
 /* ====================== Static Function Prototypes ======================== */
@@ -358,7 +371,11 @@ void system_pmod_led_isr(void) {
       // Skipping const LEDs
       continue;
     }
-    led_cnt = (uint8_t)isr_cnt % pmod_leds[n].modulo;
+    if (pmod_leds[n].modulo == 0) {
+      led_cnt = (uint8_t)isr_cnt;
+    } else {
+      led_cnt = (uint8_t)isr_cnt % pmod_leds[n].modulo;
+    }
     if (led_cnt == pmod_leds[n].count_on) {
       marble_pmod_set_gpio((uint8_t)n, 1);
     } else if (led_cnt == pmod_leds[n].count_off) {
@@ -449,7 +466,12 @@ static void pmod_led_counts(uint8_t val, volatile pmod_led_t *pled) {
       break;
   }
   uint8_t count_on = offset;
-  uint8_t count_off = (offset + duration) % modulo;
+  uint8_t count_off;
+  if (modulo == 0) {
+    count_off = (offset + duration);
+  } else {
+    count_off = (offset + duration) % modulo;
+  }
   if (PMOD_LED_INV(val)) {
     // Swap 'em
     pled->count_on = count_off;

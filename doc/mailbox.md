@@ -84,3 +84,16 @@ Offset|Name|Size|Direction|Desc|Note
 12|MB9\_VOUT\_3V3|2|MCC=\>FPGA|Voltage of the 3V3 rail measured internally by the power supply.|Access by byte as: MB9\_VOUT\_3V3\_x (x=0,1)
 14|MB9\_IOUT\_3V3|2|MCC=\>FPGA|Output current from the 3V3 rail measured internally by the power supply.|Access by byte as: MB9\_IOUT\_3V3\_x (x=0,1)
 
+# Page 10
+
+Offset|Name|Size|Direction|Desc|Note
+------|----|----|---------|----|----
+0|MB10\_PMOD\_LED\_0|1|FPGA=\>MMC|Pmod LED control via mailbox.|
+1|MB10\_PMOD\_LED\_1|1|FPGA=\>MMC|Pmod LED control via mailbox.|
+2|MB10\_PMOD\_LED\_2|1|FPGA=\>MMC|Pmod LED control via mailbox.|
+3|MB10\_PMOD\_LED\_3|1|FPGA=\>MMC|Pmod LED control via mailbox.|
+4|MB10\_PMOD\_LED\_4|1|FPGA=\>MMC|Pmod LED control via mailbox.|
+5|MB10\_PMOD\_LED\_5|1|FPGA=\>MMC|Pmod LED control via mailbox.|
+6|MB10\_PMOD\_LED\_6|1|FPGA=\>MMC|Pmod LED control via mailbox.|
+7|MB10\_PMOD\_LED\_7|1|FPGA=\>MMC|Pmod LED control via mailbox.|
+

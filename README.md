@@ -136,6 +136,7 @@ Addtitional documentation of features:
 
   * [Mailbox](doc/mailbox.md)
   * [Watchdog](watchdog.md)
+  * [Pmod Modes](pmod.md)
 
 ## Credits
 

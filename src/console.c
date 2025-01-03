@@ -1149,7 +1149,7 @@ static const char *pmod_mode_string(pmod_mode_t mode) {
     case PMOD_MODE_DISABLED:
       return "Disabled";
     case PMOD_MODE_UI_BOARD:
-      return "OLED UI Board";
+      return "ALS OLED UI Board";
     case PMOD_MODE_LED:
       return "Indicator LEDs";
     case PMOD_MODE_GPIO:
