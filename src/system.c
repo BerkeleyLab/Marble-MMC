@@ -86,7 +86,7 @@ divisions creating a small frequency/duty-cycle dither.
 256/7 = modulo 37     -> 0.29s = 3.5Hz
 256/8 = modulo 32     -> 0.25s = 4.0Hz
  */
-static const uint8_t pmod_led_modulo_map[] = {0, 128, 85, 64, 51, 43, 37, 32};
+static const uint16_t pmod_led_modulo_map[] = {256, 128, 85, 64, 51, 43, 37, 32};
 
 /* ====================== Static Function Prototypes ======================== */
 static void pmod_subsystem_init(void);
@@ -430,20 +430,20 @@ void system_handle_pmod_led(int val, int pin) {
 /* Parse the Pmod LED state encoded in byte val into "modulo", "count_on", and "count_off" values.*/
 static void pmod_led_counts(uint8_t val, volatile pmod_led_t *pled) {
   int xx = PMOD_LED_FREQ(val);
-  uint8_t modulo = pmod_led_modulo_map[xx];
-  pled->modulo = modulo;
+  uint16_t modulo = pmod_led_modulo_map[xx];
+  pled->modulo = (uint8_t)(modulo & 0xff);
   uint8_t offset = 0;
   xx = PMOD_LED_PHASE(val);
   uint8_t duration = 0;
   switch (xx) {
     case 1:
-      offset = modulo/4;
+      offset = (uint8_t)(modulo/4);
       break;
     case 2:
-      offset = modulo/2;
+      offset = (uint8_t)(modulo/2);
       break;
     case 3:
-      offset = 3*modulo/4;
+      offset = (uint8_t)(3*modulo/4);
       break;
     default:
       break;
@@ -451,27 +451,22 @@ static void pmod_led_counts(uint8_t val, volatile pmod_led_t *pled) {
   xx = PMOD_LED_DUTY(val);
   switch (xx) {
     case 0:
-      duration = modulo/8;
+      duration = (uint8_t)(modulo/8);
       break;
     case 1:
-      duration = modulo/4;
+      duration = (uint8_t)(modulo/4);
       break;
     case 2:
-      duration = 3*modulo/8;
+      duration = (uint8_t)(3*modulo/8);
       break;
     case 3:
-      duration = modulo/2;
+      duration = (uint8_t)(modulo/2);
       break;
     default:
       break;
   }
   uint8_t count_on = offset;
-  uint8_t count_off;
-  if (modulo == 0) {
-    count_off = (offset + duration);
-  } else {
-    count_off = (offset + duration) % modulo;
-  }
+  uint8_t count_off = (uint8_t)((offset + duration) % modulo);
   if (PMOD_LED_INV(val)) {
     // Swap 'em
     pled->count_on = count_off;
