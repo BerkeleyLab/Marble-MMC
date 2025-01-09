@@ -57,77 +57,77 @@ if the SPI interface is not actually talking to anything, don't act on any resul
 `0x00` and `0xff` are both interpreted as "LED off".
 
 For static "On" and "Off", the following values should be used:
-State   Byte Value
-------------------
-Off     `0x00`
-Off     `0xff`
-On      `0xf8`
+|State   |Byte Value|
+|--------|----------|
+|Off     |`0x00`    |
+|Off     |`0xff`    |
+|On      |`0x80`    |
 
 The LEDs can also be used in a "blinking" mode where the toggling on/off is controlled by an interrupt-driven
 state machine in the MMC (no toggling required on the FPGA side).  In __blink__ mode, there are options to
 control the frequency, phase, and duty cycle of the blinking.
 
-Bit Slice   Function
---------------------
-`[7:5]`     Duty
-`[4:3]`     Phase
-`[2:0]`     Freq
+|Bit Slice   |Function|
+|------------|--------|
+|`[7:5]`     |Duty    |
+|`[4:3]`     |Phase   |
+|`[2:0]`     |Freq    |
 
 In Verilog syntax, the bitmask is:
 ```verilog
 wire [7:0] bitmask = {duty[2:0], phase[1:0], freq[2:0]};
 ```
 
-Freq Bits   Frequency
----------------------
-`0b000`     0.5 Hz
-`0b001`     1.0 Hz
-`0b010`     ~1.5 Hz
-`0b011`     2.0 Hz
-`0b100`     ~2.5 Hz
-`0b101`     ~3.0 Hz
-`0b110`     ~3.5 Hz
-`0b111`     4.0 Hz
+|Freq Bits   |Frequency|
+|------------|---------|
+|`0b000`     |0 Hz (staic) |
+|`0b001`     |0.5 Hz   |
+|`0b010`     |1.0 Hz   |
+|`0b011`     |2.0 Hz   |
+|`0b100`     |~3.0 Hz  |
+|`0b101`     |4.0 Hz   |
+|`0b110`     |~6.0 Hz  |
+|`0b111`     |8.0 Hz   |
 
-Phase Bits  Phase
------------------
-`0b00`      -90 deg
-`0b01`      0 deg
-`0b10`      90 deg
-`0b11`      180 deg
+|Phase Bits  |Phase   |
+|------------|--------|
+|`0b00`      |-90 deg |
+|`0b01`      |0 deg   |
+|`0b10`      |90 deg  |
+|`0b11`      |180 deg |
 
 _Note_: The absolute phase is arbitrary.  I list it this way to make the point below that for a 50% duty-cycle
 waveform, shifting by 180 degrees and inverting are the same operation.
 
-Duty Bits   Duty Cycle
-----------------------
-`0b000`     12.5 %
-`0b001`     25.0 %
-`0b010`     37.5 %
-`0b011`     50.0 %
-`0b100`     87.5 %  (12.5%, negated)
-`0b101`     75.0 %  (25.0%, negated)
-`0b110`     62.5 %  (37.5%, negated)
-`0b111`     50.0 %  (50.0%, negated - i.e. 180-degree phase shift)
+|Duty Bits   |Duty Cycle|
+|------------|----------|
+|`0b000`     |12.5%     |
+|`0b001`     |25.0%     |
+|`0b010`     |37.5%     |
+|`0b011`     |50.0%     |
+|`0b100`     |87.5% (12.5%, negated)|
+|`0b101`     |75.0% (25.0%, negated)|
+|`0b110`     |62.5% (37.5%, negated)|
+|`0b111`     |50.0% (50.0%, negated - i.e. 180-degree phase shift)|
 
 __NOTE__: Because of the degeneracy of inverting/negating a 50% duty-cycle waveform and shifting
-by 180 degrees, the values `0b11111xxx` are all mapped to "Static On" except for the special `0b11111111`
-reserved value (which maps to "Static Off").  Hence, the recommended `0xf8` value above for "Static On"
-could also be `0xf9` through `0xfe`.
+by 180 degrees, the values `0bxxxxx000` are all mapped to "Static On" except for the special `0b00000000`
+reserved value (which maps to "Static Off").  Hence, the recommended `0x80` value above for "Static On"
+could also be `0xf8`, `0xf0`, `0x10`, etc.
 
-Similarly, the selection of 12.5% duty cycle, -90 deg phase, 0.5 Hz (`0x00`) maps to "Static Off".  Unfortunately,
-only three phases (0 deg, 90 deg, 180 deg) are available for the slowest blink with shortest duty cycle.
+Similarly, the selection of 50.0% duty cycle (negated), 180 deg phase, 8.0 Hz (`0xff`) maps to "Static Off".  Fortunately,
+this is identical to the 50% duty cycle (not negated), 0 deg phase, 8.0 Hz (`0x6f`) waveform.
 
 __Common Bit Patterns__ for easy reference.
 
-Pattern     State
------------------
-`0x00`      Static Off
-`0xff`      Static Off
-`0xf8`      Static On
-`0xfe`      Static On
-`0x60`      Slow blink (0.5 Hz, 50% duty)
-`0x67`      Fast blink (2.0 Hz, 50% duty)
+|Pattern     |State     |
+|------------|----------|
+|`0x00`      |Static Off|
+|`0xff`      |Static Off|
+|`0x80`      |Static On |
+|`0x10`      |Static On |
+|`0x61`      |Slow blink (0.5 Hz, 50% duty)|
+|`0x67`      |Fast blink (8.0 Hz, 50% duty)|
 
 ### Slow GPIO (not supported)
 A future feature (not yet supported) is the possibility of using the Pmod pins not just as generic outputs

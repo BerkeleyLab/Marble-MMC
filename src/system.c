@@ -28,12 +28,12 @@
 
 #define PMOD_LED_NCHANS     (8)
 #define PMOD_LED_CHANMASK   ((1<<PMOD_LED_NCHANS)-1)
+#define PMOD_LED_CONST(v)     ((v == 0xff) || ((v & 7) == 0))
+#define PMOD_LED_NONCONST(v)  ((v != 0xff) && ((v & 7) != 0))
 #define PMOD_LED_UPDATE_NONCONST(pin, val) do { \
   pmod_led_nonconst = (pmod_led_nonconst & ~(1 << pin)) | (PMOD_LED_NONCONST(val) << pin);\
   } while (0)
 
-#define PMOD_LED_CONST(v)     ((v == 0x00) || ((v >> 3) == 0x1f))
-#define PMOD_LED_NONCONST(v)  ((v != 0x00) && ((v >> 3) != 0x1f))
 /* Our timer system will be a counter from 0-255
  * Each pin will have a count mask which will select a smaller
  * portion of the count window for higher frequencies
@@ -77,16 +77,15 @@ static unsigned int pmod_led_nonconst=0;
 Blink state machine is 256 time intervals.  Using modulo math, we
 can approximate a linear frequency range with the non-power-of-two
 divisions creating a small frequency/duty-cycle dither.
-256/1 = modulo 256    ->    2s = 0.5Hz
-256/2 = modulo 128    ->    1s = 1.0Hz
-256/3 = modulo 85     -> 0.66s = 1.5Hz
-256/4 = modulo 64     -> 0.50s = 2.0Hz
-256/5 = modulo 51     -> 0.40s = 2.5Hz
-256/6 = modulo 43     -> 0.33s = 3.0Hz
-256/7 = modulo 37     -> 0.29s = 3.5Hz
-256/8 = modulo 32     -> 0.25s = 4.0Hz
+256/1  = modulo 256    ->    2s = 0.5Hz
+256/2  = modulo 128    ->    1s = 1.0Hz
+256/4  = modulo 64     -> 0.50s = 2.0Hz
+256/6  = modulo 43     -> 0.33s = 3.0Hz
+256/8  = modulo 32     -> 0.25s = 4.0Hz
+256/12 = modulo 22     -> 0.17s = 6.0Hz
+256/16 = modulo 16     -> 0.13s = 8.0Hz
  */
-static const uint16_t pmod_led_modulo_map[] = {256, 128, 85, 64, 51, 43, 37, 32};
+static const uint16_t pmod_led_modulo_map[] = {0, 256, 128, 64, 43, 32, 22, 16};
 
 /* ====================== Static Function Prototypes ======================== */
 static void pmod_subsystem_init(void);
@@ -431,6 +430,13 @@ void system_handle_pmod_led(int val, int pin) {
 static void pmod_led_counts(uint8_t val, volatile pmod_led_t *pled) {
   int xx = PMOD_LED_FREQ(val);
   uint16_t modulo = pmod_led_modulo_map[xx];
+  if (modulo == 0) {
+    // This branch should not be reached, but let's make a safe exit if it is
+    pled->count_on = 0;
+    pled->count_off = 0;
+    pled->modulo = 1;
+    return;
+  }
   pled->modulo = (uint8_t)(modulo & 0xff);
   uint8_t offset = 0;
   xx = PMOD_LED_PHASE(val);
