@@ -93,6 +93,7 @@ extern "C" {
 #define FREQUENCY_SYSCLK    (((FREQUENCY_HSE/CONFIG_CLK_PLLM)*CONFIG_CLK_PLLN)/CONFIG_CLK_PLLP)
 
 #define UART_MSG_TERMINATOR                           ('\n')
+#define UART_ALT_MSG_TERMINATOR                       ('\r')
 #define UART_MSG_ABORT                                (27)  // esc
 #define UART_MSG_BKSP                                 (8)   // backspace
 #define UART_MSG_DEL                                  (128) // del
