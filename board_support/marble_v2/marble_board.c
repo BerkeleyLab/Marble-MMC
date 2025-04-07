@@ -360,14 +360,17 @@ void USART_RXNE_ISR(void) {
     } else {
       if ((c == UART_MSG_TERMINATOR) || (c == UART_ALT_MSG_TERMINATOR)) {
         if (UARTQUEUE_Status() != UART_QUEUE_EMPTY) {
-          c = UART_ALT_MSG_TERMINATOR;
-          UARTQUEUE_Add(&c);
           c = UART_MSG_TERMINATOR;
+          //UARTQUEUE_Add(&c);
+          //c = UART_ALT_MSG_TERMINATOR;
           if (UARTQUEUE_Add(&c) == UART_QUEUE_FULL) {
             UARTQUEUE_SetDataLost(UART_DATA_LOST);
             // Clear QUEUE at this point?
           }
           console_pend_msg();
+        } else {
+          // Don't print
+          return;
         }
       } else {
         if (UARTQUEUE_Add(&c) == UART_QUEUE_FULL) {
