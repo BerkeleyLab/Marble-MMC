@@ -25,7 +25,7 @@
 #define FAN_SPEED_MAX           (120)
 #define OVERTEMP_HARD_MAXIMUM   (125)
 
-const char unk_str[] = "> Unknown option\r\n";
+const char unk_str[] = "> Unknown option. Press '?' for help.\r\n";
 
 const char *menu_str[] = {"\r\n",
   "Build based on git commit " GIT_REV "\r\n",
@@ -100,6 +100,7 @@ static int sscanfUnsignedDecimal(const char *s, int len);
 static int sscanfUnsignedHex(const char *s, int len);
 static int sscanfUHexExact(const char *s, int len);
 static int sscanfMGTMUX(const char *s, int len);
+static int sscanfQuery(const char *rx_msg, int len);
 static int sscanfSpace(const char *s, int len);
 static int sscanfNonSpace(const char *s, int len);
 static int sscanfNext(const char *s, int len);
@@ -268,9 +269,15 @@ static int console_handle_msg(char *rx_msg, int len)
 }
 
 static int handle_msg_IP(char *rx_msg, int len) {
+  int query = sscanfQuery((const char *)rx_msg, len);
+  if (query) {
+    print_this_ip();
+    return 0;
+  }
+  int rval;
   uint8_t ip[IP_LENGTH];
   // NOTE: It seems like sscanf doesn't work so well in newlib-nano
-  int rval = sscanfIP(rx_msg, ip, len);
+  rval = sscanfIP(rx_msg, ip, len);
   if (rval) {
     printf("Malformed IP address. Fail.\r\n");
     return rval;
@@ -284,6 +291,11 @@ static int handle_msg_IP(char *rx_msg, int len) {
 }
 
 static int handle_msg_MAC(char *rx_msg, int len) {
+  int query = sscanfQuery((const char *)rx_msg, len);
+  if (query) {
+    print_this_mac();
+    return 0;
+  }
   uint8_t mac[MAC_LENGTH];
   int rval = sscanfMAC(rx_msg, mac, len);
   if (rval) {
@@ -299,9 +311,10 @@ static int handle_msg_MAC(char *rx_msg, int len) {
 }
 
 static int handle_msg_fan_speed(char *rx_msg, int len) {
+  int query = sscanfQuery((const char *)rx_msg, len);
   int speed, speedPercent;
   uint8_t readSpeed;
-  if (len < 4) {
+  if (query) {
     // Print the current value
     if (eeprom_read_fan_speed(&readSpeed, 1)) {
       printf("Could not read current fan speed.\r\n");
@@ -325,8 +338,9 @@ static int handle_msg_fan_speed(char *rx_msg, int len) {
 
 static int handle_msg_overtemp(char *rx_msg, int len) {
   // Overtemp is stored in MAX6639 as degrees C
+  int query = sscanfQuery((const char *)rx_msg, len);
   uint8_t otbyte;
-  if (len < 4) {
+  if (query) {
     if (eeprom_read_overtemp(&otbyte, 1)) {
       printf("Could not read current over-temperature threshold.\r\n");
     } else {
@@ -419,14 +433,14 @@ static uint8_t parse_boolean(char *rx_msg, int len) {
   //  r off Disable       0x02
   //  r on  Enable        0x03
   int en = 0;
-  int query = 0;
   char c;
   int doParse = 0;
   // 'doParse' 0 means unparsed; 1 means parse fail; 2 means parse success
   char arg[3];
   int argp = 0;
-  if (len < 4) {
-    query = 1;
+  int query = sscanfQuery((const char *)rx_msg, len);
+  if (query) {
+    return 0x01;
   }
   for (int n = 1; n < len; n++) {
     c = rx_msg[n];
@@ -446,6 +460,7 @@ static uint8_t parse_boolean(char *rx_msg, int len) {
           break;
         }
       } else if (c == '?') {
+        // Shouldn't hit this
         query = 1;
         break;
       }
@@ -485,7 +500,8 @@ static uint8_t parse_boolean(char *rx_msg, int len) {
 }
 
 static int handle_msg_MGTMUX(char *rx_msg, int len) {
-  if (len < 4) {
+  int query = sscanfQuery((const char *)rx_msg, len);
+  if (query) {
     printf("E.g. Set all MUXn pin states: h 1=1 2=0 3=0\r\n");
     printf("E.g. Set just MUX2 pin high (ignore others): h 2=1\r\n");
     printf("E.g. Read MGTMUX state: h ?\r\n");
@@ -653,14 +669,6 @@ static void print_this_ip(void) {
   print_ip(ip);
   return;
 }
-
-/*
-static void print_mac_ip(mac_ip_data_t *pmac_ip_data) {
-  print_mac(pmac_ip_data->mac);
-  print_ip(pmac_ip_data->ip);
-  return;
-}
-*/
 
 void console_pend_msg(void) {
   _msgCount++;
@@ -876,9 +884,9 @@ static int sscanfUnsignedDecimal(const char *s, int len) {
 }
 
 static int handle_msg_watchdog(char *rx_msg, int len) {
-  int index = sscanfNext(rx_msg, len);
+  int index = sscanfQuery((const char *)rx_msg, len);
   int val;
-  if (index < 0) {
+  if (index) {
     val = FPGAWD_GetPeriod();
     if (val == 0) {
       printf("Watchdog disabled (period = 0)\r\n");
@@ -887,6 +895,7 @@ static int handle_msg_watchdog(char *rx_msg, int len) {
     }
     return -1;
   }
+  index = sscanfNext(rx_msg, len);
   val = sscanfUnsignedDecimal((rx_msg + index), len-index);
   if (val < 0) {
     printf("Failed to parse\r\n");
@@ -1085,6 +1094,33 @@ static int sscanfNext(const char *s, int len) {
   return -1;
 }
 
+/* static int sscanfQuery(const char *rx_msg, int len);
+ *    Return 1 if rx_msg represents a query, defined as:
+ *      "x"       // Single control char
+ *      "x?"      // Control char followed by '?'
+ *      "x  \t\n" // Control char followed by any amount of whitespace
+ *      "x ?"     // Control char, whitespace, then '?'
+ *    Else, return 0
+ *    Note that the first character is skipped (assumed to be some type
+ *    of control character vetted external to this function).
+ */
+static int sscanfQuery(const char *rx_msg, int len) {
+  int query = 0;
+  // Check for query
+  if (len <= 1) {
+    query = 1;
+  } else {
+    // Re-using the same int. Being extra stingy with stack space
+    query = sscanfNonSpace((const char *)(rx_msg+1), len-1);
+    if ((query < 0) || (rx_msg[query+1] == '?')) {
+      query = 1;
+    } else {
+      query = 0;
+    }
+  }
+  return query;
+}
+
 static int handle_msg_fsynth(const char *s, int len) {
   // Input string format:
   //  s cc 40000 1
@@ -1170,18 +1206,9 @@ static int handle_pmod_mode(char *rx_msg, int len) {
   //   "x 2"    -> Set pmod_mode = PMOD_MODE_LED
   //   "x 3"    -> Set pmod_mode = PMOD_MODE_GPIO
   //   "x 4"    -> Invalid; error
-  int query = 0;
-  int index = sscanfNext(rx_msg+1, len) + 1;
-  int mode = -1;
+  int query = sscanfQuery((const char *)rx_msg, len);
   const char *modestr;
   pmod_mode_t pmod_mode;
-  if ((len < 2) || (index <= 0) || (index == len)) {
-    query = 1;
-  } else if (rx_msg[index] == '?') {
-    query = 1;
-  } else {
-    mode = sscanfUnsignedDecimal(rx_msg+index, len-index);
-  }
   if (query) {
     pmod_mode = system_get_pmod_mode();
     modestr = pmod_mode_string(pmod_mode);
@@ -1192,7 +1219,11 @@ static int handle_pmod_mode(char *rx_msg, int len) {
       printf("    %d: %s\r\n", n, pmod_mode_string((pmod_mode_t)n));
     }
     return 0;
-  } else if ((mode < 0) || (mode >= PMOD_MODE_SIZE)) {
+  } 
+  int mode = -1;
+  int index = sscanfNext(rx_msg+1, len) + 1;
+  mode = sscanfUnsignedDecimal(rx_msg+index, len-index);
+  if ((mode < 0) || (mode >= PMOD_MODE_SIZE)) {
     printf("Invalid option. Valid choices are (%d-%d).\r\n", PMOD_MODE_DISABLED, PMOD_MODE_SIZE-1);
     return -1;
   } else {
