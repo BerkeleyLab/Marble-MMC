@@ -1024,7 +1024,7 @@ void marble_MDIO_write(uint16_t reg, uint32_t data)
 uint32_t marble_MDIO_read(uint16_t reg)
 {
    uint32_t value;
-   printf("\r\nPHYread Stat: %d\r\n", HAL_ETH_ReadPHYRegister(&heth, reg, &value));
+   HAL_ETH_ReadPHYRegister(&heth, reg, &value);
    return value;
 }
 

@@ -31,7 +31,7 @@ const char *menu_str[] = {"\r\n",
   "Build based on git commit " GIT_REV "\r\n",
   "Menu:\r\n",
   "0 - Show board/chip identification\r\n"
-  "1 - MDIO/PHY\r\n",
+  "1 [-v] - Show MDIO/PHY Status (-v for verbose output)\r\n",
   "2 - I2C monitor\r\n",
   "3 - Status & counters\r\n",
   "4 gpio - GPIO control\r\n",
@@ -78,6 +78,7 @@ static void ina219_test(void);
 static void handle_gpio(const char *msg, int len);
 static int toggle_gpio(char c);
 static uint8_t parse_boolean(char *rx_msg, int len);
+static int handle_mdio_phy_print(char *rx_msg, int len);
 static int handle_msg_IP(char *rx_msg, int len);
 static int handle_msg_MAC(char *rx_msg, int len);
 static int handle_msg_fan_speed(char *rx_msg, int len);
@@ -132,7 +133,7 @@ static int console_handle_msg(char *rx_msg, int len)
            marble_print_pcb_rev();
            break;
         case '1':
-           phy_print();
+           handle_mdio_phy_print(rx_msg, len);
            break;
         case '2':
            I2C_PM_probe();
@@ -265,6 +266,26 @@ static int console_handle_msg(char *rx_msg, int len)
            printf(unk_str);
            break;
      }
+  return 0;
+}
+
+static int handle_mdio_phy_print(char *rx_msg, int len) {
+  int query = sscanfQuery((const char *)rx_msg, len);
+  int verbose = 0;
+  if (query) {
+    mdio_phy_print(verbose);
+    return 0;
+  }
+  int offset = sscanfNext((const char *)(rx_msg + 1), len-1) + 1;
+  if (offset < len) {
+    if (rx_msg[offset] == 'v') verbose = 1;
+    else if (rx_msg[offset] == '-') {
+      if (((offset+1) < len) && (rx_msg[offset+1] == 'v')) {
+        verbose = 1;
+      }
+    }
+  }
+  mdio_phy_print(verbose);
   return 0;
 }
 
