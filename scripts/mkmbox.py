@@ -562,6 +562,7 @@ class MailboxInterface():
             self._fd = open(self._hfilename, 'w')
             print("Writing to {}".format(self._hfilename))
         except (TypeError, OSError):
+            print(f"WARNING: Can't write to {self._hfilename}")
             self._fd = None
         if self._hfilename is None:
             filestem = self._prefix
@@ -794,7 +795,7 @@ def test_getShiftOR(argv):
     print(MailboxInterface._getShiftOR(fmt, size))
     return 0
 
-def makeHeader(argv):
+def main(argv):
     parser = argparse.ArgumentParser(description="JSON-ish mailbox defintion interface")
     parser.add_argument('-d', '--def_file', default=None, help='File name for mailbox definition file to be loaded')
     ofilehelp = ("File name for generated header file. If filename ends in '.h', generates a header file only. "
@@ -847,7 +848,7 @@ def makeHeader(argv):
         print(ihash)
         return 0
     mbox.interpret()
-    print(mbox)
+    #print(mbox)
     if makeh:
         mbox.makeHeader()
     if makes:
@@ -863,4 +864,4 @@ if __name__ == "__main__":
     #sys.exit(testJSONRead(sys.argv))
     #test_extractNumber(sys.argv)
     #test_getShiftOR(sys.argv)
-    sys.exit(makeHeader(sys.argv))
+    sys.exit(main(sys.argv))

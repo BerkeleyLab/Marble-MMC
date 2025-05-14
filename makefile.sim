@@ -81,6 +81,11 @@ SOURCES := $(SIM_SOURCES)
 include $(BUILD_DIR)/sources.mk
 SOURCES := $(filter-out $(IGNORES), $(SOURCES))
 
+
+# Include platform-agnostic auto-generated code
+include makefile.autogen
+
+
 $(info OLED_SOURCES=$(OLED_SOURCES))
 
 # Translate this list of sources into a list of required objects
@@ -140,18 +145,6 @@ $(OUTPUT_DIR)/$(PROJECT_NAME): $(OBJECTS) $(LINKERS)
 	@$(ECHO)
 	$(SIZE) $@
 	@$(ECHO)
-
-# =============== Auto-Generated Mailbox Interface ================
-MKMBOX=scripts/mkmbox.py
-MBOX_DEF=mailbox_def
-MBOX_DOC=mailbox.md
-$(OUTPUT_DIR)/src/mailbox.o: $(SOURCE_DIR)/$(MBOX_DEF).c $(INCLUDE_DIR)/$(MBOX_DEF).h
-
-$(INCLUDE_DIR)/$(MBOX_DEF).h: $(INCLUDE_DIR)/mbox.def $(MKMBOX)
-	python3 $(MKMBOX) -d $< -o $@
-
-$(SOURCE_DIR)/$(MBOX_DEF).c: $(INCLUDE_DIR)/mbox.def
-	python3 $(MKMBOX) -d $< -o $@
 
 WRAPPER=$(OUTPUT_DIR)/ptywrap
 $(WRAPPER): $(BOARD)/ptywrap.c
