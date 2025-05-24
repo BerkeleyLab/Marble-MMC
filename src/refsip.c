@@ -8,7 +8,9 @@
 #include <string.h>
 #include <stdlib.h>
 // Work around Debian bug 1067692
+#ifdef __arm__
 #include <sys/_stdint.h>
+#endif
 // Using PRIx32/PRIx64 for cross-platform compatibility (sim vs target)
 #include <inttypes.h>
 
