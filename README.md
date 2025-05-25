@@ -1,3 +1,30 @@
+# Marble MMC code
+
+This code base runs on the microcontroller ("MMC") of a Marble-series FPGA board,
+implementing application-independent board-level features.  Supported boards are
+  * [Marble-Mini](https://github.com/BerkeleyLab/Marble-Mini) and its LPC1776
+  * [Marble](https://github.com/BerkeleyLab/Marble) and its STM32F207
+
+plus host-only simulation features for testing/development; see Simulated Target below.
+
+Its main interfaces are
+  * (USB) UART
+  * SPI bus to FPGA
+  * I2C to on-board peripherals
+  * Parallel I/O to control some board features
+
+While the boards themselves have Ethernet connectivity, that's operated by the FPGA,
+not the microcontroller.
+
+In the expected use-case, you will configure the board (e.g., IP and MAC) once
+using the USB UART, and then let the microcontroller operate in the background
+without you paying it any attention.
+
+While we use the name "MMC" here, and the Marble-Mini has an (unproven) option
+to operate as a microTCA card, there is no microTCA functionality (like IPMI)
+in this code base.
+
+## Credits
 Originally based on lpc-toolchain. See its [README here](README-lpc-toolchain.md).
 
 Pro-tip: People using Debian Buster (and related Linux distributions) can
@@ -132,7 +159,7 @@ u period - Set/get watchdog timeout period (in seconds)
 v key - Set a new 128-bit secret key (non-volatile, write only)
 ```
 
-Addtitional documentation of features:
+Additional documentation of features:
 
   * [Mailbox](doc/mailbox.md)
   * [Watchdog](watchdog.md)
