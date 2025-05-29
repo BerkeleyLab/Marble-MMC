@@ -12,8 +12,12 @@
 #include "ltm4673.h"
 #include "watchdog.h"
 
+#undef UI_BOARD_SUPPORTED
+
 #ifdef MARBLE_V2
+// NOTE - Support for the oled UI board will be re-introduced once licensing has been ironed out
 // NOTE - Currently only supported on Marble (not Marble-mini)
+// #define UI_BOARD_SUPPORTED
 #include "display.h"
 #endif
 
@@ -314,8 +318,10 @@ static void system_pmod_mode_disabled(void) {
 }
 
 static void system_pmod_mode_ui_board(void) {
-#ifdef MARBLE_V2
+#ifdef UI_BOARD_SUPPORTED
   display_init();
+#else
+  printf("*** UI board support disabled for this build!  Please update MMC image to use this feature ***\r\n");
 #endif
   system_pmod_timer_disable();
   return;
@@ -549,7 +555,7 @@ static void pmod_subsystem_service(void) {
       // Nothing to do
       break;
     case PMOD_MODE_UI_BOARD:
-#ifdef MARBLE_V2
+#ifdef UI_BOARD_SUPPORTED
       display_update();
 #endif
       break;

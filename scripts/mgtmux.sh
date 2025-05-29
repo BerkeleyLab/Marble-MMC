@@ -31,7 +31,7 @@ for arg in "$@"; do
 done
 
 if [ "$help" != 0 ]; then
-  echo "Usage: PYTHONPATH=bedrock/badger $0 [-h] [-d \$TTY_MMC] muxstate"
+  echo "Usage: $0 [-h] [-d \$TTY_MMC] muxstate"
   echo "  If environment variable TTY_MMC is defined, it will be used as the TTY_MMC address"
   echo "  unless overridden by '-d \$TTY_MMC' argument."
   echo "  'muxstate' can be string of one or more assignments, 1=x 2=x 3=x (where x=1,0)"
