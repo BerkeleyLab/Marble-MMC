@@ -4,10 +4,23 @@ Marble and Marble-Mini FPGA FMC carrier boards.  The MMC handles board managemen
 functions deliberately isolated from the FPGA to fulfill the "unbrickability"
 promise of the Marble family.
 
-The MMC communicates with a host computer (typically a human using said computer) over UART via Marble's
-FTDI channel 4 of 4 (i.e. `/dev/ttyUSB3`) via a text-based console interface.
+Supported boards are
+  * [Marble-Mini](https://github.com/BerkeleyLab/Marble-Mini) and its LPC1776
+  * [Marble](https://github.com/BerkeleyLab/Marble) and its STM32F207
+
+plus host-only simulation features for testing/development; see Simulated Target below.
+
+The MMC communicates with a host computer (typically a human using said computer) over UART via
+the board's FTDI channel 4 of 4 (i.e. `/dev/ttyUSB3`) via a text-based console interface.
 The MMC also communicates with the FPGA via a page-based [mailbox system](doc/mailbox.md) carried over
 the dedicated SPI bus between the two chips.
+
+While the boards themselves have Ethernet connectivity, that's operated by the FPGA,
+not the microcontroller.
+
+While we use the name "MMC" here, and the Marble-Mini has an (unproven) option
+to operate as a microTCA card, there is no microTCA functionality (like IPMI)
+in this code base.
 
 ## Dependencies
 - `gcc` (compiler for host-based "sim" target)
@@ -15,10 +28,10 @@ the dedicated SPI bus between the two chips.
 - `make` (GNU Make for build automation)
 - `openocd` (for board programming)
 - `python3` (for scripts and code auto-generation)
-- `bash` (for scripts)
+- `sh` (for scripts; POSIX-compatible)
 
 ## Marble Console Interface
-To connect to the console interface of a Marble board, connect to the Marble's USB micro-B
+To connect to the console interface of a Marble or Marble-Mini board, connect to the USB micro-B
 connector (J10) and to your host computer.  The computer will enumerate 4 USB serial devices
 (typically labeled `/dev/ttyUSBx` on Linux or `COMx` on Windows, where 'x' is a number).
 Open a terminal emulator (e.g. miniterm, minicom, or even the serial interface in the Arduino GUI!)
@@ -37,13 +50,14 @@ Non-volatile configuration parameters include:
 - Mailbox interface enable/disable
 - Speed of fans connected to M1 & M2
 - Over-temperature shutdown threshold
-- MGT transceiver multiplexer settings
-- Identifying information for the Si570 frequency synthesizer
 - Watchdog configuration
 - Pmod connector J16 function
 
-## Marble-Mini
+Additional for Marble only:
+- MGT transceiver multiplexer settings
+- Identifying information for the Si570 frequency synthesizer
 
+## Credits
 Originally based on lpc-toolchain. See its [README here](README-lpc-toolchain.md).
 
 Pro-tip: People using Debian Buster (and related Linux distributions) can
@@ -181,7 +195,7 @@ w enable - Set fan tachometer enable/disable (1/0, on/off)
 x mode - Set MMC Pmod usage mode
 ```
 
-Addtitional documentation of features:
+Additional documentation of features:
 
   * [Mailbox](doc/mailbox.md)
   * [Watchdog](watchdog.md)
@@ -210,5 +224,3 @@ such, the U.S. Government has been granted for itself and others acting on
 its behalf a paid-up, nonexclusive, irrevocable, worldwide license in the
 Software to reproduce, distribute copies to the public, prepare derivative
 works, and perform publicly and display publicly, and to permit others to do so.
-
-
