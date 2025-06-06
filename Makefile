@@ -10,6 +10,12 @@ marble_download:
 marble_clean:
 	make -f makefile.board BOARD=marble clean
 
+marble_gdb:
+	make -f makefile.board BOARD=marble gdb
+
+marble_reset:
+	make -f makefile.board BOARD=marble reset
+
 marble_mini:
 	make -f makefile.board BOARD=marble_mini all
 
@@ -19,11 +25,8 @@ marble_mini_download:
 marble_mini_clean:
 	make -f makefile.board BOARD=marble_mini clean
 
-marble_gdb:
-	make -f makefile.board BOARD=marble gdb
-
-marble_reset:
-	make -f makefile.board BOARD=marble reset
+marble_mini_gdb:
+	make -f makefile.board BOARD=marble_mini gdb2
 
 nucleo:
 	make -f makefile.board BOARD=nucleo all

@@ -33,7 +33,7 @@
 #include "string.h"
 #include "uart_fifo.h"
 #include "console.h"
-#include "st-eeprom.h"
+#include "eeprom.h"
 #include "i2c_pm.h"
 #include "i2c_fpga.h"
 #include "ltm4673.h"

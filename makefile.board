@@ -219,10 +219,21 @@ gdbscript:
 	@$(ECHO) "# Enable semihosting" >> gdbscript
 	@$(ECHO) "monitor semihosting enable" >> gdbscript
 
+ifeq ($(BOARD), marble_mini)
+GDBSCRIPT=gdbscript_lpc
+else
+GDBSCRIPT=gdbscript_stm32
+endif
+
 .PHONY: gdb
 gdb:
 	$(GDB) -ex "target remote | $(OPENOCD) -f $(PROG_DIR)/ocd/$(OCD_CONF) -c 'gdb_port pipe; log_output $(PROG_DIR)/openocd.log'" \
-				 -x $(PROG_DIR)/gdbscript_stm32 $(OUTPUT_ELF)
+				 -x $(PROG_DIR)/$(GDBSCRIPT) $(OUTPUT_ELF) arm-core.xml
+
+.PHONY: gdb2
+gdb2:
+	$(GDB) -ex "target extended-remote | $(OPENOCD) -f $(PROG_DIR)/ocd/$(OCD_CONF) -c 'gdb_port pipe; log_output $(PROG_DIR)/openocd.log'" \
+				 -x $(PROG_DIR)/$(GDBSCRIPT) $(OUTPUT_ELF)
 
 # Removes everything in the output directory
 #

@@ -80,6 +80,7 @@ all: $(OUTPUT_DIR)/$(PROJECT_NAME)
 SOURCES := $(SIM_SOURCES)
 include $(BUILD_DIR)/sources.mk
 SOURCES := $(filter-out $(IGNORES), $(SOURCES))
+SOURCES+=$(SOURCE_DIR)/eeprom_emu.c
 
 
 # Include platform-agnostic auto-generated code

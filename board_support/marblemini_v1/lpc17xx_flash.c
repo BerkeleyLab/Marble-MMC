@@ -7,12 +7,15 @@
  */
 #include "common.h"
 #include "flash.h"
-#include "st-eeprom.h"
+#include "eeprom.h"
 
 ee_frame eeprom0_base;    // Should be defined in linker file when implemented
 ee_frame eeprom1_base;    // Should be defined in linker file when implemented
 
+// Chip_EEPROM_Read(LPC_EEPROM, 0, PAGE_ADDR, ptr, EEPROM_RWSIZE_8BITS, EEPROM_PAGE_SIZE);
+
 int fmc_flash_init(void) {
+  Chip_EEPROM_Init(LPC_EEPROM);
   return 0;
 }
 

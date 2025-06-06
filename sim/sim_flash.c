@@ -7,7 +7,7 @@
 #include <string.h>
 #include "marble_api.h"
 #include "flash.h"
-#include "st-eeprom.h"
+#include "eeprom.h"
 
 #define FLASH_SECTOR_SIZE_WORDS         (FLASH_SECTOR_SIZE/4)
 #define FLASH_SECTOR_SIZE_STRAY_BYTES   (FLASH_SECTOR_SIZE%4)

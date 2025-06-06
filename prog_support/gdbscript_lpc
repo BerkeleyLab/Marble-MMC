@@ -1,0 +1,10 @@
+# Load our .elf file into GDB
+#file out_marble_mini/marble_mmc_lpc1776.elf
+# Define a target description to override the lpc-link default
+#set tdesc filename arm-core.xml
+# Required for semihosting
+set mem inaccessible-by-default off
+# Connect to the debug server launched by make lpc-link
+#target extended-remote
+# Enable semihosting
+monitor arm semihosting enable

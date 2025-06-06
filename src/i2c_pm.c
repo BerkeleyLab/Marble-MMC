@@ -6,7 +6,7 @@
 #include "max6639.h"
 #include "math.h"
 #include "ltm4673.h"
-#include "st-eeprom.h"
+#include "eeprom.h"
 
 /* ============================= Helper Macros ============================== */
 /* ============================ Static Variables ============================ */

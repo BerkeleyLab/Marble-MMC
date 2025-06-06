@@ -14,7 +14,7 @@
 #include "marble_api.h"
 #include "console.h"
 #include "uart_fifo.h"
-#include "st-eeprom.h"
+#include "eeprom.h"
 #include "sim_api.h"
 #include "sim_lass.h"
 

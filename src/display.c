@@ -9,7 +9,7 @@
 #include "frame_buffer.h"
 #include "ssd1322.h"
 #include "gui.h"
-#include "st-eeprom.h"
+#include "eeprom.h"
 #include "marble_api.h"
 #include "console.h"
 #include "i2c_fpga.h"

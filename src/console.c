@@ -16,7 +16,7 @@
 #include "i2c_pm.h"
 #include "i2c_fpga.h"
 #include "uart_fifo.h"
-#include "st-eeprom.h"
+#include "eeprom.h"
 #include "ltm4673.h"
 #include "watchdog.h"
 
@@ -115,6 +115,7 @@ static const char *pmod_mode_string(pmod_mode_t mode);
 
 int console_init(void) {
   _msgCount = 0;
+  _fpgaEnable = 0;
   return 0;
 }
 

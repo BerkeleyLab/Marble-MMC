@@ -4,7 +4,7 @@
 
 #include "marble_api.h"
 #include "console.h"
-#include "st-eeprom.h"
+#include "eeprom.h"
 #include "i2c_pm.h"
 #include "mailbox.h"
 #include "rev.h"

@@ -9,7 +9,7 @@
 #include "refsip.h"
 #include "common.h"
 #include "string.h"
-#include "st-eeprom.h"
+#include "eeprom.h"
 #include <stdio.h>
 
 //#define DEBUG_PRINT

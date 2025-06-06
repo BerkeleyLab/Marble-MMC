@@ -5,7 +5,7 @@
 #include "max6639.h"
 #include "watchdog.h"
 #include "rev.h"
-#include "st-eeprom.h"
+#include "eeprom.h"
 
 /* ============================= Helper Macros ============================== */
 // Define SPI_SWITCH to re-route SPI bound for FPGA to Pmod for debugging
