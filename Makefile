@@ -48,12 +48,21 @@ doc:
 sim:
 	make -f makefile.sim BOARD=sim all
 
+.PHONY: mini_sim
+mini_sim:
+	make -f makefile.sim BOARD=sim MINI=mini all
+
+.PHONY: sim_clean
 sim_clean:
 	make -f makefile.sim BOARD=sim clean
 
 .PHONY: run
 run:
 	make -f makefile.sim BOARD=sim run
+
+.PHONY: mini_run
+mini_run:
+	make -f makefile.sim BOARD=sim MINI=mini run
 
 .PHONY: wrap
 wrap:

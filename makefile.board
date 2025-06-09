@@ -82,6 +82,7 @@ GDB=gdb-multiarch
 # Binaries supplied with LPCXpresso used for downloading.
 #
 OPENOCD         = openocd
+#OPENOCD = ~/sw/openocd/bin/openocd
 
 
 # Compilation Flags
@@ -232,7 +233,7 @@ gdb:
 
 .PHONY: gdb2
 gdb2:
-	$(GDB) -ex "target extended-remote | $(OPENOCD) -f $(PROG_DIR)/ocd/$(OCD_CONF) -c 'gdb_port pipe; log_output $(PROG_DIR)/openocd.log'" \
+	$(GDB) -s "~/sw/openocd/share/openocd/scripts" -ex "target extended-remote | $(OPENOCD) -f $(PROG_DIR)/ocd/$(OCD_CONF) -c 'gdb_port pipe; log_output $(PROG_DIR)/openocd.log'" \
 				 -x $(PROG_DIR)/$(GDBSCRIPT) $(OUTPUT_ELF)
 
 # Removes everything in the output directory

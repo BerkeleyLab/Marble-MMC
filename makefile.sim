@@ -29,8 +29,9 @@ include dir_list.mk
 #
 # Edit the project name, chip, includes directories and so on in this file.
 #
+MINI?=
 include $(BUILD_DIR)/$(BOARD).conf
-OUTPUT_DIR := out_$(BOARD)
+OUTPUT_DIR := out_$(MINI)$(BOARD)
 
 # Shell Commands
 #
@@ -80,14 +81,15 @@ all: $(OUTPUT_DIR)/$(PROJECT_NAME)
 SOURCES := $(SIM_SOURCES)
 include $(BUILD_DIR)/sources.mk
 SOURCES := $(filter-out $(IGNORES), $(SOURCES))
-SOURCES+=$(SOURCE_DIR)/eeprom_emu.c
 
+ifeq ($(MINI), mini)
+SOURCES+=$(BSP_DIR)/marblemini_v1/lpc_eeprom.c
+else
+SOURCES+=$(SOURCE_DIR)/eeprom_emu.c
+endif
 
 # Include platform-agnostic auto-generated code
 include makefile.autogen
-
-
-$(info OLED_SOURCES=$(OLED_SOURCES))
 
 # Translate this list of sources into a list of required objects
 # in the output directory

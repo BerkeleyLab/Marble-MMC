@@ -22,32 +22,52 @@ extern "C" {
   #include <errno.h>
   #include <time.h>
 
-  #define SIM_FLASH_FILENAME                           "flash.bin"
-  #define FLASH_SECTOR_SIZE                                  (256)
-  #define EEPROM_COUNT ((size_t)FLASH_SECTOR_SIZE/sizeof(ee_frame))
-
-  #define DEMO_STRING                 "Marble UART Simulation\r\n"
-  #define BSP_GET_SYSTICK()     (uint32_t)((uint64_t)clock()/40)
+  #define DEMO_STRING                  "Marble UART Simulation\r\n"
+  #define BSP_GET_SYSTICK()        (uint32_t)((uint64_t)clock()/40)
 
   #define MGT_MAX_PINS 0
+
+  #define CONSOLE_USART_TX_DATA_READY()                         (0)
+  #define CONSOLE_USART_ENABLE_TXE_IRQ()
+  #define CONSOLE_USART_DISABLE_TXE_IRQ()
+  #define CONSOLE_USART_RX_DATA_AVAILABLE()                     (0)
+  #define CONSOLE_USART_GET_RX_CHAR()                         ('x')
+  #define CONSOLE_USART_WRITE_TX_CHAR(c)
 
 #else /* ndef SIMULATION */
 
   #ifdef MARBLEM_V1
+    #include "chip.h"
     #define MGT_MAX_PINS 0
     #define DEMO_STRING           "Marble Mini v1 UART Console\r\n"
+
+    #define CONSOLE_USART                                 LPC_UART0
+    #define CONSOLE_USART_IRQn                           UART0_IRQn
+    #define CONSOLE_USART_RX_DATA_AVAILABLE()   ((CONSOLE_USART->LSR & UART_LSR_RDR) == UART_LSR_RDR)
+    #define CONSOLE_USART_GET_RX_CHAR()         ((uint8_t)(CONSOLE_USART->RBR & (uint8_t)0x00FF))
+    #define CONSOLE_USART_TX_DATA_READY()       ((CONSOLE_USART->LSR & UART_LSR_THRE) == UART_LSR_THRE)
+    #define CONSOLE_USART_WRITE_TX_CHAR(c)      (CONSOLE_USART->THR = (uint32_t)c)
+    #define CONSOLE_USART_DISABLE_TXE_IRQ()     (CLEAR_BIT(CONSOLE_USART->IER, UART_IER_THREINT))
+    #define CONSOLE_USART_ENABLE_TXE_IRQ()      (SET_BIT(CONSOLE_USART->IER, UART_IER_THREINT))
   #else /* ndef MARBLEM_V1 */
+    #include "stm32f2xx_hal.h"
     #ifdef MARBLE_V2
     #define MGT_MAX_PINS 3
     #define DEMO_STRING               "Marble v2 UART Console\r\n"
+
+    #ifdef NUCLEO
+      #define CONSOLE_USART                                    USART3
+    #else /* ndef NUCLEO */
+      #define CONSOLE_USART                                    USART1
+    #endif /* NUCLEO */
+    #define CONSOLE_USART_RX_DATA_AVAILABLE()   ((CONSOLE_USART->SR & USART_SR_RXNE) == USART_SR_RXNE)
+    #define CONSOLE_USART_GET_RX_CHAR()         ((uint8_t)(CONSOLE_USART->DR & (uint8_t)0x00FF))
+    #define CONSOLE_USART_TX_DATA_READY()       ((CONSOLE_USART->SR & USART_SR_TXE) == USART_SR_TXE)
+    #define CONSOLE_USART_WRITE_TX_CHAR(c)      (CONSOLE_USART->DR = (uint32_t)c)
+    #define CONSOLE_USART_DISABLE_TXE_IRQ()     (CLEAR_BIT(CONSOLE_USART->CR1, USART_CR1_TXEIE))
+    #define CONSOLE_USART_ENABLE_TXE_IRQ()      (SET_BIT(CONSOLE_USART->CR1, USART_CR1_TXEIE))
     #endif /* MARBLE_V2 */
   #endif /* MARBLEM_V1 */
-
-  #ifdef NUCLEO
-    #define CONSOLE_USART                                    USART3
-  #else /* ndef NUCLEO */
-    #define CONSOLE_USART                                    USART1
-  #endif /* NUCLEO */
 
   #ifdef RTEMS_SUPPORT
     #include <rtems.h>
@@ -171,12 +191,6 @@ void cleanup(void);
 * UART
 ****/
 void marble_UART_init(void);
-
-int marble_UART_send(const char *str, int size);
-
-int marble_UART_recv(char *str, int size);
-
-void CONSOLE_USART_ISR(void);
 
 /****
 * LED

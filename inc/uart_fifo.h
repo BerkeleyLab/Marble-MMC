@@ -47,7 +47,10 @@ uint8_t UARTTXQUEUE_Get(volatile uint8_t *item);
 uint8_t UARTTXQUEUE_Status(void);
 int USART_Tx_LL_Queue(char *msg, int len);
 int USART_Rx_LL_Queue(volatile char *msg, int len);
-
+void USART_RXNE_ISR(void);
+void USART_TXE_ISR(void);
+int marble_UART_send(const char *str, int size);
+int marble_UART_recv(char *str, int size);
 
 #ifdef __cplusplus
 }

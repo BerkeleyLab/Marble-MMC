@@ -47,6 +47,8 @@ uint8_t *get_last_ip(void);
 void set_last_mac(const uint8_t *mac);
 uint8_t *get_last_mac(void);
 
+void CONSOLE_USART_ISR(void);
+
 #ifdef __cplusplus
 }
 #endif

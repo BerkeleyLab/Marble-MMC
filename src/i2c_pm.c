@@ -7,6 +7,7 @@
 #include "math.h"
 #include "ltm4673.h"
 #include "eeprom.h"
+#include "uart_fifo.h"
 
 /* ============================= Helper Macros ============================== */
 /* ============================ Static Variables ============================ */

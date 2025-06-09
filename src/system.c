@@ -179,6 +179,8 @@ void system_service(void) {
   console_service();
 
   pmod_subsystem_service();
+
+  eeprom_update();
   return;
 }
 

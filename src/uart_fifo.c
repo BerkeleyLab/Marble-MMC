@@ -4,6 +4,7 @@
 
 #include "uart_fifo.h"
 #include "marble_api.h"
+#include "console.h"
 
 #define BLOCK_TX_ON_FULL
 #define USART_TX_RETRY_TIMEOUT_MS   (1000)
@@ -25,6 +26,10 @@ typedef struct {
 
 // ============================ Private Prototypes =============================
 static int _USART_Tx_RetryOnEmpty(uint8_t *c);
+#ifdef UART_ECHO
+static void USART_Erase_Echo(void);
+static void USART_Erase(int n);
+#endif
 
 // ============================= Private Variables =============================
 static UART_queue_t UART_queue;
@@ -325,4 +330,124 @@ int USART_Rx_LL_Queue(volatile char *msg, int len) {
     }
   }
   return n;
+}
+
+/*
+ * void USART_RXNE_ISR(void);
+ *  A low-level ISR to pre-empt the STM32_HAL handler to catch
+ *  received bytes (TxE IRQ passes to HAL handler)
+ */
+void USART_RXNE_ISR(void) {
+  uint8_t c = 0;
+  if (CONSOLE_USART_RX_DATA_AVAILABLE()) {
+    // Don't clear flags; the RXNE flag is cleared automatically by read from DR
+    c = CONSOLE_USART_GET_RX_CHAR();
+    // Look for control characters first
+    if (c == UART_MSG_ABORT) {
+#ifdef UART_ECHO
+      USART_Erase_Echo();
+#endif
+      // clear queue
+      UARTQUEUE_Clear();
+    } else if (c == UART_MSG_BKSP) {
+#ifdef UART_ECHO
+      USART_Erase(1);
+#endif
+      UARTQUEUE_Rewind(1);
+    } else {
+      if ((c == UART_MSG_TERMINATOR) || (c == UART_ALT_MSG_TERMINATOR)) {
+        if (UARTQUEUE_Status() != UART_QUEUE_EMPTY) {
+          c = UART_MSG_TERMINATOR;
+          //UARTQUEUE_Add(&c);
+          //c = UART_ALT_MSG_TERMINATOR;
+          if (UARTQUEUE_Add(&c) == UART_QUEUE_FULL) {
+            UARTQUEUE_SetDataLost(UART_DATA_LOST);
+            // Clear QUEUE at this point?
+          }
+          console_pend_msg();
+        } else {
+          // Don't print
+          return;
+        }
+      } else {
+        if (UARTQUEUE_Add(&c) == UART_QUEUE_FULL) {
+          UARTQUEUE_SetDataLost(UART_DATA_LOST);
+          // Clear QUEUE at this point?
+        }
+      }
+#ifdef UART_ECHO
+      marble_UART_send((const char *)&c, 1);
+#endif
+    }
+  }
+  return;
+}
+
+void USART_TXE_ISR(void) {
+  uint8_t outByte;
+  // Send more data if the queue is not empty
+  if (CONSOLE_USART_TX_DATA_READY()) {
+    if (UARTTXQUEUE_Get(&outByte) != UARTTX_QUEUE_EMPTY) {
+      // Write new char to DR
+      CONSOLE_USART_WRITE_TX_CHAR(outByte);
+    } else {
+      // If the queue is empty, disable the TXE interrupt
+      CONSOLE_USART_DISABLE_TXE_IRQ();
+    }
+  }
+  return;
+}
+
+#ifdef UART_ECHO
+/*
+ * void USART_Erase_Echo(void);
+ *  Print 1 backspace for every char in the queue
+ */
+static void USART_Erase_Echo(void) {
+  USART_Erase(0);
+  return;
+}
+
+static void USART_Erase(int n) {
+  int fill = UARTQUEUE_FillLevel();
+  // If n = 0, erase all in queue
+  if (n == 0) {
+    n = fill;
+  } else {
+    // n = min(n, fill)
+    n = n > fill ? fill : n;
+  }
+  // First issue backspaces
+  char bksps[n];
+  for (int m = 0; m < n; m++) {
+    bksps[m] = UART_MSG_BKSP;
+  }
+  marble_UART_send((const char *)bksps, n);
+  // Then overwrite with spaces
+  for (int m = 0; m < n; m++) {
+    bksps[m] = ' ';
+  }
+  marble_UART_send((const char *)bksps, n);
+  // Then issue backspaces again
+  for (int m = 0; m < n; m++) {
+    bksps[m] = UART_MSG_BKSP;
+  }
+  marble_UART_send((const char *)bksps, n);
+  return;
+}
+#endif // ifdef UART_ECHO
+
+/* Send string over UART. Returns number of bytes sent */
+int marble_UART_send(const char *str, int size)
+{
+  int txnum = USART_Tx_LL_Queue((char *)str, size);
+  // Kick off the transmission if the TX buffer is empty
+  if (CONSOLE_USART_TX_DATA_READY()) {
+    CONSOLE_USART_ENABLE_TXE_IRQ();
+  }
+  return txnum;
+}
+
+int marble_UART_recv(char *str, int size) {
+  return USART_Rx_LL_Queue((volatile char *)str, size);
 }

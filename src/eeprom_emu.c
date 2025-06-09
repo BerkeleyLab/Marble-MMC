@@ -28,16 +28,16 @@
 #include "eeprom_emu.h"
 
 #ifndef SIMULATION
-// assigned in linker script
-// symbol value (address) is really a size in bytes
-#ifdef MARBLE_V2
-extern const char eeprom_size;
-
-#define EEPROM_COUNT ((size_t)&eeprom_size/sizeof(ee_frame))
+  #ifdef MARBLE_V2
+    // assigned in linker script
+    // symbol value (address) is really a size in bytes
+    extern const char eeprom_size;
+    #define EEPROM_COUNT ((size_t)&eeprom_size/sizeof(ee_frame))
+  #else // !MARBLE_V2
+    #error "This emulation layer should only be used for Marble (STM32-based)"
+  #endif // ifdef MARBLE_V2
 #else
-// TODO - Trigger an error here
-#endif
-
+  #include "sim_api.h"
 #endif  /* SIMULATION */
 
 typedef enum {
@@ -400,4 +400,9 @@ int fmc_ee_write(ee_tags_t tag, const ee_val_t val)
     }
 
     return ret;
+}
+
+// Unused signature for compatibility with cached EEPROM alternative
+void eeprom_update(void) {
+  return;
 }

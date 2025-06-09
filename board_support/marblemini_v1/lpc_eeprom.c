@@ -2,10 +2,15 @@
 #include <string.h>
 #include <errno.h>
 #include <stdio.h>
+#ifndef SIMULATION
 #include "chip.h"
+#else
+#include "sim_api.h"
+#endif
 #include "eeprom.h"
+#include "eeprom_emu.h"
 
-#define DEBUG_PRINT
+//#define DEBUG_PRINT
 #include "dbg.h"
 
 /* The LPC1776 has an actual EEPROM built in which behaves quite differently from the fake EEPROM emulated
@@ -22,16 +27,20 @@
  *     * In the main loop, check for dirty bits and perform the required EEPROM page write
  */
 
+/*
 #define EEPROM_SIZE (EEPROM_PAGE_SIZE*(EEPROM_PAGE_NUM+1))
 #define EEPROM_COUNT (EEPROM_SIZE/sizeof(ee_frame))
+*/
 
-#define EEPROM_BYTES_USED (ee_NUM_TAGS*sizeof(ee_frame))
-#define EEPROM_PAGES_USED (EEPROM_BYTES_USED/EEPROM_PAGE_SIZE)
+#define EEPROM_BYTES_USED ((unsigned int)(ee_NUM_TAGS*sizeof(ee_frame)))
+// Ceiling integer division
+#define EEPROM_PAGES_USED ((EEPROM_BYTES_USED/EEPROM_PAGE_SIZE) + ((EEPROM_BYTES_USED % EEPROM_PAGE_SIZE) != 0))
 
 #define FRAME_SIZE (sizeof(ee_frame)/sizeof(uint8_t))
 
 static uint8_t ram_copy[EEPROM_PAGES_USED*EEPROM_PAGE_SIZE];
-#define PAGE_POINTER(page_num) (ram_copy+(page_num*EEPROM_PAGE_SIZE))
+#define PAGE_OFFSET(page_num)  (page_num*EEPROM_PAGE_SIZE)
+#define PAGE_POINTER(page_num) (ram_copy+PAGE_OFFSET(page_num))
 
 static uint32_t dirty_flag;
 #define SET_DIRTY(page_num)   (dirty_flag |= (1<<page_num))
@@ -44,25 +53,53 @@ static uint32_t dirty_flag;
 #define FRAME_POINTER(tag) ((ee_frame *)(ram_copy + FRAME_OFFSET(tag)))
 #define PAGE_NUMBER(tag)   (FRAME_OFFSET(tag)/EEPROM_PAGE_SIZE)
 
+#ifndef SIMULATION
+#define EEPROM_INIT()               (Chip_EEPROM_Init(LPC_EEPROM))
+#define EEPROM_READ_ALL(dest, size) (Chip_EEPROM_Read(LPC_EEPROM, 0, 0, dest, EEPROM_RWSIZE_8BITS, size))
+#define EEPROM_ERASE(pagenum)       (Chip_EEPROM_Erase(LPC_EEPROM, pagenum))
+#define EEPROM_WRITE(pagenum, src, size)  (Chip_EEPROM_Write(LPC_EEPROM, 0, pagenum, src, EEPROM_RWSIZE_8BITS, size))
+#else
+#define EEPROM_INIT()               (Sim_EEPROM_Init(EEPROM_BYTES_USED))
+#define EEPROM_READ_ALL(dest, size) (Sim_EEPROM_Read(dest, size))
+//#define EEPROM_ERASE(pagenum)       (Sim_EEPROM_Erase(PAGE_OFFSET(pagenum), EEPROM_PAGE_SIZE))
+#define EEPROM_ERASE(pagenum)
+#define EEPROM_WRITE(pagenum, src, size)  (Sim_EEPROM_Write(src, PAGE_OFFSET(pagenum), size))
+
+#ifndef SUCCESS
+#define SUCCESS                     (0)
+#endif // ifndef SUCCESS
+#endif // ifndef SIMULATION
+
+#ifdef DEBUG_PRINT
+static void debug_print_frame(ee_frame *frame);
+#define DEBUG_PRINT_FRAME(frame) debug_print_frame(frame)
+#else
+#define DEBUG_PRINT_FRAME(frame)
+#endif
+
 int eeprom_system_init(void) {
-  Chip_EEPROM_Init(LPC_EEPROM);
+  EEPROM_INIT();
   // Read all EEPROM pages used into ram_copy
-  Chip_EEPROM_Read(LPC_EEPROM, 0, 0, ram_copy, EEPROM_RWSIZE_8BITS, EEPROM_BYTES_USED);
+  EEPROM_READ_ALL(ram_copy, EEPROM_BYTES_USED);
   dirty_flag = 0;
+  printd("EEPROM_PAGES_USED = %u\r\n", EEPROM_PAGES_USED);
+  printd("EEPROM_BYTES_USED = %u\r\n", EEPROM_BYTES_USED);
   return 0;
 }
 
 // This should be called periodically in the main loop
-void lpc_update_eeprom(void) {
+void eeprom_update(void) {
   if (!dirty_flag) return;
+  printd("dirty_flag = %x\r\n", dirty_flag);
   for (unsigned int n = 0; n < EEPROM_PAGES_USED; n++) {
     if (GET_DIRTY(n)) {
       // Update page number n
-      Chip_EEPROM_Erase(LPC_EEPROM, n);
-      if (Chip_EEPROM_Write(LPC_EEPROM, 0, n, PAGE_POINTER(n), EEPROM_RWSIZE_8BITS, EEPROM_PAGE_SIZE) == SUCCESS) {
-        printd("Successfully stored page %d\r\n", n);
+      EEPROM_ERASE(n);
+
+      if (EEPROM_WRITE(n, PAGE_POINTER(n), EEPROM_PAGE_SIZE) == SUCCESS) {
+        printd("Successfully stored page %u\r\n", n);
       } else {
-        printd("Failed to store page %d\r\n", n);
+        printd("Failed to store page %u\r\n", n);
       }
     }
   }
@@ -94,8 +131,21 @@ int fmc_ee_write(ee_tags_t tag, const ee_val_t val) {
       return 0;
     }
   }
+  printd("Storing val to tag %u...\r\n", tag);
   ee_frame *frame = FRAME_POINTER(tag);
+  frame->tag = tag;
   memcpy(frame->val, val, (sizeof(ee_val_t)/sizeof(uint8_t)));
+  DEBUG_PRINT_FRAME(frame);
   SET_DIRTY(PAGE_NUMBER(tag));
+  printd("dirty_flag = %x\r\n", dirty_flag);
   return 0;
 }
+
+#ifdef DEBUG_PRINT
+static void debug_print_frame(ee_frame *frame) {
+  printf("  FRAME: %u: {%x, %x, %x, %x, %x, %x}\r\n", frame->tag,
+         frame->val[0], frame->val[1], frame->val[2],
+         frame->val[3], frame->val[4], frame->val[5]);
+  return;
+}
+#endif

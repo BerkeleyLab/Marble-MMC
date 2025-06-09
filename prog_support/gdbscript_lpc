@@ -8,3 +8,5 @@ set mem inaccessible-by-default off
 #target extended-remote
 # Enable semihosting
 monitor arm semihosting enable
+# Load program
+load

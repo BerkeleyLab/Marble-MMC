@@ -69,7 +69,6 @@ uint32_t marble_init(void) {
   fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK);
   sim_console_state.toExit = 0;
   sim_console_state.msgReady = 0;
-  eeprom_init();
   init_sim_ltm4673();
   if (lass_init(MAILBOX_PORT) < 0) {
     return 1;
@@ -199,6 +198,7 @@ void marble_UART_init(void) {
   return;
 }
 
+/*
 int marble_UART_send(const char *str, int size) {
 #ifdef DEBUG_TX_OUT
   USART_Tx_LL_Queue((char *)str, size);
@@ -219,6 +219,7 @@ int marble_UART_recv(char *str, int size) {
   *str = (char)outByte;
   return 0;
 }
+*/
 
 void marble_LED_set(uint8_t led_num, bool on) {
   return;

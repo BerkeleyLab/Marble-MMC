@@ -11,6 +11,7 @@ inc/.*.swp
 sim/.*.swp
 tags
 flash.bin
+eeprom.bin
 reset
 tags
 openocd.log

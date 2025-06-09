@@ -105,6 +105,11 @@ int eeprom_store_wd_key(const uint8_t *pdata, int len);
  */
 int eeprom_init(void);
 
+/** @brief Periodic maintenance of cached EEPROM (should be called in main loop)
+ *         Note: this is unused in the memory-mapped flash implementation.
+ */
+void eeprom_update(void);
+
 #ifdef __cplusplus
 }
 #endif

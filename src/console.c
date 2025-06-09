@@ -692,6 +692,12 @@ static void print_this_ip(void) {
   return;
 }
 
+void CONSOLE_USART_ISR(void) {
+  USART_RXNE_ISR();   // Handle RX interrupts first
+  USART_TXE_ISR();  // Then handle TX interrupts
+  return;
+}
+
 void console_pend_msg(void) {
   _msgCount++;
   return;

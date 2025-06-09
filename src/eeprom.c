@@ -8,7 +8,6 @@
 
 //#define DEBUG_PRINT
 #include "dbg.h"
-#undef DEBUG_PRINT
 
 #include "eeprom.h"
 #include "eeprom_emu.h"
@@ -22,6 +21,8 @@ int eeprom_init(void) {
   eeprom_system_init();
   // Write default values of all missing tags
   eeprom_restore_all();
+  // Get those restored values written ASAP
+  eeprom_update();
   return 0;
 }
 
@@ -78,6 +79,10 @@ static int eeprom_populate_val(ee_tags_t tag, const uint8_t *paddr, int len) {
   if (rval) {
     for (int n = 0; n < len; n++) {
       eeval[n] = paddr[n];
+    }
+    // Avoid leaking bytes from stack into eeval
+    for (int n = len; n < (int)(sizeof(ee_val_t)/sizeof(uint8_t)); n++) {
+      eeval[n] = 0;
     }
     rval = fmc_ee_write(tag, eeval);
     if (!rval) {

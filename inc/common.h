@@ -11,7 +11,7 @@ extern "C" {
 #endif
 
 // Define this to enable decoding (most) errnos into their string name
-//#define DEBUG_ENABLE_ERRNO_DECODE
+#define DEBUG_ENABLE_ERRNO_DECODE
 
 // Make the compiler quit complaining about a particular unused parameter
 #define _UNUSED(X)                 (void)(X)
@@ -27,7 +27,14 @@ extern "C" {
 #define BIT_MASK(START, END)      (((1 << (END+1)) - 1) ^ ((1 << (START)) -1))
 #define SET_FIELD_MASK(REG, VAL, MASK)    ((REG & ~MASK) | (VAL & MASK))
 #define SET_FIELD(REG, VAL, START, END)   SET_FIELD_MASK(REG, VAL, BIT_MASK(START, END))
-#define EXTRACT_FIELD(VAL, START, END)      ((VAL & BIT_MASK(START, END)) >> START)
+#define EXTRACT_FIELD(VAL, START, END)    ((VAL & BIT_MASK(START, END)) >> START)
+
+#ifndef SET_BIT
+#define SET_BIT(REG, BIT)         ((REG) |= (BIT))
+#endif
+#ifndef CLEAR_BIT
+#define CLEAR_BIT(REG, BIT)       ((REG) &= ~(BIT))
+#endif
 
 // ============================== Handy Macros ================================
 // Printing multi-byte values
