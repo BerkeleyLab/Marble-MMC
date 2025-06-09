@@ -22,7 +22,12 @@ extern "C" {
   #include <errno.h>
   #include <time.h>
 
-  #define DEMO_STRING                  "Marble UART Simulation\r\n"
+  #ifdef APP_MARBLE
+    #define DEMO_STRING                "Marble UART Simulation\r\n"
+  #endif
+  #ifdef APP_MINI
+    #define DEMO_STRING           "Marble Mini UART Simulation\r\n"
+  #endif
   #define BSP_GET_SYSTICK()        (uint32_t)((uint64_t)clock()/40)
 
   #define MGT_MAX_PINS 0

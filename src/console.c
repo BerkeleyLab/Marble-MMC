@@ -41,25 +41,42 @@ const char *menu_str[] = {"\r\n",
   "8 - Readout LM75_0 (Thermometer, U29)\r\n",
   "9 - Readout LM75_1 (Thermometer, U28)\r\n",
   "a - I2C scan all ports\r\n",
+#ifdef APP_MARBLE
   "b - Config ADN4600 (Clock mux)\r\n",
+#endif
   "c - Readout INA219 (Current monitors)\r\n",
+#ifdef APP_MARBLE
   "d - MGT MUX - switch to QSFP 2\r\n",
+#endif
   "e - I2C_PM bus display\r\n",
+#ifdef APP_MARBLE
   "f - Flash XRP7724 (Power supply, Marble v1.1-1.3)\r\n",
+#endif
+#ifdef APP_MINI
+  "f - Flash XRP7724 (Power supply)\r\n",
+#endif
   "g - Enable XRP7724\r\n",
+#ifdef APP_MARBLE
   "h - FMC MGT MUX set\r\n",
+#endif
   "i - Timer check/cal\r\n",
   "j - Read SPI mailbox\r\n",
   "k - Readout PCA9555 (I2C GPIO expanders U34 and U39)\r\n",
   "l - Config PCA9555\r\n",
   "m d.d.d.d - Set IP Address\r\n",
   "n d:d:d:d:d:d - Set MAC Address\r\n",
+#ifdef APP_MARBLE
   "o - SI570 (Frequency synthesizer) status\r\n",
+#endif
   "p speed[%] - Set fan speed (0-120 or 0%-100%)\r\n",
   "q otemp - Set overtemperature threshold (degC)\r\n",
   "r enable - Set mailbox enable/disable (1/0, on/off)\r\n",
+#ifdef APP_MARBLE
   "s addr_hex freq_hz config_hex - Set Si570 configuration\r\n",
+#endif
+#ifdef APP_MARBLE
   "t pmbus_msg - Forward PMBus transaction to LTM4673\r\n",
+#endif
   "u period - Set/get watchdog timeout period (in seconds)\r\n",
   "v key - Set a new 128-bit secret key (non-volatile, write only).\r\n",
   "w enable - Set fan tachometer enable/disable (1/0, on/off)\r\n",
@@ -88,7 +105,6 @@ static int handle_msg_key(char *rx_msg, int len);
 static int handle_mailbox_enable(char *rx_msg, int len);
 static int handle_tach_enable(char *rx_msg, int len);
 static int handle_pmod_mode(char *rx_msg, int len);
-static int handle_msg_MGTMUX(char *rx_msg, int len);
 //static void print_mac_ip(mac_ip_data_t *pmac_ip_data);
 static void print_mac(uint8_t *pdata);
 static void print_ip(uint8_t *pdata);
@@ -98,19 +114,22 @@ static int sscanfIP(const char *s, volatile uint8_t *data, int len);
 static int sscanfMAC(const char *s, volatile uint8_t *data, int len);
 static int sscanfFanSpeed(const char *s, int len);
 static int sscanfUnsignedDecimal(const char *s, int len);
-static int sscanfUnsignedHex(const char *s, int len);
 static int sscanfUHexExact(const char *s, int len);
-static int sscanfMGTMUX(const char *s, int len);
 static int sscanfQuery(const char *rx_msg, int len);
 static int sscanfSpace(const char *s, int len);
 static int sscanfNonSpace(const char *s, int len);
 static int sscanfNext(const char *s, int len);
+#ifdef APP_MARBLE
+static int sscanfUnsignedHex(const char *s, int len);
+static int sscanfMGTMUX(const char *s, int len);
+static int handle_msg_MGTMUX(char *rx_msg, int len);
 static int handle_msg_fsynth(const char *s, int len);
+static void console_print_fsynth(void);
 static int handle_msg_pmbridge(const char *s, int len);
 static int PMBridgeConsumeArg(const char *s, int len, volatile int *arg);
+#endif
 static int xatoi(char c);
 static int htoi(char c);
-static void console_print_fsynth(void);
 static const char *pmod_mode_string(pmod_mode_t mode);
 
 int console_init(void) {
@@ -169,31 +188,23 @@ static int console_handle_msg(char *rx_msg, int len)
            I2C_PM_scan();
            I2C_FPGA_scan();
            break;
+#ifdef APP_MARBLE
         case 'b':
            printf("ADN4600\r\n");
-#ifdef MARBLEM_V1
-           PRINT_NA();
-#else
-#ifdef MARBLE_V2
            adn4600_init();
            adn4600_printStatus();
-#endif
-#endif
            break;
+#endif
         case 'c':
            printf("Readout INA219\r\n");
            ina219_test();
            break;
+#ifdef APP_MARBLE
         case 'd':
            printf("Switch MGT to QSFP 2\r\n");
-#ifdef MARBLEM_V1
-           PRINT_NA();
-#else
-#ifdef MARBLE_V2
            marble_MGTMUX_set(3, true);
-#endif
-#endif
            break;
+#endif
         case 'e':
            printf("PM bus display\r\n");
            I2C_PM_bus_display();
@@ -208,9 +219,11 @@ static int console_handle_msg(char *rx_msg, int len)
            printf("Enabling XRP7724\r\n");
            xrp_boot();
            break;
+#ifdef APP_MARBLE
         case 'h':
            handle_msg_MGTMUX(rx_msg, len);
            break;
+#endif
         case 'i':
            for (unsigned ix=0; ix<10; ix++) {
               printf("%u\r\n", ix);
@@ -233,9 +246,11 @@ static int console_handle_msg(char *rx_msg, int len)
         case 'n':
            handle_msg_MAC(rx_msg, len);
            break;
+#ifdef APP_MARBLE
         case 'o':
            si570_status();
            break;
+#endif
         case 'p':
            handle_msg_fan_speed(rx_msg, len);
            break;
@@ -245,12 +260,16 @@ static int console_handle_msg(char *rx_msg, int len)
         case 'r':
            handle_mailbox_enable(rx_msg, len);
            break;
+#ifdef APP_MARBLE
         case 's':
            handle_msg_fsynth(rx_msg, len);
            break;
+#endif
+#ifdef APP_MARBLE
         case 't':
            handle_msg_pmbridge(rx_msg, len);
            break;
+#endif
         case 'u':
            handle_msg_watchdog(rx_msg, len);
            break;
@@ -521,6 +540,7 @@ static uint8_t parse_boolean(char *rx_msg, int len) {
   return 0;
 }
 
+#ifdef APP_MARBLE
 static int handle_msg_MGTMUX(char *rx_msg, int len) {
   int query = sscanfQuery((const char *)rx_msg, len);
   if (query) {
@@ -547,6 +567,7 @@ static int handle_msg_MGTMUX(char *rx_msg, int len) {
   }
   return rval;
 }
+#endif
 
 static void handle_gpio(const char *msg, int len) {
   char c = 0;
@@ -968,6 +989,7 @@ static int handle_msg_key(char *rx_msg, int len) {
   return 0;
 }
 
+#ifdef APP_MARBLE
 /*
  * static int sscanfUnsignedHex(const char *s, int len);
  *    This function skips any non-hex characters (0-9,A-F,a-f)
@@ -998,6 +1020,7 @@ static int sscanfUnsignedHex(const char *s, int len) {
   }
   return (int)sum;
 }
+#endif
 
 /* static int sscanfUHexExact(const char *s, int len);
  *  This function is less permissive than sscanfUnsignedHex()
@@ -1027,6 +1050,7 @@ static int sscanfUHexExact(const char *s, int len) {
   return (int)sum;
 }
 
+#ifdef APP_MARBLE
 /*
  * static int sscanfMGTMUX(const char *s, int len);
  *    Scans for "x=y" assignments separated by whitespace where 'x' can be 1, 2, or 3
@@ -1073,6 +1097,7 @@ static int sscanfMGTMUX(const char *s, int len) {
   }
   return bmask;
 }
+#endif
 
 /* static int sscanfSpace(const char *s, int len);
  *  Return the index of first whitespace found scanning string 's'
@@ -1149,6 +1174,7 @@ static int sscanfQuery(const char *rx_msg, int len) {
   return query;
 }
 
+#ifdef APP_MARBLE
 static int handle_msg_fsynth(const char *s, int len) {
   // Input string format:
   //  s cc 40000 1
@@ -1190,7 +1216,9 @@ static int handle_msg_fsynth(const char *s, int len) {
   }
   return 0;
 }
+#endif
 
+#ifdef APP_MARBLE
 static void console_print_fsynth(void) {
   uint8_t data[6];
   uint8_t i2c_addr;
@@ -1207,6 +1235,7 @@ static void console_print_fsynth(void) {
   }
   return;
 }
+#endif
 
 static const char *pmod_mode_string(pmod_mode_t mode) {
   switch (mode) {
@@ -1267,6 +1296,7 @@ static int handle_pmod_mode(char *rx_msg, int len) {
   return 0;
 }
 
+#ifdef APP_MARBLE
 /* static int handle_msg_pmbridge(const char *s, int len);
  *  Parse a line from the user representing a PMBus transaction
  *  Syntax: x command
@@ -1328,7 +1358,9 @@ static int handle_msg_pmbridge(const char *s, int len) {
   PMBridge_xact(xact, item_index);
   return 0;
 }
+#endif
 
+#ifdef APP_MARBLE
 #define MMC_REPEAT_START      ('!')
 #define MMC_READ_ONE          ('?')
 #define MMC_READ_BLOCK        ('*')
@@ -1436,6 +1468,7 @@ static int PMBridgeConsumeArg(const char *s, int len, volatile int *arg) {
   *arg = val;
   return n;
 }
+#endif
 
 
 /*

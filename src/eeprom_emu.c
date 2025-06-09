@@ -47,7 +47,6 @@ typedef enum {
     ee_invalid,
 } ee_state_t;
 
-
 // number of bits to encode a state
 static const size_t ee_state_bits = 2u;
 

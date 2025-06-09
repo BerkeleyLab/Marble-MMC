@@ -84,8 +84,10 @@ SOURCES := $(filter-out $(IGNORES), $(SOURCES))
 
 ifeq ($(MINI), mini)
 SOURCES+=$(BSP_DIR)/marblemini_v1/lpc_eeprom.c
+USR_CFLAGS+=-DAPP_MINI
 else
 SOURCES+=$(SOURCE_DIR)/eeprom_emu.c
+USR_CFLAGS+=-DAPP_MARBLE
 endif
 
 # Include platform-agnostic auto-generated code

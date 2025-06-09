@@ -550,6 +550,10 @@ static void PMBridge_hook_write(uint8_t addr, const uint8_t *data, int len) {
 
 void xrp_boot(void)
 {
+   if (marble_get_pcb_rev() > Marble_v1_3) {
+     printf("XRP7724 not present; bypassed.\n");
+     return;
+   }
    uint8_t pwr_on=0;
    for (int i=1; i<5; i++) {
       pwr_on |= xrp_ch_status(XRP7724, i);
