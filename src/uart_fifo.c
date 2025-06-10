@@ -6,6 +6,7 @@
 #include "marble_api.h"
 #include "console.h"
 
+#define UART_ECHO
 #define BLOCK_TX_ON_FULL
 #define USART_TX_RETRY_TIMEOUT_MS   (1000)
 
@@ -444,6 +445,11 @@ int marble_UART_send(const char *str, int size)
   // Kick off the transmission if the TX buffer is empty
   if (CONSOLE_USART_TX_DATA_READY()) {
     CONSOLE_USART_ENABLE_TXE_IRQ();
+    uint8_t outByte;
+    if (UARTTXQUEUE_Get(&outByte) != UARTTX_QUEUE_EMPTY) {
+      // Write new char to DR
+      CONSOLE_USART_WRITE_TX_CHAR(outByte);
+    }
   }
   return txnum;
 }

@@ -911,12 +911,7 @@ void xrp_flash(uint8_t dev)
     return;
   }
 
-  // HACK! part 1
-#ifdef SIMULATION
-#define MARBLE_V2
-#endif
-
-#ifdef MARBLEM_V1
+#ifdef APP_MINI
    // Data originally based on python hex2c.py < MarbleMini.hex
    // Pure copy of 7 x 64-byte pages, spanning addresses 0x0000 to 0x01bf
    uint8_t dd[] = {
@@ -950,7 +945,7 @@ void xrp_flash(uint8_t dev)
       "\x20\x0A\x05\x19\x00\xFF\x00\x00\x00\xFF\xFF\x00\x04\xFF\xFF\xCF"
    };
 #else
-#ifdef MARBLE_V2
+#ifdef APP_MARBLE
    // Data based on python hex2c_linear.py < Marble_flash.hex
    // Pure copy of 7 x 64-byte pages, spanning addresses 0x0000 to 0x01bf
    uint8_t dd[] = {
@@ -983,13 +978,8 @@ void xrp_flash(uint8_t dev)
       "\x21\x64\x64\x64\x20\x64\x64\x64\x21\x64\x64\x64\x22\x64\x64\x0A"
       "\x20\x0A\x05\x19\xFF\x00\x00\x00\x00\xFF\xFF\x00\x04\xFF\xFF\x12"
    };
-#endif /* ifdef MARBLE_V2 */
-#endif /* ifdef MARBLEM_V1 */
-
-  // HACK! part 2
-#ifdef SIMULATION
-#undef MARBLE_V2
-#endif
+#endif /* ifdef APP_MARBLE */
+#endif /* ifdef APP_MINI */
 
    const unsigned dd_size = sizeof(dd) / sizeof(dd[0]);
    const unsigned pages = 7;

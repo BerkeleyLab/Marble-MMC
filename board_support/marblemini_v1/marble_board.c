@@ -31,6 +31,7 @@
  */
 
 #include <stdio.h>
+#include <stdbool.h>
 #include "chip.h"
 #include "stopwatch.h"
 #include "marble_api.h"
@@ -52,6 +53,8 @@ SSP_PORT SSP_PMOD;
 I2C_BUS I2C_FPGA;
 I2C_BUS I2C_PM;
 I2C_BUS I2C_IPMB;
+
+static void pmod_config_direction(bool output);
 
 void disable_all_IRQs(void) {
    // TODO
@@ -762,16 +765,48 @@ int mgtclk_xpoint_en(void) {
 }
 
 void marble_pmod_config_outputs(void) {
+  pmod_config_direction(true);
   return;
 }
 
 void marble_pmod_config_inputs(void) {
+  //pmod_config_direction(false); // TODO Re-enable
   return;
 }
 
+/* Pmod3
+ *   Pmod pin Port  Bit
+ *   ------------------
+ *   0        0     6
+ *   1        0     9
+ *   2        0     8
+ *   3        0     7
+ *   4        2     11
+ *   5        2     2
+ *   6        5     3
+ *   7        5     4
+ */
+#define PMOD_PORT0_OUTPUT_MASK    ((1<<6)  | (1<<9) | (1<<8) | (1<<7))
+#define PMOD_PORT2_OUTPUT_MASK    ((1<<11) | (1<<2))
+#define PMOD_PORT5_OUTPUT_MASK    ((1<<3)  | (1<<4))
+static void pmod_config_direction(bool output) {
+  //    Chip_GPIO_WriteDirBit(LPC_GPIO, ledports[i], ledpins[i], true);
+  if (output) {
+    LPC_GPIO[0].DIR |= PMOD_PORT0_OUTPUT_MASK;
+    LPC_GPIO[2].DIR |= PMOD_PORT2_OUTPUT_MASK;
+    LPC_GPIO[5].DIR |= PMOD_PORT5_OUTPUT_MASK;
+  } else {
+    LPC_GPIO[0].DIR &= ~PMOD_PORT0_OUTPUT_MASK;
+    LPC_GPIO[2].DIR &= ~PMOD_PORT2_OUTPUT_MASK;
+    LPC_GPIO[5].DIR &= ~PMOD_PORT5_OUTPUT_MASK;
+  }
+  return;
+}
+static uint8_t pmod_gpio_ports[] = {0,  0,  0,  0,  2,  2,  5,  5};
+static uint8_t pmod_gpio_pins[]  = {6,  9,  8,  7, 11,  2,  3,  4};
+
 void marble_pmod_set_gpio(uint8_t pinnum, bool state) {
-  _UNUSED(pinnum);
-  _UNUSED(state);
+  Chip_GPIO_SetPinState(LPC_GPIO, pmod_gpio_ports[pinnum], pmod_gpio_pins[pinnum], state);
   return;
 }
 

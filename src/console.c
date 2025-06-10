@@ -50,7 +50,7 @@ const char *menu_str[] = {"\r\n",
 #endif
   "e - I2C_PM bus display\r\n",
 #ifdef APP_MARBLE
-  "f - Flash XRP7724 (Power supply, Marble v1.1-1.3)\r\n",
+//  "f - Flash XRP7724 (Power supply, Marble v1.1-1.3)\r\n",
 #endif
 #ifdef APP_MINI
   "f - Flash XRP7724 (Power supply)\r\n",
@@ -209,7 +209,7 @@ static int console_handle_msg(char *rx_msg, int len)
            printf("PM bus display\r\n");
            I2C_PM_bus_display();
            break;
-#if 0
+#ifdef APP_MINI
         case 'f':
            printf("XRP flash\r\n");
            xrp_flash(XRP7724);
@@ -714,7 +714,7 @@ static void print_this_ip(void) {
 }
 
 void CONSOLE_USART_ISR(void) {
-  USART_RXNE_ISR();   // Handle RX interrupts first
+  USART_RXNE_ISR(); // Handle RX interrupts first
   USART_TXE_ISR();  // Then handle TX interrupts
   return;
 }
