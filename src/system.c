@@ -106,10 +106,6 @@ static void system_pmod_timer_disable(void);
 static void system_pmod_timer_enable(void);
 static void pmod_led_counts(uint8_t val, volatile pmod_led_t *pled);
 
-#ifdef APP_MINI
-static void mini_sign_of_life(void);
-#endif
-
 /* =========================== Exported Functions =========================== */
 /* void system_init(void);
  *  Initialization of internal chip-agnostic MMC functionality.  Nothing that
@@ -137,11 +133,7 @@ void system_init(void) {
   console_init();
 
 #ifdef APP_MINI
-  marble_pmod_config_outputs();
-  marble_pmod_set_gpio(0, 0);
-  marble_pmod_set_gpio(1, 0);
-  marble_pmod_set_gpio(2, 1);
-  marble_pmod_set_gpio(3, 1);
+  marble_PSU_pwr(1);
 #endif
   return;
 }
@@ -192,10 +184,6 @@ void system_service(void) {
   pmod_subsystem_service();
 
   eeprom_update();
-#ifdef APP_MINI
-  marble_PSU_pwr(1);
-  mini_sign_of_life();
-#endif
   return;
 }
 
@@ -587,30 +575,3 @@ static void pmod_subsystem_service(void) {
   }
   return;
 }
-
-#ifdef APP_MINI
-static void mini_sign_of_life(void) {
-  static uint32_t blink_timer=0;
-  if (marble_SW_get()) {
-      marble_pmod_set_gpio(0, 0);
-      marble_pmod_set_gpio(1, 0);
-      marble_pmod_set_gpio(2, 0);
-      marble_pmod_set_gpio(3, 0);
-  } else {
-      marble_pmod_set_gpio(2, 1);
-      marble_pmod_set_gpio(3, 1);
-    ++blink_timer;
-    if (blink_timer == 100000) {
-      marble_pmod_set_gpio(0, 0);
-      marble_pmod_set_gpio(1, 1);
-    } else if (blink_timer == 199999) {
-      blink_timer = 0;
-      marble_pmod_set_gpio(0, 1);
-      marble_pmod_set_gpio(1, 0);
-    }
-  }
-  return;
-}
-#endif
-
-

@@ -229,11 +229,11 @@ endif
 .PHONY: gdb
 gdb:
 	$(GDB) -ex "target remote | $(OPENOCD) -f $(PROG_DIR)/ocd/$(OCD_CONF) -c 'gdb_port pipe; log_output $(PROG_DIR)/openocd.log'" \
-				 -x $(PROG_DIR)/$(GDBSCRIPT) $(OUTPUT_ELF) arm-core.xml
+				 -x $(PROG_DIR)/$(GDBSCRIPT) $(OUTPUT_ELF)
 
 .PHONY: gdb2
 gdb2:
-	$(GDB) -s "~/sw/openocd/share/openocd/scripts" -ex "target extended-remote | $(OPENOCD) -f $(PROG_DIR)/ocd/$(OCD_CONF) -c 'gdb_port pipe; log_output $(PROG_DIR)/openocd.log'" \
+	$(GDB) -ex "target extended-remote | $(OPENOCD) -f $(PROG_DIR)/ocd/$(OCD_CONF) -c 'gdb_port pipe; log_output $(PROG_DIR)/openocd.log'" \
 				 -x $(PROG_DIR)/$(GDBSCRIPT) $(OUTPUT_ELF)
 
 # Removes everything in the output directory

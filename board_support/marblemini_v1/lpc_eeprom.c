@@ -27,11 +27,6 @@
  *     * In the main loop, check for dirty bits and perform the required EEPROM page write
  */
 
-/*
-#define EEPROM_SIZE (EEPROM_PAGE_SIZE*(EEPROM_PAGE_NUM+1))
-#define EEPROM_COUNT (EEPROM_SIZE/sizeof(ee_frame))
-*/
-
 #define EEPROM_BYTES_USED ((unsigned int)(ee_NUM_TAGS*sizeof(ee_frame)))
 // Ceiling integer division
 #define EEPROM_PAGES_USED ((EEPROM_BYTES_USED/EEPROM_PAGE_SIZE) + ((EEPROM_BYTES_USED % EEPROM_PAGE_SIZE) != 0))

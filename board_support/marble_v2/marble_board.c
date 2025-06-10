@@ -60,7 +60,6 @@
 #define XRP_BYPASS_PWRGD
 #define XRP_REBOOT_DELAY    (500)
 
-#define UART_ECHO
 #ifdef NUCLEO
 #define SMBA_PIN GPIO_PIN_13
 #else

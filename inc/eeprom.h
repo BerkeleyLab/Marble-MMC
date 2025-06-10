@@ -22,9 +22,8 @@ typedef struct {
  *    NOTE: Don't touch any of the X-macros unless you have a good reason.
  *    To add a new item to non-volatile memory, simply add it to the macro
  *    definition FOR_ALL_EETAGS() below.  Each entry should be:
- *      X(enumval, name, type, size, default)
+ *      X(name, type, size, default)
  *    Where:
- *      enumval = integer (must be unique! Just increment the last number)
  *      name = name of tag (must be unique!)
  *      type = (currently unused; came from MDS's RTEMS version)
  *      size = size of datum in bytes (must be <= 6).
