@@ -1,4 +1,3 @@
-
 #ifndef __DISPLAY_H
 #define __DISPLAY_H
 
@@ -14,4 +13,3 @@ void display_init(void);
 #endif
 
 #endif // __DISPLAY_H
-

@@ -392,4 +392,3 @@ void marble_pmod_timer_disable(void) {
 void marble_pmod_timer_config(void) {
   return;
 }
-

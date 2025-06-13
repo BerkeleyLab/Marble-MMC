@@ -233,5 +233,3 @@ void FPGAWD_ShowState(void) {
 FPGAWD_State_t FPGAWD_GetState(void) {
   return fpga_state;
 }
-
-

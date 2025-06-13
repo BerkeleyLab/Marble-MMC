@@ -35,4 +35,3 @@ FPGAWD_State_t FPGAWD_GetState(void);
 #endif
 
 #endif // __WATCHDOG_H
-

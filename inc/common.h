@@ -128,4 +128,3 @@ const char *decode_errno(int err);
 #endif
 
 #endif // __COMMON_H
-

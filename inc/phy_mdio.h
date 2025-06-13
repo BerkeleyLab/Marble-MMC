@@ -72,4 +72,3 @@ typedef union {
 
 
 #endif // __PHY_MDIO_H__
-

@@ -96,4 +96,3 @@ Offset|Name|Size|Direction|Desc|Note
 5|MB10\_PMOD\_LED\_5|1|FPGA=\>MMC|Pmod LED control via mailbox.|
 6|MB10\_PMOD\_LED\_6|1|FPGA=\>MMC|Pmod LED control via mailbox.|
 7|MB10\_PMOD\_LED\_7|1|FPGA=\>MMC|Pmod LED control via mailbox.|
-

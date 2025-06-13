@@ -54,4 +54,3 @@ void CONSOLE_USART_ISR(void);
 #endif
 
 #endif // __CONSOLE_H
-

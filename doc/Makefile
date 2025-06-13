@@ -35,4 +35,3 @@ doc: $(DOC_DIR)/$(MBOX_DOC) $(DOC_DIR)/$(MBOX_JSON) $(DOC_DIR)/$(MBOX_VH) $(DOC_
 .PHONY: clean
 clean:
 	$(RM) $(CLEANS)
-

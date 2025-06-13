@@ -51,5 +51,3 @@ simulate the "outside world" (i.e. additional devices connected to the processor
 
 Perhaps QEMU or another instruction translator could do the job better. Please
 enlighten me.
-
-

@@ -57,4 +57,3 @@ int marble_UART_recv(char *str, int size);
 #endif
 
 #endif // __UART_FIFO_H
-
