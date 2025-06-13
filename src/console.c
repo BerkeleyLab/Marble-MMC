@@ -94,17 +94,17 @@ static int console_shift_msg(uint8_t *pData);
 static void ina219_test(void);
 static void handle_gpio(const char *msg, int len);
 static int toggle_gpio(char c);
-static uint8_t parse_boolean(char *rx_msg, int len);
-static int handle_mdio_phy_print(char *rx_msg, int len);
-static int handle_msg_IP(char *rx_msg, int len);
-static int handle_msg_MAC(char *rx_msg, int len);
-static int handle_msg_fan_speed(char *rx_msg, int len);
-static int handle_msg_overtemp(char *rx_msg, int len);
-static int handle_msg_watchdog(char *rx_msg, int len);
-static int handle_msg_key(char *rx_msg, int len);
-static int handle_mailbox_enable(char *rx_msg, int len);
-static int handle_tach_enable(char *rx_msg, int len);
-static int handle_pmod_mode(char *rx_msg, int len);
+static uint8_t parse_boolean(const char *rx_msg, int len);
+static int handle_mdio_phy_print(const char *rx_msg, int len);
+static int handle_msg_IP(const char *rx_msg, int len);
+static int handle_msg_MAC(const char *rx_msg, int len);
+static int handle_msg_fan_speed(const char *rx_msg, int len);
+static int handle_msg_overtemp(const char *rx_msg, int len);
+static int handle_msg_watchdog(const char *rx_msg, int len);
+static int handle_msg_key(const char *rx_msg, int len);
+static int handle_mailbox_enable(const char *rx_msg, int len);
+static int handle_tach_enable(const char *rx_msg, int len);
+static int handle_pmod_mode(const char *rx_msg, int len);
 //static void print_mac_ip(mac_ip_data_t *pmac_ip_data);
 static void print_mac(uint8_t *pdata);
 static void print_ip(uint8_t *pdata);
@@ -289,14 +289,14 @@ static int console_handle_msg(char *rx_msg, int len)
   return 0;
 }
 
-static int handle_mdio_phy_print(char *rx_msg, int len) {
-  int query = sscanfQuery((const char *)rx_msg, len);
+static int handle_mdio_phy_print(const char *rx_msg, int len) {
+  int query = sscanfQuery(rx_msg, len);
   int verbose = 0;
   if (query) {
     mdio_phy_print(verbose);
     return 0;
   }
-  int offset = sscanfNext((const char *)(rx_msg + 1), len-1) + 1;
+  int offset = sscanfNext(rx_msg + 1, len-1) + 1;
   if (offset < len) {
     if (rx_msg[offset] == 'v') verbose = 1;
     else if (rx_msg[offset] == '-') {
@@ -309,8 +309,8 @@ static int handle_mdio_phy_print(char *rx_msg, int len) {
   return 0;
 }
 
-static int handle_msg_IP(char *rx_msg, int len) {
-  int query = sscanfQuery((const char *)rx_msg, len);
+static int handle_msg_IP(const char *rx_msg, int len) {
+  int query = sscanfQuery(rx_msg, len);
   if (query) {
     print_this_ip();
     return 0;
@@ -331,8 +331,8 @@ static int handle_msg_IP(char *rx_msg, int len) {
   return 0;
 }
 
-static int handle_msg_MAC(char *rx_msg, int len) {
-  int query = sscanfQuery((const char *)rx_msg, len);
+static int handle_msg_MAC(const char *rx_msg, int len) {
+  int query = sscanfQuery(rx_msg, len);
   if (query) {
     print_this_mac();
     return 0;
@@ -351,8 +351,8 @@ static int handle_msg_MAC(char *rx_msg, int len) {
   return 0;
 }
 
-static int handle_msg_fan_speed(char *rx_msg, int len) {
-  int query = sscanfQuery((const char *)rx_msg, len);
+static int handle_msg_fan_speed(const char *rx_msg, int len) {
+  int query = sscanfQuery(rx_msg, len);
   int speed, speedPercent;
   uint8_t readSpeed;
   if (query) {
@@ -377,9 +377,9 @@ static int handle_msg_fan_speed(char *rx_msg, int len) {
   return 0;
 }
 
-static int handle_msg_overtemp(char *rx_msg, int len) {
+static int handle_msg_overtemp(const char *rx_msg, int len) {
   // Overtemp is stored in MAX6639 as degrees C
-  int query = sscanfQuery((const char *)rx_msg, len);
+  int query = sscanfQuery(rx_msg, len);
   uint8_t otbyte;
   if (query) {
     if (eeprom_read_overtemp(&otbyte, 1)) {
@@ -407,7 +407,7 @@ static int handle_msg_overtemp(char *rx_msg, int len) {
   return 0;
 }
 
-static int handle_tach_enable(char *rx_msg, int len) {
+static int handle_tach_enable(const char *rx_msg, int len) {
   uint8_t rval = parse_boolean(rx_msg, len);
   uint8_t tach_en;
   if (rval == 0x01) {
@@ -437,7 +437,7 @@ static int handle_tach_enable(char *rx_msg, int len) {
   return 0;
 }
 
-static int handle_mailbox_enable(char *rx_msg, int len) {
+static int handle_mailbox_enable(const char *rx_msg, int len) {
   uint8_t rval = parse_boolean(rx_msg, len);
   int en;
   if (rval == 0x01) {
@@ -464,7 +464,7 @@ static int handle_mailbox_enable(char *rx_msg, int len) {
   return 0;
 }
 
-static uint8_t parse_boolean(char *rx_msg, int len) {
+static uint8_t parse_boolean(const char *rx_msg, int len) {
   //  Msg   Action        retval
   //        Bad parsing   0x00
   //  r ?   Print status  0x01
@@ -479,7 +479,7 @@ static uint8_t parse_boolean(char *rx_msg, int len) {
   // 'doParse' 0 means unparsed; 1 means parse fail; 2 means parse success
   char arg[3];
   int argp = 0;
-  int query = sscanfQuery((const char *)rx_msg, len);
+  int query = sscanfQuery(rx_msg, len);
   if (query) {
     return 0x01;
   }
@@ -932,8 +932,8 @@ static int sscanfUnsignedDecimal(const char *s, int len) {
   return (int)sum;
 }
 
-static int handle_msg_watchdog(char *rx_msg, int len) {
-  int index = sscanfQuery((const char *)rx_msg, len);
+static int handle_msg_watchdog(const char *rx_msg, int len) {
+  int index = sscanfQuery(rx_msg, len);
   int val;
   if (index) {
     val = FPGAWD_GetPeriod();
@@ -957,14 +957,14 @@ static int handle_msg_watchdog(char *rx_msg, int len) {
 }
 
 #define KEY_LEN     (16)
-static int handle_msg_key(char *rx_msg, int len) {
+static int handle_msg_key(const char *rx_msg, int len) {
   int index = sscanfNext(rx_msg, len);
   uint8_t key[KEY_LEN];
   int rval;
   int n;
   for (n = 0; n < KEY_LEN; n++) {
     // Parse hex string into bytes
-    rval = sscanfUHexExact((const char *)(rx_msg + index + 2*n), 2);
+    rval = sscanfUHexExact(rx_msg + index + 2*n, 2);
     if (rval < 0) {
       key[n] = 0xcc;
       break;
@@ -1253,7 +1253,7 @@ static const char *pmod_mode_string(pmod_mode_t mode) {
   return "Unknown";
 }
 
-static int handle_pmod_mode(char *rx_msg, int len) {
+static int handle_pmod_mode(const char *rx_msg, int len) {
   // Parse messages:
   //   "x"      -> Query pmod_mode
   //   "x?"     -> Query pmod_mode
@@ -1263,7 +1263,7 @@ static int handle_pmod_mode(char *rx_msg, int len) {
   //   "x 2"    -> Set pmod_mode = PMOD_MODE_LED
   //   "x 3"    -> Set pmod_mode = PMOD_MODE_GPIO
   //   "x 4"    -> Invalid; error
-  int query = sscanfQuery((const char *)rx_msg, len);
+  int query = sscanfQuery(rx_msg, len);
   const char *modestr;
   pmod_mode_t pmod_mode;
   if (query) {
