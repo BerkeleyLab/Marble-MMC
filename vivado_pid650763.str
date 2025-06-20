@@ -172,3 +172,428 @@ selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Constraints,
 floatFrame(PAResourceOtoP.PAViews_CODE, "Marble.xdc"); // az
 // PAResourceOtoP.PAViews_CODE: Code: float view
 // [GUI Memory]: 140 MB (+7972kb) [00:06:41]
+// HMemoryUtils.trashcanNow. Engine heap size: 1,639 MB. GUI used memory: 76 MB. Current time: 6/20/25, 2:39:44 PM PDT
+// Elapsed time: 1782 seconds
+selectButton(PAResourceCommand.PACommandNames_ADD_SOURCES, "Sources_add_sources"); // E
+// Run Command: PAResourceCommand.PACommandNames_ADD_SOURCES
+// c (cr): Add Sources: addNotify
+selectRadioButton(PAResourceAtoD.AddSrcWizard_SPECIFY_HDL_NETLIST_BLOCK_DESIGN, "Add or create design sources"); // a
+selectButton("NEXT", "Next >"); // JButton
+selectButton(PAResourceQtoS.SrcChooserPanel_ADD_HDL_AND_NETLIST_FILES_TO_YOUR_PROJECT, "Add Files"); // a
+// Elapsed time: 36 seconds
+String[] filenames31467 = {"/home/le123456/Desktop/Project/bedrock/projects/test_marble_family/gps_test.v", "/home/le123456/Desktop/Project/bedrock/projects/test_marble_family/lb_marble_slave.v", "/home/le123456/Desktop/Project/bedrock/projects/test_marble_family/ltm_sync.v", "/home/le123456/Desktop/Project/bedrock/projects/test_marble_family/marble_base_shell.v", "/home/le123456/Desktop/Project/bedrock/projects/test_marble_family/marble_mid.vh", "/home/le123456/Desktop/Project/bedrock/projects/test_marble_family/marble_top.v", "/home/le123456/Desktop/Project/bedrock/projects/test_marble_family/mmc_mailbox.v", "/home/le123456/Desktop/Project/bedrock/projects/test_marble_family/tmds_test.v", "/home/le123456/Desktop/Project/bedrock/projects/test_marble_family/xadc_tempmon.v"};
+setFileChooser(filenames31467);
+selectButton("FINISH", "Finish"); // JButton
+// 'g' command handler elapsed time: 43 seconds
+// TclEventType: DG_GRAPH_STALE
+dismissDialog("Add Sources"); // c
+// TclEventType: FILE_SET_CHANGE
+// Tcl Message: add_files -norecurse /home/le123456/Desktop/Project/bedrock/projects/test_marble_family/marble_mid.vh 
+// TclEventType: FILE_SET_CHANGE
+// Tcl Message: add_files -norecurse {/home/le123456/Desktop/Project/bedrock/projects/test_marble_family/marble_top.v /home/le123456/Desktop/Project/bedrock/projects/test_marble_family/xadc_tempmon.v /home/le123456/Desktop/Project/bedrock/projects/test_marble_family/gps_test.v /home/le123456/Desktop/Project/bedrock/projects/test_marble_family/tmds_test.v /home/le123456/Desktop/Project/bedrock/projects/test_marble_family/marble_base_shell.v /home/le123456/Desktop/Project/bedrock/projects/test_marble_family/lb_marble_slave.v /home/le123456/Desktop/Project/bedrock/projects/test_marble_family/ltm_sync.v /home/le123456/Desktop/Project/bedrock/projects/test_marble_family/mmc_mailbox.v} 
+// [GUI Memory]: 155 MB (+8246kb) [00:36:30]
+// HMemoryUtils.trashcanNow. Engine heap size: 1,662 MB. GUI used memory: 84 MB. Current time: 6/20/25, 2:42:29 PM PDT
+// TclEventType: FILE_SET_CHANGE
+// TclEventType: DG_GRAPH_STALE
+// TclEventType: FILE_SET_CHANGE
+// TclEventType: DG_GRAPH_STALE
+// Tcl Message: update_compile_order -fileset sources_1 
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Simulation Sources]", 4, true); // D - Node
+selectButton(PAResourceCommand.PACommandNames_ADD_SOURCES, "Sources_add_sources"); // E
+// Run Command: PAResourceCommand.PACommandNames_ADD_SOURCES
+// c (cr): Add Sources: addNotify
+// TclEventType: DG_GRAPH_STALE
+// TclEventType: FILE_SET_CHANGE
+// Tcl Message: update_compile_order -fileset sources_1 
+selectButton("NEXT", "Next >"); // JButton
+selectButton(PAResourceQtoS.SrcChooserPanel_ADD_HDL_AND_NETLIST_FILES_TO_YOUR_PROJECT, "Add Files"); // a
+// Elapsed time: 10 seconds
+String[] filenames16706 = {"/home/le123456/Desktop/Project/bedrock/projects/test_marble_family/dna_tb.v", "/home/le123456/Desktop/Project/bedrock/projects/test_marble_family/gps_test_tb.v", "/home/le123456/Desktop/Project/bedrock/projects/test_marble_family/lb_marble_slave_tb.v", "/home/le123456/Desktop/Project/bedrock/projects/test_marble_family/ltm_sync_tb.v", "/home/le123456/Desktop/Project/bedrock/projects/test_marble_family/mmc_mailbox_tb.v", "/home/le123456/Desktop/Project/bedrock/projects/test_marble_family/tmds_test_tb.v"};
+setFileChooser(filenames16706);
+selectButton("FINISH", "Finish"); // JButton
+// 'g' command handler elapsed time: 15 seconds
+// TclEventType: FILE_SET_CHANGE
+dismissDialog("Add Sources"); // c
+// TclEventType: FILE_SET_OPTIONS_CHANGE
+// Tcl Message: set_property SOURCE_SET sources_1 [get_filesets sim_1] 
+// TclEventType: DG_GRAPH_STALE
+// TclEventType: FILE_SET_CHANGE
+// Tcl Message: add_files -fileset sim_1 -norecurse {/home/le123456/Desktop/Project/bedrock/projects/test_marble_family/mmc_mailbox_tb.v /home/le123456/Desktop/Project/bedrock/projects/test_marble_family/lb_marble_slave_tb.v /home/le123456/Desktop/Project/bedrock/projects/test_marble_family/dna_tb.v /home/le123456/Desktop/Project/bedrock/projects/test_marble_family/tmds_test_tb.v /home/le123456/Desktop/Project/bedrock/projects/test_marble_family/ltm_sync_tb.v /home/le123456/Desktop/Project/bedrock/projects/test_marble_family/gps_test_tb.v} 
+expandTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Simulation Sources, sim_1]", 5); // D
+// TclEventType: DG_GRAPH_STALE
+// TclEventType: FILE_SET_CHANGE
+// Tcl Message: update_compile_order -fileset sim_1 
+// HMemoryUtils.trashcanNow. Engine heap size: 1,711 MB. GUI used memory: 85 MB. Current time: 6/20/25, 2:42:54 PM PDT
+// TclEventType: FILE_SET_CHANGE
+// TclEventType: DG_GRAPH_STALE
+// [Engine Memory]: 1,724 MB (+12171kb) [00:37:02]
+expandTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources]", 0); // D
+collapseTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources]", 0); // D
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Simulation Sources, sim_1, ltm_sync_tb (ltm_sync_tb.v)]", 12, true); // D - Node
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Simulation Sources, sim_1, ltm_sync_tb (ltm_sync_tb.v)]", 12, true, false, false, false, false, true); // D - Double Click - Node
+selectCodeEditor("ltm_sync_tb.v", 163, 311); // bP
+selectCodeEditor("ltm_sync_tb.v", 191, 370); // bP
+selectCodeEditor("ltm_sync_tb.v", 197, 382); // bP
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Simulation Sources, sim_1, lb_marble_slave_tb (lb_marble_slave_tb.v)]", 8, true); // D - Node
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Simulation Sources, sim_1, marble_top (marble_top.v)]", 7, true); // D - Node
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Simulation Sources, sim_1, marble_top (marble_top.v)]", 7, true); // D - Node
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Simulation Sources, sim_1, marble_top (marble_top.v)]", 7, true, false, false, false, false, true); // D - Double Click - Node
+// HMemoryUtils.trashcanNow. Engine heap size: 1,740 MB. GUI used memory: 86 MB. Current time: 6/20/25, 2:43:14 PM PDT
+collapseTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Simulation Sources]", 4); // D
+// Elapsed time: 234 seconds
+expandTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Simulation Sources]", 4); // D
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Simulation Sources, sim_1, marble_top (marble_top.v), gmii_to_rgmii_i : xil_defaultlib.gmii_to_rgmii]", 8, false); // D
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Simulation Sources, sim_1, marble_top (marble_top.v), gmii_to_rgmii_i : xil_defaultlib.gmii_to_rgmii]", 8, false, false, false, false, false, true); // D - Double Click
+collapseTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Simulation Sources, sim_1, marble_top (marble_top.v)]", 7); // D
+expandTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Simulation Sources, sim_1, marble_top (marble_top.v)]", 7); // D
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Simulation Sources, sim_1, marble_top (marble_top.v), gmii_to_rgmii_i : xil_defaultlib.gmii_to_rgmii]", 8, false); // D
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Simulation Sources, sim_1, marble_top (marble_top.v), gmii_to_rgmii_i : xil_defaultlib.gmii_to_rgmii]", 8, false, false, false, false, false, true); // D - Double Click
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Simulation Sources, sim_1, marble_top (marble_top.v), base : xil_defaultlib.marble_base]", 9, false); // D
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Simulation Sources, sim_1, marble_top (marble_top.v), base : xil_defaultlib.marble_base]", 9, false, false, false, false, false, true); // D - Double Click
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Simulation Sources, sim_1, marble_top (marble_top.v), genblk4.clocks_i : xil_defaultlib.xilinx7_clocks]", 10, false); // D
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Simulation Sources, sim_1, marble_top (marble_top.v), genblk4.clocks_i : xil_defaultlib.xilinx7_clocks]", 10, false, false, false, false, false, true); // D - Double Click
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Simulation Sources, sim_1, marble_top (marble_top.v), xil_defaultlib.C_SYSCLK_SRC_parameter_has_an_invalid_value]", 11, false); // D
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Simulation Sources, sim_1, marble_top (marble_top.v), xil_defaultlib.C_SYSCLK_SRC_parameter_has_an_invalid_value]", 11, false, false, false, false, false, true); // D - Double Click
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Simulation Sources, sim_1, marble_top (marble_top.v), xil_defaultlib.C_SYSCLK_SRC_ddr_ref_clk_can_only_be_used_with_a_Marble_v2]", 12, false); // D
+expandTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Simulation Sources, sim_1, lb_marble_slave_tb (lb_marble_slave_tb.v)]", 14); // D
+expandTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Simulation Sources, sim_1, mmc_mailbox_tb (mmc_mailbox_tb.v)]", 19); // D
+collapseTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Simulation Sources, sim_1, mmc_mailbox_tb (mmc_mailbox_tb.v)]", 19); // D
+collapseTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Simulation Sources, sim_1]", 5); // D
+expandTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources]", 0); // D
+expandTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, lb_marble_slave (lb_marble_slave.v)]", 2); // D
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, lb_marble_slave (lb_marble_slave.v)]", 2, true); // D - Node
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, lb_marble_slave (lb_marble_slave.v)]", 2, true, false, false, false, false, true); // D - Double Click - Node
+expandTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, lb_marble_slave (lb_marble_slave.v)]", 2); // D
+collapseTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, lb_marble_slave (lb_marble_slave.v)]", 2); // D
+expandTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v)]", 3); // D
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v)]", 3, true); // D - Node
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v)]", 3, true, false, false, false, false, true); // D - Double Click - Node
+expandTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v)]", 3); // D
+// Elapsed time: 35 seconds
+selectCodeEditor("marble_top.v", 272, 458); // bP
+// Elapsed time: 24 seconds
+selectMenu(PAResourceItoN.MainMenuMgr_VIEW, "View"); // ac
+dismissMenu(PAResourceItoN.MainMenuMgr_VIEW, "View"); // ac
+selectMenu(PAResourceItoN.MainMenuMgr_HELP, "Help"); // ac
+dismissMenu(PAResourceItoN.MainMenuMgr_HELP, "Help"); // ac
+selectButton(PAResourceCommand.PACommandNames_ADD_SOURCES, "Sources_add_sources"); // E
+// Run Command: PAResourceCommand.PACommandNames_ADD_SOURCES
+// c (cr): Add Sources: addNotify
+selectRadioButton(PAResourceAtoD.AddSrcWizard_SPECIFY_HDL_NETLIST_BLOCK_DESIGN, "Add or create design sources"); // a
+selectButton("NEXT", "Next >"); // JButton
+selectButton(PAResourceQtoS.SrcChooserPanel_ADD_HDL_AND_NETLIST_FILES_TO_YOUR_PROJECT, "Add Files"); // a
+// Elapsed time: 27 seconds
+setFileChooser("/home/le123456/Desktop/Project/bedrock/board_support/marblemini/marble_base.v");
+selectButton(PAResourceQtoS.SrcChooserPanel_ADD_HDL_AND_NETLIST_FILES_TO_YOUR_PROJECT, "Add Files"); // a
+// Elapsed time: 35 seconds
+String[] filenames29306 = {"/home/le123456/Desktop/Project/bedrock/serial_io/crc16.v", "/home/le123456/Desktop/Project/bedrock/serial_io/dec_8b10b.v", "/home/le123456/Desktop/Project/bedrock/serial_io/enc_8b10b.v", "/home/le123456/Desktop/Project/bedrock/serial_io/endpoint.vh", "/home/le123456/Desktop/Project/bedrock/serial_io/ep_rx_pcs.v", "/home/le123456/Desktop/Project/bedrock/serial_io/ep_sync_detect.v", "/home/le123456/Desktop/Project/bedrock/serial_io/ep_tx_pcs.v", "/home/le123456/Desktop/Project/bedrock/serial_io/eth_gtx_bridge.v", "/home/le123456/Desktop/Project/bedrock/serial_io/eth_gtx_hook.v", "/home/le123456/Desktop/Project/bedrock/serial_io/gmii_gtp.v", "/home/le123456/Desktop/Project/bedrock/serial_io/gmii_link.v", "/home/le123456/Desktop/Project/bedrock/serial_io/gmii_to_rgmii.v", "/home/le123456/Desktop/Project/bedrock/serial_io/gtx_noise.v", "/home/le123456/Desktop/Project/bedrock/serial_io/negotiate.v", "/home/le123456/Desktop/Project/bedrock/serial_io/oversampled_rx_8b9b.v", "/home/le123456/Desktop/Project/bedrock/serial_io/oversampling_rx_8b9b.v", "/home/le123456/Desktop/Project/bedrock/serial_io/patt_gen.v", "/home/le123456/Desktop/Project/bedrock/serial_io/simpleuart.v", "/home/le123456/Desktop/Project/bedrock/serial_io/tx_8b9b.v"};
+setFileChooser(filenames29306);
+selectButton(PAResourceQtoS.SrcChooserPanel_ADD_HDL_AND_NETLIST_FILES_TO_YOUR_PROJECT, "Add Files"); // a
+// Elapsed time: 39 seconds
+setFileChooser("/home/le123456/Desktop/Project/bedrock/fpga_family/xilinx/xilinx7_clocks.v");
+selectButton(PAResourceQtoS.SrcChooserPanel_ADD_HDL_AND_NETLIST_FILES_TO_YOUR_PROJECT, "Add Files"); // a
+String[] filenames17995 = {"/home/le123456/Desktop/Project/bedrock/fpga_family/ddr_cells.v", "/home/le123456/Desktop/Project/bedrock/fpga_family/ds_clk_buf.v", "/home/le123456/Desktop/Project/bedrock/fpga_family/pll.v"};
+setFileChooser(filenames17995);
+selectButton("FINISH", "Finish"); // JButton
+// 'g' command handler elapsed time: 120 seconds
+// TclEventType: DG_GRAPH_STALE
+dismissDialog("Add Sources"); // c
+// TclEventType: FILE_SET_CHANGE
+// Tcl Message: add_files -norecurse /home/le123456/Desktop/Project/bedrock/serial_io/endpoint.vh 
+// TclEventType: FILE_SET_CHANGE
+// HMemoryUtils.trashcanNow. Engine heap size: 1,757 MB. GUI used memory: 86 MB. Current time: 6/20/25, 2:50:59 PM PDT
+// TclEventType: DG_GRAPH_STALE
+// TclEventType: FILE_SET_CHANGE
+// Tcl Message: update_compile_order -fileset sources_1 
+// TclEventType: FILE_SET_CHANGE
+// TclEventType: DG_GRAPH_STALE
+// TclEventType: FILE_SET_CHANGE
+// Tcl Message: update_compile_order -fileset sources_1 
+// Elapsed time: 14 seconds
+expandTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, eth_gtx_bridge (eth_gtx_bridge.v)]", 9); // D
+// [Engine Memory]: 1,813 MB (+2808kb) [00:45:18]
+collapseTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, eth_gtx_bridge (eth_gtx_bridge.v)]", 9); // D
+// Elapsed time: 25 seconds
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), xil_defaultlib.C_SYSCLK_SRC_parameter_has_an_invalid_value]", 6, false); // D
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), xil_defaultlib.C_SYSCLK_SRC_parameter_has_an_invalid_value]", 6, false, false, false, false, true, false); // D - Popup Trigger
+// Elapsed time: 24 seconds
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), xil_defaultlib.C_SYSCLK_SRC_parameter_has_an_invalid_value]", 6, false, false, false, false, true, false); // D - Popup Trigger
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), xil_defaultlib.C_SYSCLK_SRC_parameter_has_an_invalid_value]", 6, false); // D
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), xil_defaultlib.C_SYSCLK_SRC_parameter_has_an_invalid_value]", 6, false, false, false, false, true, false); // D - Popup Trigger
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), xil_defaultlib.C_SYSCLK_SRC_parameter_has_an_invalid_value]", 6, false); // D
+// Elapsed time: 11 seconds
+expandTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Simulation Sources, sim_1]", 27); // D
+collapseTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Simulation Sources, sim_1]", 27); // D
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), xil_defaultlib.C_SYSCLK_SRC_parameter_has_an_invalid_value]", 6, false); // D
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), xil_defaultlib.C_SYSCLK_SRC_parameter_has_an_invalid_value]", 6, false, false, false, false, false, true); // D - Double Click
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), genblk4.clocks_i : xilinx7_clocks (xilinx7_clocks.v)]", 5, false); // D
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), genblk4.clocks_i : xilinx7_clocks (xilinx7_clocks.v)]", 5, false, false, false, false, false, true); // D - Double Click
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), xil_defaultlib.C_SYSCLK_SRC_parameter_has_an_invalid_value]", 6, false); // D
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), xil_defaultlib.C_SYSCLK_SRC_parameter_has_an_invalid_value]", 6, false, false, false, false, false, true); // D - Double Click
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), xil_defaultlib.gmii_clock_handle]", 8, false); // D
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), xil_defaultlib.gmii_clock_handle]", 8, false, false, false, false, false, true); // D - Double Click
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), genblk4.clocks_i : xilinx7_clocks (xilinx7_clocks.v)]", 5, false); // D
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), genblk4.clocks_i : xilinx7_clocks (xilinx7_clocks.v)]", 5, false, false, false, false, true, false); // D - Popup Trigger
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), genblk4.clocks_i : xilinx7_clocks (xilinx7_clocks.v)]", 5, false); // D
+selectButton(PAResourceCommand.PACommandNames_ADD_SOURCES, "Sources_add_sources"); // E
+// Run Command: PAResourceCommand.PACommandNames_ADD_SOURCES
+// c (cr): Add Sources: addNotify
+dismissDialog("Add Sources"); // c
+selectCodeEditor("xilinx7_clocks.v", 223, 143); // bP
+selectButton(PAResourceCommand.PACommandNames_ADD_SOURCES, "Sources_add_sources"); // E
+// Run Command: PAResourceCommand.PACommandNames_ADD_SOURCES
+// c (cr): Add Sources: addNotify
+selectButton("NEXT", "Next >"); // JButton
+selectButton(PAResourceQtoS.SrcChooserPanel_ADD_HDL_AND_NETLIST_FILES_TO_YOUR_PROJECT, "Add Files"); // a
+// Elapsed time: 44 seconds
+dismissFileChooser();
+// 'g' command handler elapsed time: 51 seconds
+dismissDialog("Add Sources"); // c
+expandTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, eth_gtx_bridge (eth_gtx_bridge.v)]", 9); // D
+collapseTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, eth_gtx_bridge (eth_gtx_bridge.v)]", 9); // D
+// Elapsed time: 11 seconds
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), genblk4.clocks_i : xilinx7_clocks (xilinx7_clocks.v)]", 5, false); // D
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), genblk4.clocks_i : xilinx7_clocks (xilinx7_clocks.v)]", 5, false, false, false, false, true, false); // D - Popup Trigger
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), xil_defaultlib.C_SYSCLK_SRC_parameter_has_an_invalid_value]", 6, false); // D
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), xil_defaultlib.C_SYSCLK_SRC_parameter_has_an_invalid_value]", 6, false, false, false, false, true, false); // D - Popup Trigger
+selectMenu(PAResourceCommand.PACommandNames_AUTO_UPDATE_HIER, "Hierarchy Update"); // ah
+selectMenu(PAResourceQtoS.SrcMenu_IP_HIERARCHY, "IP Hierarchy"); // ah
+selectMenu(PAResourceCommand.PACommandNames_AUTO_UPDATE_HIER, "Hierarchy Update"); // ah
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), xil_defaultlib.C_SYSCLK_SRC_parameter_has_an_invalid_value]", 6, false); // D
+// Elapsed time: 268 seconds
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), xil_defaultlib.C_SYSCLK_SRC_parameter_has_an_invalid_value]", 6, false); // D
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), genblk4.clocks_i : xilinx7_clocks (xilinx7_clocks.v)]", 5, false); // D
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), genblk4.clocks_i : xilinx7_clocks (xilinx7_clocks.v)]", 5, false, false, false, false, false, true); // D - Double Click
+// Elapsed time: 27 seconds
+expandTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_base_shell (marble_base_shell.v)]", 11); // D
+collapseTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_base_shell (marble_base_shell.v)]", 11); // D
+expandTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, oversampling_rx_8b9b (oversampling_rx_8b9b.v)]", 12); // D
+collapseTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, oversampling_rx_8b9b (oversampling_rx_8b9b.v)]", 12); // D
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), xil_defaultlib.C_SYSCLK_SRC_parameter_has_an_invalid_value]", 6, false); // D
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), xil_defaultlib.C_SYSCLK_SRC_parameter_has_an_invalid_value]", 6, false, false, false, false, true, false); // D - Popup Trigger
+selectMenu(PAResourceCommand.PACommandNames_AUTO_UPDATE_HIER, "Hierarchy Update"); // ah
+selectMenu(PAResourceQtoS.SrcMenu_IP_HIERARCHY, "IP Hierarchy"); // ah
+selectMenuItem(PAResourceCommand.PACommandNames_GOTO_INSTANTIATION, "Go to Source"); // ak
+// Run Command: PAResourceCommand.PACommandNames_GOTO_INSTANTIATION
+selectCodeEditor("marble_top.v", 159, 246); // bP
+typeControlKey((HResource) null, "marble_top.v", 'c'); // bP
+selectCodeEditor("marble_top.v", 194, 240); // bP
+// Elapsed time: 10 seconds
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), xil_defaultlib.C_SYSCLK_SRC_parameter_has_an_invalid_value]", 6, false); // D
+selectCodeEditor("marble_top.v", 132, 221); // bP
+// Elapsed time: 50 seconds
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, xadc_tempmon (xadc_tempmon.v)]", 22, false); // D
+// Elapsed time: 38 seconds
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_base_shell (marble_base_shell.v)]", 11, true); // D - Node
+selectButton(PAResourceCommand.PACommandNames_ADD_SOURCES, "Sources_add_sources"); // E
+// Run Command: PAResourceCommand.PACommandNames_ADD_SOURCES
+// c (cr): Add Sources: addNotify
+selectButton("NEXT", "Next >"); // JButton
+selectButton(PAResourceQtoS.SrcChooserPanel_ADD_HDL_AND_NETLIST_FILES_TO_YOUR_PROJECT, "Add Files"); // a
+// Elapsed time: 18 seconds
+setFileChooser("/home/le123456/Desktop/Project/bedrock/projects/test_marble_family/marble_mid.vh");
+selectButton("FINISH", "Finish"); // JButton
+// 'g' command handler elapsed time: 22 seconds
+dismissDialog("Add Sources"); // c
+// Tcl Message: add_files -norecurse /home/le123456/Desktop/Project/bedrock/projects/test_marble_family/marble_mid.vh 
+// Elapsed time: 27 seconds
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, oversampling_rx_8b9b (oversampling_rx_8b9b.v)]", 12, true); // D - Node
+selectButton(RDIResource.AbstractSearchablePanel_SHOW_SEARCH, "Sources_search"); // x: TRUE
+setText("PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE_SEARCH_FIELD", "marble_mid", true); // OverlayTextField
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, Verilog Header, marble_mid.vh]", 2, false); // D
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, Verilog Header, marble_mid.vh]", 2, false, false, false, false, false, true); // D - Double Click
+selectCodeEditor("marble_mid.vh", 128, 113); // bP
+typeControlKey((HResource) null, "marble_mid.vh", 'c'); // bP
+// Elapsed time: 31 seconds
+selectTree(PAResourceEtoH.FlowNavigatorTreePanel_FLOW_NAVIGATOR_TREE, "[, IP Integrator, Open Block Design]", 7, false); // u
+// Elapsed time: 33 seconds
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), gmii_to_rgmii_i : gmii_to_rgmii (gmii_to_rgmii.v)]", 5, false); // D
+// Elapsed time: 22 seconds
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), gmii_to_rgmii_i : gmii_to_rgmii (gmii_to_rgmii.v)]", 5, false); // D
+selectTree(PAResourceEtoH.FlowNavigatorTreePanel_FLOW_NAVIGATOR_TREE, "[, Project Manager, Settings]", 1, false); // u
+// Run Command: RDIResourceCommand.RDICommands_SETTINGS
+// d (cr): Settings: addNotify
+// [GUI Memory]: 175 MB (+12481kb) [00:58:14]
+// HMemoryUtils.trashcanNow. Engine heap size: 1,836 MB. GUI used memory: 86 MB. Current time: 6/20/25, 3:04:29 PM PDT
+// Elapsed time: 33 seconds
+selectTree(PAResourceQtoS.SettingsDialog_PROJECT_TREE, "[projectRoot, Simulation]", 1, false); // B
+selectTab(PAResourceOtoP.ProjectSettingsSimulationPanel_TABBED_PANE, PAResourceOtoP.ProjectSettingsSimulationPanel_SIMULATION, "Simulation", 2); // i
+selectTab(PAResourceOtoP.ProjectSettingsSimulationPanel_TABBED_PANE, PAResourceOtoP.ProjectSettingsSimulationPanel_COMPILATION, "Compilation", 0); // i
+// Elapsed time: 10 seconds
+selectTree(PAResourceQtoS.SettingsDialog_OPTIONS_TREE, "[optionsRoot, Selection Rules]", 10, false); // B
+selectTree(PAResourceQtoS.SettingsDialog_PROJECT_TREE, "[projectRoot, Simulation]", 1, false); // B
+selectTab(PAResourceOtoP.ProjectSettingsSimulationPanel_TABBED_PANE, PAResourceOtoP.ProjectSettingsSimulationPanel_SIMULATION, "Simulation", 2); // i
+// Elapsed time: 16 seconds
+selectTab(PAResourceOtoP.ProjectSettingsSimulationPanel_TABBED_PANE, PAResourceOtoP.ProjectSettingsSimulationPanel_COMPILATION, "Compilation", 0); // i
+// Elapsed time: 61 seconds
+selectButton(PAResourceTtoZ.VerilogOptionsChooserPanel_SPECIFY_COMPILATION_OPTIONS_FOR_VERILOG, (String) null); // t
+// b (d): Verilog Options: addNotify
+// Elapsed time: 36 seconds
+selectButton(PAResourceItoN.NameValuePanel_ADD_VALUE, "Add Value"); // E
+// L (b): Add Value: addNotify
+// Elapsed time: 10 seconds
+setText(PAResourceItoN.NameValuePanel_NAME, "MARBLE_V2"); // aa
+// Elapsed time: 20 seconds
+selectButton(RDIResource.BaseDialog_OK, "OK"); // a
+dismissDialog("Add Value"); // L
+selectButton(PAResourceItoN.NameValuePanel_ADD_VALUE, "Add Value"); // E
+// L (b): Add Value: addNotify
+setText(PAResourceItoN.NameValuePanel_NAME, "USE_SI570"); // aa
+selectButton(RDIResource.BaseDialog_OK, "OK"); // a
+dismissDialog("Add Value"); // L
+selectButton(PAResourceItoN.NameValuePanel_ADD_VALUE, "Add Value"); // E
+// L (b): Add Value: addNotify
+setText(PAResourceItoN.NameValuePanel_NAME, "USE_IDELAYCTRL"); // aa
+selectButton(RDIResource.BaseDialog_OK, "OK"); // a
+dismissDialog("Add Value"); // L
+selectButton(RDIResource.BaseDialog_OK, "OK"); // a
+dismissDialog("Verilog Options"); // b
+selectTree(PAResourceQtoS.SettingsDialog_PROJECT_TREE, "[projectRoot, Synthesis]", 3, false); // B
+selectTree(PAResourceQtoS.SettingsDialog_PROJECT_TREE, "[projectRoot, Simulation]", 1, false); // B
+selectTree(PAResourceQtoS.SettingsDialog_PROJECT_TREE, "[projectRoot, Synthesis]", 3, false); // B
+// Elapsed time: 52 seconds
+selectTree(PAResourceQtoS.SettingsDialog_OPTIONS_TREE, "[optionsRoot, WebTalk]", 5, false); // B
+selectTree(PAResourceQtoS.SettingsDialog_PROJECT_TREE, "[projectRoot, Simulation]", 1, false); // B
+selectTab(PAResourceOtoP.ProjectSettingsSimulationPanel_TABBED_PANE, PAResourceOtoP.ProjectSettingsSimulationPanel_COMPILATION, "Compilation", 0); // i
+selectButton(RDIResource.BaseDialog_OK, "OK"); // a
+// TclEventType: FILE_SET_CHANGE
+// TclEventType: DG_GRAPH_STALE
+// TclEventType: FILE_SET_CHANGE
+// Tcl Message: set_property verilog_define {MARBLE_V2 USE_SI570 USE_IDELAYCTRL} [get_filesets sim_1] 
+dismissDialog("Settings"); // d
+selectCodeEditor("marble_mid.vh", 190, 296); // bP
+// HMemoryUtils.trashcanNow. Engine heap size: 1,864 MB. GUI used memory: 92 MB. Current time: 6/20/25, 3:09:04 PM PDT
+expandTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), base : marble_base (marble_base.v)]", 6); // D
+expandTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), base : marble_base (marble_base.v), mailbox_i : mmc_mailbox (mmc_mailbox.v)]", 7); // D
+collapseTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), base : marble_base (marble_base.v), mailbox_i : mmc_mailbox (mmc_mailbox.v)]", 7); // D
+expandTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), base : marble_base (marble_base.v), slave : lb_marble_slave (lb_marble_slave.v)]", 9); // D
+collapseTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), base : marble_base (marble_base.v), slave : lb_marble_slave (lb_marble_slave.v)]", 9); // D
+collapseTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), base : marble_base (marble_base.v)]", 6); // D
+// Elapsed time: 57 seconds
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), xil_defaultlib.C_SYSCLK_SRC_parameter_has_an_invalid_value]", 8, false); // D
+selectTree(PAResourceEtoH.FlowNavigatorTreePanel_FLOW_NAVIGATOR_TREE, "[, Project Manager, Settings]", 1, false); // u
+// Run Command: RDIResourceCommand.RDICommands_SETTINGS
+// d (cr): Settings: addNotify
+selectButton(PAResourceTtoZ.VerilogOptionsChooserPanel_SPECIFY_COMPILATION_OPTIONS_FOR_VERILOG, (String) null); // t
+// b (d): Verilog Options: addNotify
+selectButton(PAResourceItoN.MultiFileChooser_ADD_DIRECTORIES, "Add Directories"); // E
+setFolderChooser("/home/le123456/Desktop/Project/bedrock/projects");
+selectButton(RDIResource.BaseDialog_OK, "OK"); // a
+dismissDialog("Verilog Options"); // b
+selectButton(RDIResource.BaseDialog_APPLY, "Apply"); // a
+// TclEventType: DG_GRAPH_STALE
+// TclEventType: FILE_SET_CHANGE
+// Tcl Message: set_property include_dirs /home/le123456/Desktop/Project/bedrock/projects [get_filesets sim_1] 
+selectButton(RDIResource.BaseDialog_OK, "OK"); // a
+dismissDialog("Settings"); // d
+// Elapsed time: 10 seconds
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, eth_gtx_bridge (eth_gtx_bridge.v)]", 11, true); // D - Node
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), xil_defaultlib.C_SYSCLK_SRC_parameter_has_an_invalid_value]", 8, false); // D
+// Elapsed time: 11 seconds
+selectCodeEditor("marble_mid.vh", 67, 318); // bP
+// Elapsed time: 10 seconds
+selectCodeEditor("marble_mid.vh", 31, 216); // bP
+typeControlKey((HResource) null, "marble_mid.vh", 'c'); // bP
+// Elapsed time: 1004 seconds
+selectTree(PAResourceEtoH.FlowNavigatorTreePanel_FLOW_NAVIGATOR_TREE, "[, Project Manager, Settings]", 1, false); // u
+// Run Command: RDIResourceCommand.RDICommands_SETTINGS
+// d (cr): Settings: addNotify
+selectButton(PAResourceTtoZ.VerilogOptionsChooserPanel_SPECIFY_COMPILATION_OPTIONS_FOR_VERILOG, (String) null); // t
+// b (d): Verilog Options: addNotify
+selectButton(PAResourceItoN.NameValuePanel_ADD_VALUE, "Add Value"); // E
+// L (b): Add Value: addNotify
+setText(PAResourceItoN.NameValuePanel_NAME, "C_SYSCLK_SRC"); // aa
+setText(PAResourceItoN.NameValuePanel_VALUE, "\"sys_clk\""); // aa
+selectButton(RDIResource.BaseDialog_OK, "OK"); // a
+dismissDialog("Add Value"); // L
+selectButton(RDIResource.BaseDialog_OK, "OK"); // a
+dismissDialog("Verilog Options"); // b
+selectButton(RDIResource.BaseDialog_OK, "OK"); // a
+// TclEventType: DG_GRAPH_STALE
+// TclEventType: FILE_SET_CHANGE
+// Tcl Message: set_property verilog_define {MARBLE_V2 USE_SI570 USE_IDELAYCTRL C_SYSCLK_SRC=\"sys_clk\"} [get_filesets sim_1] 
+// Tcl Message: INFO: [IP_Flow 19-3899] Cannot get the environment domain name variable for the component vendor name. Setting the vendor name to 'user.org'. 
+dismissDialog("Settings"); // d
+selectCodeEditor("marble_mid.vh", 141, 423); // bP
+selectCodeEditor("marble_mid.vh", 205, 518); // bP
+// Elapsed time: 16 seconds
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v)]", 4, true); // D - Node
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v)]", 4, true, false, false, false, false, true); // D - Double Click - Node
+selectCodeEditor("marble_top.v", 150, 113); // bP
+selectCodeEditor("marble_top.v", 124, 192); // bP
+// Elapsed time: 10 seconds
+expandTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v)]", 4); // D
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), xil_defaultlib.C_SYSCLK_SRC_parameter_has_an_invalid_value]", 8, false); // D
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), xil_defaultlib.C_SYSCLK_SRC_parameter_has_an_invalid_value]", 8, false, false, false, false, false, true); // D - Double Click
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, marble_top (marble_top.v), xil_defaultlib.C_SYSCLK_SRC_parameter_has_an_invalid_value]", 8, false, false, false, false, true, false); // D - Popup Trigger
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, Verilog Header, marble_mid.vh]", 3, false); // D
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, Verilog Header, marble_mid.vh]", 3, false, false, false, false, false, true); // D - Double Click
+selectCodeEditor("marble_mid.vh", 111, 444); // bP
+// Elapsed time: 79 seconds
+selectCodeEditor("marble_mid.vh", 188, 273); // bP
+selectCodeEditor("marble_mid.vh", 245, 26); // bP
+selectCodeEditor("marble_mid.vh", 3, 10); // bP
+selectCodeEditor("marble_mid.vh", 60, 4); // bP
+typeControlKey((HResource) null, "marble_mid.vh", 'v'); // bP
+selectCodeEditor("marble_mid.vh", 168, 137); // bP
+// TclEventType: DG_GRAPH_STALE
+// TclEventType: FILE_SET_CHANGE
+// HMemoryUtils.trashcanNow. Engine heap size: 1,898 MB. GUI used memory: 93 MB. Current time: 6/20/25, 3:31:10 PM PDT
+// Elapsed time: 56 seconds
+selectCodeEditor("marble_mid.vh", 300, 12); // bP
+typeControlKey((HResource) null, "marble_mid.vh", 'v'); // bP
+// TclEventType: DG_GRAPH_STALE
+// TclEventType: FILE_SET_CHANGE
+// [Engine Memory]: 1,913 MB (+9627kb) [01:26:10]
+// Elapsed time: 15 seconds
+selectCodeEditor("marble_mid.vh", 70, 577); // bP
+selectCodeEditor("marble_mid.vh", 45, 576); // bP
+typeControlKey((HResource) null, "marble_mid.vh", 'v'); // bP
+// TclEventType: DG_GRAPH_STALE
+// TclEventType: FILE_SET_CHANGE
+selectCodeEditor("marble_mid.vh", 148, 542); // bP
+// HMemoryUtils.trashcanNow. Engine heap size: 1,929 MB. GUI used memory: 92 MB. Current time: 6/20/25, 3:32:25 PM PDT
+typeControlKey(null, null, 'z');
+// Elapsed time: 11 seconds
+selectCodeEditor("marble_mid.vh", 49, 572); // bP
+selectCodeEditor("marble_mid.vh", 40, 580); // bP
+selectCodeEditor("marble_mid.vh", 95, 486); // bP
+selectCodeEditor("marble_mid.vh", 100, 501); // bP
+typeControlKey((HResource) null, "marble_mid.vh", 'c'); // bP
+selectCodeEditor("marble_mid.vh", 152, 87); // bP
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, Verilog Header, endpoint.vh]", 2, false); // D
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, Verilog Header, endpoint.vh]", 2, false, false, false, false, false, true); // D - Double Click
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, Verilog Header, marble_mid.vh]", 3, false); // D
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources, Verilog Header, marble_mid.vh]", 3, false, false, false, false, false, true); // D - Double Click
+// Elapsed time: 19 seconds
+selectCodeEditor("marble_mid.vh", 67, 520); // bP
+selectCodeEditor("marble_mid.vh", 57, 578); // bP
+typeControlKey((HResource) null, "marble_mid.vh", 'v'); // bP
+// TclEventType: DG_GRAPH_STALE
+// TclEventType: FILE_SET_CHANGE
+selectCodeEditor("marble_mid.vh", 214, 393); // bP
+// Elapsed time: 24 seconds
+selectCodeEditor("marble_mid.vh", 255, 386); // bP
+selectCodeEditor("marble_mid.vh", 245, 435); // bP
+// Elapsed time: 617 seconds
+selectCodeEditor("marble_mid.vh", 31, 83); // bP
+typeControlKey((HResource) null, "marble_mid.vh", 'c'); // bP
+// TclEventType: DG_GRAPH_STALE
+// TclEventType: FILE_SET_CHANGE
+// HMemoryUtils.trashcanNow. Engine heap size: 1,962 MB. GUI used memory: 92 MB. Current time: 6/20/25, 3:46:45 PM PDT
+// TclEventType: DG_GRAPH_STALE
+// TclEventType: FILE_SET_CHANGE
+// TclEventType: DG_GRAPH_STALE
+// TclEventType: FILE_SET_CHANGE
+// HMemoryUtils.trashcanNow. Engine heap size: 1,994 MB. GUI used memory: 92 MB. Current time: 6/20/25, 3:47:25 PM PDT
+// TclEventType: DG_GRAPH_STALE
+// TclEventType: FILE_SET_CHANGE
+// [Engine Memory]: 2,010 MB (+1520kb) [01:43:42]
+// TclEventType: DG_GRAPH_STALE
+// TclEventType: FILE_SET_CHANGE
+// HMemoryUtils.trashcanNow. Engine heap size: 2,026 MB. GUI used memory: 92 MB. Current time: 6/20/25, 3:50:35 PM PDT
+// TclEventType: DG_GRAPH_STALE
+// TclEventType: FILE_SET_CHANGE
+// TclEventType: DG_GRAPH_STALE
+// TclEventType: FILE_SET_CHANGE
+// HMemoryUtils.trashcanNow. Engine heap size: 2,058 MB. GUI used memory: 92 MB. Current time: 6/20/25, 3:51:00 PM PDT
