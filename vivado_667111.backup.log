@@ -1,0 +1,14 @@
+#-----------------------------------------------------------
+# Vivado v2020.2 (64-bit)
+# SW Build 3064766 on Wed Nov 18 09:12:47 MST 2020
+# IP Build 3064653 on Wed Nov 18 14:17:31 MST 2020
+# Start of session at: Tue May 27 09:19:15 2025
+# Process ID: 667111
+# Current directory: /home/le123456/Desktop/Project/Marble-MMC
+# Command line: vivado
+# Log file: /home/le123456/Desktop/Project/Marble-MMC/vivado.log
+# Journal file: /home/le123456/Desktop/Project/Marble-MMC/vivado.jou
+#-----------------------------------------------------------
+start_gui
+exit
+INFO: [Common 17-206] Exiting Vivado at Tue May 27 09:19:30 2025...
