@@ -1,0 +1,95 @@
+/*
+
+Xilinx Vivado v2020.2 (64-bit) [Major: 2020, Minor: 2]
+SW Build: 3064766 on Wed Nov 18 09:12:47 MST 2020
+IP Build: 3064653 on Wed Nov 18 14:17:31 MST 2020
+
+Process ID (PID): 636959
+License: Customer
+Mode: GUI Mode
+
+Current time: 	Fri Jun 20 12:17:37 PDT 2025
+Time zone: 	Pacific Standard Time (America/Los_Angeles)
+
+OS: Ubuntu
+OS Version: 6.8.0-58-generic
+OS Architecture: amd64
+Available processors (cores): 16
+
+Display: 1
+Screen size: 2560x1440
+Screen resolution (DPI): 100
+Available screens: 1
+Default font: family=Dialog,name=Dialog,style=plain,size=12
+Scale size: 12
+
+Java version: 	11.0.2 64-bit
+Java home: 	/home/le123456/Desktop/Xilinx/Vivado/2020.2/tps/lnx64/jre11.0.2
+Java executable location: 	/home/le123456/Desktop/Xilinx/Vivado/2020.2/tps/lnx64/jre11.0.2/bin/java
+Java initial memory (-Xms): 	128 MB
+Java maximum memory (-Xmx):	 3 GB
+
+
+User name: 	le123456
+User home directory: /home/le123456
+User working directory: /home/le123456/Desktop/Project/Marble-MMC/build/marble_v1_4_2
+User country: 	US
+User language: 	en
+User locale: 	en_US
+
+RDI_BASEROOT: /home/le123456/Desktop/Xilinx/Vivado
+HDI_APPROOT: /home/le123456/Desktop/Xilinx/Vivado/2020.2
+RDI_DATADIR: /home/le123456/Desktop/Xilinx/Vivado/2020.2/data
+RDI_BINDIR: /home/le123456/Desktop/Xilinx/Vivado/2020.2/bin
+
+Vivado preferences file location: /home/le123456/.Xilinx/Vivado/2020.2/vivado.xml
+Vivado preferences directory: /home/le123456/.Xilinx/Vivado/2020.2/
+Vivado layouts directory: /home/le123456/.Xilinx/Vivado/2020.2/data/layouts
+PlanAhead jar file location: 	/home/le123456/Desktop/Xilinx/Vivado/2020.2/lib/classes/planAhead.jar
+Vivado log file location: 	/home/le123456/Desktop/Project/Marble-MMC/build/marble_v1_4_2/vivado.log
+Vivado journal file location: 	/home/le123456/Desktop/Project/Marble-MMC/build/marble_v1_4_2/vivado.jou
+Engine tmp dir: 	./.Xil/Vivado-636959-pc100379
+
+Xilinx Environment Variables
+----------------------------
+XILINX: /home/le123456/Desktop/Xilinx/Vivado/2020.2/ids_lite/ISE
+XILINX_DSP: /home/le123456/Desktop/Xilinx/Vivado/2020.2/ids_lite/ISE
+XILINX_HLS: /home/le123456/Desktop/Xilinx/Vitis_HLS/2020.2
+XILINX_PLANAHEAD: /home/le123456/Desktop/Xilinx/Vivado/2020.2
+XILINX_VITIS: 
+XILINX_VIVADO: /home/le123456/Desktop/Xilinx/Vivado/2020.2
+XILINX_VIVADO_HLS: /home/le123456/Desktop/Xilinx/Vivado/2020.2
+
+
+GUI allocated memory:	154 MB
+GUI max memory:		3,072 MB
+Engine allocated memory: 1,482 MB
+
+Copyright 1986-2020 Xilinx, Inc. All Rights Reserved.
+
+*/
+
+// TclEventType: START_GUI
+// Tcl Message: start_gui 
+// Tcl Command: 'rdi::info_commands {device::*}'
+// Tcl Command: 'rdi::info_commands {debug::*}'
+// Tcl Command: 'rdi::info_commands {*}'
+// WARNING: HEventQueue.dispatchEvent() is taking  1309 ms.
+// HMemoryUtils.trashcanNow. Engine heap size: 1,482 MB. GUI used memory: 62 MB. Current time: 6/20/25, 12:17:37 PM PDT
+selectButton(PAResourceEtoH.GettingStartedView_CREATE_NEW_PROJECT, "Create Project"); // y
+// Run Command: PAResourceCommand.PACommandNames_NEW_PROJECT
+// [GUI Memory]: 79 MB (+80788kb) [00:00:12]
+// [Engine Memory]: 1,485 MB (+1405270kb) [00:00:12]
+// [GUI Memory]: 86 MB (+3150kb) [00:00:12]
+// [GUI Memory]: 93 MB (+2783kb) [00:00:12]
+// [GUI Memory]: 99 MB (+1368kb) [00:00:12]
+// f (cr): New Project: addNotify
+selectButton("NEXT", "Next >"); // JButton
+setText(PAResourceOtoP.ProjectNameChooser_PROJECT_NAME, "marble_v1_4_2"); // aa
+selectButton("NEXT", "Next >"); // JButton
+selectButton("NEXT", "Next >"); // JButton
+// Elapsed time: 13 seconds
+selectButton(PAResourceQtoS.SrcChooserPanel_ADD_HDL_AND_NETLIST_FILES_TO_YOUR_PROJECT, "Add Files"); // a
+// HMemoryUtils.trashcanNow. Engine heap size: 1,493 MB. GUI used memory: 69 MB. Current time: 6/20/25, 12:47:37 PM PDT
+// HMemoryUtils.trashcanNow. Engine heap size: 1,493 MB. GUI used memory: 61 MB. Current time: 6/20/25, 1:17:38 PM PDT
+// [GUI Memory]: 115 MB (+10769kb) [01:18:02]

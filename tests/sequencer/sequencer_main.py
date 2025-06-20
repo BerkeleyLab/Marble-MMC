@@ -3,6 +3,11 @@ import os
 from utils import setup_marble, is_hardware_connected, RESULTS_LOG
 from test_leds import test_led_register
 from test_fmc import test_fmc_loopback
+from test_uart_loopback import test_uart_loopback
+from test_gpio_toggle import test_gpio_toggle
+from test_eeprom import test_eeprom
+from test_voltage import test_voltage
+from test_i2c import test_i2c
 
 def run_all_tests():
     RESULTS_LOG.unlink(missing_ok=True)
