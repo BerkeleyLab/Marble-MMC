@@ -22,8 +22,13 @@ def run_all_tests():
     all_passed = all([
         test_led_register(),
         test_fmc_loopback(),
-        # Add more as needed
+        test_uart_loopback(),
+        test_gpio_toggle(),
+        test_eeprom(),
+        test_voltage(),
+        test_i2c(),
     ])
+
     sys.exit(0 if all_passed else 1)
 
 
