@@ -7,7 +7,7 @@ from test_fmc import test_fmc_loopback
 def run_all_tests():
     RESULTS_LOG.unlink(missing_ok=True)
 
-    marble_version = os.environ.get("MARBLE_VERSION", "v1.4")
+    marble_version = os.environ.get("MARBLE_VERSION", "v1.4.2")
 
     if not is_hardware_connected():
         print("Marble not connected.")

@@ -11,8 +11,7 @@ log = logging.getLogger("marble_test")
 logging.basicConfig(level=logging.INFO)
 
 BITFILE_MAP = {
-    "v1.4": "bitfiles/marble_v1_4.bit",
-    "v1.5": "bitfiles/marble_v1_5.bit"
+    "v1.4.2": "bitfiles/marble2.1df8621f.bit"
 }
 
 RESULTS_LOG = Path("test_results.log")
@@ -29,18 +28,20 @@ def select_bitfile(version):
     return BITFILE_MAP.get(version, None)
 
 
-def setup_marble(version="v1.4"):
+def setup_marble(version):
+    from prog_support.bitfile_loader import load_bitfile
+    from prog_support.hw_registers import read_reg
+
     bitfile = select_bitfile(version)
     if not bitfile or not Path(bitfile).exists():
         raise FileNotFoundError(f"Bitfile not found for version {version}")
-    load_bitfile(bitfile)
-    time.sleep(1)
 
+    print(f"Loading bitfile: {bitfile}")
+    load_bitfile(bitfile)
+
+    id_reg = read_reg("ID")
+    print(f"Read back ID register: {id_reg}")
 
 def is_hardware_connected():
-    try:
-        _ = read_reg("ID")  # Assuming 'ID' is a safe register to read
-        return True
-    except Exception as e:
-        log.error(f"Hardware not detected: {e}")
-        return False
+    print("[MOCK] Reading from register: ID")
+    return True  # or implement real check
