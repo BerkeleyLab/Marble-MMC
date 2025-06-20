@@ -1,0 +1,174 @@
+/*
+
+Xilinx Vivado v2020.2 (64-bit) [Major: 2020, Minor: 2]
+SW Build: 3064766 on Wed Nov 18 09:12:47 MST 2020
+IP Build: 3064653 on Wed Nov 18 14:17:31 MST 2020
+
+Process ID (PID): 650763
+License: Customer
+Mode: GUI Mode
+
+Current time: 	Fri Jun 20 14:06:03 PDT 2025
+Time zone: 	Pacific Standard Time (America/Los_Angeles)
+
+OS: Ubuntu
+OS Version: 6.8.0-58-generic
+OS Architecture: amd64
+Available processors (cores): 16
+
+Display: 1
+Screen size: 2560x1440
+Screen resolution (DPI): 100
+Available screens: 1
+Default font: family=Dialog,name=Dialog,style=plain,size=12
+Scale size: 12
+
+Java version: 	11.0.2 64-bit
+Java home: 	/home/le123456/Desktop/Xilinx/Vivado/2020.2/tps/lnx64/jre11.0.2
+Java executable location: 	/home/le123456/Desktop/Xilinx/Vivado/2020.2/tps/lnx64/jre11.0.2/bin/java
+Java initial memory (-Xms): 	128 MB
+Java maximum memory (-Xmx):	 3 GB
+
+
+User name: 	le123456
+User home directory: /home/le123456
+User working directory: /home/le123456/Desktop/Project/Marble-MMC
+User country: 	US
+User language: 	en
+User locale: 	en_US
+
+RDI_BASEROOT: /home/le123456/Desktop/Xilinx/Vivado
+HDI_APPROOT: /home/le123456/Desktop/Xilinx/Vivado/2020.2
+RDI_DATADIR: /home/le123456/Desktop/Xilinx/Vivado/2020.2/data
+RDI_BINDIR: /home/le123456/Desktop/Xilinx/Vivado/2020.2/bin
+
+Vivado preferences file location: /home/le123456/.Xilinx/Vivado/2020.2/vivado.xml
+Vivado preferences directory: /home/le123456/.Xilinx/Vivado/2020.2/
+Vivado layouts directory: /home/le123456/.Xilinx/Vivado/2020.2/data/layouts
+PlanAhead jar file location: 	/home/le123456/Desktop/Xilinx/Vivado/2020.2/lib/classes/planAhead.jar
+Vivado log file location: 	/home/le123456/Desktop/Project/Marble-MMC/vivado.log
+Vivado journal file location: 	/home/le123456/Desktop/Project/Marble-MMC/vivado.jou
+Engine tmp dir: 	./.Xil/Vivado-650763-pc100379
+
+Xilinx Environment Variables
+----------------------------
+XILINX: /home/le123456/Desktop/Xilinx/Vivado/2020.2/ids_lite/ISE
+XILINX_DSP: /home/le123456/Desktop/Xilinx/Vivado/2020.2/ids_lite/ISE
+XILINX_HLS: /home/le123456/Desktop/Xilinx/Vitis_HLS/2020.2
+XILINX_PLANAHEAD: /home/le123456/Desktop/Xilinx/Vivado/2020.2
+XILINX_VITIS: 
+XILINX_VIVADO: /home/le123456/Desktop/Xilinx/Vivado/2020.2
+XILINX_VIVADO_HLS: /home/le123456/Desktop/Xilinx/Vivado/2020.2
+
+
+GUI allocated memory:	154 MB
+GUI max memory:		3,072 MB
+Engine allocated memory: 1,502 MB
+
+Copyright 1986-2020 Xilinx, Inc. All Rights Reserved.
+
+*/
+
+// TclEventType: START_GUI
+// Tcl Message: start_gui 
+// Tcl Command: 'rdi::info_commands {device::*}'
+// Tcl Command: 'rdi::info_commands {debug::*}'
+// Tcl Command: 'rdi::info_commands {*}'
+// HMemoryUtils.trashcanNow. Engine heap size: 1,502 MB. GUI used memory: 62 MB. Current time: 6/20/25, 2:06:04 PM PDT
+// WARNING: HEventQueue.dispatchEvent() is taking  1001 ms.
+// WARNING: HEventQueue.dispatchEvent() is taking  1001 ms.
+// WARNING: HEventQueue.dispatchEvent() is taking  1001 ms.
+// WARNING: HEventQueue.dispatchEvent() is taking  1001 ms.
+// WARNING: HEventQueue.dispatchEvent() is taking  1001 ms.
+// WARNING: HEventQueue.dispatchEvent() is taking  1001 ms.
+// WARNING: HEventQueue.dispatchEvent() is taking  1001 ms.
+// WARNING: HEventQueue.dispatchEvent() is taking  1001 ms.
+selectButton(PAResourceEtoH.GettingStartedView_OPEN_PROJECT, "Open Project"); // y
+// Run Command: PAResourceCommand.PACommandNames_OPEN_PROJECT
+// HMemoryUtils.trashcanNow. Engine heap size: 1,538 MB. GUI used memory: 66 MB. Current time: 6/20/25, 2:08:09 PM PDT
+// Elapsed time: 18 seconds
+dismissFileChooser();
+// 'i' command handler elapsed time: 18 seconds
+selectButton(PAResourceEtoH.GettingStartedView_CREATE_NEW_PROJECT, "Create Project"); // y
+// Run Command: PAResourceCommand.PACommandNames_NEW_PROJECT
+// [GUI Memory]: 85 MB (+86628kb) [00:02:34]
+// [Engine Memory]: 1,542 MB (+1464982kb) [00:02:34]
+// [GUI Memory]: 92 MB (+2854kb) [00:02:34]
+// [GUI Memory]: 99 MB (+2491kb) [00:02:34]
+// [GUI Memory]: 105 MB (+1076kb) [00:02:34]
+// f (cr): New Project: addNotify
+selectButton("NEXT", "Next >"); // JButton
+selectButton(PAResourceOtoP.ProjectNameChooser_CHOOSE_PROJECT_LOCATION, (String) null); // t
+setFolderChooser("/home/le123456/Desktop/Project/Marble-MMC/build/marble_v1_4_2");
+setText(PAResourceOtoP.ProjectNameChooser_CHOOSE_PROJECT_LOCATION, "/home/le123456/Desktop/Project/Marble-MMC/build/marble_v1_4_2"); // ao
+setText(PAResourceOtoP.ProjectNameChooser_PROJECT_NAME, "marble_v1_4_2"); // aa
+selectButton("NEXT", "Next >"); // JButton
+selectButton("NEXT", "Next >"); // JButton
+selectButton("NEXT", "Next >"); // JButton
+selectButton("NEXT", "Next >"); // JButton
+selectTab(PAResourceOtoP.PartChooser_TABBED_PANE, (HResource) null, "Boards", 1); // i
+setText("PAResourceAtoD.BoardChooser_BOARD_TABLE_SEARCH_FIELD", (String) null); // OverlayTextField
+// Elapsed time: 25 seconds
+setText("PAResourceAtoD.BoardChooser_BOARD_TABLE_SEARCH_FIELD", "xc7k160tffg676-2"); // OverlayTextField
+selectTab(PAResourceOtoP.PartChooser_TABBED_PANE, (HResource) null, "Parts", 0); // i
+setText("PAResourceEtoH.FPGAChooser_FPGA_TABLE_SEARCH_FIELD", "xc7k160tffg676-2"); // OverlayTextField
+selectTable(PAResourceEtoH.FPGAChooser_FPGA_TABLE, "xc7k160tffg676-2 ; 676 ; 400 ; 101400 ; 202800 ; 325 ; 0 ; 600 ; 8 ; 0 ; 8 ; 0 ; 0 ; 0 ; 0 ; 0 ; 0 ; 0 ; 0 ; 0 ; 0 ; 1 ; 8 ;  ;  ;  ;  ;  ; 0.97 ; 0.97 ; 1.03", 0, "676", 1); // w
+selectButton("NEXT", "Next >"); // JButton
+// bz (cr):  Create Project : addNotify
+// TclEventType: DEBUG_PROBE_SET_CHANGE
+// TclEventType: FILE_SET_NEW
+// TclEventType: RUN_ADD
+// TclEventType: RUN_CURRENT
+// TclEventType: PROJECT_DASHBOARD_NEW
+// TclEventType: PROJECT_DASHBOARD_GADGET_NEW
+// TclEventType: PROJECT_DASHBOARD_GADGET_CHANGE
+// TclEventType: PROJECT_DASHBOARD_GADGET_NEW
+// TclEventType: PROJECT_DASHBOARD_GADGET_CHANGE
+// TclEventType: PROJECT_DASHBOARD_GADGET_NEW
+// TclEventType: PROJECT_DASHBOARD_GADGET_CHANGE
+// TclEventType: PROJECT_DASHBOARD_GADGET_NEW
+// TclEventType: PROJECT_DASHBOARD_GADGET_CHANGE
+// TclEventType: PROJECT_DASHBOARD_GADGET_NEW
+// TclEventType: PROJECT_DASHBOARD_GADGET_CHANGE
+// TclEventType: PROJECT_DASHBOARD_GADGET_NEW
+// TclEventType: PROJECT_DASHBOARD_GADGET_CHANGE
+// TclEventType: PROJECT_NEW
+// Tcl Message: create_project marble_v1_4_2 /home/le123456/Desktop/Project/Marble-MMC/build/marble_v1_4_2/marble_v1_4_2 -part xc7k160tffg676-2 
+// TclEventType: PROJECT_NEW
+// [GUI Memory]: 111 MB (+550kb) [00:03:44]
+// WARNING: HEventQueue.dispatchEvent() is taking  1896 ms.
+// TclEventType: FILE_SET_OPTIONS_CHANGE
+// Tcl Message: INFO: [IP_Flow 19-234] Refreshing IP repositories INFO: [IP_Flow 19-1704] No user IP repositories specified INFO: [IP_Flow 19-2313] Loaded Vivado IP repository '/home/le123456/Desktop/Xilinx/Vivado/2020.2/data/ip'. 
+// HMemoryUtils.trashcanNow. Engine heap size: 1,611 MB. GUI used memory: 75 MB. Current time: 6/20/25, 2:09:40 PM PDT
+// TclEventType: FILE_SET_OPTIONS_CHANGE
+// Tcl Message: INFO: [IP_Flow 19-3899] Cannot get the environment domain name variable for the component vendor name. Setting the vendor name to 'user.org'. 
+// TclEventType: FILE_SET_OPTIONS_CHANGE
+selectButton("FINISH", "Finish"); // JButton
+// 'g' command handler elapsed time: 71 seconds
+dismissDialog("Create Project"); // bz
+dismissDialog("New Project"); // f
+// [Engine Memory]: 1,631 MB (+13027kb) [00:03:46]
+// [GUI Memory]: 126 MB (+10576kb) [00:03:48]
+// Elapsed time: 20 seconds
+expandTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Constraints]", 1); // D
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Constraints, constrs_1]", 2, false); // D
+selectButton(PAResourceCommand.PACommandNames_ADD_SOURCES, "Sources_add_sources"); // E
+// Run Command: PAResourceCommand.PACommandNames_ADD_SOURCES
+// c (cr): Add Sources: addNotify
+selectButton("NEXT", "Next >"); // JButton
+selectButton(PAResourceAtoD.ConstraintsChooserPanel_ADD_FILES, "Add Files"); // a
+// Elapsed time: 46 seconds
+setFileChooser("/home/le123456/Desktop/Project/bedrock/board_support/marble/Marble.xdc");
+selectButton("FINISH", "Finish"); // JButton
+// 'g' command handler elapsed time: 50 seconds
+dismissDialog("Add Sources"); // c
+// TclEventType: FILE_SET_CHANGE
+// Tcl Message: add_files -fileset constrs_1 -norecurse /home/le123456/Desktop/Project/bedrock/board_support/marble/Marble.xdc 
+expandTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Constraints, constrs_1]", 2); // D
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Design Sources]", 0, false); // D
+// Elapsed time: 58 seconds
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Constraints, constrs_1, Marble.xdc]", 3, false); // D
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Constraints, constrs_1, Marble.xdc]", 3, false, false, false, false, false, true); // D - Double Click
+floatFrame(PAResourceOtoP.PAViews_CODE, "Marble.xdc"); // az
+// PAResourceOtoP.PAViews_CODE: Code: float view
+// [GUI Memory]: 140 MB (+7972kb) [00:06:41]
