@@ -18,7 +18,7 @@ The default Pmod mode is `disabled` which puts all the Pmod data pins into hi-Z 
 pulldown resistors.  This is a safe default for just about anything that could be attached to
 the Pmod connector.
 
-### ALS OLED UI Board
+### ALS OLED UI Board (not supported)
 For applications wanting a bit of visual feedback on the generic state of the Marble board, a
 SPI-based interface with the custom OLED [ui\_board](https://gitlab.lbl.gov/llrf-projects/analog_psu_board/-/tree/master/ui_board)
 developed and used at the ALS.  This board does not interface with the FPGA at all, but provides
@@ -80,7 +80,7 @@ wire [7:0] bitmask = {duty[2:0], phase[1:0], freq[2:0]};
 
 |Freq Bits   |Frequency|
 |------------|---------|
-|`0b000`     |0 Hz (staic) |
+|`0b000`     |0 Hz (static) |
 |`0b001`     |0.5 Hz   |
 |`0b010`     |1.0 Hz   |
 |`0b011`     |2.0 Hz   |

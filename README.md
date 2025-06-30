@@ -60,7 +60,7 @@ Additional for Marble only:
 ## Credits
 Originally based on lpc-toolchain. See its [README here](README-lpc-toolchain.md).
 
-Pro-tip: People using Debian Buster (and related Linux distributions) can
+Pro-tip: People using Debian Buster, Bullseye, Bookworm, Trixie, or related Linux distributions can
 get the required ARM compilers etc. with `apt-get install gcc-arm-none-eabi`.
 
 ### Marble-Mini UART connectivity ##
@@ -87,7 +87,7 @@ on `/dev/ttyUSB1`.
   * Connect Lab-psu to J17
       - 12 V @ 0.5 A current limit
       - GND pin is the one closer to the barrel connector
-  * Connect Segger j-link mini or ST-Link v3 to J14
+  * Connect Segger J-Link Mini or ST-Link v3 to J14
   * Download MMC firmware: `make marble_download` or `make marble_mini_download`
   * Connect to Marble(-Mini) USB port and enter serial terminal:
     `miniterm -e /dev/ttyUSB3 115200`

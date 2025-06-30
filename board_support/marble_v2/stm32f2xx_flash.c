@@ -11,7 +11,7 @@
 #include "flash.h"
 #include "stm32f2xx_hal.h"
 
-#define DEBUG_PRINT
+//#define DEBUG_PRINT
 #include "dbg.h"
 #undef DEBUG_PRINT
 
