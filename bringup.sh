@@ -148,9 +148,9 @@ echo "Write IP and MAC addresses to marble_mmc based on serial number..."
 "$SCRIPTS_PATH/config_ip_mac.sh" -d "$TTY_MMC" "$SERIAL_NUM"
 
 echo "##################################"
-# 4. Write Si570 parameters to marble_mmc based on serial number
-echo "Write Si570 parameters to marble_mmc based on serial number..."
-"$SCRIPTS_PATH/config_si57x.sh" -d "$TTY_MMC" "$SERIAL_NUM"
+# 4. Write Si570 parameters to marble_mmc based on PCB version
+echo "Write Si570 parameters to marble_mmc based on PCB version"
+"$SCRIPTS_PATH/config_si57x.sh" -d "$TTY_MMC"
 
 echo "##################################"
 # 4. Load bitfile to FPGA
