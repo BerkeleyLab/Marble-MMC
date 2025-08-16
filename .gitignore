@@ -25,3 +25,23 @@ doc/mailbox_map.*
 # Special auto-generated files
 src/mailbox_def.c
 inc/mailbox_def.h
+
+# Vivado/Vitis generated
+*.bit
+*.bin
+*.mmi
+*.jou
+*.log
+*.wdb
+*.xpr
+*.xsa
+*.ltx
+.runs/
+.cache/
+.hw/
+.sim/
+.ip_user_files/
+.Xil/
+.gen/
+.sdk/
+.vscode/
