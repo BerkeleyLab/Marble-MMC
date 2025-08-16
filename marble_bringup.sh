@@ -5,10 +5,6 @@ set -e  # Exit on any error
 LOGFILE="marble_bringup_$(date +%Y%m%d_%H%M%S).log"
 exec > >(tee -a "$LOGFILE") 2>&1
 
-# Set up enrionment variables
-echo "Setting environement variables"
-./environment_variable_setup.sh
-
 # MMC + LTM4673 bring-up
 echo "Programming MMC and LTM4673..."
 ./bringup_mmc.sh
