@@ -1,70 +1,59 @@
-#!/bin/sh
-# Configure marble_mmc si57x parameters based on serial number
-# config_si57x.sh [-d /dev/ttyUSB3] serial_number
+# Configure marble_mmc si57x parameters based on PCB revision
+# config_si57x.sh [-d /dev/ttyUSB3]
 # Set environment variable TTY_MMC to point to whatever /dev/ttyUSBx
 # the marble_mmc enumerated as.  Defaults to /dev/ttyUSB3
 # In case no argument is given, it will try to figure it out
 
-devnext=0
-dev=
-snum=
-for arg in "$@"; do
-  if [ $devnext != 0 ]; then
-    dev=$arg
-    devnext=0
-  elif [ "$arg" = "-d" ]; then
-    devnext=1
-  else
-    snum=$arg
-  fi
+dev=""
+
+# Parse arguments
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -d)
+            dev="$2"
+            shift 2
+            ;;
+        *)
+            shift
+            ;;
+    esac
 done
 
 SCRIPT_DIR=$( dirname -- "$0"; )
-
-if [ -z "$snum" ]; then
-  if [ -n "$IP" ]; then
-    # TODO - This only extracts 2-digit numbers!!! Need to use sed to extract everything after last '.'
-    snum=$(printf "%-.2s" "$IP")
-    echo "Using serial number from IP: $snum"
-  else
-    # Try to find serial number (first one)
-    snum=$(ls -l /dev/serial/by-id/ | grep "LBNL_Marble.*if03" \
-              | sed -r 's/.*Marble_0{0,6}//' | sed 's/-.*$//')
-    snum=$(echo $snum | sed 's/ .*//')
-    if [ -z "$snum" ]; then
-      echo "Usage: config_si57x.sh [-d /dev/ttyUSB3] serial_number"
-      exit 1
-    fi
-  fi
-fi
-
+# Auto-detect TTY if not set
 if [ -z "$dev" ]; then
-  if [ -n "$TTY_MMC" ]; then
-    dev=$TTY_MMC
-  else
-    # Try to find tty associated to mmc (first one)
-    dev=$(ls -l /dev/serial/by-id/ | grep "LBNL_Marble.*if03"\
-            | sed 's/.*ttyUSB/\/dev\/ttyUSB/')
-    dev=$(echo $dev | sed 's/ .*//')
-    if [ -z "$dev" ]; then
-      dev=/dev/ttyUSB3
+    if [ -n "$TTY_MMC" ]; then
+        dev="$TTY_MMC"
+    else
+        # Try to find tty associated to mmc (first one)
+        dev=$(ls -l /dev/serial/by-id/ 2>/dev/null | grep "LBNL_Marble.*if03" | sed 's/.*ttyUSB/\/dev\/ttyUSB/')
+        dev=$(echo "$dev" | sed 's/ .*//')
+        if [ -z "$dev" ]; then
+            dev="/dev/ttyUSB3"
+        fi
     fi
-  fi
 fi
 
-### Temporary solution to configure Si570 parameters.
+# Query the board for PCB revision using load.py
+PCB_REV=$(python3 "$SCRIPT_DIR"/load.py -d "$dev" 0 2>/dev/null | tr '\r' '\n' | grep -i 'pcb rev' | grep -oE '[0-9]+\.[0-9]+')
+if [ -z "$PCB_REV" ]; then
+    echo "Could not detect PCB revision via console."
+    exit 1
+fi
+echo "Detected Marble PCB revision: $PCB_REV"
+
+awk_result=$(awk "BEGIN {print ($PCB_REV >= 1.4) ? 1 : 0}")
+# Solution to configure Si570 parameters based on marble version
 # NOTE: I2C address is hex 8-bit, frequency is decimal and the configuration
 # contains the 0x40 for validity check.
-if [ $snum > 0 ]; then
-  if [ "$snum" -ge 53 ]; then # Marble 1.4 starts from #53
+if [ "$awk_result" -eq 1 ]; then
     si570_configuration_string="s AA 270000000 40"
-    echo "Marble PCB rev = 1.4 - Si570 parameters = {0xAA (0x55 7-bit), 270 MHz, 0x0}"
-  else # considering Marble 1.3
+    echo "Marble PCB rev = $PCB_REV (>=1.4) - Si570 parameters = {0xAA (0x55 7-bit), 270 MHz, 0x0}"
+else
     si570_configuration_string="s EE 125000000 42"
-    echo "Marble PCB rev = 1.3 - Si570 parameters = {0xEE (0x77 7-bit), 125 MHz, 0x1}"
-  fi
+    echo "Marble PCB rev = $PCB_REV (<1.4) - Si570 parameters = {0xEE (0x77 7-bit), 125 MHz, 0x1}"
 fi
 
-python3 $SCRIPT_DIR/load.py -d "$dev" "$si570_configuration_string"
+python3 "$SCRIPT_DIR"/load.py -d "$dev" "$si570_configuration_string"
 
 exit 0
