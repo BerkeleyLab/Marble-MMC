@@ -1,8 +1,14 @@
 # Bespoke-syntax mailbox definition file (JSON with comments)
 #
-# To generate #include statements in the source file, there should be one special
-# key-value pair named "include" whose value is a list of file names to include
-# (as strings).
+# A single "control" entry is used to control the behavior of the mailbox on a
+# per-page basis.  The value corresponding to key "control" is also a dict, with
+# each key being a name of a mailbox page and the value being a dict of parameters
+# relating to that page.  Currently the only valid parameters are "read_if" and
+# "write_if".  For both of these, a string representing valid C code will be
+# used in a conditional block determining whether that page will be read or written
+# during the mailbox update.  This feature is provided to allow certain pages to
+# be skipped completely if the corresponding feature is disabled to minimize the
+# SPI transaction duration.
 #
 # Every other key-value pair represents a page of the mailbox.
 # Each page is a key-value pair where the key is 'pageN' where 1 <= N <= 128
@@ -53,13 +59,14 @@
 #     zero immediately following the response (because reads and writes are done by page).
 
 {
-#  "include" : [
-#    "marble_api.h",
-#    "i2c_pm.h",
-#    "mailbox.h",
-#    "rev.h",
-#    "max6639.h"
-#  ],
+# Some mailbox control parameters.
+  "control": {
+    "page10" : {
+      # Only read page 10 if the Pmod LED feature is enabled
+      "read_if" : "system_pmod_leds_enabled()"
+    }
+  },
+
 # Page 0 contains metadata information
   "page0" : [
     { "name" : "MAGIC_NUMBER",
@@ -107,7 +114,7 @@
       "size" : 1,
       "desc" : "Watchdog bitfile state. 0=STATE_BOOT, 1=STATE_GOLDEN, 2=STATE_USER",
       "fmt"  : "%d",
-      "output" : "@ = FPGAWD_GetState()"
+      "output" : "@ = (int)FPGAWD_GetState()"
     },
     { "name" : "PAD3"},
     { "name" : "LM75_0",
@@ -116,7 +123,7 @@
       "fmt"  : "{:.1f} degC",
       "scale": 0.5,
       "desc" : "Returns LM75_0 temperature in units of 0.5degC",
-      "output" : "LM75_read(LM75_0, LM75_TEMP, (int *)&@)"
+      "output" : "@ = LM75_get_temperature(LM75_0)"
     },
     { "name" : "LM75_1",
       "size" : 2,
@@ -124,7 +131,7 @@
       "fmt"  : "{:.1f} degC",
       "scale": 0.5,
       "desc" : "Returns LM75_1 temperature in units of 0.5degC",
-      "output" : "LM75_read(LM75_1, LM75_TEMP, (int *)&@)"
+      "output" : "@ = LM75_get_temperature(LM75_1)"
     },
     { "name" : "FMC_ST",
       "type" : "int",
@@ -313,6 +320,65 @@
       "fmt"  : "{} mA",
       "output" : "@ = PM_GetTelem(IOUT_3V3)",
       "desc" : "Output current from the 3V3 rail measured internally by the power supply."
+    }
+  ],
+# Page 10 contains only inputs (MMC <= FPGA)
+  "page10" : [
+    { "name" : "PMOD_LED_0",
+      "type" : "int",
+      "size" : 1,
+      "fmt"  : "0x{:x}",
+      "desc" : "Pmod LED control via mailbox.",
+      "input" : "system_handle_pmod_led(@, 0)"
+    },
+    { "name" : "PMOD_LED_1",
+      "type" : "int",
+      "size" : 1,
+      "fmt"  : "0x{:x}",
+      "desc" : "Pmod LED control via mailbox.",
+      "input" : "system_handle_pmod_led(@, 1)"
+    },
+    { "name" : "PMOD_LED_2",
+      "type" : "int",
+      "size" : 1,
+      "fmt"  : "0x{:x}",
+      "desc" : "Pmod LED control via mailbox.",
+      "input" : "system_handle_pmod_led(@, 2)"
+    },
+    { "name" : "PMOD_LED_3",
+      "type" : "int",
+      "size" : 1,
+      "fmt"  : "0x{:x}",
+      "desc" : "Pmod LED control via mailbox.",
+      "input" : "system_handle_pmod_led(@, 3)"
+    },
+    { "name" : "PMOD_LED_4",
+      "type" : "int",
+      "size" : 1,
+      "fmt"  : "0x{:x}",
+      "desc" : "Pmod LED control via mailbox.",
+      "input" : "system_handle_pmod_led(@, 4)"
+    },
+    { "name" : "PMOD_LED_5",
+      "type" : "int",
+      "size" : 1,
+      "fmt"  : "0x{:x}",
+      "desc" : "Pmod LED control via mailbox.",
+      "input" : "system_handle_pmod_led(@, 5)"
+    },
+    { "name" : "PMOD_LED_6",
+      "type" : "int",
+      "size" : 1,
+      "fmt"  : "0x{:x}",
+      "desc" : "Pmod LED control via mailbox.",
+      "input" : "system_handle_pmod_led(@, 6)"
+    },
+    { "name" : "PMOD_LED_7",
+      "type" : "int",
+      "size" : 1,
+      "fmt"  : "0x{:x}",
+      "desc" : "Pmod LED control via mailbox.",
+      "input" : "system_handle_pmod_led(@, 7)"
     }
   ]
 }

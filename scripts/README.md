@@ -296,7 +296,3 @@ only ttyUSB attached.
 
 ## testscript.txt
 See 'load.py'
-
-
-
-

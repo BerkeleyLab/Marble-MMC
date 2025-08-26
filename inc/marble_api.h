@@ -15,57 +15,84 @@ extern "C" {
 #include <stdbool.h>
 #include <stdint.h>
 #include "common.h"
+#include "system.h"
 
 #ifdef SIMULATION
-#include <stddef.h>
-#include <errno.h>
-#include <time.h>
+  #include <stddef.h>
+  #include <errno.h>
+  #include <time.h>
 
-#define SIM_FLASH_FILENAME                           "flash.bin"
-#define FLASH_SECTOR_SIZE                                  (256)
-#define EEPROM_COUNT ((size_t)FLASH_SECTOR_SIZE/sizeof(ee_frame))
+  #ifdef APP_MARBLE
+    #define DEMO_STRING                "Marble UART Simulation\r\n"
+  #endif
+  #ifdef APP_MINI
+    #define DEMO_STRING           "Marble Mini UART Simulation\r\n"
+  #endif
+  #define BSP_GET_SYSTICK()        (uint32_t)((uint64_t)clock()/40)
 
-#define DEMO_STRING                 "Marble UART Simulation\r\n"
-#define BSP_GET_SYSTICK()     (uint32_t)((uint64_t)clock()/40)
+  #define MGT_MAX_PINS 0
 
-# define MGT_MAX_PINS 0
-#else
+  #define CONSOLE_USART_TX_DATA_READY()                         (0)
+  #define CONSOLE_USART_ENABLE_TXE_IRQ()
+  #define CONSOLE_USART_DISABLE_TXE_IRQ()
+  #define CONSOLE_USART_RX_DATA_AVAILABLE()                     (0)
+  #define CONSOLE_USART_GET_RX_CHAR()                         ('x')
+  #define CONSOLE_USART_WRITE_TX_CHAR(c)
 
-#ifdef MARBLEM_V1
-# define MGT_MAX_PINS 0
-# define DEMO_STRING           "Marble Mini v1 UART Console\r\n"
-#else
-# ifdef MARBLE_V2
-#  define MGT_MAX_PINS 3
-#  define DEMO_STRING               "Marble v2 UART Console\r\n"
-# endif /* MARBLE_V2 */
-#endif /* MARBLEM_V1 */
+#else /* ndef SIMULATION */
 
-#ifdef NUCLEO
-#define CONSOLE_USART                                    USART3
-#else
-#define CONSOLE_USART                                    USART1
-#endif
+  #ifdef MARBLEM_V1
+    #include "chip.h"
+    #define MGT_MAX_PINS 0
+    #define DEMO_STRING           "Marble Mini v1 UART Console\r\n"
 
-#ifdef RTEMS_SUPPORT
-#include <rtems.h>
-// Optionally be more specific and only include the file where these are defined
-//#include <rtems/rtems/intr.h>
-#define INTERRUPTS_DISABLE()  do { \
-  rtems_interrupt_level level; \
-  rtems_interrupt_disable(level); \
-} while (0)
-#define INTERRUPTS_ENABLE()   do { \
-  rtems_interrupt_enable(level); \
-} while (0)
-#define BSP_GET_SYSTICK()       (0) // TODO
-#else /* ndef RTEMS_SUPPORT */
-//#define INTERRUPTS_DISABLE                     __disable_irq
-#define INTERRUPTS_DISABLE()                    __set_PRIMASK(1)
-//#define INTERRUPTS_ENABLE                       __enable_irq
-#define INTERRUPTS_ENABLE()                     __set_PRIMASK(0)
-#define BSP_GET_SYSTICK()                      marble_get_tick()
-#endif  /* RTEMS_SUPPORT */
+    #define CONSOLE_USART                                 LPC_UART0
+    #define CONSOLE_USART_IRQn                           UART0_IRQn
+    #define CONSOLE_USART_RX_DATA_AVAILABLE()   ((CONSOLE_USART->LSR & UART_LSR_RDR) == UART_LSR_RDR)
+    #define CONSOLE_USART_GET_RX_CHAR()         ((uint8_t)(CONSOLE_USART->RBR & (uint8_t)0x00FF))
+    #define CONSOLE_USART_TX_DATA_READY()       ((CONSOLE_USART->LSR & UART_LSR_THRE) == UART_LSR_THRE)
+    #define CONSOLE_USART_WRITE_TX_CHAR(c)      (CONSOLE_USART->THR = (uint32_t)c)
+    #define CONSOLE_USART_DISABLE_TXE_IRQ()     (CLEAR_BIT(CONSOLE_USART->IER, UART_IER_THREINT))
+    #define CONSOLE_USART_ENABLE_TXE_IRQ()      (SET_BIT(CONSOLE_USART->IER, UART_IER_THREINT))
+  #else /* ndef MARBLEM_V1 */
+    #include "stm32f2xx_hal.h"
+    #ifdef MARBLE_V2
+    #define MGT_MAX_PINS 3
+    #define DEMO_STRING               "Marble v2 UART Console\r\n"
+
+    #ifdef NUCLEO
+      #define CONSOLE_USART                                    USART3
+    #else /* ndef NUCLEO */
+      #define CONSOLE_USART                                    USART1
+    #endif /* NUCLEO */
+    #define CONSOLE_USART_RX_DATA_AVAILABLE()   ((CONSOLE_USART->SR & USART_SR_RXNE) == USART_SR_RXNE)
+    #define CONSOLE_USART_GET_RX_CHAR()         ((uint8_t)(CONSOLE_USART->DR & (uint8_t)0x00FF))
+    #define CONSOLE_USART_TX_DATA_READY()       ((CONSOLE_USART->SR & USART_SR_TXE) == USART_SR_TXE)
+    #define CONSOLE_USART_WRITE_TX_CHAR(c)      (CONSOLE_USART->DR = (uint32_t)c)
+    #define CONSOLE_USART_DISABLE_TXE_IRQ()     (CLEAR_BIT(CONSOLE_USART->CR1, USART_CR1_TXEIE))
+    #define CONSOLE_USART_ENABLE_TXE_IRQ()      (SET_BIT(CONSOLE_USART->CR1, USART_CR1_TXEIE))
+    #endif /* MARBLE_V2 */
+  #endif /* MARBLEM_V1 */
+
+  #ifdef RTEMS_SUPPORT
+    #include <rtems.h>
+    // Optionally be more specific and only include the file where these are defined
+    //#include <rtems/rtems/intr.h>
+    #define INTERRUPTS_DISABLE()  do { \
+      rtems_interrupt_level level; \
+      rtems_interrupt_disable(level); \
+    } while (0)
+    #define INTERRUPTS_ENABLE()   do { \
+      rtems_interrupt_enable(level); \
+    } while (0)
+    #define BSP_GET_SYSTICK()       (0) // TODO
+  #else /* ndef RTEMS_SUPPORT */
+    //#define INTERRUPTS_DISABLE                     __disable_irq
+    #define INTERRUPTS_DISABLE()                    __set_PRIMASK(1)
+    //#define INTERRUPTS_ENABLE                       __enable_irq
+    #define INTERRUPTS_ENABLE()                     __set_PRIMASK(0)
+    #define BSP_GET_SYSTICK()                      marble_get_tick()
+  #endif  /* RTEMS_SUPPORT */
 
 #endif /* SIMULATION */
 
@@ -74,20 +101,24 @@ extern "C" {
 /* = = = = System Clock Configuration = = = = */
 // System Clock Frequency = 120 MHz
 #ifdef NUCLEO
-// HSE input is 8 MHz from onboard ST-Link MCO
-#define CONFIG_CLK_PLLM              (8)
-#define CONFIG_CLK_PLLN            (240)
-#define CONFIG_CLK_PLLP    RCC_PLLP_DIV2
-#define CONFIG_CLK_PLLQ              (5)
-#else
-// HSE input on Marble is 25 MHz from WhiteRabbit module
-#define CONFIG_CLK_PLLM             (20)
-#define CONFIG_CLK_PLLN            (192)
-#define CONFIG_CLK_PLLP    RCC_PLLP_DIV2
-#define CONFIG_CLK_PLLQ              (5)
-#endif
+  // HSE input is 8 MHz from onboard ST-Link MCO
+  #define FREQUENCY_HSE          (8000000)
+  #define CONFIG_CLK_PLLM              (8)
+  #define CONFIG_CLK_PLLN            (240)
+  #define CONFIG_CLK_PLLP    RCC_PLLP_DIV2
+  #define CONFIG_CLK_PLLQ              (5)
+#else /* ndef NUCLEO */
+  // HSE input on Marble is 25 MHz from WhiteRabbit module
+  #define FREQUENCY_HSE         (25000000)
+  #define CONFIG_CLK_PLLM             (20)
+  #define CONFIG_CLK_PLLN            (192)
+  #define CONFIG_CLK_PLLP    RCC_PLLP_DIV2
+  #define CONFIG_CLK_PLLQ              (5)
+#endif /* NUCLEO */
+#define FREQUENCY_SYSCLK    (((FREQUENCY_HSE/CONFIG_CLK_PLLM)*CONFIG_CLK_PLLN)/CONFIG_CLK_PLLP)
 
 #define UART_MSG_TERMINATOR                           ('\n')
+#define UART_ALT_MSG_TERMINATOR                       ('\r')
 #define UART_MSG_ABORT                                (27)  // esc
 #define UART_MSG_BKSP                                 (8)   // backspace
 #define UART_MSG_DEL                                  (128) // del
@@ -114,16 +145,16 @@ typedef enum {
   Marble_Simulator
 } Marble_PCB_Rev_t;
 
+typedef enum {
+  BOARD_STATUS_GOOD = 0,
+  BOARD_STATUS_OVERTEMP,
+  BOARD_STATUS_POWERDOWN,
+} Board_Status_t;
+
 /****
 * Top-level Application Functionality
 ****/
 void disable_all_IRQs(void);
-
-void system_init(void);
-
-void system_service(void);
-
-void system_apply_params(void);
 
 /****
 * Platform/Hardware-Specific Routines
@@ -137,7 +168,7 @@ int board_service(void);
 
 void pwr_autoboot(void);
 
-void mgtclk_xpoint_en(void);
+int mgtclk_xpoint_en(void);
 
 /* Use this function to test against PCB revisions if the
  * board type (Marble vs. Marble-Mini) is known.
@@ -150,11 +181,11 @@ void marble_print_pcb_rev(void);
 // The Board ID is (PCB revision) | (BOARD_TYPE_...)
 uint8_t marble_get_board_id(void);
 
-void print_status_counters(void);
-
 void marble_print_status(void);
 
 int marble_pwr_good(void);
+
+Board_Status_t marble_get_status(void);
 
 uint32_t marble_get_tick(void);
 
@@ -165,12 +196,6 @@ void cleanup(void);
 * UART
 ****/
 void marble_UART_init(void);
-
-int marble_UART_send(const char *str, int size);
-
-int marble_UART_recv(char *str, int size);
-
-void CONSOLE_USART_ISR(void);
 
 /****
 * LED
@@ -187,6 +212,30 @@ void marble_Pmod3_5_write(bool on);
 * Push-Buttons
 ****/
 bool marble_SW_get(void);
+
+/****
+* Pmod J16
+****/
+/*
+Signal  Portbit J16 Pin
+-----------------------
+Pmod3_0 PB9     1
+Pmod3_1 PC3     3
+Pmod3_2 PC2     5
+Pmod3_3 PB10    7
+Pmod3_4 PB14    2
+Pmod3_5 PB15    4
+Pmod3_6 PD6     6
+Pmod3_7 PD5     8
+*/
+
+/* Set all Pmod data pins at slow GPIO push/pull output */
+void marble_pmod_config_outputs(void);
+void marble_pmod_config_inputs(void);
+void marble_pmod_set_gpio(uint8_t pinnum, bool state);
+void marble_pmod_timer_enable(void);
+void marble_pmod_timer_disable(void);
+void marble_pmod_timer_config(void);
 
 /****
 * FPGA int
@@ -326,8 +375,6 @@ void marble_SLEEP_us(uint32_t delay);
 /************
 * FPGA Watchdog Support
 ************/
-// In system.c
-void reset_fpga_with_callback(void (*cb)(void));
 // RND - only on marble_v2 (STM32) for now
 int get_hw_rnd(uint32_t *result);
 

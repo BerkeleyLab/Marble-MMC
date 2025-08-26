@@ -82,6 +82,7 @@ GDB=gdb-multiarch
 # Binaries supplied with LPCXpresso used for downloading.
 #
 OPENOCD         = openocd
+#OPENOCD = ~/sw/openocd/bin/openocd
 
 
 # Compilation Flags
@@ -140,33 +141,10 @@ $(OUTPUT_DIR)/%.o: %.c
 #
 -include $(OBJECTS:.o=.d)
 
-# =============== Auto-Generated Mailbox Interface ================
-MKMBOX=scripts/mkmbox.py
-MBOX_DEF=mailbox_def
-MBOX_DOC=mailbox.md
-MBOX_JSON=mailbox_map.json
-MBOX_VH=mailbox_map.vh
-MBOX_H=mailbox_map.h
-OFFSET ?= 0
-$(OUTPUT_DIR)/src/mailbox.o: $(SOURCE_DIR)/$(MBOX_DEF).c $(INCLUDE_DIR)/$(MBOX_DEF).h
 
-$(INCLUDE_DIR)/$(MBOX_DEF).h: $(INCLUDE_DIR)/mbox.def $(MKMBOX)
-	python3 $(MKMBOX) -d $< -o $@
+# Include platform-agnostic auto-generated code
+include makefile.autogen
 
-$(SOURCE_DIR)/$(MBOX_DEF).c: $(INCLUDE_DIR)/mbox.def
-	python3 $(MKMBOX) -d $< -o $@
-
-$(DOC_DIR)/$(MBOX_DOC): $(INCLUDE_DIR)/mbox.def
-	python3 $(MKMBOX) -d $< -o $@
-
-$(DOC_DIR)/$(MBOX_JSON): $(INCLUDE_DIR)/mbox.def
-	python3 $(MKMBOX) --map -d $< -o $@ --offset $(OFFSET)
-
-$(DOC_DIR)/$(MBOX_VH): $(INCLUDE_DIR)/mbox.def
-	python3 $(MKMBOX) --map -d $< -o $@ --offset $(OFFSET)
-
-$(DOC_DIR)/$(MBOX_H): $(INCLUDE_DIR)/mbox.def
-	python3 $(MKMBOX) --map -d $< -o $@ --offset $(OFFSET)
 
 # Rule for generating object files from assembler files
 #
@@ -226,9 +204,6 @@ download: all
 reset:
 	$(OPENOCD) -f $(PROG_DIR)/ocd/$(OCD_CONF) -c "init" -c "reset" -c "exit"
 
-.PHONY: doc
-doc: $(DOC_DIR)/$(MBOX_DOC) $(DOC_DIR)/$(MBOX_JSON) $(DOC_DIR)/$(MBOX_VH) $(DOC_DIR)/$(MBOX_H)
-
 # Creates a gdb script if required
 #
 #
@@ -245,10 +220,21 @@ gdbscript:
 	@$(ECHO) "# Enable semihosting" >> gdbscript
 	@$(ECHO) "monitor semihosting enable" >> gdbscript
 
+ifeq ($(BOARD), marble_mini)
+GDBSCRIPT=gdbscript_lpc
+else
+GDBSCRIPT=gdbscript_stm32
+endif
+
 .PHONY: gdb
 gdb:
 	$(GDB) -ex "target remote | $(OPENOCD) -f $(PROG_DIR)/ocd/$(OCD_CONF) -c 'gdb_port pipe; log_output $(PROG_DIR)/openocd.log'" \
-				 -x $(PROG_DIR)/gdbscript_stm32 $(OUTPUT_ELF)
+				 -x $(PROG_DIR)/$(GDBSCRIPT) $(OUTPUT_ELF)
+
+.PHONY: gdb2
+gdb2:
+	$(GDB) -ex "target extended-remote | $(OPENOCD) -f $(PROG_DIR)/ocd/$(OCD_CONF) -c 'gdb_port pipe; log_output $(PROG_DIR)/openocd.log'" \
+				 -x $(PROG_DIR)/$(GDBSCRIPT) $(OUTPUT_ELF)
 
 # Removes everything in the output directory
 #

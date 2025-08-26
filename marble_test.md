@@ -18,7 +18,7 @@
 6. Connect cables
    - USB micro from host to J10
    - Segger J-Link from host to J14
-   - Connect ethernet between host and J4
+   - Connect Ethernet between host and J4
    - Configure host adapter settings as needed
 
 ## Program and Validate
@@ -120,7 +120,7 @@ Set up Linux computer (presumably laptop)
 
 ## Wishlist:
 - Device DNA and XADC
-- maibox –> MAX6639 temperature in C and speed in rpm
+- mailbox -> MAX6639 temperature in C and speed in rpm
 - record current and temperature at some point?
 - check absolute cal of 125 MHz?  GPS or Rubidium?
 - Pmod LEDs?

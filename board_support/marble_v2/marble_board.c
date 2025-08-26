@@ -33,16 +33,33 @@
 #include "string.h"
 #include "uart_fifo.h"
 #include "console.h"
-#include "st-eeprom.h"
+#include "eeprom.h"
 #include "i2c_pm.h"
 #include "i2c_fpga.h"
 #include "ltm4673.h"
 #include "watchdog.h"
 
+#define AHBCLK_DIV        (RCC_SYSCLK_DIV1)
+#define APB1CLK_DIV       (RCC_HCLK_DIV4)
+#define APB2CLK_DIV       (RCC_HCLK_DIV2)
+
+#define AHB_CLK_DIV(CLK_DIV) (CLK_DIV == RCC_SYSCLK_DIV1   ? 1   : CLK_DIV == RCC_SYSCLK_DIV2   ? 2   : \
+                              CLK_DIV == RCC_SYSCLK_DIV4   ? 4   : CLK_DIV == RCC_SYSCLK_DIV8   ? 8   : \
+                              CLK_DIV == RCC_SYSCLK_DIV16  ? 16  : CLK_DIV == RCC_SYSCLK_DIV64  ? 64  : \
+                              CLK_DIV == RCC_SYSCLK_DIV128 ? 128 : CLK_DIV == RCC_SYSCLK_DIV256 ? 256 : 512)
+
+#define APB_CLK_DIV(CLK_DIV) (CLK_DIV == RCC_HCLK_DIV1 ? 1 : CLK_DIV == RCC_HCLK_DIV2 ? 2 : \
+                              CLK_DIV == RCC_HCLK_DIV4 ? 4 : CLK_DIV == RCC_HCLK_DIV8 ? 8 : 16)
+
+#define FREQUENCY_AHBCLK     (FREQUENCY_SYSCLK/AHB_CLK_DIV(AHBCLK_DIV))
+#define FREQUENCY_APB1CLK    (FREQUENCY_AHBCLK/APB_CLK_DIV(APB1CLK_DIV))
+#define FREQUENCY_APB2CLK    (FREQUENCY_AHBCLK/APB_CLK_DIV(APB2CLK_DIV))
+#define FREQUENCY_APB1TIM    APB1CLK_DIV == RCC_HCLK_DIV1 ? FREQUENCY_APB1CLK : 2*FREQUENCY_APB1CLK
+#define FREQUENCY_APB2TIM    APB2CLK_DIV == RCC_HCLK_DIV1 ? FREQUENCY_APB2CLK : 2*FREQUENCY_APB2CLK
+
 #define XRP_BYPASS_PWRGD
 #define XRP_REBOOT_DELAY    (500)
 
-#define UART_ECHO
 #ifdef NUCLEO
 #define SMBA_PIN GPIO_PIN_13
 #else
@@ -104,20 +121,19 @@ static void MX_ETH_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_I2C3_Init(void);
 static void MX_SPI1_Init(void);
-static void MX_SPI2_Init(void);
+//static void MX_SPI2_Init(void);
 //static void MX_USART1_UART_Init(void);
 static void CONSOLE_USART_Init(void);
-static void MX_USART2_UART_Init(void);
-static void USART_RXNE_ISR(void);
-static void USART_TXE_ISR(void);
-static void USART_Erase_Echo(void);
-static void USART_Erase(int n);
+//static void MX_USART2_UART_Init(void);
 static void marble_read_pcb_rev(void);
 static int marble_MGTMUX_store(void);
 static void I2C_PM_smba_handler(void);
 static int i2c_hook(I2C_BUS I2C_bus, uint8_t addr, uint8_t rnw,
                     int cmd, const uint8_t *data, int len);
 static void show_chip_ID(void);
+static void pmod_timer_interrupt_enable(void);
+static void pmod_timer_interrupt_disable(void);
+static void pmod_config_direction(uint32_t direction);
 
 void disable_all_IRQs(void) {
    // STM32F2 has 80 interrupt channels (plus the 14 in the ARM Cortex-M)
@@ -131,16 +147,21 @@ void disable_all_IRQs(void) {
  *  Board-related (not MMC-related) initialization
  */
 void board_init(void) {
-  // Enable clock crosspoint
-  mgtclk_xpoint_en();
-
   // Initialize subsystems
   I2C_PM_init();
-  LM75_Init();
 
-  // Some non-volatile params go straight to external hardware
-  // (i.e. fan speed, overtemp threshold)
-  system_apply_params();
+  // Enable clock crosspoint, checking power good in the process
+  if (mgtclk_xpoint_en() == 0) {
+
+    LM75_Init();
+
+    // Some non-volatile params go straight to external hardware
+    // (i.e. fan speed, overtemp threshold)
+    //system_apply_params();
+
+    // This needs to wait for system parameters and external +3V3 power available
+    system_off_chip_init();
+  }
 
   return;
 }
@@ -203,9 +224,9 @@ int board_service(void) {
        if (((++_pwr_state) == PWR_GOOD) && (_pwr_good == 0)) {
          // Detect asserting edge
          printf("ALERT: Power good. Re-initializing.\r\n");
+         _pwr_good = 1;
          board_init();
          FPGAWD_SelfReset();
-         _pwr_good = 1;
        } else {
          //printf("PWR STATE CHANGE: _pwr_state = %d;  _pwr_good = %d\r\n", _pwr_state, _pwr_good);
        }
@@ -248,6 +269,12 @@ int marble_pwr_good(void) {
   return _pwr_good;
 }
 
+Board_Status_t marble_get_status(void) {
+  if (_over_temp) return BOARD_STATUS_OVERTEMP;
+  if (!_pwr_good) return BOARD_STATUS_POWERDOWN;
+  return BOARD_STATUS_GOOD;
+}
+
 // Only used in simulation
 void cleanup(void) {
    return;
@@ -260,7 +287,9 @@ void marble_UART_init(void)
    //MX_USART1_UART_Init();
    CONSOLE_USART_Init();
    /* PD5, PD6 - UART4 (Pmod3_7/3_6) */
-   MX_USART2_UART_Init();
+   // This is disabled to use Pmod3 to drive UI board
+   // It only had development use anyhow
+   //MX_USART2_UART_Init();
    i2cBusStatus = 0;
 }
 
@@ -276,123 +305,6 @@ void pwr_autoboot(void) {
 #endif /* NUCLEO */
    return;
 }
-
-/* Send string over UART. Returns number of bytes sent */
-int marble_UART_send(const char *str, int size)
-{
-  //HAL_UART_Transmit(&huart_console, (const uint8_t *) str, size, 1000);
-  int txnum = USART_Tx_LL_Queue((char *)str, size);
-  // Kick off the transmission if the TX buffer is empty
-  if ((CONSOLE_USART->SR) & USART_SR_TXE) {
-    SET_BIT(CONSOLE_USART->CR1, USART_CR1_TXEIE);
-  }
-  return txnum;
-}
-
-int marble_UART_recv(char *str, int size) {
-  return USART_Rx_LL_Queue((volatile char *)str, size);
-}
-
-void CONSOLE_USART_ISR(void) {
-  USART_RXNE_ISR();   // Handle RX interrupts first
-  USART_TXE_ISR();  // Then handle TX interrupts
-  return;
-}
-
-/*
- * void USART_RXNE_ISR(void);
- *  A low-level ISR to pre-empt the STM32_HAL handler to catch
- *  received bytes (TxE IRQ passes to HAL handler)
- */
-void USART_RXNE_ISR(void) {
-  uint8_t c = 0;
-  //if (__HAL_UART_GET_FLAG(&huart_console, UART_FLAG_RXNE) == SET) {
-  if ((CONSOLE_USART->SR & USART_SR_RXNE) == USART_SR_RXNE) {
-    // Don't clear flags; the RXNE flag is cleared automatically by read from DR
-    //c = (uint8_t)(huart_console.Instance->DR & (uint8_t)0x00FF);
-    c = (uint8_t)(CONSOLE_USART->DR & (uint8_t)0x00FF);
-    // Look for control characters first
-    if (c == UART_MSG_ABORT) {
-#ifdef UART_ECHO
-      USART_Erase_Echo();
-#endif
-      // clear queue
-      UARTQUEUE_Clear();
-    } else if (c == UART_MSG_BKSP) {
-#ifdef UART_ECHO
-      USART_Erase(1);
-#endif
-      UARTQUEUE_Rewind(1);
-    } else {
-      if (UARTQUEUE_Add(&c) == UART_QUEUE_FULL) {
-        UARTQUEUE_SetDataLost(UART_DATA_LOST);
-        // Clear QUEUE at this point?
-      }
-      if (c == UART_MSG_TERMINATOR) {
-        console_pend_msg();
-      }
-#ifdef UART_ECHO
-      marble_UART_send((const char *)&c, 1);
-#endif
-    }
-  }
-  return;
-}
-
-/*
- * void USART_Erase_Echo(void);
- *  Print 1 backspace for every char in the queue
- */
-static void USART_Erase_Echo(void) {
-  USART_Erase(0);
-  return;
-}
-
-static void USART_Erase(int n) {
-  int fill = UARTQUEUE_FillLevel();
-  // If n = 0, erase all in queue
-  if (n == 0) {
-    n = fill;
-  } else {
-    // n = min(n, fill)
-    n = n > fill ? fill : n;
-  }
-  // First issue backspaces
-  char bksps[n];
-  for (int m = 0; m < n; m++) {
-    bksps[m] = UART_MSG_BKSP;
-  }
-  marble_UART_send((const char *)bksps, n);
-  // Then overwrite with spaces
-  for (int m = 0; m < n; m++) {
-    bksps[m] = ' ';
-  }
-  marble_UART_send((const char *)bksps, n);
-  // Then issue backspaces again
-  for (int m = 0; m < n; m++) {
-    bksps[m] = UART_MSG_BKSP;
-  }
-  marble_UART_send((const char *)bksps, n);
-  return;
-}
-
-void USART_TXE_ISR(void) {
-  uint8_t outByte;
-  // If char queue not empty
-  //if (__HAL_UART_GET_FLAG(&huart_console, UART_FLAG_TXE) == SET) {
-  if ((CONSOLE_USART->SR & USART_SR_TXE) == USART_SR_TXE) {
-    if (UARTTXQUEUE_Get(&outByte) != UARTTX_QUEUE_EMPTY) {
-      // Write new char to DR
-      //huart_console.Instance->DR = (uint32_t)outByte;
-      CONSOLE_USART->DR = (uint32_t)outByte;
-    } else {
-      // If the queue is empty, disable the TXE interrupt
-      CLEAR_BIT(CONSOLE_USART->CR1, USART_CR1_TXEIE);
-    }
-  }
-  return;
-}
-
 
 /************
 * LEDs
@@ -977,7 +889,7 @@ void marble_MDIO_write(uint16_t reg, uint32_t data)
 uint32_t marble_MDIO_read(uint16_t reg)
 {
    uint32_t value;
-   printf("\r\nPHYread Stat: %d\r\n", HAL_ETH_ReadPHYRegister(&heth, reg, &value));
+   HAL_ETH_ReadPHYRegister(&heth, reg, &value);
    return value;
 }
 
@@ -1056,7 +968,7 @@ uint32_t marble_init(void)
   MX_I2C1_Init();
   MX_I2C3_Init();
   MX_SPI1_Init();
-  MX_SPI2_Init();
+  //MX_SPI2_Init();
 
   // RNG
   hrng.Instance = RNG;
@@ -1179,9 +1091,9 @@ static void SystemClock_Config(void)
    RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                                |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
    RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
-   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
+   RCC_ClkInitStruct.AHBCLKDivider = AHBCLK_DIV;
+   RCC_ClkInitStruct.APB1CLKDivider = APB1CLK_DIV;
+   RCC_ClkInitStruct.APB2CLKDivider = APB2CLK_DIV;
 
    if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK)
    {
@@ -1302,13 +1214,14 @@ static void MX_SPI1_Init(void)
    SSP_FPGA = &hspi1;
 }
 
+/*
 static void MX_SPI2_Init(void)
 {
    hspi2.Instance = SPI2;
    hspi2.Init.Mode = SPI_MODE_MASTER;
    hspi2.Init.Direction = SPI_DIRECTION_2LINES;
-   hspi2.Init.DataSize = SPI_DATASIZE_16BIT;
-   hspi2.Init.CLKPolarity = SPI_POLARITY_HIGH;
+   hspi2.Init.DataSize = SPI_DATASIZE_8BIT;
+   hspi2.Init.CLKPolarity = SPI_POLARITY_LOW;
    hspi2.Init.CLKPhase = SPI_PHASE_1EDGE;
    hspi2.Init.NSS = SPI_NSS_SOFT;
    hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_128;
@@ -1322,6 +1235,7 @@ static void MX_SPI2_Init(void)
    }
    SSP_PMOD = &hspi2;
 }
+*/
 
 static void SPI_CSB_SET(SSP_PORT ssp, bool set)
 {
@@ -1374,6 +1288,7 @@ static void CONSOLE_USART_Init(void) {
   return;
 }
 
+/*
 static void MX_USART2_UART_Init(void)
 {
    huart2.Instance = USART2;
@@ -1389,6 +1304,7 @@ static void MX_USART2_UART_Init(void)
       Error_Handler();
    }
 }
+*/
 
 static void MX_GPIO_Init(void)
 {
@@ -1592,9 +1508,11 @@ int get_hw_rnd(uint32_t *result) {
 }
 
 /* Enable MGT clock cross-point switch if 3.3V rail is ON
+ * Returns 0 if power good.
  */
-void mgtclk_xpoint_en(void)
+int mgtclk_xpoint_en(void)
 {
+  int rval=0;
    if ((marble_get_pcb_rev() <= Marble_v1_3) & xrp_ch_status(XRP7724, 1)) { // CH1: 3.3V
       printf("Using XRP7724 and adn4600_init\r\n");
       adn4600_init();
@@ -1606,7 +1524,9 @@ void mgtclk_xpoint_en(void)
       _pwr_good = 0;
       // This will trigger a board_init in the main loop if PWRGD is asserted on the first check
       _pwr_state = PWR_GOOD-1;
+      rval = 1;
    }
+   return rval;
 }
 
 static void show_chip_ID(void) {
@@ -1615,6 +1535,145 @@ static void show_chip_ID(void) {
    id = HAL_GetREVID();
    printf("REVID 0x%04x\r\n", (uint16_t)(id & 0xffff));
    return;
+}
+
+void marble_pmod_config_outputs(void) {
+  //printf("marble_pmod_config_outputs\r\n");
+  pmod_config_direction(GPIO_MODE_OUTPUT_PP);
+  return;
+}
+
+void marble_pmod_config_inputs(void) {
+  //printf("marble_pmod_config_inputs\r\n");
+  pmod_config_direction(GPIO_MODE_INPUT);
+  return;
+}
+
+static void pmod_config_direction(uint32_t direction) {
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+  GPIO_InitStruct.Mode = direction;
+  if (direction == GPIO_MODE_OUTPUT_PP) {
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+  } else {
+    GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  }
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  // PB9, PB10, PB14, PB15
+  GPIO_InitStruct.Pin = GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_14|GPIO_PIN_15;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  // PC2, PC3
+  GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_3;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+  // PD5, PD6
+  GPIO_InitStruct.Pin = GPIO_PIN_5|GPIO_PIN_6;
+  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+  return;
+}
+
+#define PMOD_TIMER      (TIM2)
+/* TIM2 hangs off APB1 bus
+ * APBx timer clocks comes from:
+ *  sysclk -> AHB prescaler -> APB prescaler -> APBx conditional doubler
+ *  If APB prescaler = 1, then APBx doubler = 1x, else 2x
+ *  FREQUENCY_APB1TIM
+ *  ratio = PMOD_TIMER_RATIO
+ *  PSC = (ratio >> 16) + 1
+ *  ARR = ratio / PSC
+ */
+
+#define PMOD_TIMER_RATIO          (FREQUENCY_APB1TIM/FREQUENCY_PMOD_TIMER)
+
+static void pmod_timer_interrupt_enable(void) {
+  HAL_NVIC_SetPriority(TIM2_IRQn, 7, 7);
+  HAL_NVIC_EnableIRQ(TIM2_IRQn);
+  return;
+}
+
+static void pmod_timer_interrupt_disable(void) {
+  HAL_NVIC_DisableIRQ(TIM2_IRQn);
+  return;
+}
+
+void marble_pmod_timer_enable(void) {
+  //printf("Timer enable\r\n");
+  pmod_timer_interrupt_enable();
+  uint32_t cr1 = PMOD_TIMER->CR1;
+  cr1 |= TIM_CR1_CEN;
+  PMOD_TIMER->CR1 = cr1;
+  return;
+}
+
+void marble_pmod_timer_disable(void) {
+  //printf("Timer disable\r\n");
+  uint32_t cr1 = PMOD_TIMER->CR1;
+  cr1 &= ~TIM_CR1_CEN;
+  PMOD_TIMER->CR1 = cr1;
+  pmod_timer_interrupt_disable();
+  return;
+}
+
+void marble_pmod_timer_config(void) {
+  //PMOD_TIMER->CR1
+  //PMOD_TIMER->CR2
+  //PMOD_TIMER->SMCR
+  //PMOD_TIMER->DIER
+  //PMOD_TIMER->SR
+  //PMOD_TIMER->EGR
+  //PMOD_TIMER->CCMR1
+  //PMOD_TIMER->CCMR2
+  //PMOD_TIMER->CCER
+  //PMOD_TIMER->CNT
+  //PMOD_TIMER->PSC
+  //PMOD_TIMER->ARR
+  //PMOD_TIMER->RCR
+  //PMOD_TIMER->CCR1
+  //PMOD_TIMER->CCR2
+  //PMOD_TIMER->CCR3
+  //PMOD_TIMER->CCR4
+  //PMOD_TIMER->BDTR
+  //PMOD_TIMER->DCR
+  //PMOD_TIMER->DMAR
+  //PMOD_TIMER->OR
+  __HAL_RCC_TIM2_CLK_ENABLE();
+  // Set the prescaler and auto-reload register
+  uint16_t scratch = (PMOD_TIMER_RATIO >> 16) + 1;
+  PMOD_TIMER->PSC = (uint32_t)scratch;
+  PMOD_TIMER->ARR = (uint32_t)(PMOD_TIMER_RATIO/scratch);
+  //printf("Configuring TIM2 with PSC = %d, ARR = %d\r\n", scratch, PMOD_TIMER_RATIO/scratch);
+  // Enable interrupt on underflow event (UEV)
+  PMOD_TIMER->DIER = TIM_DIER_UIE;
+  // Enable downcounter mode
+  PMOD_TIMER->CR1 = TIM_CR1_DIR;
+  return;
+}
+
+/*
+Signal  Portbit J16 Pin
+-----------------------
+Pmod3_0 PB9     1
+Pmod3_1 PC3     3
+Pmod3_2 PC2     5
+Pmod3_3 PB10    7
+Pmod3_4 PB14    2
+Pmod3_5 PB15    4
+Pmod3_6 PD6     6
+Pmod3_7 PD5     8
+*/
+/*                                        Pmod3_0     Pmod3_1     Pmod3_2     Pmod3_3      Pmod3_4      Pmod3_5      Pmod3_6     Pmod3_7  */
+static GPIO_TypeDef *pmod_gpio_ports[] = {GPIOB,      GPIOC,      GPIOC,      GPIOB,       GPIOB,       GPIOB,       GPIOD,      GPIOD};
+static uint16_t pmod_gpio_pins[] =       {GPIO_PIN_9, GPIO_PIN_3, GPIO_PIN_2, GPIO_PIN_10, GPIO_PIN_14, GPIO_PIN_15, GPIO_PIN_6, GPIO_PIN_5};
+
+void marble_pmod_set_gpio(uint8_t pinnum, bool state) {
+  if (pinnum > 7) return;
+  HAL_GPIO_WritePin(pmod_gpio_ports[pinnum], pmod_gpio_pins[pinnum], state ? GPIO_PIN_SET : GPIO_PIN_RESET);
+  return;
+}
+
+void TIM2_IRQHandler(void) {
+  // Clear the update interrupt flag (ok, all interrupt flags)
+  PMOD_TIMER->SR = 0;
+  system_pmod_led_isr();
+  return;
 }
 
 /**

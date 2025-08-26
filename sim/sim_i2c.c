@@ -617,4 +617,3 @@ static void init_sim_ltm4673_config(void) {
   ltm4673.page3[LTM4673_MFR_TEMP_1_OFFSET] = 0x8000;
   return;
 }
-

@@ -9,6 +9,8 @@ import argparse
 
 JSON_TOP_DIR="mailbox"
 
+MBOX_REGNAMES = ("spi_mbox", "marble_mbox_buf")
+
 import mkmbox
 def getFromLeep(ipAddr, port=803):
     try:
@@ -18,9 +20,16 @@ def getFromLeep(ipAddr, port=803):
         return None
     leep_addr = "leep://{}:{}".format(ipAddr, port)
     print("Getting from {}".format(leep_addr))
-    addr = leep.open(leep_addr, timeout=5.0) # Returns LEEPDevice instance
-    mbox = addr.reg_read(["spi_mbox"])[0]
-    addr.sock.close()
+    dev = leep.open(leep_addr, timeout=5.0) # Returns LEEPDevice instance
+    regname = None
+    for _regname in MBOX_REGNAMES:
+        if _regname in dev.regmap.keys():
+            regname = _regname
+            break
+    if regname is None:
+        raise Exception("Could not find mailbox in memory map.")
+    mbox = dev.reg_read([regname])[0]
+    dev.sock.close()
     return mbox
 
 def get_MSB(l, offset, size):

@@ -1,12 +1,12 @@
-#ifndef ST_EEPROM_H
-#define ST_EEPROM_H
-
-#include <stdlib.h>
-#include <stdint.h>
+#ifndef EEPROM_H
+#define EEPROM_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#include <stdlib.h>
+#include <stdint.h>
 
 typedef uint8_t ee_tag_t;
 typedef uint8_t ee_val_t[6];
@@ -22,15 +22,14 @@ typedef struct {
  *    NOTE: Don't touch any of the X-macros unless you have a good reason.
  *    To add a new item to non-volatile memory, simply add it to the macro
  *    definition FOR_ALL_EETAGS() below.  Each entry should be:
- *      X(enumval, name, type, size, default)
+ *      X(name, type, size, default)
  *    Where:
- *      enumval = integer (must be unique! Just increment the last number)
  *      name = name of tag (must be unique!)
  *      type = (currently unused; came from MDS's RTEMS version)
  *      size = size of datum in bytes (must be <= 6).
  *      default = default value as array literal
  *
- *    The expansion of the X-macro here and in st-eeprom.c creates the support
+ *    The expansion of the X-macro here and in eeprom.c creates the support
  *    code needed to automatically handle read/store of the variable to/from
  *    non-volatile memory.  At startup, it will automatically search for each
  *    item in flash.  If not found, it will store the value provided as "default"
@@ -69,12 +68,15 @@ typedef struct {
   X(10,wd_key_1,  raw, 6, {'s','e','c','r','e','t'}) \
   X(11,wd_key_2,  raw, 4, {' ','k','e','y'}) \
   X(12,mbox_en,   raw, 1, {1}) \
-  X(13,tach_en,   raw, 1, {1})
+  X(13,tach_en,   raw, 1, {1}) \
+  X(14,pmod_mode, raw, 1, {0})
 
 typedef enum {
-#define X(N, NAME, TYPE, SIZE, ...)  ee_ ## NAME = N,
+  ee_RESERVED,
+#define X(N, NAME, TYPE, SIZE, ...)  ee_ ## NAME,
   FOR_ALL_EETAGS()
 #undef X
+  ee_NUM_TAGS
 } ee_tags_t;
 
 /*
@@ -102,27 +104,13 @@ int eeprom_store_wd_key(const uint8_t *pdata, int len);
  */
 int eeprom_init(void);
 
-/** @brief Reformat EEPROM to erase all settings.
- *  @returns 0 on Success, or negative errno
+/** @brief Periodic maintenance of cached EEPROM (should be called in main loop)
+ *         Note: this is unused in the memory-mapped flash implementation.
  */
-int fmc_ee_reset(void);
-
-/** @brief Read from EEPROM
- * @param tag Tag ID.  in range [0, 0xff] inclusive
- * @param val Read buffer
- * @return 0 on Success, -ENOENT if not found, other negative errno on error
- */
-int fmc_ee_read(ee_tags_t tag, ee_val_t val);
-
-/** @brief Write to EEPROM
- * @param tag Tag ID.  in range [1, 0xff] inclusive
- * @param val Write buffer
- * @return 0 on Success, negative errno on error
- */
-int fmc_ee_write(ee_tags_t tag, const ee_val_t val);
+void eeprom_update(void);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // ST_EEPROM_H
+#endif // EEPROM_H

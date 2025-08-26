@@ -14,7 +14,7 @@
 #include "marble_api.h"
 #include "console.h"
 #include "uart_fifo.h"
-#include "st-eeprom.h"
+#include "eeprom.h"
 #include "sim_api.h"
 #include "sim_lass.h"
 
@@ -69,7 +69,6 @@ uint32_t marble_init(void) {
   fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK);
   sim_console_state.toExit = 0;
   sim_console_state.msgReady = 0;
-  eeprom_init();
   init_sim_ltm4673();
   if (lass_init(MAILBOX_PORT) < 0) {
     return 1;
@@ -90,6 +89,10 @@ void marble_print_status(void) {
 
 int marble_pwr_good(void) {
   return 1;
+}
+
+Board_Status_t marble_get_status(void) {
+  return BOARD_STATUS_GOOD;
 }
 
 // Emulate USART_RXNE_ISR() from marble_board.c but with keyboard input from stdin
@@ -195,6 +198,7 @@ void marble_UART_init(void) {
   return;
 }
 
+/*
 int marble_UART_send(const char *str, int size) {
 #ifdef DEBUG_TX_OUT
   USART_Tx_LL_Queue((char *)str, size);
@@ -215,6 +219,7 @@ int marble_UART_recv(char *str, int size) {
   *str = (char)outByte;
   return 0;
 }
+*/
 
 void marble_LED_set(uint8_t led_num, bool on) {
   return;
@@ -360,4 +365,30 @@ int get_hw_rnd(uint32_t *result) {
 
 void marble_MGTMUX_set_all(uint8_t mgt_cfg) {
   _UNUSED(mgt_cfg);
+}
+
+void marble_pmod_config_outputs(void) {
+  return;
+}
+
+void marble_pmod_config_inputs(void) {
+  return;
+}
+
+void marble_pmod_set_gpio(uint8_t pinnum, bool state) {
+  _UNUSED(pinnum);
+  _UNUSED(state);
+  return;
+}
+
+void marble_pmod_timer_enable(void) {
+  return;
+}
+
+void marble_pmod_timer_disable(void) {
+  return;
+}
+
+void marble_pmod_timer_config(void) {
+  return;
 }

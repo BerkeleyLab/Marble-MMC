@@ -13,6 +13,7 @@ int marble_UART_recv(char *str, int size);
 #else
 #include "marble_api.h"
 #include "i2c_pm.h"
+#include "uart_fifo.h"
 #endif
 
 // Sending data to runtime memory, see ANP-39

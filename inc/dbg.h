@@ -43,4 +43,3 @@ extern "C" {
 #endif
 
 #endif // __DBG_H
-

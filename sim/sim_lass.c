@@ -19,7 +19,7 @@
 #define LASS_CMD_READ         (0x10)
 #define LASS_CMD_BURST        (0x20)
 
-// Maximum ethernet packet size (overkill by UDP header & crc32)
+// Maximum Ethernet packet size (overkill by UDP header & crc32)
 #define ETH_MTU               (1500)
 
 #define UDP_MAX_MSG_SIZE      ETH_MTU

@@ -6,14 +6,15 @@
 #include "max6639.h"
 #include "math.h"
 #include "ltm4673.h"
-#include "st-eeprom.h"
+#include "eeprom.h"
+#include "uart_fifo.h"
 
 /* ============================= Helper Macros ============================== */
-#define MAX6639_GET_TEMP_DOUBLE(rTemp, rTempExt) \
-   ((double)(((uint16_t)rTemp << 3) | (uint16_t)rTempExt >> 5)/8)
-
 /* ============================ Static Variables ============================ */
 extern I2C_BUS I2C_PM;
+static int lm75_0_temperature=0, lm75_1_temperature=0;
+static int max6639_temp_ch1=0, max6639_temp_ext_ch1=0;
+static int max6639_temp_ch2=0, max6639_temp_ext_ch2=0;
 static uint16_t _telem_data[PM_NUM_TELEM_ENUM];
 
 /* =========================== Static Prototypes ============================ */
@@ -64,7 +65,7 @@ uint8_t max6639_get_tach_en(void) {
 int max6639_set_tach_en(uint8_t tach_en) {
   // Restrict to 1 bit
   uint8_t pstretch_disable = (~tach_en) & 1;
-  // Default value = 0x41 (/THERM to full-speed enabl, Fan PWM freq LSB 1)
+  // Default value = 0x41 (/THERM to full-speed enable, Fan PWM freq LSB 1)
   // Disable pulse stretching (0x41 | 1<<5)
   uint8_t config = 0x41 | (pstretch_disable << 5);
   int rc = set_max6639_reg(MAX6639_FAN1_CONFIG3, config);
@@ -97,11 +98,30 @@ int get_max6639_reg(int regno, unsigned int *value)
    return rc;
 }
 
-// TODO - Test me!
 int return_max6639_reg(int regno) {
   uint8_t i2c_dat[4];
   marble_I2C_cmdrecv(I2C_PM, MAX6639, regno, i2c_dat, 1);
-  return (int)*i2c_dat;
+  int rval = (int)*i2c_dat;
+  // Store values locally so display can pick them up without additional I2C transactions
+  switch (regno) {
+    case MAX6639_TEMP_CH1: max6639_temp_ch1 = rval; break;
+    case MAX6639_TEMP_EXT_CH1: max6639_temp_ext_ch1 = rval; break;
+    case MAX6639_TEMP_CH2: max6639_temp_ch2 = rval; break;
+    case MAX6639_TEMP_EXT_CH2: max6639_temp_ext_ch2 = rval; break;
+    default: break;
+  }
+  return rval;
+}
+
+int max6639_get_cached_temp(int regno) {
+  switch (regno) {
+    case MAX6639_TEMP_CH1: return max6639_temp_ch1;
+    case MAX6639_TEMP_EXT_CH1: return max6639_temp_ext_ch1;
+    case MAX6639_TEMP_CH2: return max6639_temp_ch2;
+    case MAX6639_TEMP_EXT_CH2: return max6639_temp_ext_ch2;
+    default: break;
+  }
+  return 0;
 }
 
 int max6639_set_fans(int speed)
@@ -111,30 +131,6 @@ int max6639_set_fans(int speed)
   rc |= set_max6639_reg(MAX6639_FAN1_DUTY, speed);
   rc |= set_max6639_reg(MAX6639_FAN2_DUTY, speed);
   return rc;
-}
-
-void print_max6639(void)
-{
-   char p_buf[40];
-   unsigned int value;
-   // ix is the MAX6639 register address
-   for (unsigned ix=0; ix<64; ix++) {
-      if (get_max6639_reg(ix, &value) != 0) {
-          marble_UART_send("I2C fault!\r\n", 11);
-          break;
-      }
-      snprintf(p_buf, 40, "  reg[%2.2x] = %2.2x", ix, value);
-      marble_UART_send(p_buf, strlen(p_buf));
-      if ((ix&0x3) == 0x3) marble_UART_send("\r\n", 2);
-   }
-   if (0) {
-      //int fan_speed[2];
-      // update fan speed to 83%, max is 120
-      // see page 9 in datasheet
-      //fan_speed[0] = 100;
-      //fan_speed[1] = 100;
-      max6639_set_fans(100);
-   }
 }
 
 void print_max6639_decoded(void)
@@ -252,9 +248,10 @@ void LM75_print_decoded(uint8_t dev)
 {
   int vTemp;
   if (dev == LM75_0) {
-    printf("LM75_0 (U29) Registers:\n");
+    // FIXME This non-portable (Marble version-specific) information is nevertheless very helpful.
+    printf("LM75_0 (U29) is on the PCB bottom between FPGA and power supply\r\nRegisters:\r\n");
   } else {
-    printf("LM75_1 (U28) Registers:\n");
+    printf("LM75_1 (U28) is on the PCB bottom under the FMC1 area near the MMC\r\nRegisters:\r\n");
   }
 #define X(name, val) \
   do{ \
@@ -273,7 +270,6 @@ void LM75_Init(void) {
   LM75_write(LM75_1, LM75_CFG, LM75_CFG_DEFAULT);
   return;
 }
-
 
 /*
  * int LM75_set_overtemp(int ot);
@@ -295,6 +291,32 @@ int LM75_set_overtemp(int ot) {
   rc |= LM75_write(LM75_1, LM75_OS, 2*ot);
   rc |= LM75_write(LM75_1, LM75_HYST, 2*thyst);
   return rc;
+}
+
+/* int LM75_get_temperature(uint8_t dev);
+    Returns temperature from LM75 at address 'dev' in units of 0.5degC
+    @params
+      uint8_t dev: one of LM75_0, LM75_1
+ */
+int LM75_get_temperature(uint8_t dev) {
+  int temp;
+  LM75_read(dev, LM75_TEMP, &temp);
+  // Store copy in RAM for display driver to pick up if needed
+  if (dev == LM75_0) {
+    lm75_0_temperature = temp;
+  } else if (dev == LM75_1) {
+    lm75_1_temperature = temp;
+  }
+  return temp;
+}
+
+int LM75_get_cached_temperature(uint8_t dev) {
+  if (dev == LM75_0) {
+    return lm75_0_temperature;
+  } else if (dev == LM75_1) {
+    return lm75_1_temperature;
+  }
+  return 0;
 }
 
 static const uint8_t i2c_list[I2C_NUM] = {LM75_0, LM75_1, MAX6639, XRP7724};
@@ -528,6 +550,10 @@ static void PMBridge_hook_write(uint8_t addr, const uint8_t *data, int len) {
 
 void xrp_boot(void)
 {
+   if (marble_get_pcb_rev() > Marble_v1_3) {
+     printf("XRP7724 not present; bypassed.\n");
+     return;
+   }
    uint8_t pwr_on=0;
    for (int i=1; i<5; i++) {
       pwr_on |= xrp_ch_status(XRP7724, i);
@@ -885,12 +911,7 @@ void xrp_flash(uint8_t dev)
     return;
   }
 
-  // HACK! part 1
-#ifdef SIMULATION
-#define MARBLE_V2
-#endif
-
-#ifdef MARBLEM_V1
+#ifdef APP_MINI
    // Data originally based on python hex2c.py < MarbleMini.hex
    // Pure copy of 7 x 64-byte pages, spanning addresses 0x0000 to 0x01bf
    uint8_t dd[] = {
@@ -924,7 +945,7 @@ void xrp_flash(uint8_t dev)
       "\x20\x0A\x05\x19\x00\xFF\x00\x00\x00\xFF\xFF\x00\x04\xFF\xFF\xCF"
    };
 #else
-#ifdef MARBLE_V2
+#ifdef APP_MARBLE
    // Data based on python hex2c_linear.py < Marble_flash.hex
    // Pure copy of 7 x 64-byte pages, spanning addresses 0x0000 to 0x01bf
    uint8_t dd[] = {
@@ -957,13 +978,8 @@ void xrp_flash(uint8_t dev)
       "\x21\x64\x64\x64\x20\x64\x64\x64\x21\x64\x64\x64\x22\x64\x64\x0A"
       "\x20\x0A\x05\x19\xFF\x00\x00\x00\x00\xFF\xFF\x00\x04\xFF\xFF\x12"
    };
-#endif /* ifdef MARBLE_V2 */
-#endif /* ifdef MARBLEM_V1 */
-
-  // HACK! part 2
-#ifdef SIMULATION
-#undef MARBLE_V2
-#endif
+#endif /* ifdef APP_MARBLE */
+#endif /* ifdef APP_MINI */
 
    const unsigned dd_size = sizeof(dd) / sizeof(dd[0]);
    const unsigned pages = 7;
@@ -1038,7 +1054,7 @@ void PM_UpdateTelem(void) {
 
 int PM_GetTelem(PM_telem_enum_t elem) {
   if (elem < PM_NUM_TELEM_ENUM) {
-    return _telem_data[elem];
+    return (int)_telem_data[elem];
   }
   return -1;
 }

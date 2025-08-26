@@ -3,6 +3,7 @@ out/*
 out_marble/*
 out_marble_mini/*
 out_sim/*
+out_minisim/*
 out_nucleo/*
 src/rev.h
 .*.swp
@@ -11,6 +12,7 @@ inc/.*.swp
 sim/.*.swp
 tags
 flash.bin
+eeprom.bin
 reset
 tags
 openocd.log
@@ -20,7 +22,6 @@ __pycache__
 __pycache__/*
 scripts/__pycache__
 scripts/__pycache__/*
-doc/mailbox_map.*
 
 # Special auto-generated files
 src/mailbox_def.c

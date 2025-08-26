@@ -1,7 +1,7 @@
 /* A wrapper which converts STDIN/STDOUT to a pseudoterminal (PTY)
  */
 
-// Need a bit more than least-common-denomenator header file features
+// Need a bit more than least-common-denominator header file features
 #define _XOPEN_SOURCE 600
 #include <sys/time.h> // For sleep
 #include <unistd.h>   // For STDIN_FILENO, fork, sleep

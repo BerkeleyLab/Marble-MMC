@@ -13,6 +13,13 @@ extern "C" {
 
 #include <stdint.h>
 
+typedef enum {
+  STATE_BOOT,     // Waiting for first DONE rising edge     (disable watchdog)
+  STATE_GOLDEN,   // Assumed to be running golden image     (disable watchdog)
+  STATE_USER,     // Assumed to be running user image       (enable watchdog)
+  STATE_RESET,    // MMC is holding the FPGA reset low      (disable watchdog)
+} FPGAWD_State_t;
+
 void FPGAWD_GetNonce(uint8_t *pdata);
 void FPGAWD_DoneHandler(void);
 void FPGAWD_HandleHash(const uint8_t *hash);
@@ -21,11 +28,10 @@ int FPGAWD_SetPeriod(unsigned int period);
 int FPGAWD_GetPeriod(void);
 void FPGAWD_ShowState(void);
 void FPGAWD_SelfReset(void);
-int FPGAWD_GetState(void);
+FPGAWD_State_t FPGAWD_GetState(void);
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif // __WATCHDOG_H
-

@@ -9,7 +9,7 @@
 #include "refsip.h"
 #include "common.h"
 #include "string.h"
-#include "st-eeprom.h"
+#include "eeprom.h"
 #include <stdio.h>
 
 //#define DEBUG_PRINT
@@ -24,13 +24,6 @@
 #define HASH_SIZE_32                  (HASH_SIZE/4)
 
 /* ============================ Static Variables ============================ */
-typedef enum {
-  STATE_BOOT,     // Waiting for first DONE rising edge     (disable watchdog)
-  STATE_GOLDEN,   // Assumed to be running golden image     (disable watchdog)
-  STATE_USER,     // Assumed to be running user image       (enable watchdog)
-  STATE_RESET,    // MMC is holding the FPGA reset low      (disable watchdog)
-} FPGAWD_State_t;
-
 static uint8_t remote_hash[HASH_SIZE] = {0};
 static uint8_t local_nonce[HASH_SIZE] = {0};
 static uint32_t entropy[HASH_SIZE_32] = {0};
@@ -237,6 +230,6 @@ void FPGAWD_ShowState(void) {
   print64("remote_hash = ", remote_hash, HASH_SIZE);
 }
 
-int FPGAWD_GetState(void) {
-  return (int)fpga_state;
+FPGAWD_State_t FPGAWD_GetState(void) {
+  return fpga_state;
 }

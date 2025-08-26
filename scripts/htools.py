@@ -57,5 +57,3 @@ def writeFooter(fd, prefix):
     write(s, fd)
     s = "\n#endif /* {} */".format(hdef)
     write(s, fd)
-
-

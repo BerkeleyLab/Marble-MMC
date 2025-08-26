@@ -10,6 +10,12 @@ marble_download:
 marble_clean:
 	make -f makefile.board BOARD=marble clean
 
+marble_gdb:
+	make -f makefile.board BOARD=marble gdb
+
+marble_reset:
+	make -f makefile.board BOARD=marble reset
+
 marble_mini:
 	make -f makefile.board BOARD=marble_mini all
 
@@ -19,11 +25,8 @@ marble_mini_download:
 marble_mini_clean:
 	make -f makefile.board BOARD=marble_mini clean
 
-marble_gdb:
-	make -f makefile.board BOARD=marble gdb
-
-marble_reset:
-	make -f makefile.board BOARD=marble reset
+marble_mini_gdb:
+	make -f makefile.board BOARD=marble_mini gdb2
 
 nucleo:
 	make -f makefile.board BOARD=nucleo all
@@ -39,19 +42,27 @@ nucleo_clean:
 
 .PHONY: doc
 doc:
-	mkdir -p doc
-	make -f makefile.board BOARD=marble doc
+	make -f doc/Makefile doc
 
 .PHONY: sim
 sim:
 	make -f makefile.sim BOARD=sim all
 
+.PHONY: mini_sim
+mini_sim:
+	make -f makefile.sim BOARD=sim MINI=mini all
+
+.PHONY: sim_clean
 sim_clean:
 	make -f makefile.sim BOARD=sim clean
 
 .PHONY: run
 run:
 	make -f makefile.sim BOARD=sim run
+
+.PHONY: mini_run
+mini_run:
+	make -f makefile.sim BOARD=sim MINI=mini run
 
 .PHONY: wrap
 wrap:

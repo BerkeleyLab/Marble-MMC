@@ -24,23 +24,21 @@
 
 //#define DEBUG_PRINT
 #include "dbg.h"
-#undef DEBUG_PRINT
+
+#include "eeprom_emu.h"
 
 #ifndef SIMULATION
-// assigned in linker script
-// symbol value (address) is really a size in bytes
-#ifdef MARBLE_V2
-extern const char eeprom_size;
-
-#define EEPROM_COUNT ((size_t)&eeprom_size/sizeof(ee_frame))
+  #ifdef MARBLE_V2
+    // assigned in linker script
+    // symbol value (address) is really a size in bytes
+    extern const char eeprom_size;
+    #define EEPROM_COUNT ((size_t)&eeprom_size/sizeof(ee_frame))
+  #else // !MARBLE_V2
+    #error "This emulation layer should only be used for Marble (STM32-based)"
+  #endif // ifdef MARBLE_V2
 #else
-// FIXME - Need to implement eeprom/flash in marble_mini
-#define EEPROM_COUNT                                (1)
-#endif
-
+  #include "sim_api.h"
 #endif  /* SIMULATION */
-
-#include "st-eeprom.h"
 
 typedef enum {
     ee_erased = 0xff,
@@ -48,11 +46,6 @@ typedef enum {
     ee_moving = 0x00,
     ee_invalid,
 } ee_state_t;
-
-static int eeprom_read_val(ee_tags_t tag, volatile uint8_t *paddr, int len);
-static int eeprom_store_val(ee_tags_t tag, const uint8_t *paddr, int len);
-static int eeprom_populate_val(ee_tags_t tag, const uint8_t *paddr, int len);
-static int eeprom_restore_all(void);
 
 // number of bits to encode a state
 static const size_t ee_state_bits = 2u;
@@ -182,11 +175,13 @@ int ee_write(ee_frame* bank, ee_tags_t tag, const ee_val_t val)
             prev = f;
     }
 
-    if(prev && memcmp(prev->val, val, sizeof(prev->val))==0)
+    if(prev && memcmp(prev->val, val, sizeof(prev->val))==0) {
         return 0; // ignore write of duplicate
+    }
 
-    if(n==EEPROM_COUNT)
+    if(n==EEPROM_COUNT) {
         return -ENOSPC; // full!
+    }
 
     // we have space, and 'n' points to an unused block
     ee_frame f;
@@ -224,7 +219,7 @@ int ee_migrate(ee_frame* __restrict__ dst, const ee_frame* __restrict__ src)
     return ret;
 }
 
-int eeprom_init(void)
+int eeprom_system_init(void)
 {
     if (restore_flash() < 0) {
       fmc_flash_erase_sector(1);
@@ -275,13 +270,11 @@ int eeprom_init(void)
             printd("e0 active\r\n");
             ee_active = &eeprom0_base;
             e0 = ee_page_state(&eeprom0_base);
-            printd("e0 page_state = %d\r\n", e0);
+            printd("e0 page_state = %u\r\n", e0);
         } else {
             printd("no active\r\n");
         }
     }
-    // Write default values of all missing tags
-    eeprom_restore_all();
     printd("eeprom_init (%d)\r\n", ret);
     return ret;
 }
@@ -307,7 +300,7 @@ int fmc_ee_read(ee_tags_t tag, ee_val_t val)
         return -EIO;
     }
     const ee_frame* f = ee_find(bank, tag);
-    printd("ee_find(eeprom0_base, %d) = %p\r\n", tag, (void *)f);
+    printd("ee_find(eeprom0_base, %u) = %p\r\n", tag, (void *)f);
     if(f) {
         memcpy(val, f->val, sizeof(f->val)/sizeof(uint8_t));
         return 0;
@@ -367,7 +360,7 @@ int fmc_ee_write(ee_tags_t tag, const ee_val_t val)
         return -EIO;
     }
     int ret = ee_write(active, tag, val);
-    printd("ee_write ret = %d\r\n", ret);
+    printd("ee_write ret = %s\r\n", decode_errno(ret));
 
     if(ret==-ENOSPC && !ee_is_full(active)) { // Try migration
         ee_frame* alt;
@@ -408,121 +401,7 @@ int fmc_ee_write(ee_tags_t tag, const ee_val_t val)
     return ret;
 }
 
-static int eeprom_read_val(ee_tags_t tag, volatile uint8_t *paddr, int len) {
-  ee_val_t eeval;
-  len = MIN(len, (int)(sizeof(ee_val_t)/sizeof(uint8_t)));
-  int rval = fmc_ee_read(tag, eeval);
-  if (!rval) {
-    for (int n = 0; n < len; n++) {
-      paddr[n] = eeval[n];
-    }
-  } else {
-#ifdef DEBUG_ENABLE_ERRNO_DECODE
-    const char *errname = decode_errno(-rval);
-    printf("eeprom_read_val: rval = %d (%s)\r\n", rval, errname);
-#else
-    printf("eeprom_read_val: rval = %d\r\n", rval);
-#endif
-  }
-  return rval;
-}
-
-static int eeprom_store_val(ee_tags_t tag, const uint8_t *paddr, int len) {
-  ee_val_t eeval;
-  len = MIN(len, (int)(sizeof(ee_val_t)/sizeof(uint8_t)));
-  for (int n = 0; n < len; n++) {
-    eeval[n] = paddr[n];
-  }
-  int rval = fmc_ee_write(tag, eeval);
-  if (!rval) {
-    printf("Success\r\n");
-  } else {
-#ifdef DEBUG_ENABLE_ERRNO_DECODE
-    const char *errname = decode_errno(-rval);
-    printf("eeprom_store_val: rval = %d (%s)\r\n", rval, errname);
-#else
-    printf("eeprom_store_val: rval = %d\r\n", rval);
-#endif
-  }
-  return rval;
-}
-
-/*
- * static int eeprom_populate_val(ee_tags_t tag, const uint8_t *paddr, int len);
- *    Ensure a given tag is present in nonvolatile memory.  If the tag is not
- *    found, a new copy is stored.
- */
-static int eeprom_populate_val(ee_tags_t tag, const uint8_t *paddr, int len) {
-  ee_val_t eeval;
-  len = MIN(len, (int)(sizeof(ee_val_t)/sizeof(uint8_t)));
-  // Note: fmc_ee_read() wastes a bit of ops compared to ee_find(), but I like the
-  // encapsulation, plus stack var eeval would need to exist for fmc_ee_write() anyhow
-  int rval = fmc_ee_read(tag, eeval);
-  if (rval) {
-    for (int n = 0; n < len; n++) {
-      eeval[n] = paddr[n];
-    }
-    rval = fmc_ee_write(tag, eeval);
-    if (!rval) {
-      printf("Default stored\r\n");
-      return 1;
-    } else {
-      printf("Failed to store default\r\n");
-      return rval;
-    }
-  } else {
-    printd("Found\r\n");
-  }
-  return 0;
-}
-
-/*
- * static int eeprom_restore_all(void);
- *    Write default values for all missing tags in non-volatile memory.
- */
-static int eeprom_restore_all(void) {
-#define X(N, NAME, TYPE, SIZE, ...) \
-  uint8_t pdata_ ## NAME[SIZE] = __VA_ARGS__; \
-  eeprom_populate_val(ee_ ## NAME, pdata_ ## NAME, SIZE);
-  FOR_ALL_EETAGS()
-#undef X
-  return 0;
-}
-
-/* (see st-eeprom.h)
- */
-#define X(N, NAME, TYPE, SIZE, ...) \
-int eeprom_store_ ## NAME(const uint8_t *pdata, int len) { return eeprom_store_val(ee_ ## NAME, pdata, len); } \
-int eeprom_read_ ## NAME(volatile uint8_t *pdata, int len) { return eeprom_read_val(ee_ ## NAME, pdata, len); }
-FOR_ALL_EETAGS()
-#undef X
-
-/* int eeprom_read_wd_key(volatile uint8_t *pdata, int len);
- *  The whole eeprom scheme is built around an 8-byte structure with a 6-byte
- *  payload, so this bespoke hack is necessary for any larger structures.
- */
-int eeprom_read_wd_key(volatile uint8_t *pdata, int len) {
-  _UNUSED(len);
-  // Read part 0 (6 bytes)
-  if (eeprom_read_wd_key_0(pdata, 6) < 0) return -1;
-  // Read part 1 (6 bytes)
-  if (eeprom_read_wd_key_1((pdata+6), 6) < 0) return -1;
-  // Read part 2 (6 bytes)
-  if (eeprom_read_wd_key_2((pdata+12), 4) < 0) return -1;
-  return 0;
-}
-
-/* int eeprom_store_wd_key(const uint8_t *pdata, int len);
- *  The whole eeprom scheme is built around an 8-byte structure with a 6-byte
- *  payload, so this bespoke hack is necessary for any larger structures.
- */
-int eeprom_store_wd_key(const uint8_t *pdata, int len) {
-  _UNUSED(len);
-  // Store part 0 (6 bytes)
-  if (eeprom_store_wd_key_0(pdata, 6) < 0) return -1;
-  // Store part 1 (6 bytes)
-  if (eeprom_store_wd_key_1((pdata+6), 6) < 0) return -1;
-  // Store part 2 (6 bytes)
-  if (eeprom_store_wd_key_2((pdata+12), 4) < 0) return -1;
-  return 0;
+// Unused signature for compatibility with cached EEPROM alternative
+void eeprom_update(void) {
+  return;
 }

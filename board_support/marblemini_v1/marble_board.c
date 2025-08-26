@@ -30,11 +30,13 @@
  * this code.
  */
 
+#include <stdio.h>
+#include <stdbool.h>
 #include "chip.h"
 #include "stopwatch.h"
 #include "marble_api.h"
 #include "string.h"
-#include <stdio.h>
+#include "console.h"
 
 /************
 * Clocking
@@ -51,6 +53,8 @@ SSP_PORT SSP_PMOD;
 I2C_BUS I2C_FPGA;
 I2C_BUS I2C_PM;
 I2C_BUS I2C_IPMB;
+
+static void pmod_config_direction(bool output);
 
 void disable_all_IRQs(void) {
    // TODO
@@ -83,6 +87,11 @@ int marble_pwr_good(void) {
   return 1;
 }
 
+Board_Status_t marble_get_status(void) {
+  // TODO - Return current state of power supply
+  return BOARD_STATUS_GOOD;
+}
+
 // Only used in simulation
 void cleanup(void) {
    return;
@@ -93,16 +102,24 @@ void cleanup(void) {
 
 /* UART ring buffer and baud rate */
 #define UART_BAUD_RATE 115200
-STATIC RINGBUFF_T txring, rxring;
+//STATIC RINGBUFF_T txring, rxring;
 
-#define UART_SEND_RB_SZ 128
-#define UART_RECV_RB_SZ 32
-static uint8_t rxbuff[UART_RECV_RB_SZ], txbuff[UART_SEND_RB_SZ];
+//#define UART_SEND_RB_SZ 128
+//#define UART_RECV_RB_SZ 32
+//static uint8_t rxbuff[UART_RECV_RB_SZ], txbuff[UART_SEND_RB_SZ];
 
 // Override default (weak) IRQHandler
 void UART0_IRQHandler(void)
 {
-   Chip_UART_IRQRBHandler(LPC_UART0, &rxring, &txring);
+  // Read Interrupt Identification Register
+  if (((CONSOLE_USART->IIR) & 0x0f) == 6) {
+    // Read LSR to clear interrupt
+    //uint32_t ignored_reg = CONSOLE_USART->LSR;
+    _UNUSED(CONSOLE_USART->LSR);
+  }
+  //Chip_UART_IRQRBHandler(LPC_UART0, &rxring, &txring);
+  CONSOLE_USART_ISR();
+  return;
 }
 
 /* Initialize UART pins */
@@ -115,45 +132,25 @@ void marble_UART_init(void)
    Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 3, (IOCON_FUNC1 | IOCON_MODE_INACT));
 
    // Setup UART built-in FIFOs
-   Chip_UART_SetBaud(LPC_UART0, UART_BAUD_RATE);
-   Chip_UART_ConfigData(LPC_UART0, (UART_LCR_WLEN8 | UART_LCR_SBS_1BIT));
-   Chip_UART_SetupFIFOS(LPC_UART0, (UART_FCR_FIFO_EN | UART_FCR_TRG_LEV2));
-   Chip_UART_TXEnable(LPC_UART0);
+   Chip_UART_SetBaud(CONSOLE_USART, UART_BAUD_RATE);
+   Chip_UART_ConfigData(CONSOLE_USART, (UART_LCR_WLEN8 | UART_LCR_SBS_1BIT));
+   //Chip_UART_SetupFIFOS(CONSOLE_USART, (UART_FCR_FIFO_EN | UART_FCR_TRG_LEV2));
+   Chip_UART_TXEnable(CONSOLE_USART);
 
    // Before using the ring buffers, initialize them using the ring buffer init function
-   RingBuffer_Init(&rxring, rxbuff, 1, UART_RECV_RB_SZ);
-   RingBuffer_Init(&txring, txbuff, 1, UART_SEND_RB_SZ);
+   //RingBuffer_Init(&rxring, rxbuff, 1, UART_RECV_RB_SZ);
+   //RingBuffer_Init(&txring, txbuff, 1, UART_SEND_RB_SZ);
 
-   /* Reset and enable FIFOs, FIFO trigger level 3 (14 chars) */
-   Chip_UART_SetupFIFOS(LPC_UART0, (UART_FCR_FIFO_EN | UART_FCR_RX_RS |
-                                    UART_FCR_TX_RS | UART_FCR_TRG_LEV3));
+   /* Reset and enable FIFOs, FIFO trigger level 0 (1 char) */
+   Chip_UART_SetupFIFOS(CONSOLE_USART, (UART_FCR_FIFO_EN | UART_FCR_RX_RS |
+                                       UART_FCR_TX_RS | UART_FCR_TRG_LEV0));
 
    /* Enable receive data and line status interrupt */
-   Chip_UART_IntEnable(LPC_UART0, (UART_IER_RBRINT | UART_IER_RLSINT));
+   Chip_UART_IntEnable(CONSOLE_USART, (UART_IER_RBRINT | UART_IER_RLSINT));
 
    /* preemption = 1, sub-priority = 1 */
-   NVIC_SetPriority(UART0_IRQn, 1);
-   NVIC_EnableIRQ(UART0_IRQn);
-}
-
-#define UART_WAIT 100000
-
-/* Send \0 terminated string over UART. Returns number of bytes sent */
-int marble_UART_send(const char *str, int size)
-{
-   int sent=0;
-   do {
-      sent += Chip_UART_SendRB(LPC_UART0, &txring, str+sent, size-sent);
-      for (int wait_cnt = UART_WAIT; wait_cnt > 0; wait_cnt--) {} // Busy-wait
-   } while (sent < size);
-
-   return sent;
-}
-
-/* Read at most size-1 bytes (due to \0) from UART. Returns bytes read */
-int marble_UART_recv(char *str, int size)
-{
-   return Chip_UART_ReadRB(LPC_UART0, &rxring, str, size);
+   NVIC_SetPriority(CONSOLE_USART_IRQn, 1);
+   NVIC_EnableIRQ(CONSOLE_USART_IRQn);
 }
 
 /************
@@ -474,7 +471,7 @@ int marble_I2C_probe(I2C_BUS I2C_bus, uint8_t addr) {
 }
 
 /* Generic I2C send function with selectable I2C bus and 8-bit I2C addresses (R/W bit = 0) */
-/* For compatiblity with STM32 code base (!?),
+/* For compatibility with STM32 code base (!?),
  * return 0 on success, 1 on failure */
 int marble_I2C_send(I2C_BUS I2C_bus, uint8_t addr, const uint8_t *data, int size) {
    addr = addr >> 1;
@@ -598,7 +595,7 @@ static void marble_SSP_init(LPC_SSP_T *ssp)
 
 int marble_SSP_write16(SSP_PORT ssp, uint16_t *buffer, unsigned size)
 {
-   return Chip_SSP_WriteFrames_Blocking(ssp, (uint8_t*) buffer, size*2); // API expectes length in bytes
+   return Chip_SSP_WriteFrames_Blocking(ssp, (uint8_t*) buffer, size*2); // API expected length in bytes
 }
 
 int marble_SSP_read16(SSP_PORT ssp, uint16_t *buffer, unsigned size)
@@ -762,8 +759,69 @@ int get_hw_rnd(uint32_t *result) {
   return 0;
 }
 
-void mgtclk_xpoint_en(void) {
+int mgtclk_xpoint_en(void) {
   // Unused board compatibility
+  return 0;
+}
+
+void marble_pmod_config_outputs(void) {
+  pmod_config_direction(true);
+  return;
+}
+
+void marble_pmod_config_inputs(void) {
+  //pmod_config_direction(false); // TODO Re-enable
+  return;
+}
+
+/* Pmod3
+ *   Pmod pin Port  Bit
+ *   ------------------
+ *   0        0     6
+ *   1        0     9
+ *   2        0     8
+ *   3        0     7
+ *   4        2     11
+ *   5        2     2
+ *   6        5     3
+ *   7        5     4
+ */
+#define PMOD_PORT0_OUTPUT_MASK    ((1<<6)  | (1<<9) | (1<<8) | (1<<7))
+#define PMOD_PORT2_OUTPUT_MASK    ((1<<11) | (1<<2))
+#define PMOD_PORT5_OUTPUT_MASK    ((1<<3)  | (1<<4))
+static void pmod_config_direction(bool output) {
+  //    Chip_GPIO_WriteDirBit(LPC_GPIO, ledports[i], ledpins[i], true);
+  if (output) {
+    LPC_GPIO[0].DIR |= PMOD_PORT0_OUTPUT_MASK;
+    LPC_GPIO[2].DIR |= PMOD_PORT2_OUTPUT_MASK;
+    LPC_GPIO[5].DIR |= PMOD_PORT5_OUTPUT_MASK;
+  } else {
+    LPC_GPIO[0].DIR &= ~PMOD_PORT0_OUTPUT_MASK;
+    LPC_GPIO[2].DIR &= ~PMOD_PORT2_OUTPUT_MASK;
+    LPC_GPIO[5].DIR &= ~PMOD_PORT5_OUTPUT_MASK;
+  }
+  return;
+}
+static uint8_t pmod_gpio_ports[] = {0,  0,  0,  0,  2,  2,  5,  5};
+static uint8_t pmod_gpio_pins[]  = {6,  9,  8,  7, 11,  2,  3,  4};
+
+void marble_pmod_set_gpio(uint8_t pinnum, bool state) {
+  Chip_GPIO_SetPinState(LPC_GPIO, pmod_gpio_ports[pinnum], pmod_gpio_pins[pinnum], state);
+  return;
+}
+
+void marble_pmod_timer_enable(void) {
+  // TODO
+  return;
+}
+
+void marble_pmod_timer_disable(void) {
+  // TODO
+  return;
+}
+
+void marble_pmod_timer_config(void) {
+  // TODO
   return;
 }
 

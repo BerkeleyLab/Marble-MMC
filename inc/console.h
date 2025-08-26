@@ -42,14 +42,15 @@ int console_push_fpga_mac_ip(void);
 void console_print_mac_ip(void);
 void console_pend_FPGA_enable(void);
 
-void UARTTXQUEUE_Init(void);
+void set_last_ip(const uint8_t *ip);
+uint8_t *get_last_ip(void);
+void set_last_mac(const uint8_t *mac);
+uint8_t *get_last_mac(void);
 
-int restoreIPAddr(void);
-int restoreMACAddr(void);
+void CONSOLE_USART_ISR(void);
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif // __CONSOLE_H
-

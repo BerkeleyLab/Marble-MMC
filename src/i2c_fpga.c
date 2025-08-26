@@ -186,6 +186,14 @@ static int16_t getBusVoltage_raw(uint8_t ina)
    return (int16_t)((value >> 3) * 4);
 }
 
+uint16_t ina219_getShuntVoltage(uint8_t ina) {
+  uint16_t shunt_voltage;
+  if (wireReadRegister(ina, INA_REG_SHUNTVOLTAGE, &shunt_voltage)) {
+    return shunt_voltage;
+  }
+  return 0;
+}
+
 static int16_t getCurrent_raw(uint8_t ina)
 {
    uint16_t value = 0;

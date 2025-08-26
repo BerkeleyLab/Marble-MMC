@@ -29,8 +29,9 @@ include dir_list.mk
 #
 # Edit the project name, chip, includes directories and so on in this file.
 #
+MINI?=
 include $(BUILD_DIR)/$(BOARD).conf
-OUTPUT_DIR := out_$(BOARD)
+OUTPUT_DIR := out_$(MINI)$(BOARD)
 
 # Shell Commands
 #
@@ -80,6 +81,17 @@ all: $(OUTPUT_DIR)/$(PROJECT_NAME)
 SOURCES := $(SIM_SOURCES)
 include $(BUILD_DIR)/sources.mk
 SOURCES := $(filter-out $(IGNORES), $(SOURCES))
+
+ifeq ($(MINI), mini)
+SOURCES+=$(BSP_DIR)/marblemini_v1/lpc_eeprom.c
+USR_CFLAGS+=-DAPP_MINI
+else
+SOURCES+=$(SOURCE_DIR)/eeprom_emu.c
+USR_CFLAGS+=-DAPP_MARBLE
+endif
+
+# Include platform-agnostic auto-generated code
+include makefile.autogen
 
 # Translate this list of sources into a list of required objects
 # in the output directory
@@ -138,18 +150,6 @@ $(OUTPUT_DIR)/$(PROJECT_NAME): $(OBJECTS) $(LINKERS)
 	@$(ECHO)
 	$(SIZE) $@
 	@$(ECHO)
-
-# =============== Auto-Generated Mailbox Interface ================
-MKMBOX=scripts/mkmbox.py
-MBOX_DEF=mailbox_def
-MBOX_DOC=mailbox.md
-$(OUTPUT_DIR)/src/mailbox.o: $(SOURCE_DIR)/$(MBOX_DEF).c $(INCLUDE_DIR)/$(MBOX_DEF).h
-
-$(INCLUDE_DIR)/$(MBOX_DEF).h: $(INCLUDE_DIR)/mbox.def $(MKMBOX)
-	python3 $(MKMBOX) -d $< -o $@
-
-$(SOURCE_DIR)/$(MBOX_DEF).c: $(INCLUDE_DIR)/mbox.def
-	python3 $(MKMBOX) -d $< -o $@
 
 WRAPPER=$(OUTPUT_DIR)/ptywrap
 $(WRAPPER): $(BOARD)/ptywrap.c
