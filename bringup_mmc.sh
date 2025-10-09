@@ -74,17 +74,21 @@ sleep 5
 echo "Programming LTM4673 power management chip...."
 if ! python3 "$SCRIPTS_PATH"/ltm4673.py -d "$TTY_MMC" write -f "$LTM_SCRIPT"; then
   fail "Could not program LTM4673."
-else
-  echo "##################################"
-  python3 "$SCRIPTS_PATH"/ltm4673.py -d "$TTY_MMC" store
-  echo "napping for 5 seconds.."
-  sleep 5
-  python3 "$SCRIPTS_PATH"/load.py -d "$TTY_MMC" "4b"
-  echo "napping for 5 seconds.."
-  sleep 5
-  python3 "$SCRIPTS_PATH"/load.py -d "$TTY_MMC" "4B"
-  echo "Successfully programmed LTM4673!"
 fi
+
+if ! python3 "$SCRIPTS_PATH"/ltm4673.py -d "$TTY_MMC" read --check -f "$LTM_SCRIPT"; then
+  fail "LTM4673 EEPROM readback mis-match!"
+fi
+
+echo "##################################"
+python3 "$SCRIPTS_PATH"/ltm4673.py -d "$TTY_MMC" store
+echo "napping for 5 seconds.."
+sleep 5
+python3 "$SCRIPTS_PATH"/load.py -d "$TTY_MMC" "4b"
+echo "napping for 5 seconds.."
+sleep 5
+python3 "$SCRIPTS_PATH"/load.py -d "$TTY_MMC" "4B"
+echo "Successfully programmed LTM4673!"
 
 echo "bringup_mmc DONE"
 exit 0
