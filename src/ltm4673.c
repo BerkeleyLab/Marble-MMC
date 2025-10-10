@@ -457,6 +457,7 @@ int ltm4673_ch_status(uint8_t dev)
     printf("LTM4673 not present; bypassed.\n");
     return 0;
   }
+  marble_SLEEP_ms(500);
   uint8_t i2c_dat[4];
   for (unsigned jx = 0; jx < 4; jx++) {
     marble_SLEEP_ms(200);
