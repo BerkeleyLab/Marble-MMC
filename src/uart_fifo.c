@@ -6,6 +6,10 @@
 #include "marble_api.h"
 #include "console.h"
 
+#include <stdio.h>          /* vsnprintf */
+#include <string.h>         /* strlen   */
+#include <stdarg.h>         /* va_list  */
+
 #define UART_ECHO
 #define BLOCK_TX_ON_FULL
 #define USART_TX_RETRY_TIMEOUT_MS   (1000)
@@ -232,12 +236,14 @@ uint8_t UARTTXQUEUE_Add(uint8_t *item) {
   // Wrap pIn at boundary
   if (UARTTX_queue.pIn == UARTTX_QUEUE_ITEMS - 1) {
     UARTTX_queue.pIn = 0;
+    // printf("Wrapped UARTTX_queue.pIn to 0\r\n");
   } else {
     UARTTX_queue.pIn++;
   }
   // Check for full condition
   if (UARTTX_queue.pIn == UARTTX_queue.pOut) {
     UARTTX_queue.full = 1;
+    // printf("UARTTX_queue is full\r\n");
   }
   return UARTTX_QUEUE_OK;
 }
@@ -248,12 +254,13 @@ uint8_t UARTTXQUEUE_Get(volatile uint8_t *item) {
     return UARTTX_QUEUE_EMPTY;
   }
   // Copy next data from the queue to item
-  for (unsigned int n = 0; n < sizeof(uint8_t); n++) {
+  for (unsigned int n = 0; n < sizeof(uint8_t); n++) { // runs only once (n=0)
     *((volatile uint8_t *)item + n) = *((volatile uint8_t *)&(UARTTX_queue.queue[UARTTX_queue.pOut]) + n);
   }
   // Wrap pOut at boundary
   if (UARTTX_queue.pOut == UARTTX_QUEUE_ITEMS - 1) {
     UARTTX_queue.pOut = 0;
+    //printf("Wrapped UARTTX_queue.pOut to 0\r\n");
   } else {
     UARTTX_queue.pOut++;
   }
@@ -445,14 +452,33 @@ int marble_UART_send(const char *str, int size)
   // Kick off the transmission if the TX buffer is empty
   if (CONSOLE_USART_TX_DATA_READY()) {
     CONSOLE_USART_ENABLE_TXE_IRQ();
-    uint8_t outByte;
-    if (UARTTXQUEUE_Get(&outByte) != UARTTX_QUEUE_EMPTY) {
-      // Write new char to DR
-      CONSOLE_USART_WRITE_TX_CHAR(outByte);
-    }
+    // uint8_t outByte;
+    // if (UARTTXQUEUE_Get(&outByte) != UARTTX_QUEUE_EMPTY) {
+    //   // Write new char to DR
+    //   CONSOLE_USART_WRITE_TX_CHAR(outByte);
+    // }
   }
   return txnum;
 }
+
+// // A tiny UART‑only printf helper.
+// void marble_UART_printf(const char *fmt, ...) 
+// {
+//   char msg[CONSOLE_MAX_MESSAGE_LENGTH];
+//   va_list args;
+//   va_start(args, fmt);
+//   /* vsnprintf always NUL‑terminates (truncates if needed). */
+//   uint16_t len = vsnprintf(msg, sizeof(msg), fmt, args);
+//   va_end(args);
+//   if (len > 0) {
+//     if (len > CONSOLE_MAX_MESSAGE_LENGTH) {
+//       len = CONSOLE_MAX_MESSAGE_LENGTH;
+//     }
+//     marble_UART_send(msg, len);
+//   }
+//   return;
+// }
+
 
 int marble_UART_recv(char *str, int size) {
   return USART_Rx_LL_Queue((volatile char *)str, size);

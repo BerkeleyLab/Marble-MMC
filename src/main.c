@@ -21,6 +21,7 @@ int main(void) {
    disable_all_IRQs();
 
    UARTQUEUE_Init();
+      
 #ifdef MARBLEM_V1
    uint32_t sysclk_freq = marble_init();
    // Initialize Marble(mini) board with IRC, so it works even when
@@ -30,12 +31,20 @@ int main(void) {
 #else
    marble_init();
 #endif
+   //~ marble_PSU_pwr(false);
+   //~ printf("Let's wait a second and turn on the psu");
+   //~ marble_SLEEP_ms(1000);
+   //~ marble_PSU_pwr(true);
+
    system_init();
+   reset_cause_t reset_cause = reset_cause_get();
+   printf("Last system reset cause is \"%s\"\n", reset_cause_get_name(reset_cause));
 
    /* Turn on LEDs */
    marble_LED_set(0, true);   // LD15
    marble_LED_set(1, true);   // LD11
    marble_LED_set(2, true);   // LD12
+   
 
    // Boot the power supply controller if needed
    pwr_autoboot();
@@ -55,6 +64,13 @@ int main(void) {
    // Send demo string over UART at 115200 BAUD
    marble_UART_send(DEMO_STRING, strlen(DEMO_STRING));
 
+   // char buf[128];
+   // int n = snprintf(buf, sizeof(buf),
+   //                "Last system reset cause is \"%s\"\n",
+   //                reset_cause_get_name(reset_cause));
+   // if (n > 0) {
+   // marble_UART_send(buf, (n < (int)sizeof(buf) ? n : (int)sizeof(buf) - 1));
+   // }   
    while (1) {
       // Service system (application logic)
       system_service();

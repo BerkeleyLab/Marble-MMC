@@ -12,6 +12,8 @@ extern "C" {
 // ================================= Includes ==================================
 #include <stdio.h>
 #include <stdint.h>
+#include <stdarg.h>
+
 
 // ============================== Exported Macros ==============================
 #define UART_QUEUE_ITEMS                            (100)
@@ -51,6 +53,7 @@ void USART_RXNE_ISR(void);
 void USART_TXE_ISR(void);
 int marble_UART_send(const char *str, int size);
 int marble_UART_recv(char *str, int size);
+// void marble_UART_printf(const char *fmt, ...);
 
 #ifdef __cplusplus
 }

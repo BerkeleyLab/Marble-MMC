@@ -38,6 +38,7 @@
 #include "i2c_fpga.h"
 #include "ltm4673.h"
 #include "watchdog.h"
+#include "rev.h"
 
 #define AHBCLK_DIV        (RCC_SYSCLK_DIV1)
 #define APB1CLK_DIV       (RCC_HCLK_DIV4)
@@ -66,6 +67,116 @@
 #define SMBA_PIN GPIO_PIN_15
 #endif
 
+
+/// @brief      Obtain the STM32 system reset cause
+/// @param      None
+/// @return     The system reset cause
+reset_cause_t reset_cause_get(void)
+{
+    reset_cause_t reset_cause;
+
+    if (__HAL_RCC_GET_FLAG(RCC_FLAG_LPWRRST))
+    {
+        reset_cause = RESET_CAUSE_LOW_POWER_RESET;
+    }
+    else if (__HAL_RCC_GET_FLAG(RCC_FLAG_WWDGRST))
+    {
+        reset_cause = RESET_CAUSE_WINDOW_WATCHDOG_RESET;
+    }
+    else if (__HAL_RCC_GET_FLAG(RCC_FLAG_IWDGRST))
+    {
+        reset_cause = RESET_CAUSE_INDEPENDENT_WATCHDOG_RESET;
+    }
+    else if (__HAL_RCC_GET_FLAG(RCC_FLAG_SFTRST))
+    {
+        // This reset is induced by calling the ARM CMSIS 
+        // `NVIC_SystemReset()` function!
+        reset_cause = RESET_CAUSE_SOFTWARE_RESET; 
+    }
+    else if (__HAL_RCC_GET_FLAG(RCC_FLAG_PORRST))
+    {
+        reset_cause = RESET_CAUSE_POWER_ON_POWER_DOWN_RESET;
+    }
+    else if (__HAL_RCC_GET_FLAG(RCC_FLAG_PINRST))
+    {
+        reset_cause = RESET_CAUSE_EXTERNAL_RESET_PIN_RESET;
+    }
+    // Needs to come *after* checking the `RCC_FLAG_PORRST` flag in order to
+    // ensure first that the reset cause is NOT a POR/PDR reset. See note
+    // below. 
+    else if (__HAL_RCC_GET_FLAG(RCC_FLAG_BORRST))
+    {
+        reset_cause = RESET_CAUSE_BROWNOUT_RESET;
+    }
+    else
+    {
+        reset_cause = RESET_CAUSE_UNKNOWN;
+    }
+
+    // Clear all the reset flags or else they will remain set during future
+    // resets until system power is fully removed.
+    __HAL_RCC_CLEAR_RESET_FLAGS();
+
+    return reset_cause; 
+}
+
+// Note: any of the STM32 Hardware Abstraction Layer (HAL) Reset and Clock
+// Controller (RCC) header files, such as 
+// "STM32Cube_FW_F7_V1.12.0/Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_rcc.h",
+// "STM32Cube_FW_F2_V1.7.0/Drivers/STM32F2xx_HAL_Driver/Inc/stm32f2xx_hal_rcc.h",
+// etc., indicate that the brownout flag, `RCC_FLAG_BORRST`, will be set in
+// the event of a "POR/PDR or BOR reset". This means that a Power-On Reset
+// (POR), Power-Down Reset (PDR), OR Brownout Reset (BOR) will trip this flag.
+// See the doxygen just above their definition for the 
+// `__HAL_RCC_GET_FLAG()` macro to see this:
+//      "@arg RCC_FLAG_BORRST: POR/PDR or BOR reset." <== indicates the Brownout
+//      Reset flag will *also* be set in the event of a POR/PDR. 
+// Therefore, you must check the Brownout Reset flag, `RCC_FLAG_BORRST`, *after*
+// first checking the `RCC_FLAG_PORRST` flag in order to ensure first that the
+// reset cause is NOT a POR/PDR reset.
+
+
+/// @brief      Obtain the system reset cause as an ASCII-printable name string 
+///             from a reset cause type
+/// @param[in]  reset_cause     The previously-obtained system reset cause
+/// @return     A null-terminated ASCII name string describing the system 
+///             reset cause
+const char * reset_cause_get_name(reset_cause_t reset_cause)
+{
+    const char * reset_cause_name = "TBD";
+
+    switch (reset_cause)
+    {
+        case RESET_CAUSE_UNKNOWN:
+            reset_cause_name = "UNKNOWN";
+            break;
+        case RESET_CAUSE_LOW_POWER_RESET:
+            reset_cause_name = "LOW_POWER_RESET";
+            break;
+        case RESET_CAUSE_WINDOW_WATCHDOG_RESET:
+            reset_cause_name = "WINDOW_WATCHDOG_RESET";
+            break;
+        case RESET_CAUSE_INDEPENDENT_WATCHDOG_RESET:
+            reset_cause_name = "INDEPENDENT_WATCHDOG_RESET";
+            break;
+        case RESET_CAUSE_SOFTWARE_RESET:
+            reset_cause_name = "SOFTWARE_RESET";
+            break;
+        case RESET_CAUSE_POWER_ON_POWER_DOWN_RESET:
+            reset_cause_name = "POWER-ON_RESET (POR) / POWER-DOWN_RESET (PDR)";
+            break;
+        case RESET_CAUSE_EXTERNAL_RESET_PIN_RESET:
+            reset_cause_name = "EXTERNAL_RESET_PIN_RESET";
+            break;
+        case RESET_CAUSE_BROWNOUT_RESET:
+            reset_cause_name = "BROWNOUT_RESET (BOR)";
+            break;
+    }
+
+    return reset_cause_name;
+}
+
+
 #define PRINT_POWER_STATE(subs, on) do {\
    char s[3] = {'f', 'f', '\0'}; \
    if (on) {s[0] = 'n'; s[1] = '\0';} \
@@ -93,6 +204,7 @@ UART_HandleTypeDef huart2;
 UART_HandleTypeDef huart3;  // Used for nucleo
 
 static Marble_PCB_Rev_t marble_pcb_rev;
+static uint32_t boot_id = 0xDEADBEEF;
 
 static int i2cBusStatus = 0;
 static int i2c_pm_alert = 0;
@@ -143,6 +255,7 @@ void disable_all_IRQs(void) {
    return;
 }
 
+
 /* void board_init(void);
  *  Board-related (not MMC-related) initialization
  */
@@ -165,6 +278,9 @@ void board_init(void) {
 
   return;
 }
+
+
+
 
 // PC7: OVER_TEMP (low-true)
 #define OVER_TEMP_PORT              GPIOC
@@ -402,6 +518,7 @@ void marble_PSU_pwr(bool on)
    // Sch net EN_PSU_CH. Assert when on==true
    HAL_GPIO_WritePin(EN_PSU_CH_PORT, EN_PSU_CH_PIN, on ? EN_PSU_CH_ASSERTED : EN_PSU_CH_DEASSERTED);
    // PSU reset; Power reset pin for LTM4673. Deassert when on==true
+      
    HAL_GPIO_WritePin(PWR_RESET_PORT, PWR_RESET_PIN, on ? PWR_RESET_DEASSERTED : PWR_RESET_ASSERTED);
    if (on) {
       SystemClock_Config(); // switch back to external clock source
@@ -702,17 +819,15 @@ int marble_I2C_probe(I2C_BUS I2C_bus, uint8_t addr) {
    return rc;
 }
 
-/* Generic I2C send function with selectable I2C bus and 8-bit I2C addresses (R/W bit = 0) */
-/* 1-byte register addresses */
-int marble_I2C_send(I2C_BUS I2C_bus, uint8_t addr, const uint8_t *data, int size) {
-   int rc = HAL_I2C_Master_Transmit(I2C_bus, (uint16_t)addr, data, size, I2C_DELAY_MS);
-   if (rc == HAL_TIMEOUT) {
-     printf("*** I2C_send TIMEOUT\r\n");
+
+static void marble_I2C_error_handler(I2C_BUS I2C_bus, int rc) {
+  if (rc == HAL_TIMEOUT) {
+     printf("*** I2C_cmdsend TIMEOUT\r\n");
    } else if (rc == HAL_BUSY) {
-     printf("*** I2C_send BUSY\r\n");
+     printf("*** I2C_cmdsend BUSY\r\n");
    } else if (rc == HAL_ERROR) {
      printf("*** I2C_send ERROR: ");
-     switch (((I2C_HandleTypeDef *)I2C_bus)->ErrorCode) {
+     switch ((I2C_bus)->ErrorCode) {
        case HAL_I2C_ERROR_NONE:     printf("No error"); break;
        case HAL_I2C_ERROR_BERR:     printf("Bus error (BERR)"); break;
        case HAL_I2C_ERROR_ARLO:     printf("Arbitration lost (ARLO)"); break;
@@ -720,10 +835,38 @@ int marble_I2C_send(I2C_BUS I2C_bus, uint8_t addr, const uint8_t *data, int size
        case HAL_I2C_ERROR_OVR:      printf("Overrun error (OVR)"); break;
        case HAL_I2C_ERROR_DMA:      printf("DMA transfer error"); break;
        case HAL_I2C_ERROR_TIMEOUT:  printf("Timeout error"); break;
-       default: printf("Unknown error code: 0x%lx", ((I2C_HandleTypeDef *)I2C_bus)->ErrorCode); break;
+       default: printf("Unknown error code: 0x%lx", (I2C_bus)->ErrorCode); break;
      }
+     I2C_bus->Instance->CR1 |= I2C_CR1_STOP; // force I2C STOP condition
      printf("\r\n");
    }
+}
+
+static int marble_I2C_bus_prepare(I2C_BUS I2C_bus) {
+  // first make sure that the bus is available
+  int i=0;
+  while(((HAL_I2C_GetState(I2C_bus) != HAL_I2C_STATE_READY)||(__HAL_I2C_GET_FLAG(I2C_bus, I2C_FLAG_BUSY))) && (i<100)) {
+    marble_SLEEP_us(10); //sleep one i2c clock cycle at 100kHz
+    i++;
+    //printf("Warning: I2C hardware busy (flag 0x%08x)\r\n", (__HAL_I2C_GET_FLAG(I2C_bus, I2C_FLAG_BUSY)));
+  }
+  if(i >= 100) { //after 1ms, timeout
+    printf("Error: Timeout - I2C hardware busy (flag 0x%08x), I2C bus state %d\r\n", (__HAL_I2C_GET_FLAG(I2C_bus, I2C_FLAG_BUSY)), HAL_I2C_GetState(I2C_bus));
+    return 1; // might want a different return value
+  }
+  return 0;
+}
+
+/* Generic I2C send function with selectable I2C bus and 8-bit I2C addresses (R/W bit = 0) */
+/* 1-byte register addresses */
+int marble_I2C_send(I2C_BUS I2C_bus, uint8_t addr, const uint8_t *data, int size) {
+  // first make sure that the bus is available
+  if(marble_I2C_bus_prepare(I2C_bus) != 0) {
+    return 1; // bus not available
+  }
+  // I2C action and error handling 
+  int rc = HAL_I2C_Master_Transmit(I2C_bus, (uint16_t)addr, data, size, I2C_DELAY_MS);
+   marble_I2C_error_handler(I2C_bus, rc);
    i2cBusStatus |= rc;
    if (rc == HAL_OK) {
       // rnw=0, cmd=-1
@@ -732,13 +875,15 @@ int marble_I2C_send(I2C_BUS I2C_bus, uint8_t addr, const uint8_t *data, int size
    return rc;
 }
 
+
 int marble_I2C_cmdsend(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, const uint8_t *data, int size) {
-   int rc = HAL_I2C_Mem_Write(I2C_bus, (uint16_t)addr, cmd, 1, (uint8_t *)data, size, I2C_DELAY_MS);
-   if (rc == HAL_TIMEOUT) {
-     printf("*** I2C_cmdsend TIMEOUT\r\n");
-   } else if (rc == HAL_BUSY) {
-     printf("*** I2C_cmdsend BUSY\r\n");
-   }
+  // first make sure that the bus is available
+  if(marble_I2C_bus_prepare(I2C_bus) != 0) {
+    return 1; // bus not available
+  }
+  // I2C action and error handling
+  int rc = HAL_I2C_Mem_Write(I2C_bus, (uint16_t)addr, cmd, 1, (uint8_t *)data, size, I2C_DELAY_MS);
+  marble_I2C_error_handler(I2C_bus, rc);
    if (rc == HAL_OK) {
       // rnw=0, cmd=cmd
       i2c_hook(I2C_bus, addr, 0, cmd, data, size);
@@ -748,12 +893,13 @@ int marble_I2C_cmdsend(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, const uint8_t
 }
 
 int marble_I2C_recv(I2C_BUS I2C_bus, uint8_t addr, uint8_t *data, int size) {
+  // first make sure that the bus is available
+  if(marble_I2C_bus_prepare(I2C_bus) != 0) {
+    return 1; // bus not available
+  }
+  // I2C action and error handling
    int rc = HAL_I2C_Master_Receive(I2C_bus, (uint16_t)addr, data, size, I2C_DELAY_MS);
-   if (rc == HAL_TIMEOUT) {
-     printf("*** I2C_recv TIMEOUT\r\n");
-   } else if (rc == HAL_BUSY) {
-     printf("*** I2C_recv BUSY\r\n");
-   }
+   marble_I2C_error_handler(I2C_bus, rc);
    i2cBusStatus |= rc;
    if (rc == HAL_OK) {
       // rnw=1, cmd=-1
@@ -763,12 +909,13 @@ int marble_I2C_recv(I2C_BUS I2C_bus, uint8_t addr, uint8_t *data, int size) {
 }
 
 int marble_I2C_cmdrecv(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size) {
+  // first make sure that the bus is available
+  if(marble_I2C_bus_prepare(I2C_bus) != 0) {
+    return 1; // bus not available
+  }
+  // I2C action and error handling
    int rc = HAL_I2C_Mem_Read(I2C_bus, (uint16_t)addr, cmd, 1, data, size, I2C_DELAY_MS);
-   if (rc == HAL_TIMEOUT) {
-     printf("*** I2C_cmdrecv TIMEOUT\r\n");
-   } else if (rc == HAL_BUSY) {
-     printf("*** I2C_cmdrecv BUSY\r\n");
-   }
+   marble_I2C_error_handler(I2C_bus, rc);
    i2cBusStatus |= rc;
    if (rc == HAL_OK) {
       // rnw=1, cmd=cmd
@@ -779,12 +926,13 @@ int marble_I2C_cmdrecv(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data
 
 /* Same but 2-byte register addresses */
 int marble_I2C_cmdsend_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, const uint8_t *data, int size) {
-   int rc = HAL_I2C_Mem_Write(I2C_bus, (uint16_t)addr, cmd, 2, (uint8_t *)data, size, I2C_DELAY_MS);
-   if (rc == HAL_TIMEOUT) {
-     printf("*** I2C_cmdsend_a2 TIMEOUT\r\n");
-   } else if (rc == HAL_BUSY) {
-     printf("*** I2C_cmdsend_a2 BUSY\r\n");
-   }
+  // first make sure that the bus is available
+  if(marble_I2C_bus_prepare(I2C_bus) != 0) {
+    return 1; // bus not available
+  }
+  // I2C action and error handling 
+  int rc = HAL_I2C_Mem_Write(I2C_bus, (uint16_t)addr, cmd, 2, (uint8_t *)data, size, I2C_DELAY_MS);
+   marble_I2C_error_handler(I2C_bus, rc);
    i2cBusStatus |= rc;
    if (rc == HAL_OK) {
       // rnw=0, cmd=cmd
@@ -793,12 +941,13 @@ int marble_I2C_cmdsend_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, const uin
    return rc;
 }
 int marble_I2C_cmdrecv_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *data, int size) {
+  // first make sure that the bus is available
+  if(marble_I2C_bus_prepare(I2C_bus) != 0) {
+    return 1; // bus not available
+  }
+  // I2C action and error handling
    int rc = HAL_I2C_Mem_Read(I2C_bus, (uint16_t)addr, cmd, 2, data, size, I2C_DELAY_MS);
-   if (rc == HAL_TIMEOUT) {
-     printf("*** I2C_cmdrecv_a2 TIMEOUT\r\n");
-   } else if (rc == HAL_BUSY) {
-     printf("*** I2C_cmdrecv_a2 BUSY\r\n");
-   }
+   marble_I2C_error_handler(I2C_bus, rc);
    i2cBusStatus |= rc;
    if (rc == HAL_OK) {
       // rnw=1, cmd=cmd
@@ -975,6 +1124,8 @@ uint32_t marble_init(void)
   __HAL_RCC_RNG_CLK_ENABLE();
   rng_init_status = HAL_RNG_Init(&hrng);
 
+  get_hw_rnd(&boot_id);
+
   marble_LED_init();
   marble_SW_init();
   marble_UART_init();
@@ -1000,6 +1151,7 @@ void marble_print_pcb_rev(void) {
       break;
     case Marble_v1_4:
       printf("PCB Rev: Marble v1.4\r\n");
+      //printf("PCB Rev: Marble v1.4\r\n");
       break;
     case Marble_v1_5:
       printf("PCB Rev: Marble v1.5\r\n");
@@ -1022,7 +1174,10 @@ void marble_print_pcb_rev(void) {
   }
 #endif
   show_chip_ID();
-  return;
+  printf("Firmware revision: " GIT_REV " [Git]\r\n");// placeholder for GIT_REV
+  uint32_t uptime = marble_get_tick();
+  printf("Boot ID: 0x%08lx\n", boot_id);
+  printf("Uptime: %lu ms [wraps at 4.29e9]\n", uptime);  return;
 }
 
 Marble_PCB_Rev_t marble_get_pcb_rev(void) {
@@ -1530,10 +1685,7 @@ int mgtclk_xpoint_en(void)
 }
 
 static void show_chip_ID(void) {
-   uint32_t id = HAL_GetDEVID();
-   printf("Chip ID: DEVID 0x%04x ", (uint16_t)(id & 0xffff));
-   id = HAL_GetREVID();
-   printf("REVID 0x%04x\r\n", (uint16_t)(id & 0xffff));
+   printf("MMC CHIP ID: DEVID 0x%04x REVID 0x%04x\r\n", (uint16_t)(HAL_GetDEVID() & 0xffff), (uint16_t)(HAL_GetREVID() & 0xffff));
    return;
 }
 

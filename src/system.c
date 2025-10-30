@@ -3,6 +3,7 @@
  */
 
 #include "marble_api.h"
+#include "uart_fifo.h"
 #include "console.h"
 #include "eeprom.h"
 #include "i2c_pm.h"

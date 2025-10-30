@@ -25,7 +25,7 @@
 #define FAN_SPEED_MAX           (120)
 #define OVERTEMP_HARD_MAXIMUM   (125)
 
-const char unk_str[] = "> Unknown option. Press '?' for help.\r\n";
+const char unk_str[] = " > Unknown option. Press '?' for help.\r\n";
 
 const char *menu_str[] = {"\r\n",
   "Build based on git commit " GIT_REV "\r\n",
@@ -283,6 +283,7 @@ static int console_handle_msg(char *rx_msg, int len)
            handle_pmod_mode(rx_msg, len);
            break;
         default:
+           marble_UART_send(rx_msg, len); // Echo back unrecognized commands
            printf(unk_str);
            break;
      }
@@ -734,6 +735,7 @@ int console_service(void) {
   int len;
   if (_msgCount) {
     len = console_shift_msg(msg);
+    //printf("_msgCount, len = %d\r\n", _msgCount);
     _msgCount--;
     if (len) {
       return console_handle_msg((char *)msg, len);

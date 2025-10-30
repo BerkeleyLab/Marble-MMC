@@ -62,6 +62,8 @@ MKDIR	:= mkdir -p
 RM	:= rm -rf
 SED	:= sed
 SHUF	:= shuf
+SED_INLINE := $(shell if [[ "$(OSTYPE)" == darwin* ]]; then echo -i ''; else echo -i; fi)
+
 
 # ARM GNU Toolchain
 #
@@ -75,7 +77,8 @@ CXX	:= $(TARGET)-g++
 OBJCOPY	:= $(TARGET)-objcopy
 SIZE	:= $(TARGET)-size
 # An alternative to gdb-multiarch is arm-none-eabi-gdb distributed with gcc-arm-none-eabi-xxxx
-GDB=gdb-multiarch
+GDB=arm-none-eabi-gdb
+#gdb-multiarch
 
 # Download Tools
 #
@@ -119,7 +122,7 @@ src/rev.h: $(SOURCES)
 	(git rev-parse --short=8 HEAD | awk '{print "#define GIT_REV \"" $$1 "\""}'; \
 	! git diff | grep -q .; echo "#define GIT_DIRTY $$?")  > $@
 	git rev-parse --short=8 HEAD | awk '{print "#define GIT_REV_32BIT 0x" $$1 ""}' >> $@
-$(OUTPUT_DIR)/src/main.o $(OUTPUT_DIR)/src/mailbox.o: src/rev.h
+$(OUTPUT_DIR)/src/main.o $(OUTPUT_DIR)/src/mailbox.o $(OUTPUT_DIR)/board_support/marble_v2/marble_board.o: src/rev.h
 
 # Rule for generating object and dependancy files from source files
 #
@@ -164,7 +167,7 @@ $(OUTPUT_DIR)/%.o: %.s
 # about human-readable .map is also created.
 #
 $(OUTPUT_ELF): $(OBJECTS) $(LINKERS) gdbscript
-	@$(SED) -i 's/^file.*$$/file $(OUTPUT_DIR)\/$(PROJECT_NAME)\.elf/' gdbscript
+	@$(SED_INLINE) 's/^file.*$$/file $(OUTPUT_DIR)\/$(PROJECT_NAME)\.elf/' gdbscript
 	@$(ECHO)
 	@$(ECHO) 'Linking $@...'
 	$(CC) $(LDFLAGS) $(addprefix -T,$(LINKERS)) -Wl,-Map,$(@:.elf=.map) -o $@ $(OBJECTS)
@@ -188,8 +191,8 @@ sources:
 	@$(ECHO)
 	@$(FIND) $(SOURCE_DIR)/ | $(GREP) \\.[cS]$ > sources.mk
 	@$(CAT) sources.mk
-	@$(SED) -i '1s/^/SOURCES += /' sources.mk
-	@$(SED) -i 's/$$/ \\/' sources.mk
+	@$(SED) @(SED_INLINE) '1s/^/SOURCES += /' sources.mk
+	@$(SED) @(SED_INLINE) 's/$$/ \\/' sources.mk
 
 # Downloads the firmware over J-Link with openocd
 #
