@@ -93,7 +93,7 @@ CFLAGS += -Wall -Wextra -Wundef -Wshadow -Wstrict-prototypes -Wwrite-strings -pe
 CFLAGS += -Wpointer-arith -Wredundant-decls -Wunreachable-code
 # to do:  -Wcast-align -Wcast-qual
 
-ASFLAGS = $(FLAGS) $(ARCH_FLAGS)
+ASFLAGS = $(ARCH_FLAGS)
 LDFLAGS = $(FLAGS) $(LINKER_FLAGS) -Wextra $(ARCH_FLAGS)
 
 # Default target
@@ -182,7 +182,7 @@ $(OUTPUT_DIR)/%.o: %.s
 # about human-readable .map is also created.
 #
 $(OUTPUT_DIR)/$(PROJECT_NAME).elf: $(OBJECTS) $(LINKERS) gdbscript
-	@$(SED) -i 's/^file.*$$/file $(OUTPUT_DIR)\/$(PROJECT_NAME)\.elf/' gdbscript
+	@$(SED) -i '' 's/^file.*$$/file $(OUTPUT_DIR)\/$(PROJECT_NAME)\.elf/' gdbscript
 	@$(ECHO)
 	@$(ECHO) 'Linking $@...'
 	$(CC) $(LDFLAGS) $(addprefix -T,$(LINKERS)) -Wl,-Map,$(@:.elf=.map) -o $@ $(OBJECTS)

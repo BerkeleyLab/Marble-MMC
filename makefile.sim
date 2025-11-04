@@ -142,7 +142,11 @@ $(OUTPUT_DIR)/%.o: %.s
 $(OUTPUT_DIR)/$(PROJECT_NAME): $(OBJECTS) $(LINKERS)
 	@$(ECHO) 'Linking $@...'
 	@$(MKDIR) $(dir $@)
-	$(CC) $(LDFLAGS) $(addprefix -T,$(LINKERS)) -Wl,-Map,$@.map -o $@ $(OBJECTS)
+	@if [[ "$$OSTYPE" == "darwin"* ]]; then \
+		$(CC) $(LDFLAGS) $(addprefix -T,$(LINKERS)) -o $@ $(OBJECTS); \
+	else \
+		$(CC) $(LDFLAGS) $(addprefix -T,$(LINKERS)) -Wl,-Map,$@.map -o $@ $(OBJECTS); \
+	fi
 	@$(ECHO)
 	$(SIZE) $@
 	@$(ECHO)
