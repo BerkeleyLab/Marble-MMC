@@ -8,6 +8,9 @@
 #   openocd
 #   arm-none-eabi-gcc
 #   udprtx (bedrock/badger/tests)
+#		Build with:
+#  			bedrock/badger/tests
+# 	 		make udprtx
 #
 # Setup:
 #   Perform electrical validation of marble

@@ -43,7 +43,18 @@ fi
 
 # Optional Environment Variables Check.
 if [ -z "$TTY_MMC" ]; then
-  TTY_MMC=/dev/ttyUSB3
+	if [[ "$OSTYPE" == "darwin"* ]]; then
+		# macOS: find device starting with 'usbserial' and ending with '3'
+		TTY_MMC=$(ls /dev/cu.usbserial*3 2>/dev/null | head -n 1)
+		if [[ -z "$TTY_MMC" ]]; then
+			echo "Error: No matching USB serial device found."
+			exit 1
+		fi
+	else
+		# Linux
+		TTY_MMC="/dev/ttyUSB3"
+	fi
+	echo "Using TTY: $TTY_MMC"  #TTY_MMC=/dev/ttyUSB3
 fi
 
 # Handy Params
@@ -74,24 +85,24 @@ fi
 echo "##################################"
 
 # Sleep for a few seconds to give the MMC time to boot
-echo "napping for 5 seconds.."
-sleep 5
+echo "So much code! Give me a few seconds to read through this..."
+sleep 4
 
 # 2. Program LTM4673 power management chip
 echo "Programming LTM4673 power management chip...."
-if ! python3 "$SCRIPTS_PATH"/ltm4673.py -d "$TTY_MMC" write -f "$LTM_SCRIPT"; then
+if ! python3 "$SCRIPTS_PATH"/ltm4673.py -d "$TTY_MMC" write_read -f "$LTM_SCRIPT"; then
   echo "Could not program LTM4673."
   exit 1
 else
   echo "##################################"
   python3 "$SCRIPTS_PATH"/ltm4673.py -d "$TTY_MMC" store
-  echo "napping for 5 seconds.."
-  sleep 5
+  echo "I need a second to let this sink in..."
+  sleep 1
+  echo "I need to sleep over this. Powering off..."
   python3 "$SCRIPTS_PATH"/load.py -d "$TTY_MMC" "4b"
-  echo "napping for 5 seconds.."
-  sleep 5
+  sleep 2
   python3 "$SCRIPTS_PATH"/load.py -d "$TTY_MMC" "4B"
-  echo "Successfully programmed LTM4673!"
+  echo "Wakey wakey eggs and bakey! My LTM4673 has been programmed successfully!"
 fi
 
 echo "bringup_mmc DONE"

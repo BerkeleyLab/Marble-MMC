@@ -24,8 +24,9 @@
 // TODO - Put this in a better place
 #define FAN_SPEED_MAX           (120)
 #define OVERTEMP_HARD_MAXIMUM   (125)
+#define LTM_CONSOLE_ACTIVE_TIMEOUT_MS (5000)
 
-const char unk_str[] = " > Unknown option. Press '?' for help.\r\n";
+const char unk_str[] = " > Unknown option. Press '?' for help.";
 
 const char *menu_str[] = {"\r\n",
   "Build based on git commit " GIT_REV "\r\n",
@@ -86,6 +87,7 @@ const char *menu_str[] = {"\r\n",
 
 static uint8_t _msgCount;
 static uint8_t _fpgaEnable;
+static uint32_t _LTM_console_timestamp = 0;
 
 // TODO - find a better home for these
 static int console_handle_msg(char *rx_msg, int len);
@@ -282,9 +284,13 @@ static int console_handle_msg(char *rx_msg, int len)
         case 'x':
            handle_pmod_mode(rx_msg, len);
            break;
+        case 0x0A: // LF
+           break;
+        case 0x0D: // CR
+           break;
         default:
            marble_UART_send(rx_msg, len); // Echo back unrecognized commands
-           printf(unk_str);
+           printf("%s [%c] 0x%02X \r\n", unk_str, *rx_msg, *rx_msg);
            break;
      }
   return 0;
@@ -1320,6 +1326,7 @@ static int handle_msg_pmbridge(const char *s, int len) {
   int item_index = 0;
   int fail = 0;
   uint16_t xact[PMBRIDGE_XACT_MAX_ITEMS];
+  _LTM_console_timestamp = marble_get_tick();
   while (ptr < max_len) {
     if (s[ptr] == '\n') {
       break;
@@ -1529,3 +1536,10 @@ const char *decode_errno(int err) {
   }
 }
 #endif
+
+
+uint8_t _LTM_console_active(void) {
+    uint32_t now = marble_get_tick();
+    uint32_t delta = now - _LTM_console_timestamp;
+    return (delta < LTM_CONSOLE_ACTIVE_TIMEOUT_MS) ? 1 : 0;
+  }

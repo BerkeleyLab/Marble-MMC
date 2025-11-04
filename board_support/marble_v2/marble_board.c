@@ -333,30 +333,32 @@ int board_service(void) {
       return 0;
 #endif
    }
-   // Check state of PWRGD pin
-   gpio = HAL_GPIO_ReadPin(PWRGD_PORT, PWRGD_PIN);
-   if (gpio == PWRGD_ASSERTED) {
-     if (_pwr_state != PWR_GOOD) {
-       if (((++_pwr_state) == PWR_GOOD) && (_pwr_good == 0)) {
-         // Detect asserting edge
-         printf("ALERT: Power good. Re-initializing.\r\n");
-         _pwr_good = 1;
-         board_init();
-         FPGAWD_SelfReset();
-       } else {
-         //printf("PWR STATE CHANGE: _pwr_state = %d;  _pwr_good = %d\r\n", _pwr_state, _pwr_good);
-       }
-     }
-   } else { // gpio == PWRGD_DEASSERTED
-     if (_pwr_state != PWR_FAIL) {
-       if (((--_pwr_state) == 0) && (_pwr_good > 0)) {
-         // Detect de-asserting edge
-         printf("ALERT: Lost power.\r\n");
-         _pwr_good = 0;
-       } else {
-         //printf("PWR STATE CHANGE: _pwr_state = %d;  _pwr_good = %d\r\n", _pwr_state, _pwr_good);
-       }
-     }
+   if(!_LTM_console_active()) {
+      // Check state of PWRGD pin
+      gpio = HAL_GPIO_ReadPin(PWRGD_PORT, PWRGD_PIN);
+      if (gpio == PWRGD_ASSERTED) {
+        if (_pwr_state != PWR_GOOD) {
+          if (((++_pwr_state) == PWR_GOOD) && (_pwr_good == 0)) {
+            // Detect asserting edge
+            printf("ALERT: Power good. Re-initializing.\r\n");
+            _pwr_good = 1;
+            board_init();
+            FPGAWD_SelfReset();
+          } else {
+            //printf("PWR STATE CHANGE: _pwr_state = %d;  _pwr_good = %d\r\n", _pwr_state, _pwr_good);
+          }
+        }
+      } else { // gpio == PWRGD_DEASSERTED
+        if (_pwr_state != PWR_FAIL) {
+          if (((--_pwr_state) == 0) && (_pwr_good > 0)) {
+            // Detect de-asserting edge
+            printf("ALERT: Lost power.\r\n");
+            _pwr_good = 0;
+          } else {
+            //printf("PWR STATE CHANGE: _pwr_state = %d;  _pwr_good = %d\r\n", _pwr_state, _pwr_good);
+          }
+        }
+      }
    }
 #if 0
    // This is unused at the moment.
@@ -809,7 +811,7 @@ static int marble_MGTMUX_store(void) {
 * I2C
 ************/
 #define SPEED_100KHZ 100000
-#define I2C_DELAY_MS 1000
+#define I2C_TIMEOUT_MS 10
 
 
 /* Non-destructive I2C probe function based on empty data command, i.e. S+[A,RW]+P */
@@ -845,12 +847,12 @@ static void marble_I2C_error_handler(I2C_BUS I2C_bus, int rc) {
 static int marble_I2C_bus_prepare(I2C_BUS I2C_bus) {
   // first make sure that the bus is available
   int i=0;
-  while(((HAL_I2C_GetState(I2C_bus) != HAL_I2C_STATE_READY)||(__HAL_I2C_GET_FLAG(I2C_bus, I2C_FLAG_BUSY))) && (i<100)) {
+  while(((HAL_I2C_GetState(I2C_bus) != HAL_I2C_STATE_READY)||(__HAL_I2C_GET_FLAG(I2C_bus, I2C_FLAG_BUSY))) && (i<50)) {
     marble_SLEEP_us(10); //sleep one i2c clock cycle at 100kHz
     i++;
     //printf("Warning: I2C hardware busy (flag 0x%08x)\r\n", (__HAL_I2C_GET_FLAG(I2C_bus, I2C_FLAG_BUSY)));
   }
-  if(i >= 100) { //after 1ms, timeout
+  if(i >= 50) { //after 1ms, timeout
     printf("Error: Timeout - I2C hardware busy (flag 0x%08x), I2C bus state %d\r\n", (__HAL_I2C_GET_FLAG(I2C_bus, I2C_FLAG_BUSY)), HAL_I2C_GetState(I2C_bus));
     return 1; // might want a different return value
   }
@@ -865,7 +867,7 @@ int marble_I2C_send(I2C_BUS I2C_bus, uint8_t addr, const uint8_t *data, int size
     return 1; // bus not available
   }
   // I2C action and error handling 
-  int rc = HAL_I2C_Master_Transmit(I2C_bus, (uint16_t)addr, data, size, I2C_DELAY_MS);
+  int rc = HAL_I2C_Master_Transmit(I2C_bus, (uint16_t)addr, data, size, I2C_TIMEOUT_MS);
    marble_I2C_error_handler(I2C_bus, rc);
    i2cBusStatus |= rc;
    if (rc == HAL_OK) {
@@ -882,7 +884,7 @@ int marble_I2C_cmdsend(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, const uint8_t
     return 1; // bus not available
   }
   // I2C action and error handling
-  int rc = HAL_I2C_Mem_Write(I2C_bus, (uint16_t)addr, cmd, 1, (uint8_t *)data, size, I2C_DELAY_MS);
+  int rc = HAL_I2C_Mem_Write(I2C_bus, (uint16_t)addr, cmd, 1, (uint8_t *)data, size, I2C_TIMEOUT_MS);
   marble_I2C_error_handler(I2C_bus, rc);
    if (rc == HAL_OK) {
       // rnw=0, cmd=cmd
@@ -898,7 +900,7 @@ int marble_I2C_recv(I2C_BUS I2C_bus, uint8_t addr, uint8_t *data, int size) {
     return 1; // bus not available
   }
   // I2C action and error handling
-   int rc = HAL_I2C_Master_Receive(I2C_bus, (uint16_t)addr, data, size, I2C_DELAY_MS);
+   int rc = HAL_I2C_Master_Receive(I2C_bus, (uint16_t)addr, data, size, I2C_TIMEOUT_MS);
    marble_I2C_error_handler(I2C_bus, rc);
    i2cBusStatus |= rc;
    if (rc == HAL_OK) {
@@ -914,7 +916,7 @@ int marble_I2C_cmdrecv(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data
     return 1; // bus not available
   }
   // I2C action and error handling
-   int rc = HAL_I2C_Mem_Read(I2C_bus, (uint16_t)addr, cmd, 1, data, size, I2C_DELAY_MS);
+   int rc = HAL_I2C_Mem_Read(I2C_bus, (uint16_t)addr, cmd, 1, data, size, I2C_TIMEOUT_MS);
    marble_I2C_error_handler(I2C_bus, rc);
    i2cBusStatus |= rc;
    if (rc == HAL_OK) {
@@ -931,7 +933,7 @@ int marble_I2C_cmdsend_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, const uin
     return 1; // bus not available
   }
   // I2C action and error handling 
-  int rc = HAL_I2C_Mem_Write(I2C_bus, (uint16_t)addr, cmd, 2, (uint8_t *)data, size, I2C_DELAY_MS);
+  int rc = HAL_I2C_Mem_Write(I2C_bus, (uint16_t)addr, cmd, 2, (uint8_t *)data, size, I2C_TIMEOUT_MS);
    marble_I2C_error_handler(I2C_bus, rc);
    i2cBusStatus |= rc;
    if (rc == HAL_OK) {
@@ -946,7 +948,7 @@ int marble_I2C_cmdrecv_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *
     return 1; // bus not available
   }
   // I2C action and error handling
-   int rc = HAL_I2C_Mem_Read(I2C_bus, (uint16_t)addr, cmd, 2, data, size, I2C_DELAY_MS);
+   int rc = HAL_I2C_Mem_Read(I2C_bus, (uint16_t)addr, cmd, 2, data, size, I2C_TIMEOUT_MS);
    marble_I2C_error_handler(I2C_bus, rc);
    i2cBusStatus |= rc;
    if (rc == HAL_OK) {
