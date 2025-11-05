@@ -1,0 +1,317 @@
+{
+  "mbox_magic_number": {
+    "access": "r",
+    "addr_width": 1,
+    "sign": "unsigned",
+    "base_addr": 0,
+    "data_width": 8
+  },
+  "mbox_version_major": {
+    "access": "r",
+    "addr_width": 0,
+    "sign": "unsigned",
+    "base_addr": 2,
+    "data_width": 8
+  },
+  "mbox_version_minor": {
+    "access": "r",
+    "addr_width": 0,
+    "sign": "unsigned",
+    "base_addr": 3,
+    "data_width": 8
+  },
+  "mbox_fmc_mgt_ctl": {
+    "access": "r",
+    "addr_width": 0,
+    "sign": "unsigned",
+    "base_addr": 32,
+    "data_width": 8
+  },
+  "mbox_count": {
+    "access": "r",
+    "addr_width": 1,
+    "sign": "unsigned",
+    "base_addr": 48,
+    "data_width": 8
+  },
+  "mbox_wd_state": {
+    "access": "r",
+    "addr_width": 0,
+    "sign": "unsigned",
+    "base_addr": 50,
+    "data_width": 8
+  },
+  "mbox_lm75_0": {
+    "access": "r",
+    "addr_width": 1,
+    "sign": "unsigned",
+    "base_addr": 52,
+    "data_width": 8
+  },
+  "mbox_lm75_1": {
+    "access": "r",
+    "addr_width": 1,
+    "sign": "unsigned",
+    "base_addr": 54,
+    "data_width": 8
+  },
+  "mbox_fmc_st": {
+    "access": "r",
+    "addr_width": 0,
+    "sign": "unsigned",
+    "base_addr": 56,
+    "data_width": 8
+  },
+  "mbox_pwr_st": {
+    "access": "r",
+    "addr_width": 0,
+    "sign": "unsigned",
+    "base_addr": 57,
+    "data_width": 8
+  },
+  "mbox_mgtmux_st": {
+    "access": "r",
+    "addr_width": 0,
+    "sign": "unsigned",
+    "base_addr": 58,
+    "data_width": 8
+  },
+  "mbox_git32": {
+    "access": "r",
+    "addr_width": 2,
+    "sign": "unsigned",
+    "base_addr": 60,
+    "data_width": 8
+  },
+  "mbox_max_t1_hi": {
+    "access": "r",
+    "addr_width": 0,
+    "sign": "unsigned",
+    "base_addr": 64,
+    "data_width": 8
+  },
+  "mbox_max_t1_lo": {
+    "access": "r",
+    "addr_width": 0,
+    "sign": "unsigned",
+    "base_addr": 65,
+    "data_width": 8
+  },
+  "mbox_max_t2_hi": {
+    "access": "r",
+    "addr_width": 0,
+    "sign": "unsigned",
+    "base_addr": 66,
+    "data_width": 8
+  },
+  "mbox_max_t2_lo": {
+    "access": "r",
+    "addr_width": 0,
+    "sign": "unsigned",
+    "base_addr": 67,
+    "data_width": 8
+  },
+  "mbox_max_f1_tach": {
+    "access": "r",
+    "addr_width": 0,
+    "sign": "unsigned",
+    "base_addr": 68,
+    "data_width": 8
+  },
+  "mbox_max_f2_tach": {
+    "access": "r",
+    "addr_width": 0,
+    "sign": "unsigned",
+    "base_addr": 69,
+    "data_width": 8
+  },
+  "mbox_max_f1_duty": {
+    "access": "r",
+    "addr_width": 0,
+    "sign": "unsigned",
+    "base_addr": 70,
+    "data_width": 8
+  },
+  "mbox_max_f2_duty": {
+    "access": "r",
+    "addr_width": 0,
+    "sign": "unsigned",
+    "base_addr": 71,
+    "data_width": 8
+  },
+  "mbox_pcb_rev": {
+    "access": "r",
+    "addr_width": 0,
+    "sign": "unsigned",
+    "base_addr": 72,
+    "data_width": 8
+  },
+  "mbox_count": {
+    "access": "r",
+    "addr_width": 1,
+    "sign": "unsigned",
+    "base_addr": 74,
+    "data_width": 8
+  },
+  "mbox_hash": {
+    "access": "r",
+    "addr_width": 2,
+    "sign": "unsigned",
+    "base_addr": 76,
+    "data_width": 8
+  },
+  "mbox_i2c_bus_status": {
+    "access": "r",
+    "addr_width": 0,
+    "sign": "unsigned",
+    "base_addr": 80,
+    "data_width": 8
+  },
+  "mbox_fsynth_i2c_addr": {
+    "access": "r",
+    "addr_width": 0,
+    "sign": "unsigned",
+    "base_addr": 96,
+    "data_width": 8
+  },
+  "mbox_fsynth_config": {
+    "access": "r",
+    "addr_width": 0,
+    "sign": "unsigned",
+    "base_addr": 97,
+    "data_width": 8
+  },
+  "mbox_fsynth_freq": {
+    "access": "r",
+    "addr_width": 2,
+    "sign": "unsigned",
+    "base_addr": 98,
+    "data_width": 8
+  },
+  "mbox_wd_nonce": {
+    "access": "r",
+    "addr_width": 3,
+    "sign": "unsigned",
+    "base_addr": 112,
+    "data_width": 8
+  },
+  "mbox_wd_hash": {
+    "access": "r",
+    "addr_width": 3,
+    "sign": "unsigned",
+    "base_addr": 128,
+    "data_width": 8
+  },
+  "mbox_vout_1v0": {
+    "access": "r",
+    "addr_width": 1,
+    "sign": "unsigned",
+    "base_addr": 144,
+    "data_width": 8
+  },
+  "mbox_iout_1v0": {
+    "access": "r",
+    "addr_width": 1,
+    "sign": "unsigned",
+    "base_addr": 146,
+    "data_width": 8
+  },
+  "mbox_vout_1v8": {
+    "access": "r",
+    "addr_width": 1,
+    "sign": "unsigned",
+    "base_addr": 148,
+    "data_width": 8
+  },
+  "mbox_iout_1v8": {
+    "access": "r",
+    "addr_width": 1,
+    "sign": "unsigned",
+    "base_addr": 150,
+    "data_width": 8
+  },
+  "mbox_vout_2v5": {
+    "access": "r",
+    "addr_width": 1,
+    "sign": "unsigned",
+    "base_addr": 152,
+    "data_width": 8
+  },
+  "mbox_iout_2v5": {
+    "access": "r",
+    "addr_width": 1,
+    "sign": "unsigned",
+    "base_addr": 154,
+    "data_width": 8
+  },
+  "mbox_vout_3v3": {
+    "access": "r",
+    "addr_width": 1,
+    "sign": "unsigned",
+    "base_addr": 156,
+    "data_width": 8
+  },
+  "mbox_iout_3v3": {
+    "access": "r",
+    "addr_width": 1,
+    "sign": "unsigned",
+    "base_addr": 158,
+    "data_width": 8
+  },
+  "mbox_pmod_led_0": {
+    "access": "r",
+    "addr_width": 0,
+    "sign": "unsigned",
+    "base_addr": 160,
+    "data_width": 8
+  },
+  "mbox_pmod_led_1": {
+    "access": "r",
+    "addr_width": 0,
+    "sign": "unsigned",
+    "base_addr": 161,
+    "data_width": 8
+  },
+  "mbox_pmod_led_2": {
+    "access": "r",
+    "addr_width": 0,
+    "sign": "unsigned",
+    "base_addr": 162,
+    "data_width": 8
+  },
+  "mbox_pmod_led_3": {
+    "access": "r",
+    "addr_width": 0,
+    "sign": "unsigned",
+    "base_addr": 163,
+    "data_width": 8
+  },
+  "mbox_pmod_led_4": {
+    "access": "r",
+    "addr_width": 0,
+    "sign": "unsigned",
+    "base_addr": 164,
+    "data_width": 8
+  },
+  "mbox_pmod_led_5": {
+    "access": "r",
+    "addr_width": 0,
+    "sign": "unsigned",
+    "base_addr": 165,
+    "data_width": 8
+  },
+  "mbox_pmod_led_6": {
+    "access": "r",
+    "addr_width": 0,
+    "sign": "unsigned",
+    "base_addr": 166,
+    "data_width": 8
+  },
+  "mbox_pmod_led_7": {
+    "access": "r",
+    "addr_width": 0,
+    "sign": "unsigned",
+    "base_addr": 167,
+    "data_width": 8
+  }
+}

@@ -12,7 +12,7 @@ void I2C_FPGA_scan(void)
    printf("Scanning I2C_FPGA bus:\r\n");
    for (unsigned j = 0; j < 8; j++)
    {
-      printf("\r\nI2C switch port: %d\r\n", j);
+      printf("\r\nI2C switch port: %u\r\n", j);
       switch_i2c_bus(j);
       marble_SLEEP_ms(100);
       for (unsigned i = 1; i < 128; i++)
@@ -82,7 +82,14 @@ void ina219_debug(uint8_t addr)
 {
    uint16_t value = 0;
    bool rc;
-   printf("> INA219 debug at address %2.2xh\r\n", (unsigned) addr);
+   printf("> Readout INA219 at address %2.2xh ", (unsigned) addr);
+   if (addr == INA219_0) {
+     printf("(Main nominal +12V input)\r\n");
+   } else if (addr == INA219_FMC1) {
+     printf("(Nominal +12V supply to FMC1)\r\n");
+   } else if (addr == INA219_FMC2) {
+     printf("(Nominal +12V supply to FMC2)\r\n");
+   }
    rc = wireReadRegister(addr, INA_REG_CONFIG, &value);
    printf("Register %d value 0x%4.4x (%d)\r\n", INA_REG_CONFIG, value, rc);
    rc = wireReadRegister(addr, INA_REG_SHUNTVOLTAGE, &value);
@@ -177,6 +184,14 @@ static int16_t getBusVoltage_raw(uint8_t ina)
 
    // Shift to the right 3 to drop CNVR and OVF and multiply by LSB
    return (int16_t)((value >> 3) * 4);
+}
+
+uint16_t ina219_getShuntVoltage(uint8_t ina) {
+  uint16_t shunt_voltage;
+  if (wireReadRegister(ina, INA_REG_SHUNTVOLTAGE, &shunt_voltage)) {
+    return shunt_voltage;
+  }
+  return 0;
 }
 
 static int16_t getCurrent_raw(uint8_t ina)
@@ -326,12 +341,12 @@ void adn4600_init()
    for (unsigned ix=0; ix<4; ix++) {
       uint8_t cmd = 0x58 + ix;
       rc = marble_I2C_cmdrecv(I2C_FPGA, ADN4600, cmd, &status, 1);
-      printf("> ADN6400 XPT Temp %d r[0x%x] = 0x%2.2x (rc=%d)\r\n", ix, cmd, status, rc);
+      printf("> ADN4600 XPT Temp %u r[0x%x] = 0x%2.2x (rc=%d)\r\n", ix, cmd, status, rc);
    }
 
    config = 1;
    rc = marble_I2C_cmdsend(I2C_FPGA, ADN4600, ADN4600_XPT_Update, &config, 1);
-   printf("> ADN6400 Update (rc=%d)\r\n", rc);
+   printf("> ADN4600 Update (rc=%d)\r\n", rc);
 }
 
 void adn4600_printStatus()
@@ -341,7 +356,7 @@ void adn4600_printStatus()
    for (unsigned ix = 0; ix < 8; ix++) {
       uint8_t cmd = ADN4600_XPT_Status0 + ix;
       marble_I2C_cmdrecv(I2C_FPGA, ADN4600, cmd, &status, 1);
-      printf("> ADN4600 reg: %x: Output number: %d, Connected input: [%d]\r\n", cmd, ix, status);
+      printf("> ADN4600 reg: %x: Output number: %u, Connected input: [%d]\r\n", cmd, ix, status);
    }
 }
 
@@ -365,20 +380,29 @@ void pca9555_status()
 void pca9555_config()
 {
    switch_i2c_bus(6);
+   uint8_t si570_config = fsynthGetConfig();
+   if ((si570_config == 0) || (si570_config == 0xff)) {
+     printf("SI570 parameters not configured. Please configure via console.\r\n");
+     return;
+   }
+   // from Part number(570_N_): N --> LVDS output with output enable polarity low
+   // default SI570_OE = 0 but using fsynthGetConfig, we can get the polarity
+   // Default freq = 125 MHz but one should measure it through a frequency counter on FPGA
+   uint8_t si570_polarity;
+   if (si570_config & 0x01) si570_polarity = 1;
+   else si570_polarity = 0;
    // Reset U39 P1_7, P1_3 and P0_0, and turn on LED LD13
    uint8_t data[3];
-   printf("Configuring PCA9555 at address 0x%02x\r\n", PCA9555_1);
+
+   printf("Configuring PCA9555 at address 0x%02x\r\n", (unsigned) PCA9555_1);
    data[0] = 0x6;  // Config reg (6) and (7)
    data[1] = 0xFE; // Configure P0_0 (SI570_OE) and P0_1 (unused) as output (set those bits to 0)
    data[2] = 0x73; // Configure P1_7 (CLKMUX_RST), P1_2, (LD14), and P1_3 (LD13) as outputs
    marble_I2C_send(I2C_FPGA, PCA9555_1, data, 3);
    marble_SLEEP_ms(100);
 
-   // from Part number(570_N_): N --> LVDS output with output enable polarity low
-   // SI570_OE = 0, from a scope generally default freq = 125 MHz
-   // but one should measure it through a frequency counter on FPGA
    data[0] = 0x2; // P0, by default it will jump to next address 3 for P1
-   data[1] = 0x1; // Write one to P0_0
+   data[1] = si570_polarity; // Write one to P0_0
    // LEDs have reverse polarity
    data[2] = 0x04; // Write zero to P1_7 and one to P1_3
    marble_I2C_send(I2C_FPGA, PCA9555_1, data, 3);
@@ -386,19 +410,19 @@ void pca9555_config()
    // Reassert CLKMUX_RST
    marble_SLEEP_ms(1000);
    data[0] = 0x2; // P0
-   data[1] = 0x00; // Write zero to P0_0, thereby enabling SI570
+   data[1] = si570_polarity; // Write zero/one to P0_0, thereby enabling SI570
    data[2] = 0x80; // Write one to P1_7 and zero to P1_3 (LED 13 should be ON)
    marble_I2C_send(I2C_FPGA, PCA9555_1, data, 3);
    printf("> reg: %x: value: %x\r\n", data[0], data[1]);
-   printf("> reg: %x: value: %x\r\n", data[0]+1, data[2]);
+   printf("> reg: %x: value: %x\r\n", data[0]+1U, data[2]);
 
-   printf("Configuring PCA9555 at address 0x%02x\r\n", PCA9555_0);
+   printf("Configuring PCA9555 at address 0x%02x\r\n", (unsigned) PCA9555_0);
    data[0] = 0x6; // Config regs 6(port 0) and 7(port 1)
    data[1] = 0x37; // Configure P0_7, P0_6 and P0_3 as outputs (set those bits to 0)
    data[2] = 0x37; // Configure P1_7, P1_6 and P0_3 as outputs (set those bits to 0)
    marble_I2C_send(I2C_FPGA, PCA9555_0, data, 3);
    printf("> reg: %x: value: %x\r\n", data[0], data[1]);
-   printf("> reg: %x: value: %x\r\n", data[0]+1, data[2]);
+   printf("> reg: %x: value: %x\r\n", data[0]+1U, data[2]);
    marble_SLEEP_ms(100);
 
    data[0] = 0x2; // P1 and P2
@@ -406,7 +430,7 @@ void pca9555_config()
    data[2] = 0x48; // Write ones to P1_7 and P1_3
    marble_I2C_send(I2C_FPGA, PCA9555_0, data, 3);
    printf("> reg: %x: value: %x\r\n", data[0], data[1]);
-   printf("> reg: %x: value: %x\r\n", data[0]+1, data[2]);
+   printf("> reg: %x: value: %x\r\n", data[0]+1U, data[2]);
 }
 
 // Compute the current SI570 Frequency
@@ -444,7 +468,7 @@ void si570_status()
    // Nominal internal crystal frequency
    // from datasheet, typically 114.285 MHz +/- 2000 ppm, see page 12
    // In the future, maybe this could this come from a non-volatile mmc parameter
-   float fxtal = 114.3982e6;
+   float fxtal = 114.285e6;
    float fout = (fxtal * rfreq)/(hs_div*n1);
 
    printf("> HS_DIV: %x\r\n", hs_div);

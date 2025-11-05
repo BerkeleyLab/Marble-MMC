@@ -1,0 +1,16 @@
+# Auto-generated platform-agnostic code
+
+PYTHON?=python3
+
+# =============== Auto-Generated Mailbox Interface ================
+MKMBOX=scripts/mkmbox.py
+MBOX_DEF=$(INCLUDE_DIR)/mbox.def
+MBOX_OUT=mailbox_def
+MBOX_DOC=mailbox.md
+$(OUTPUT_DIR)/src/mailbox.o: $(SOURCE_DIR)/$(MBOX_OUT).c $(INCLUDE_DIR)/$(MBOX_OUT).h
+
+$(INCLUDE_DIR)/$(MBOX_OUT).h: $(MBOX_DEF) $(MKMBOX)
+	$(PYTHON) $(MKMBOX) -d $< -o $@
+
+$(SOURCE_DIR)/$(MBOX_OUT).c: $(MBOX_DEF) $(MKMBOX)
+	$(PYTHON) $(MKMBOX) -d $< -o $@

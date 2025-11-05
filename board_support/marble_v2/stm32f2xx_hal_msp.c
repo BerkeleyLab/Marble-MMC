@@ -364,8 +364,8 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
     /**SPI2 GPIO Configuration
     PC2     ------> SPI2_MISO
     PC3     ------> SPI2_MOSI
-    PB10     ------> SPI2_SCK
-    PB9     ------> SPI2_NSS
+    PB10    ------> SPI2_SCK
+    //PB9     ------> SPI2_NSS - Using software (GPIO) NSS
     */
     GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_3;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
@@ -374,7 +374,7 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
     GPIO_InitStruct.Alternate = GPIO_AF5_SPI2;
     HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-    GPIO_InitStruct.Pin = GPIO_PIN_10|GPIO_PIN_9;
+    GPIO_InitStruct.Pin = GPIO_PIN_10;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;

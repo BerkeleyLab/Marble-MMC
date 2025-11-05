@@ -31,6 +31,7 @@ void adn4600_init(void);
 void adn4600_printStatus(void);
 void ina219_init(void);
 void ina219_debug(uint8_t addr);
+uint16_t ina219_getShuntVoltage(uint8_t ina);
 float getBusVoltage_V(uint8_t);
 float getCurrentAmps(uint8_t);
 void pca9555_status(void);
@@ -101,6 +102,9 @@ typedef enum CONFIG_SADCRES {
 #define INA_REG_POWER        (0x03)
 #define INA_REG_CURRENT      (0x04)
 #define INA_REG_CALIBRATION  (0x05)
+
+// Using the nominal value of the shunt resistors 0.082 Ohms (regval is in units of 10uV)
+#define INA219_SHUNT_VOLTAGE_TO_CURRENT(regval)       ((float)(((int16_t)regval)/82000))
 
 typedef enum {
    ADN4600 = 0x90

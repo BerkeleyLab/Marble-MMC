@@ -9,6 +9,9 @@
 
 #define LTM4673_DEV_ADDR_8BIT         (0xc0)
 
+#undef CHATTER
+#include "dbg.h"
+
 /* ============================ Static Variables ============================ */
 extern I2C_BUS I2C_PM;
 static uint8_t ltm4673_page = 0;
@@ -370,9 +373,9 @@ static int ltm4673_decode(uint8_t cmd, uint16_t data);
 static uint16_t ltm4673_encode(uint8_t cmd, int val);
 #endif
 
-
 static uint16_t ltm4673_apply_limits_cmd(uint8_t cmd, uint16_t val_enc, uint16_t mask,
                                      uint16_t min_enc, uint16_t max_enc);
+static int ltm4673_vet_status_word(uint16_t stat);
 
 /* void ltm4673_init(void);
  *  Read page from LTM4673 to synchronize internal page tracking
@@ -450,28 +453,46 @@ static uint16_t ltm4673_encode(uint8_t cmd, int val) {
 
 int ltm4673_ch_status(uint8_t dev)
 {
-  if (marble_get_board_id() < Marble_v1_3) {
+  if (marble_get_pcb_rev() < Marble_v1_4) {
     printf("LTM4673 not present; bypassed.\n");
     return 0;
   }
-   const uint8_t STATUS_WORD = 0x79;
-   uint8_t i2c_dat[4];
-   for (unsigned jx = 0; jx < 4; jx++) {
-      // start selecting channel/page 0 until you finish reading
-      // data for all 4 channels
-      uint8_t page = 0x00 + jx;
-      marble_I2C_cmdsend(I2C_PM, dev, 0x00, &page, 1);
-      // marble_I2C_cmd_recv should return 0, if everything is good, see page 100
-      int rc = marble_I2C_cmdrecv(I2C_PM, dev, STATUS_WORD, i2c_dat, 2);
-      if (rc == HAL_OK) {
-          uint16_t word0 = ((unsigned int) i2c_dat[1] << 8) | i2c_dat[0];
-          if (word0) {
-              printf("BAD! LTM4673 Channel %x, Status_word r[%2.2x] = 0x%x\r\n", page, STATUS_WORD, word0);
-              return 0;
-          }
-      }
-   }
-   return 1;
+  uint8_t i2c_dat[4];
+  for (unsigned jx = 0; jx < 4; jx++) {
+    marble_SLEEP_ms(200);
+    // start selecting channel/page 0 until you finish reading
+    // data for all 4 channels
+    uint8_t page = 0x00 + jx;
+    marble_I2C_cmdsend(I2C_PM, dev, 0x00, &page, 1);
+    // marble_I2C_cmd_recv should return 0, if everything is good, see page 100
+    int rc = marble_I2C_cmdrecv(I2C_PM, dev, LTM4673_STATUS_WORD, i2c_dat, 2);
+    if (rc == HAL_OK) {
+      uint16_t status_word = ((unsigned int) i2c_dat[1] << 8) | i2c_dat[0];
+      return ltm4673_vet_status_word(status_word);
+    }
+  }
+  return 1;
+}
+
+static int ltm4673_vet_status_word(uint16_t stat) {
+  // These strings are straight out of LTM4673 Datasheet Rev. A. Section "PMBus COMMAND DESCRIPTION"
+  // Subsection "STATUS_WORD" (pg 100)
+  if (stat) {
+    printf("LTM4673 Status 0x%04x:\r\n", stat);
+  }
+  if (stat & (1 << 15)) printf("  * An output voltage fault or warning has occurred\r\n");
+  if (stat & (1 << 14)) printf("  * An output current fault or warning has occurred.\r\n");
+  if (stat & (1 << 13)) printf("  * An input voltage fault or warning has occurred.\r\n");
+  if (stat & (1 << 12)) printf("  * A manufacturer specific fault has occurred.\r\n");
+  if (stat & (1 << 11)) printf("  * The PWRGD pin, if enabled, is negated. Power is not good.\r\n");
+  if (stat & (1 << 7)) printf("  * Device busy when PMBus command received.\r\n");
+  if (stat & (1 << 6)) printf("  * The unit is not providing power to the output.\r\n");
+  if (stat & (1 << 5)) printf("  * An output overvoltage fault has occurred.\r\n");
+  if (stat & (1 << 4)) printf("  * An output overcurrent fault has occurred.\r\n");
+  if (stat & (1 << 3)) printf("  * A VIN undervoltage fault has occurred.\r\n");
+  if (stat & (1 << 2)) printf("  * A temperature fault or warning has occurred.\r\n");
+  if (stat & (1 << 1)) printf("  * A communication, memory or logic fault has occurred.\r\n");
+  return (int)(stat == 0);
 }
 
 void ltm4673_read_telem(uint8_t dev) {
@@ -527,13 +548,51 @@ void ltm4673_read_telem(uint8_t dev) {
               } else {
                   phys_unit = (float)word0;
               }
-              printf("r[%2.2x] = 0x%4.4x = %5d = %7.3f %s\r\n", regno, word0, word0, phys_unit, r_table[ix].m);
+              printf("r[%2.2x] = 0x%4.4x = %5d = %7.3f %s\r\n", (unsigned) regno, word0, word0, phys_unit, r_table[ix].m);
           } else {
-              printf("r[%2.2x]    unread          (%s)\r\n", regno, r_table[ix].m);
+              printf("r[%2.2x]    unread          (%s)\r\n", (unsigned) regno, r_table[ix].m);
           }
       }
    }
    return;
+}
+
+void ltm4673_update_telem(uint8_t dev, volatile uint16_t *pdata) {
+  #define COMBINE_BYTES16(p) (((uint16_t)p[1] << 8) | (uint16_t)p[0])
+  uint8_t page;
+  uint8_t i2c_dat[4];
+  uint16_t rval;
+  // Recall:  LTM4673_READ_VOUT is LTM4673_ENCODING_L16
+  //          LTM4673_READ_IOUT is LTM4673_ENCODING_L11
+  // For each page
+  for (unsigned int npage = 0; npage < 4; npage++) {
+    page = (uint8_t)(npage & 0xff);
+    marble_I2C_cmdsend(I2C_PM, dev, 0x00, &page, 1);
+    // Read voltage
+    marble_I2C_cmdrecv(I2C_PM, dev, LTM4673_READ_VOUT, i2c_dat, 2);
+    rval = COMBINE_BYTES16(i2c_dat);
+    // Recall: LTM4673_READ_VOUT is LTM4673_ENCODING_L16
+    rval = (uint16_t)(l16_to_mv_int(rval) & 0xffff);
+    *(&pdata[2*npage]) = rval;
+    // Read current
+    marble_I2C_cmdrecv(I2C_PM, dev, LTM4673_READ_IOUT, i2c_dat, 2);
+    rval = COMBINE_BYTES16(i2c_dat);
+    // Recall: LTM4673_READ_IOUT is LTM4673_ENCODING_L11
+    rval = (uint16_t)(l11_to_mv_int(rval) & 0xffff);
+    *(&pdata[2*npage+1]) = rval;
+  }
+  // LTM4673_READ_VIN, LTM4673_READ_IIN are identical on all pages
+  // They are both LTM4673_ENCODING_L11
+  marble_I2C_cmdrecv(I2C_PM, dev, LTM4673_READ_VIN, i2c_dat, 2);
+  rval = COMBINE_BYTES16(i2c_dat);
+  rval = (uint16_t)(l11_to_mv_int(rval) & 0xffff);
+  *(&pdata[8]) = rval;
+  marble_I2C_cmdrecv(I2C_PM, dev, LTM4673_READ_IIN, i2c_dat, 2);
+  rval = COMBINE_BYTES16(i2c_dat);
+  rval = (uint16_t)(l11_to_mv_int(rval) & 0xffff);
+  *(&pdata[9]) = rval;
+  #undef COMBINE_BYTES
+  return;
 }
 
 int ltm4673_hook_write(uint8_t addr, int cmd, const uint8_t *data, int len) {
@@ -564,13 +623,50 @@ int ltm4673_hook_write(uint8_t addr, int cmd, const uint8_t *data, int len) {
     if (xact_len < 1) {
       printf("Invalid PAGE write length %d\r\n", xact_len);
     } else if (*pdata == 0xff) {
-      printf("# LTM4673_PAGE 0xff\r\n");
+      printc("# LTM4673_PAGE 0xff\r\n");
       ltm4673_page = 0xff;
     } else if (*pdata < 4) {
-      printf("# LTM4673_PAGE 0x%02x\r\n", *pdata);
+      printc("# LTM4673_PAGE 0x%02x\r\n", *pdata);
       ltm4673_page = *pdata;
     } else {
       printf("LTM4673 invalid PAGE write: 0x%02x\r\n", *pdata);
+    }
+  }
+  return matched;
+}
+
+int ltm4673_pmbridge_hook_write(uint8_t addr, int cmd, const uint8_t *data, int len) {
+  // TODO: see the same gripe in ltm4673_pmbridge_hook_read
+  int matched = 0;
+  // Look for LTM4673 writes
+  for (unsigned int n = 0; n < LTM4673_MATCH_ADDRS; n++) {
+    if (addr == ltm4673_addrs[n]) {
+      matched = 1;
+      break;
+    }
+  }
+  if (!matched) {
+    return 0;
+  }
+  uint8_t cmd_byte;
+  const uint8_t *pdata = data;
+  int xact_len = len;
+  if (cmd < 0) {
+    // cmd_byte is concatenated with data
+    cmd_byte = data[0];
+    pdata = &data[1];
+    --xact_len;
+  } else {
+    cmd_byte = (uint8_t)(cmd & 0xff);
+  }
+  // Look for page writes
+  if (cmd_byte == LTM4673_PAGE) {
+    if (xact_len > 0) {
+      if (*pdata == 0xff) {
+        printf("# LTM4673_PAGE 0xff\r\n");
+      } else if (*pdata < 4) {
+        printf("# LTM4673_PAGE 0x%02x\r\n", *pdata);
+      }
     }
   }
   return matched;
@@ -602,15 +698,54 @@ int ltm4673_hook_read(uint8_t addr, int cmd, const uint8_t *data, int len) {
   // Look for page reads
   if (cmd_byte == LTM4673_PAGE) {
     if (xact_len == 2) {
-      printf("Invalid read length 0\r\n");
+      printf("WARNING: Invalid I2C read length 0 to LTM4673\r\n");
     } else if (*pdata == 0xff) {
-      printf("# LTM4673_PAGE 0xff\r\n");
       ltm4673_page = 0xff;
     } else if (*pdata < 4) {
-      printf("# LTM4673_PAGE 0x%02x\r\n", *pdata);
       ltm4673_page = *pdata;
     } else {
-      printf("LTM4673 invalid PAGE returned on read: 0x%02x\r\n", *pdata);
+      printf("WARNING: LTM4673 returned invalid value on PAGE read: 0x%02x\r\n", *pdata);
+    }
+  }
+  return matched;
+}
+
+int ltm4673_pmbridge_hook_read(uint8_t addr, int cmd, const uint8_t *data, int len) {
+  // TODO - I hate that this code is repeated from ltm4673_hook_read, but I can't figure
+  // out how to eliminate the redundancy.  I need a hook for all I2C writes to track the
+  // page of the LTM4673 (writes from PMBRIDGE or from other functions).  I need a
+  // separate hook that is only called when the transaction is from PMBRIDGE so I can
+  // print the page number so the console can catch it and also track the current page.
+  int matched = 0;
+  // Look for LTM4673 reads
+  for (unsigned int n = 0; n < LTM4673_MATCH_ADDRS; n++) {
+    if (addr == ltm4673_addrs[n]) {
+      matched = 1;
+      break;
+    }
+  }
+  if (!matched) {
+    return 0;
+  }
+  uint8_t cmd_byte;
+  const uint8_t *pdata = data;
+  int xact_len = len;
+  if (cmd < 0) {
+    // cmd_byte is concatenated with data
+    cmd_byte = data[0];
+    pdata = &data[1];
+    --xact_len;
+  } else {
+    cmd_byte = (uint8_t)(cmd & 0xff);
+  }
+  // Look for page reads
+  if (cmd_byte == LTM4673_PAGE) {
+    if (xact_len > 2) {
+      if (*pdata == 0xff) {
+        printf("# LTM4673_PAGE 0xff\r\n");
+      } else if (*pdata < 4) {
+        printf("# LTM4673_PAGE 0x%02x\r\n", *pdata);
+      }
     }
   }
   return matched;
@@ -733,5 +868,3 @@ void ltm4673_print_limits(void) {
   }
   return;
 }
-
-

@@ -72,7 +72,7 @@ if [ -z "$BITFILE" ]; then
   paths_complete=0
 fi
 
-if [ $paths_complete -eq 0 ]; then
+if [ "$paths_complete" -eq 0 ]; then
   exit 1
 fi
 
@@ -142,22 +142,15 @@ if ! "$FTDI_PATH/verifyid.sh" "$SERIAL_NUM"; then
   fi
 fi
 
-# 2. Program MMC
 echo "##################################"
-echo "Programming MMC..."
-cd "$MMC_PATH"
-if ! make marble_download; then
-  echo "Could not program marble_mmc. Is Segger J-Link attached? Is board powered?"
-  exit 1
-fi
-
-# Sleep for a few seconds to give the MMC time to boot
-sleep 5
-
-echo "##################################"
-# 3. Write IP and MAC addresses to marble_mmc based on serial number
+# 4. Write IP and MAC addresses to marble_mmc based on serial number
 echo "Write IP and MAC addresses to marble_mmc based on serial number..."
-"$SCRIPTS_PATH/config.sh" -d "$TTY_MMC" "$SERIAL_NUM"
+"$SCRIPTS_PATH/config_ip_mac.sh" -d "$TTY_MMC" "$SERIAL_NUM"
+
+echo "##################################"
+# 4. Write Si570 parameters to marble_mmc based on PCB version
+echo "Write Si570 parameters to marble_mmc based on PCB version"
+"$SCRIPTS_PATH/config_si57x.sh" -d "$TTY_MMC"
 
 echo "##################################"
 # 4. Load bitfile to FPGA
@@ -169,7 +162,8 @@ if ! BITFILE="$BITFILE" ./mutil usb; then
 fi
 
 # Sleep for a few seconds to give the FPGA time to reconfigure with new IP/MAC
-sleep 3
+echo "napping for 5 seconds.."
+sleep 5
 
 echo "##################################"
 # Read 4 lines from FPGA frequency counter output
@@ -224,3 +218,4 @@ rm "$tt"
 
 exit 0
 } 2>&1 | tee "bringup_logfile_$SERIAL_NUM"
+echo "bringup DONE"

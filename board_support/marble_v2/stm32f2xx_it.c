@@ -24,6 +24,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "marble_api.h"
+#include "console.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/

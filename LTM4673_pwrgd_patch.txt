@@ -1,0 +1,4 @@
+#LTC PMBus Project Text File Version:1.1
+#7-Bit Address,Page,Write Protocol,Register Command Code,[DataByteHi]DataByteLo,RegisterName
+0x60,-1,WB,0x10,0x00,WRITE_PROTECT
+0x60,-1,WW,0xD4,0x000F,MFR_PWRGD_EN_LTC2974

@@ -1,5 +1,5 @@
 /**
- * @file
+ * @file flash.h
  * @ingroup fmc_flash
  * @brief Flash support.
  */

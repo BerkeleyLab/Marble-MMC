@@ -1,6 +1,6 @@
 #!/bin/sh
 # Configure marble_mmc IP and mac addresses based on serial number
-# config.sh [-d /dev/ttyUSB3] serial_number
+# config_ip_mac.sh [-d /dev/ttyUSB3] serial_number
 # Set environment variable TTY_MMC to point to whatever /dev/ttyUSBx
 # the marble_mmc enumerated as.  Defaults to /dev/ttyUSB3
 
@@ -26,7 +26,7 @@ if [ -z "$snum" ]; then
     snum=$(printf "%-.2s" "$IP")
     echo "Using serial number from IP: $snum"
   else
-    echo "Usage: config.sh [-d /dev/ttyUSB3] serial_number"
+    echo "Usage: config_ip_mac.sh [-d /dev/ttyUSB3] serial_number"
     exit 1
   fi
 fi

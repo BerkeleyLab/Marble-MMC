@@ -1,6 +1,10 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+<<<<<<< HEAD
+=======
+#include <ctype.h>
+>>>>>>> master
 #include <stdlib.h>
 #include "refsip.h"
 
@@ -17,11 +21,19 @@ static int sip_sign(const unsigned char *key)
 	unsigned int ix=0;
 	unsigned char msg[1024], hash[8];
 	while (EOF != (c=getchar())) {
+<<<<<<< HEAD
 		printf("%2.2x\n", c);
 		if (ix<sizeof msg) msg[ix++] = c;
 	}
 	if (ix%8 != 0) {
 		printf("error: byte count not a mult of 8: %d\n", ix);
+=======
+		printf("%2.2x\n", (unsigned) c);
+		if (ix<sizeof msg) msg[ix++] = c;
+	}
+	if (ix%8 != 0) {
+		printf("error: byte count not a mult of 8: %u\n", ix);
+>>>>>>> master
 		return 1;
 	}
 	core_siphash(hash, msg, ix, key);
@@ -60,6 +72,7 @@ static int sip_check(const unsigned char *key)
 	return fail;
 }
 
+<<<<<<< HEAD
 #define HASH_SIZE (2)
 static int spot_check1(uint32_t local_hash[], uint32_t desired_mac[])
 {
@@ -85,12 +98,68 @@ static int spot_check(void)
 	local_hash[0] = 0x6cf3f85b;  local_hash[1] = 0xfd51f6ad;
 	desired_mac[0] = 0x483a1f3a; desired_mac[1] = 0x0f8045fb;
 	if (spot_check1(local_hash, desired_mac)) rc = 1;
+=======
+static void print64(const char *header, const uint8_t *data, unsigned len)
+{
+	printf(header);
+	for (unsigned jx=0; jx<len; jx++) printf("%2.2x", data[jx]);
+	printf("\r\n");
+}
+
+#define HASH_SIZE (8)
+static int spot_check1(const unsigned char *local_nonce, const unsigned char *desired_mac)
+{
+	const unsigned char *tkey = (const unsigned char *) "super secret key";
+	unsigned char result_mac[HASH_SIZE];
+	int ok=1;
+	print64("in   ", local_nonce, HASH_SIZE);
+	print64("want ", desired_mac, HASH_SIZE);
+	core_siphash(result_mac, local_nonce, HASH_SIZE, tkey);
+	print64("got  ", result_mac, HASH_SIZE);
+	for (unsigned int n = 0; n < HASH_SIZE; n++) {
+		ok &= (result_mac[n] == desired_mac[n]);
+	}
+	printf("%s\n", ok ? "OK" : "BAD");
+	return !ok;
+}
+
+#define HEX(x) (isdigit(x) ? (x)-'0' : islower(x) ? (x)-'a'+10 : isupper(x) ? (x)-'A'+10 : 0)
+
+static int unhexlify(unsigned char *bytes, const char *hex, unsigned int len)
+{
+	unsigned int ix;
+	if (!bytes || !hex) return 1;
+	for (ix=0; ix<len; ix++) {
+		if (hex[2*ix] == '\0' || hex[2*ix+1] == '\0') break;
+		*bytes++ = HEX(hex[2*ix]) << 4 | HEX(hex[2*ix+1]);
+	}
+	return (ix<len);
+}
+
+static int spot_check(void)
+{
+	unsigned char local_nonce[HASH_SIZE], desired_mac[HASH_SIZE];
+	int rc = 0;
+	unhexlify(local_nonce, "0000000000000000", HASH_SIZE);
+	unhexlify(desired_mac, "cda26e52dca34794", HASH_SIZE);
+	if (spot_check1(local_nonce, desired_mac)) rc = 1;
+	unhexlify(local_nonce, "fd51f6ad6cf3f85b", HASH_SIZE);
+	unhexlify(desired_mac, "3a1f3a48fb45800f", HASH_SIZE);
+	if (spot_check1(local_nonce, desired_mac)) rc = 1;
+	unhexlify(local_nonce, "8b8ec08cfce55e6f", HASH_SIZE);
+	unhexlify(desired_mac, "8e763fc0499f581c", HASH_SIZE);
+	if (spot_check1(local_nonce, desired_mac)) rc = 1;
+>>>>>>> master
 	return rc;
 }
 
 static void usage(void)
 {
+<<<<<<< HEAD
 	printf("Usage: refsip {sign, check}\n  I/O through stdin and stdout\n");
+=======
+	printf("Usage: refsip {sign, check, spot}\n  I/O through stdin and stdout\n");
+>>>>>>> master
 }
 
 int main(int argc, char *argv[])

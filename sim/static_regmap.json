@@ -1,0 +1,9 @@
+{
+    "spi_mbox": {
+        "access": "r",
+        "addr_width": 11,
+        "sign": "unsigned",
+        "base_addr": "0x200000",
+        "data_width": 8
+    }
+}

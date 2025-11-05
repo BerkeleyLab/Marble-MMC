@@ -9,7 +9,23 @@ typedef enum {
    MAX6639 = 0x58,
    XRP7724 = 0x50,
    LTM4673 = 0xC0
-} I2C_SLAVE;
+} I2C_PERIPHERAL;
+
+// I'm assigning explicit values here being extra paranoid
+// WARNING: These need to agree with ltm4673_update_telem
+typedef enum {
+  VOUT_1V0=0,
+  IOUT_1V0=1,
+  VOUT_1V8=2,
+  IOUT_1V8=3,
+  VOUT_2V5=4,
+  IOUT_2V5=5,
+  VOUT_3V3=6,
+  IOUT_3V3=7,
+  VIN=8,
+  IIN=9,
+  PM_NUM_TELEM_ENUM=10,
+} PM_telem_enum_t;
 
 #define I2C_NUM 5
 
@@ -19,14 +35,23 @@ typedef enum {
 // Note that the MAX6639 has a hard-coded 5degC hysteresis
 #define TEMPERATURE_HYST_DEGC           (5)
 
+/* ============================= Helper Macros ============================== */
+#define MAX6639_GET_TEMP_DOUBLE(rTemp, rTempExt) \
+   ((double)(((uint16_t)rTemp << 3) | (uint16_t)rTempExt >> 5)/8)
+
 void I2C_PM_init(void);
 void I2C_PM_scan(void);
 void I2C_PM_probe(void);
-void print_max6639(void);
-void print_max6639_decoded(void);
-int get_max6639_reg(int regno, int *value);
-int return_max6639_reg(int regno);
+void I2C_PM_bus_display(void);
 void i2c_pm_hook(uint8_t addr, uint8_t rnw, int cmd, const uint8_t *data, int len);
+int PM_GetTelem(PM_telem_enum_t elem);
+void PM_UpdateTelem(void);
+int max6639_set_tach_en(uint8_t tach_en);
+uint8_t max6639_get_tach_en(void);
+void print_max6639_decoded(void);
+int get_max6639_reg(int regno, unsigned int *value);
+int return_max6639_reg(int regno);
+int max6639_get_cached_temp(int regno);
 
 #define LM75_FOR_EACH_REGISTER() \
   X(LM75_TEMP, 0) \
@@ -67,7 +92,10 @@ void LM75_Init(void);
 int LM75_read(uint8_t dev, LM75_REG reg, int *data);
 int LM75_write(uint8_t dev, LM75_REG reg, int data);
 int LM75_set_overtemp(int ot);
+int LM75_get_temperature(uint8_t dev);
+int LM75_get_cached_temperature(uint8_t dev);
 
+void xrp_boot(void);
 int xrp_ch_status(uint8_t dev, uint8_t chn);
 void xrp_dump(uint8_t dev);
 void xrp_flash(uint8_t dev);
@@ -81,7 +109,7 @@ int max6639_set_overtemp(uint8_t ot);
 /* communication between i2c_pm and hexrec */
 int xrp_push_low(uint8_t dev, uint16_t addr, const uint8_t data[], unsigned len);
 int xrp_set2(uint8_t dev, uint16_t addr, uint8_t data);
-int xrp_read2(uint8_t dev, uint16_t addr);
+unsigned int xrp_read2(uint8_t dev, uint16_t addr);
 int xrp_srecord(uint8_t dev, const uint8_t data[]);
 int xrp_program_static(uint8_t dev);
 int xrp_file(uint8_t dev);

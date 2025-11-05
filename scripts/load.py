@@ -191,7 +191,7 @@ def loadFile(dev, baud=115200, filename=None):
 
 def ArgParser():
     parser = argparse.ArgumentParser(description="Script loader for marble_mmc")
-    parser.add_argument('-d', '--dev', default=None,
+    parser.add_argument('-d', '--dev', default=None, required=True,
                         help='Device descriptor of TTY/COM port for marble_mmc')
     parser.add_argument('-b', '--baud', default=115200, help="UART Baud rate")
     return parser

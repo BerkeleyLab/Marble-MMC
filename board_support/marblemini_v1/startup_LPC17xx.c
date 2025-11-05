@@ -88,7 +88,7 @@ weak void EEPROM_IRQHandler(void) alias (Default_Handler);
 extern void __StackLimit(void);
 
 /*
- * This array of interrupt vectors is decared in a special section so that the
+ * This array of interrupt vectors is declared in a special section so that the
  * linker script can position it at 0x00000000.
  */
 __attribute__ ((section(".isr_vector")))

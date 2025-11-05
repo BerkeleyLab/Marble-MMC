@@ -7,6 +7,16 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+<<<<<<< HEAD
+=======
+// Work around Debian bug 1067692
+#ifdef __arm__
+#include <sys/_stdint.h>
+#endif
+// Using PRIx32/PRIx64 for cross-platform compatibility (sim vs target)
+#include <inttypes.h>
+
+>>>>>>> master
 #include "refsip.h"
 
 #ifdef DEBUG
@@ -15,6 +25,17 @@
 #define debug 0
 #endif
 
+<<<<<<< HEAD
+=======
+// handle this optimization automatically per gcc documentation
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#define NATIVE_LITTLE_ENDIAN
+#endif
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#define NATIVE_BIG_ENDIAN
+#endif
+
+>>>>>>> master
 #define STORE64_BE(DST, W) store64_be((DST), (W))
 static inline void
 store64_be(uint8_t dst[8], uint64_t w)
@@ -84,7 +105,11 @@ rotl64(const uint64_t x, const int b)
 
 #define SIPROUND             \
     do {                     \
+<<<<<<< HEAD
         if (debug) printf("sipround in  %16.16llx %16.16llx %16.16llx %16.16llx\n", v0, v1, v2, v3); \
+=======
+        if (debug) printf("sipround in  %16.16"PRIx64" %16.16"PRIx64" %16.16"PRIx64" %16.16"PRIx64"\n", v0, v1, v2, v3); \
+>>>>>>> master
         v0 += v1;            \
         v1 = ROTL64(v1, 13); \
         v1 ^= v0;            \
@@ -99,7 +124,11 @@ rotl64(const uint64_t x, const int b)
         v1 = ROTL64(v1, 17); \
         v1 ^= v2;            \
         v2 = ROTL64(v2, 32); \
+<<<<<<< HEAD
         if (debug) printf("sipround out %16.16llx %16.16llx %16.16llx %16.16llx\n", v0, v1, v2, v3); \
+=======
+        if (debug) printf("sipround out %16.16"PRIx64" %16.16"PRIx64" %16.16"PRIx64" %16.16"PRIx64"\n", v0, v1, v2, v3); \
+>>>>>>> master
     } while (0)
 
 void core_siphash(unsigned char *out, const unsigned char *in,
@@ -120,9 +149,15 @@ void core_siphash(unsigned char *out, const unsigned char *in,
     v1 ^= k1;
     v0 ^= k0;
     for (; in != end; in += 8) {
+<<<<<<< HEAD
         // Use big-endian because that's network byte order?
         m = LOAD64_BE(in);
         if (debug) printf("siphash m    %16.16llx\n", m);
+=======
+        // Use little-endian because that's in the spec
+        m = LOAD64_LE(in);
+        if (debug) printf("siphash m    %16.16"PRIx64"\n", m);
+>>>>>>> master
         v3 ^= m;
         SIPROUND;
         SIPROUND;
@@ -134,7 +169,11 @@ void core_siphash(unsigned char *out, const unsigned char *in,
     SIPROUND;
     SIPROUND;
     b = v0 ^ v1 ^ v2 ^ v3;
+<<<<<<< HEAD
     if (debug) printf("siphash b    %16.16llx\n", b);
+=======
+    if (debug) printf("siphash b    %16.16"PRIx64"\n", b);
+>>>>>>> master
     STORE64_BE(out, b);
 }
 

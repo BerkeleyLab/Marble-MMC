@@ -1,0 +1,55 @@
+stages:
+  - pre-build
+  - build
+
+variables:
+  GIT_SUBMODULE_STRATEGY: normal
+  CI_REGISTRY: mohs.dhcp.lbl.gov
+  CONTAINER_IMAGE: $CI_REGISTRY/arm_build_image
+  DOCKER_HOST: tcp://docker:2375/
+  DOCKER_DRIVER: overlay2
+
+image: $CONTAINER_IMAGE:$CI_COMMIT_REF_NAME
+
+services:
+  - name: mohs.dhcp.lbl.gov/docker:20.10.12-dind
+    command: ["--insecure-registry", "mohs.dhcp.lbl.gov"]
+    alias: docker
+
+include:
+  - local: .gitlab/ci/build.gitlab-ci.yml
+
+marble_mini_build:
+  stage: build
+  script:
+    - make marble_mini_clean && make marble_mini
+  artifacts:
+    paths:
+      - out_marble_mini/marble_mmc_lpc1776.*
+
+marble_build:
+  stage: build
+  script:
+    - make clean && make
+  artifacts:
+    paths:
+      - out_marble/marble_mmc_stm32f2.*
+
+nucleo_build:
+  stage: build
+  script:
+    - make clean && make nucleo
+  artifacts:
+    paths:
+      - out_nucleo/marble_mmc_stm32f2_nucleo.*
+
+sim_build:
+  stage: build
+  script:
+    - make sim_clean && make sim
+
+self_test:
+  stage: build
+  script:
+    - make -C tests && make -C tests clean
+    - (cd scripts && python3 pysiphash.py)

@@ -16,7 +16,7 @@
 #include "i2c_pm.h"
 #include "i2c_fpga.h"
 #include "uart_fifo.h"
-#include "st-eeprom.h"
+#include "eeprom.h"
 #include "ltm4673.h"
 #include "watchdog.h"
 
@@ -25,42 +25,62 @@
 #define FAN_SPEED_MAX           (120)
 #define OVERTEMP_HARD_MAXIMUM   (125)
 
-const char unk_str[] = "> Unknown option\r\n";
+const char unk_str[] = "> Unknown option. Press '?' for help.\r\n";
 
 const char *menu_str[] = {"\r\n",
   "Build based on git commit " GIT_REV "\r\n",
   "Menu:\r\n",
-  "1 - MDIO/PHY\r\n",
+  "0 - Show board/chip identification\r\n"
+  "1 [-v] - Show MDIO/PHY Status (-v for verbose output)\r\n",
   "2 - I2C monitor\r\n",
   "3 - Status & counters\r\n",
   "4 gpio - GPIO control\r\n",
   "5 - Reset FPGA\r\n",
   "6 - Push IP&MAC\r\n",
-  "7 - MAX6639\r\n",
-  "8 - LM75_0\r\n",             // Do I want to elaborate this option?
-  "9 - LM75_1\r\n",
+  "7 - Readout MAX6639 (Thermometer and fan controller).\r\n",
+  "8 - Readout LM75_0 (Thermometer, U29)\r\n",
+  "9 - Readout LM75_1 (Thermometer, U28)\r\n",
   "a - I2C scan all ports\r\n",
-  "b - Config ADN4600\r\n",
-  "c - INA219 Main power supply\r\n",
+#ifdef APP_MARBLE
+  "b - Config ADN4600 (Clock mux)\r\n",
+#endif
+  "c - Readout INA219 (Current monitors)\r\n",
+#ifdef APP_MARBLE
   "d - MGT MUX - switch to QSFP 2\r\n",
-  "e - PM bus display\r\n",
-  "f - XRP7724 flash\r\n",
-  "g - XRP7724 go\r\n",
-  //"h - XRP7724 hex input\r\n",
+#endif
+  "e - I2C_PM bus display\r\n",
+#ifdef APP_MARBLE
+//  "f - Flash XRP7724 (Power supply, Marble v1.1-1.3)\r\n",
+#endif
+#ifdef APP_MINI
+  "f - Flash XRP7724 (Power supply)\r\n",
+#endif
+  "g - Enable XRP7724\r\n",
+#ifdef APP_MARBLE
   "h - FMC MGT MUX set\r\n",
-  "i - timer check/cal\r\n",
+#endif
+  "i - Timer check/cal\r\n",
   "j - Read SPI mailbox\r\n",
-  "k - PCA9555 status\r\n",
+  "k - Readout PCA9555 (I2C GPIO expanders U34 and U39)\r\n",
   "l - Config PCA9555\r\n",
   "m d.d.d.d - Set IP Address\r\n",
   "n d:d:d:d:d:d - Set MAC Address\r\n",
-  "o - SI570 status\r\n",
+#ifdef APP_MARBLE
+  "o - SI570 (Frequency synthesizer) status\r\n",
+#endif
   "p speed[%] - Set fan speed (0-120 or 0%-100%)\r\n",
   "q otemp - Set overtemperature threshold (degC)\r\n",
-  "r enable - Set mailbox enable/disable (0/1, on/off)\r\n",
+  "r enable - Set mailbox enable/disable (1/0, on/off)\r\n",
+#ifdef APP_MARBLE
   "s addr_hex freq_hz config_hex - Set Si570 configuration\r\n",
+#endif
+#ifdef APP_MARBLE
   "t pmbus_msg - Forward PMBus transaction to LTM4673\r\n",
-  "u period - Set/get watchdog timeout period (in seconds)\r\n"
+#endif
+  "u period - Set/get watchdog timeout period (in seconds)\r\n",
+  "v key - Set a new 128-bit secret key (non-volatile, write only).\r\n",
+  "w enable - Set fan tachometer enable/disable (1/0, on/off)\r\n",
+  "x mode - Set MMC Pmod usage mode\r\n",
 };
 #define MENU_LEN (sizeof(menu_str)/sizeof(*menu_str))
 
@@ -68,20 +88,23 @@ static uint8_t _msgCount;
 static uint8_t _fpgaEnable;
 
 // TODO - find a better home for these
-static void pm_bus_display(void);
 static int console_handle_msg(char *rx_msg, int len);
 //static int console_shift_all(uint8_t *pData);
 static int console_shift_msg(uint8_t *pData);
 static void ina219_test(void);
 static void handle_gpio(const char *msg, int len);
 static int toggle_gpio(char c);
-static int handle_msg_IP(char *rx_msg, int len);
-static int handle_msg_MAC(char *rx_msg, int len);
-static int handle_msg_fan_speed(char *rx_msg, int len);
-static int handle_msg_overtemp(char *rx_msg, int len);
-static int handle_msg_watchdog(char *rx_msg, int len);
-static int handle_mailbox_enable(char *rx_msg, int len);
-static int handle_msg_MGTMUX(char *rx_msg, int len);
+static uint8_t parse_boolean(const char *rx_msg, int len);
+static int handle_mdio_phy_print(const char *rx_msg, int len);
+static int handle_msg_IP(const char *rx_msg, int len);
+static int handle_msg_MAC(const char *rx_msg, int len);
+static int handle_msg_fan_speed(const char *rx_msg, int len);
+static int handle_msg_overtemp(const char *rx_msg, int len);
+static int handle_msg_watchdog(const char *rx_msg, int len);
+static int handle_msg_key(const char *rx_msg, int len);
+static int handle_mailbox_enable(const char *rx_msg, int len);
+static int handle_tach_enable(const char *rx_msg, int len);
+static int handle_pmod_mode(const char *rx_msg, int len);
 //static void print_mac_ip(mac_ip_data_t *pmac_ip_data);
 static void print_mac(uint8_t *pdata);
 static void print_ip(uint8_t *pdata);
@@ -91,20 +114,27 @@ static int sscanfIP(const char *s, volatile uint8_t *data, int len);
 static int sscanfMAC(const char *s, volatile uint8_t *data, int len);
 static int sscanfFanSpeed(const char *s, int len);
 static int sscanfUnsignedDecimal(const char *s, int len);
-static int sscanfUnsignedHex(const char *s, int len);
-static int sscanfMGTMUX(const char *s, int len);
+static int sscanfUHexExact(const char *s, int len);
+static int sscanfQuery(const char *rx_msg, int len);
 static int sscanfSpace(const char *s, int len);
 static int sscanfNonSpace(const char *s, int len);
 static int sscanfNext(const char *s, int len);
-static int sscanfFSynth(const char *s, int len);
-static int sscanfPMBridge(const char *s, int len);
+#ifdef APP_MARBLE
+static int sscanfUnsignedHex(const char *s, int len);
+static int sscanfMGTMUX(const char *s, int len);
+static int handle_msg_MGTMUX(char *rx_msg, int len);
+static int handle_msg_fsynth(const char *s, int len);
+static void console_print_fsynth(void);
+static int handle_msg_pmbridge(const char *s, int len);
 static int PMBridgeConsumeArg(const char *s, int len, volatile int *arg);
+#endif
 static int xatoi(char c);
 static int htoi(char c);
-static void console_print_fsynth(void);
+static const char *pmod_mode_string(pmod_mode_t mode);
 
 int console_init(void) {
   _msgCount = 0;
+  _fpgaEnable = 0;
   return 0;
 }
 
@@ -119,8 +149,11 @@ static int console_handle_msg(char *rx_msg, int len)
                printf("%s", menu_str[kx]);
            }
            break;
+        case '0':
+           marble_print_pcb_rev();
+           break;
         case '1':
-           phy_print();
+           handle_mdio_phy_print(rx_msg, len);
            break;
         case '2':
            I2C_PM_probe();
@@ -132,11 +165,11 @@ static int console_handle_msg(char *rx_msg, int len)
            handle_gpio(rx_msg, len);
            break;
         case '5':
-           reset_fpga();
+           printf("Resetting FPGA\r\n");
+           FPGAWD_SelfReset();
            break;
         case '6':
-           print_this_ip();
-           print_this_mac();
+           console_print_mac_ip();
            console_push_fpga_mac_ip();
            printf("DONE\r\n");
            break;
@@ -145,72 +178,55 @@ static int console_handle_msg(char *rx_msg, int len)
            print_max6639_decoded();
            break;
         case '8':
-           // Demonstrate setting over-temperature register and Interrupt mode
-           //LM75_write(LM75_0, LM75_OS, 100*2);
-           //LM75_write(LM75_0, LM75_CFG, LM75_CFG_COMP_INT);
-           //LM75_print(LM75_0);
            LM75_print_decoded(LM75_0);
            break;
         case '9':
-           // Demonstrate setting over-temperature register
-           //LM75_write(LM75_1, LM75_OS, 100*2);
            LM75_print_decoded(LM75_1);
-           //LM75_print(LM75_1);
            break;
         case 'a':
            printf("I2C scanner\r\n");
            I2C_PM_scan();
            I2C_FPGA_scan();
            break;
+#ifdef APP_MARBLE
         case 'b':
            printf("ADN4600\r\n");
-#ifdef MARBLEM_V1
-           PRINT_NA();
-#else
-#ifdef MARBLE_V2
            adn4600_init();
            adn4600_printStatus();
-#endif
-#endif
            break;
+#endif
         case 'c':
-           printf("INA test\r\n");
+           printf("Readout INA219\r\n");
            ina219_test();
            break;
+#ifdef APP_MARBLE
         case 'd':
            printf("Switch MGT to QSFP 2\r\n");
-#ifdef MARBLEM_V1
-           PRINT_NA();
-#else
-#ifdef MARBLE_V2
            marble_MGTMUX_set(3, true);
-#endif
-#endif
            break;
+#endif
         case 'e':
            printf("PM bus display\r\n");
-           pm_bus_display();
+           I2C_PM_bus_display();
            break;
+#ifdef APP_MINI
         case 'f':
            printf("XRP flash\r\n");
            xrp_flash(XRP7724);
            break;
+#endif
         case 'g':
-           printf("XRP go\r\n");
+           printf("Enabling XRP7724\r\n");
            xrp_boot();
            break;
-#if 0
-        case 'h':
-           printf("XRP hex input\r\n");
-           xrp_hex_in(XRP7724);
-           break;
-#endif
+#ifdef APP_MARBLE
         case 'h':
            handle_msg_MGTMUX(rx_msg, len);
            break;
+#endif
         case 'i':
            for (unsigned ix=0; ix<10; ix++) {
-              printf("%d\r\n", ix);
+              printf("%u\r\n", ix);
               marble_SLEEP_ms(1000);
            }
            break;
@@ -230,9 +246,11 @@ static int console_handle_msg(char *rx_msg, int len)
         case 'n':
            handle_msg_MAC(rx_msg, len);
            break;
+#ifdef APP_MARBLE
         case 'o':
            si570_status();
            break;
+#endif
         case 'p':
            handle_msg_fan_speed(rx_msg, len);
            break;
@@ -242,14 +260,27 @@ static int console_handle_msg(char *rx_msg, int len)
         case 'r':
            handle_mailbox_enable(rx_msg, len);
            break;
+#ifdef APP_MARBLE
         case 's':
-           sscanfFSynth(rx_msg, len);
+           handle_msg_fsynth(rx_msg, len);
            break;
+#endif
+#ifdef APP_MARBLE
         case 't':
-           sscanfPMBridge(rx_msg, len);
+           handle_msg_pmbridge(rx_msg, len);
            break;
+#endif
         case 'u':
            handle_msg_watchdog(rx_msg, len);
+           break;
+        case 'v':
+           handle_msg_key(rx_msg, len);
+           break;
+        case 'w':
+           handle_tach_enable(rx_msg, len);
+           break;
+        case 'x':
+           handle_pmod_mode(rx_msg, len);
            break;
         default:
            printf(unk_str);
@@ -258,10 +289,36 @@ static int console_handle_msg(char *rx_msg, int len)
   return 0;
 }
 
-static int handle_msg_IP(char *rx_msg, int len) {
+static int handle_mdio_phy_print(const char *rx_msg, int len) {
+  int query = sscanfQuery(rx_msg, len);
+  int verbose = 0;
+  if (query) {
+    mdio_phy_print(verbose);
+    return 0;
+  }
+  int offset = sscanfNext(rx_msg + 1, len-1) + 1;
+  if (offset < len) {
+    if (rx_msg[offset] == 'v') verbose = 1;
+    else if (rx_msg[offset] == '-') {
+      if (((offset+1) < len) && (rx_msg[offset+1] == 'v')) {
+        verbose = 1;
+      }
+    }
+  }
+  mdio_phy_print(verbose);
+  return 0;
+}
+
+static int handle_msg_IP(const char *rx_msg, int len) {
+  int query = sscanfQuery(rx_msg, len);
+  if (query) {
+    print_this_ip();
+    return 0;
+  }
+  int rval;
   uint8_t ip[IP_LENGTH];
   // NOTE: It seems like sscanf doesn't work so well in newlib-nano
-  int rval = sscanfIP(rx_msg, ip, len);
+  rval = sscanfIP(rx_msg, ip, len);
   if (rval) {
     printf("Malformed IP address. Fail.\r\n");
     return rval;
@@ -274,7 +331,12 @@ static int handle_msg_IP(char *rx_msg, int len) {
   return 0;
 }
 
-static int handle_msg_MAC(char *rx_msg, int len) {
+static int handle_msg_MAC(const char *rx_msg, int len) {
+  int query = sscanfQuery(rx_msg, len);
+  if (query) {
+    print_this_mac();
+    return 0;
+  }
   uint8_t mac[MAC_LENGTH];
   int rval = sscanfMAC(rx_msg, mac, len);
   if (rval) {
@@ -289,10 +351,11 @@ static int handle_msg_MAC(char *rx_msg, int len) {
   return 0;
 }
 
-static int handle_msg_fan_speed(char *rx_msg, int len) {
+static int handle_msg_fan_speed(const char *rx_msg, int len) {
+  int query = sscanfQuery(rx_msg, len);
   int speed, speedPercent;
   uint8_t readSpeed;
-  if (len < 4) {
+  if (query) {
     // Print the current value
     if (eeprom_read_fan_speed(&readSpeed, 1)) {
       printf("Could not read current fan speed.\r\n");
@@ -314,10 +377,11 @@ static int handle_msg_fan_speed(char *rx_msg, int len) {
   return 0;
 }
 
-static int handle_msg_overtemp(char *rx_msg, int len) {
+static int handle_msg_overtemp(const char *rx_msg, int len) {
   // Overtemp is stored in MAX6639 as degrees C
+  int query = sscanfQuery(rx_msg, len);
   uint8_t otbyte;
-  if (len < 4) {
+  if (query) {
     if (eeprom_read_overtemp(&otbyte, 1)) {
       printf("Could not read current over-temperature threshold.\r\n");
     } else {
@@ -343,23 +407,81 @@ static int handle_msg_overtemp(char *rx_msg, int len) {
   return 0;
 }
 
-static int handle_mailbox_enable(char *rx_msg, int len) {
-  //  Msg   Action
-  //  r 0   Disable
-  //  r 1   Enable
-  //  r ?   Print status
-  //  r     Print status
-  //  r on  Enable
-  //  r off Disable
+static int handle_tach_enable(const char *rx_msg, int len) {
+  uint8_t rval = parse_boolean(rx_msg, len);
+  uint8_t tach_en;
+  if (rval == 0x01) {
+    // Query
+    tach_en = max6639_get_tach_en();
+    if (tach_en) {
+      printf("Fan tachometer (PWM pulse stretching) enabled\r\n");
+    } else {
+      printf("Fan tachometer (PWM pulse stretching) disabled\r\n");
+    }
+    return 0;
+  } else if (rval == 0x02) {
+    // Disable
+    printf("Disabling fan tachometer (PWM pulse stretching)\r\n");
+    tach_en = 0;
+  } else if (rval == 0x03) {
+    // Enable
+    printf("Enabling fan tachometer (PWM pulse stretching)\r\n");
+    tach_en = 1;
+  } else {
+    // Bad parsing
+    printf("Failed to parse\r\n");
+    return 1;
+  }
+  max6639_set_tach_en(tach_en);
+  eeprom_store_tach_en((const uint8_t *)&tach_en, 1);
+  return 0;
+}
+
+static int handle_mailbox_enable(const char *rx_msg, int len) {
+  uint8_t rval = parse_boolean(rx_msg, len);
+  int en;
+  if (rval == 0x01) {
+    // Query
+    en = mbox_get_enable();
+    if (en) {
+      printf("Mailbox enabled\r\n");
+    } else {
+      printf("Mailbox disabled\r\n");
+    }
+  } else if (rval == 0x02) {
+    // Disable
+    printf("Disabling mailbox update\r\n");
+    mbox_disable();
+  } else if (rval == 0x03) {
+    // Enable
+    printf("Enabling mailbox update\r\n");
+    mbox_enable();
+  } else {
+    // Bad parsing
+    printf("Failed to parse\r\n");
+    return 1;
+  }
+  return 0;
+}
+
+static uint8_t parse_boolean(const char *rx_msg, int len) {
+  //  Msg   Action        retval
+  //        Bad parsing   0x00
+  //  r ?   Print status  0x01
+  //  r     Print status  0x01
+  //  r 0   Disable       0x02
+  //  r 1   Enable        0x03
+  //  r off Disable       0x02
+  //  r on  Enable        0x03
   int en = 0;
-  int query = 0;
   char c;
   int doParse = 0;
   // 'doParse' 0 means unparsed; 1 means parse fail; 2 means parse success
   char arg[3];
   int argp = 0;
-  if (len < 4) {
-    query = 1;
+  int query = sscanfQuery(rx_msg, len);
+  if (query) {
+    return 0x01;
   }
   for (int n = 1; n < len; n++) {
     c = rx_msg[n];
@@ -379,6 +501,7 @@ static int handle_mailbox_enable(char *rx_msg, int len) {
           break;
         }
       } else if (c == '?') {
+        // Shouldn't hit this
         query = 1;
         break;
       }
@@ -403,30 +526,24 @@ static int handle_mailbox_enable(char *rx_msg, int len) {
     query = 1;
   }
   if ((doParse < 2) && (!query)) {
-    printf("Failed to parse\r\n");
-    return 1;
+    return 0;
   }
   if (query) {
-    en = mbox_get_enable();
-    if (en) {
-      printf("Mailbox enabled\r\n");
-    } else {
-      printf("Mailbox disabled\r\n");
-    }
+    return 0x01;
   } else {
     if (en) {
-      printf("Enabling mailbox update\r\n");
-      mbox_enable();
+      return 0x03;
     } else {
-      printf("Disabling mailbox update\r\n");
-      mbox_disable();
+      return 0x02;
     }
   }
   return 0;
 }
 
+#ifdef APP_MARBLE
 static int handle_msg_MGTMUX(char *rx_msg, int len) {
-  if (len < 4) {
+  int query = sscanfQuery((const char *)rx_msg, len);
+  if (query) {
     printf("E.g. Set all MUXn pin states: h 1=1 2=0 3=0\r\n");
     printf("E.g. Set just MUX2 pin high (ignore others): h 2=1\r\n");
     printf("E.g. Read MGTMUX state: h ?\r\n");
@@ -450,6 +567,7 @@ static int handle_msg_MGTMUX(char *rx_msg, int len) {
   }
   return rval;
 }
+#endif
 
 static void handle_gpio(const char *msg, int len) {
   char c = 0;
@@ -475,13 +593,7 @@ static void handle_gpio(const char *msg, int len) {
     marble_print_GPIO_status();
   }
   else if (!found) {
-    printf("GPIO pins, caps for on, lower case for off\r\n"
-           "?) Print state of GPIOs\r\n"
-           "a) FMC power\r\n"
-           "b) EN_PSU_CH\r\n"
-           "c) PB15 J16[4]\r\n"
-           "d) PSU reset\r\n"
-           "e) PSU alert\r\n");
+    marble_list_GPIOs();
   }
   return;
 }
@@ -503,7 +615,13 @@ static int toggle_gpio(char c) {
       break;
     case 'B':
       marble_PSU_pwr(1);
-      printf("PSU Power On\r\n");
+      printf("PSU Powered On\r\n");
+      #ifdef MARBLE_V2
+        marble_SLEEP_ms(800);
+        mgtclk_xpoint_en();
+        // TODO - Does this trigger a double-reset? The PWRGOOD line should assert soon after this.
+        FPGAWD_SelfReset();
+      #endif
       break;
     case 'c':
       // PMOD3_5 J16[4]
@@ -513,7 +631,6 @@ static int toggle_gpio(char c) {
       marble_Pmod3_5_write(1);
       break;
     case 'd':
-      // PMOD3_5 J16[4]
       marble_PSU_reset_write(0);
       break;
     case 'D':
@@ -534,6 +651,8 @@ int console_push_fpga_mac_ip(void) {
     printf("Could not find one of IP or MAC address\r\n");
     return rval;
   }
+  set_last_ip(pdata.ip);
+  set_last_mac(pdata.mac);
   return push_fpga_mac_ip(&pdata);
 }
 
@@ -545,41 +664,17 @@ void console_print_mac_ip(void) {
 
 static void ina219_test(void)
 {
-	switch_i2c_bus(6);
-	if (1) {
-		ina219_debug(INA219_0);
-		ina219_debug(INA219_FMC1);
-		ina219_debug(INA219_FMC2);
-	} else {
-		ina219_init();
-		//printf("Main bus: %dV, %dmA", getBusVoltage_V(INA219_0), getCurrentAmps(INA219_0));
-		getBusVoltage_V(INA219_0);
-		getCurrentAmps(INA219_0);
-	}
-}
-
-static void pm_bus_display(void)
-{
-	LM75_print(LM75_0);
-	LM75_print(LM75_1);
-       if (marble_get_board_id() < Marble_v1_3)
-          xrp_dump(XRP7724);
-       else
-          ltm4673_read_telem(LTM4673);
-}
-
-void xrp_boot(void)
-{
-   uint8_t pwr_on=0;
-   for (int i=1; i<5; i++) {
-      pwr_on |= xrp_ch_status(XRP7724, i);
-   }
-   if (pwr_on) {
-      printf("XRP already ON. Skipping autoboot...\r\n");
-   } else {
-      xrp_go(XRP7724);
-      marble_SLEEP_ms(1000);
-   }
+  switch_i2c_bus(6);
+  if (1) {
+    ina219_debug(INA219_0);
+    ina219_debug(INA219_FMC1);
+    ina219_debug(INA219_FMC2);
+  } else {
+    ina219_init();
+    //printf("Main bus: %dV, %dmA", getBusVoltage_V(INA219_0), getCurrentAmps(INA219_0));
+    getBusVoltage_V(INA219_0);
+    getCurrentAmps(INA219_0);
+  }
 }
 
 static void print_mac(uint8_t *pdata) {
@@ -613,17 +708,16 @@ static void print_this_ip(void) {
     printf("Could not find IP address\r\n");
     return;
   }
+  set_last_ip(ip);
   print_ip(ip);
   return;
 }
 
-/*
-static void print_mac_ip(mac_ip_data_t *pmac_ip_data) {
-  print_mac(pmac_ip_data->mac);
-  print_ip(pmac_ip_data->ip);
+void CONSOLE_USART_ISR(void) {
+  USART_RXNE_ISR(); // Handle RX interrupts first
+  USART_TXE_ISR();  // Then handle TX interrupts
   return;
 }
-*/
 
 void console_pend_msg(void) {
   _msgCount++;
@@ -838,10 +932,10 @@ static int sscanfUnsignedDecimal(const char *s, int len) {
   return (int)sum;
 }
 
-static int handle_msg_watchdog(char *rx_msg, int len) {
-  int index = sscanfNext(rx_msg, len);
+static int handle_msg_watchdog(const char *rx_msg, int len) {
+  int index = sscanfQuery(rx_msg, len);
   int val;
-  if (index < 0) {
+  if (index) {
     val = FPGAWD_GetPeriod();
     if (val == 0) {
       printf("Watchdog disabled (period = 0)\r\n");
@@ -850,6 +944,7 @@ static int handle_msg_watchdog(char *rx_msg, int len) {
     }
     return -1;
   }
+  index = sscanfNext(rx_msg, len);
   val = sscanfUnsignedDecimal((rx_msg + index), len-index);
   if (val < 0) {
     printf("Failed to parse\r\n");
@@ -861,6 +956,40 @@ static int handle_msg_watchdog(char *rx_msg, int len) {
   return 0;
 }
 
+#define KEY_LEN     (16)
+static int handle_msg_key(const char *rx_msg, int len) {
+  int index = sscanfNext(rx_msg, len);
+  uint8_t key[KEY_LEN];
+  int rval;
+  int n;
+  for (n = 0; n < KEY_LEN; n++) {
+    // Parse hex string into bytes
+    rval = sscanfUHexExact(rx_msg + index + 2*n, 2);
+    if (rval < 0) {
+      key[n] = 0xcc;
+      break;
+    }
+    key[n] = (uint8_t)rval;
+  }
+  if (n < KEY_LEN-1) {
+    // Failed to parse all 2*KEY_LEN chars
+    printf("Failed to parse %d consecutive hex characters. Key not stored.\r\n", 2*KEY_LEN);
+    return -1;
+  }
+  if (1) {
+    for (n = 0; n < 16; n++) {
+      printf("%02x ", key[n]);
+      if ((n == 7) || (n == 15)) printf("\r\n");
+    }
+  }
+  // Store non-volatile
+  eeprom_store_wd_key((const uint8_t *)key, KEY_LEN);
+  // Clobber the stack memory before exiting.
+  memset(key, 0xaa, KEY_LEN);
+  return 0;
+}
+
+#ifdef APP_MARBLE
 /*
  * static int sscanfUnsignedHex(const char *s, int len);
  *    This function skips any non-hex characters (0-9,A-F,a-f)
@@ -891,7 +1020,37 @@ static int sscanfUnsignedHex(const char *s, int len) {
   }
   return (int)sum;
 }
+#endif
 
+/* static int sscanfUHexExact(const char *s, int len);
+ *  This function is less permissive than sscanfUnsignedHex()
+ *  and expects to find exactly 'len' hex characters starting
+ *  from 's'.
+ *
+ *  Returns -1 if the above criterion is not met (any non-hex
+ *  chars within the first 'len' chars)
+ *
+ *  Returns the scanned value otherwise.
+ */
+static int sscanfUHexExact(const char *s, int len) {
+  int r;
+  unsigned int sum = 0;
+  int n;
+  for (n = 0; n < len; n++) {
+    r = htoi(s[n]);
+    if (r >= 0) {
+      sum = (sum * 16) + r;
+    } else {
+      break;
+    }
+  }
+  if (n < (len-1)) {
+    return -1;
+  }
+  return (int)sum;
+}
+
+#ifdef APP_MARBLE
 /*
  * static int sscanfMGTMUX(const char *s, int len);
  *    Scans for "x=y" assignments separated by whitespace where 'x' can be 1, 2, or 3
@@ -938,6 +1097,7 @@ static int sscanfMGTMUX(const char *s, int len) {
   }
   return bmask;
 }
+#endif
 
 /* static int sscanfSpace(const char *s, int len);
  *  Return the index of first whitespace found scanning string 's'
@@ -987,7 +1147,35 @@ static int sscanfNext(const char *s, int len) {
   return -1;
 }
 
-static int sscanfFSynth(const char *s, int len) {
+/* static int sscanfQuery(const char *rx_msg, int len);
+ *    Return 1 if rx_msg represents a query, defined as:
+ *      "x"       // Single control char
+ *      "x?"      // Control char followed by '?'
+ *      "x  \t\n" // Control char followed by any amount of whitespace
+ *      "x ?"     // Control char, whitespace, then '?'
+ *    Else, return 0
+ *    Note that the first character is skipped (assumed to be some type
+ *    of control character vetted external to this function).
+ */
+static int sscanfQuery(const char *rx_msg, int len) {
+  int query = 0;
+  // Check for query
+  if (len <= 1) {
+    query = 1;
+  } else {
+    // Re-using the same int. Being extra stingy with stack space
+    query = sscanfNonSpace((const char *)(rx_msg+1), len-1);
+    if ((query < 0) || (rx_msg[query+1] == '?')) {
+      query = 1;
+    } else {
+      query = 0;
+    }
+  }
+  return query;
+}
+
+#ifdef APP_MARBLE
+static int handle_msg_fsynth(const char *s, int len) {
   // Input string format:
   //  s cc 40000 1
   int i2c_addr = -1;
@@ -1022,13 +1210,15 @@ static int sscanfFSynth(const char *s, int len) {
       printf("Could not interpret input\r\n");
       return -1;
     }
-    printf("I2C Addr = 0x%x, Freq = %d Hz, Config = 0x%x\r\n", i2c_addr, freq, config);
+    printf("I2C Addr = 0x%x, Freq = %d Hz, Config = 0x%x\r\n", (unsigned) i2c_addr, freq, (unsigned) config);
     FSYNTH_ASSEMBLE(data, i2c_addr, freq, config);
     eeprom_store_fsynth((const uint8_t *)data, 6);
   }
   return 0;
 }
+#endif
 
+#ifdef APP_MARBLE
 static void console_print_fsynth(void) {
   uint8_t data[6];
   uint8_t i2c_addr;
@@ -1045,9 +1235,69 @@ static void console_print_fsynth(void) {
   }
   return;
 }
+#endif
 
+static const char *pmod_mode_string(pmod_mode_t mode) {
+  switch (mode) {
+    case PMOD_MODE_DISABLED:
+      return "Disabled";
+    case PMOD_MODE_UI_BOARD:
+      return "ALS OLED UI Board";
+    case PMOD_MODE_LED:
+      return "Indicator LEDs";
+    case PMOD_MODE_GPIO:
+      return "Slow GPIO";
+    default:
+      break;
+  }
+  return "Unknown";
+}
 
-/* static int sscanfPMBridge(const char *s, int len);
+static int handle_pmod_mode(const char *rx_msg, int len) {
+  // Parse messages:
+  //   "x"      -> Query pmod_mode
+  //   "x?"     -> Query pmod_mode
+  //   "x ?"    -> Query pmod_mode
+  //   "x 0"    -> Set pmod_mode = PMOD_MODE_DISABLED
+  //   "x 1"    -> Set pmod_mode = PMOD_MODE_UI_BOARD
+  //   "x 2"    -> Set pmod_mode = PMOD_MODE_LED
+  //   "x 3"    -> Set pmod_mode = PMOD_MODE_GPIO
+  //   "x 4"    -> Invalid; error
+  int query = sscanfQuery(rx_msg, len);
+  const char *modestr;
+  pmod_mode_t pmod_mode;
+  if (query) {
+    pmod_mode = system_get_pmod_mode();
+    modestr = pmod_mode_string(pmod_mode);
+    printf("Current Pmod mode: %s\r\n", modestr);
+    printf("  Options:\r\n");
+    printf("  --------\r\n");
+    for (int n=0; n<PMOD_MODE_SIZE; n++) {
+      printf("    %d: %s\r\n", n, pmod_mode_string((pmod_mode_t)n));
+    }
+    return 0;
+  } 
+  int mode = -1;
+  int index = sscanfNext(rx_msg+1, len) + 1;
+  mode = sscanfUnsignedDecimal(rx_msg+index, len-index);
+  if ((mode < 0) || (mode >= PMOD_MODE_SIZE)) {
+    printf("Invalid option. Valid choices are (%d-%d).\r\n", PMOD_MODE_DISABLED, PMOD_MODE_SIZE-1);
+    return -1;
+  } else {
+    printf("Setting Pmod mode to: %s... ", pmod_mode_string((pmod_mode_t)mode));
+    // Re-using index as rval
+    if ((index = system_set_pmod_mode(mode)) == 0) {
+      printf("\r\n");
+    } else {
+      printf("Failed. Error code %d\r\n", index);
+      return -1;
+    }
+  }
+  return 0;
+}
+
+#ifdef APP_MARBLE
+/* static int handle_msg_pmbridge(const char *s, int len);
  *  Parse a line from the user representing a PMBus transaction
  *  Syntax: x command
  */
@@ -1059,7 +1309,7 @@ static void console_print_fsynth(void) {
     0xHH: Use hex value 0xHH as the next transaction byte
     DDD : Use decimal value DDD as the next transaction byte
 */
-static int sscanfPMBridge(const char *s, int len) {
+static int handle_msg_pmbridge(const char *s, int len) {
   // Skip the first character (command char)
   int ptr = sscanfNext(s, len);
   int ptrinc;
@@ -1108,7 +1358,9 @@ static int sscanfPMBridge(const char *s, int len) {
   PMBridge_xact(xact, item_index);
   return 0;
 }
+#endif
 
+#ifdef APP_MARBLE
 #define MMC_REPEAT_START      ('!')
 #define MMC_READ_ONE          ('?')
 #define MMC_READ_BLOCK        ('*')
@@ -1216,6 +1468,7 @@ static int PMBridgeConsumeArg(const char *s, int len, volatile int *arg) {
   *arg = val;
   return n;
 }
+#endif
 
 
 /*
@@ -1227,6 +1480,31 @@ static int PMBridgeConsumeArg(const char *s, int len, volatile int *arg) {
 void console_pend_FPGA_enable(void) {
   _fpgaEnable = 1;
   return;
+}
+
+static uint8_t last_ip_addr[IP_LENGTH] = {0, 0, 0, 0};
+static uint8_t last_mac_addr[MAC_LENGTH] = {0, 0, 0, 0, 0, 0};
+
+void set_last_ip(const uint8_t *ip) {
+  //printf("Setting ip: ");
+  //PRINT_MULTIBYTE_DEC(ip, 4, '.');
+  memcpy((void *)last_ip_addr, (void *)ip, (size_t)IP_LENGTH/sizeof(uint8_t));
+  //printf("last_ip_addr = ");
+  //PRINT_MULTIBYTE_DEC(last_ip_addr, 4, '.');
+  return;
+}
+
+uint8_t *get_last_ip(void) {
+  return last_ip_addr;
+}
+
+void set_last_mac(const uint8_t *mac) {
+  memcpy((void *)last_mac_addr, (void *)mac, (size_t)MAC_LENGTH/sizeof(uint8_t));
+  return;
+}
+
+uint8_t *get_last_mac(void) {
+  return last_mac_addr;
 }
 
 #ifdef DEBUG_ENABLE_ERRNO_DECODE

@@ -14,7 +14,9 @@
 #include "marble_api.h"
 #include "console.h"
 #include "uart_fifo.h"
-#include "st-eeprom.h"
+#include "eeprom.h"
+#include "sim_api.h"
+#include "sim_lass.h"
 
 /*
  * On the simulated platform, the "UART" console process will be the following:
@@ -28,18 +30,15 @@
 #define DEBUG_TX_OUT
 #define BOARD_SERVICE_SLEEP_MS       (50)
 #define SIM_FPGA_DONE_DELAY_MS      (100)
-#define SIM_FPGA_RESETS               (4)
+#define SIM_FPGA_RESETS               (0)
 
 // Defined in sim_i2c.c; declared here to avoid creating a "real" i2c_init function in marble_api.h
-void init_sim_ltm4673(void);
+//void init_sim_ltm4673(void);
 
 typedef struct {
   int toExit;
   int msgReady;
 } sim_console_state_t;
-
-// GLOBALS
-SSP_PORT SSP_FPGA;
 
 // Local static variables
 static void dummy_handler(void) {}
@@ -56,6 +55,45 @@ static int fpga_enabled = 1;
 // Static Prototypes
 static int shiftMessage(void);
 static void _sigHandler(int c);
+
+void disable_all_IRQs(void) {
+  return;
+}
+
+#define MAILBOX_PORT      (8003)
+uint32_t marble_init(void) {
+  _fpgaDoneTimeStart = BSP_GET_SYSTICK();
+  _systickIrqTimeStart = BSP_GET_SYSTICK();
+  _fpgaDonePend = 1;
+  signal(SIGINT, _sigHandler);
+  fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK);
+  sim_console_state.toExit = 0;
+  sim_console_state.msgReady = 0;
+  init_sim_ltm4673();
+  if (lass_init(MAILBOX_PORT) < 0) {
+    return 1;
+  }
+  sim_spi_init();
+  printf("Listening on port %d\r\n", MAILBOX_PORT);
+  return 0;
+}
+
+void board_init(void) {
+  return;
+}
+
+void marble_print_status(void) {
+  printf("Board Status: Simulation\r\n");
+  return;
+}
+
+int marble_pwr_good(void) {
+  return 1;
+}
+
+Board_Status_t marble_get_status(void) {
+  return BOARD_STATUS_GOOD;
+}
 
 // Emulate USART_RXNE_ISR() from marble_board.c but with keyboard input from stdin
 // Also emulate USART_TXE_ISR() for printf()
@@ -88,6 +126,8 @@ int board_service(void) {
     marble_SysTick_Handler();
     _systickIrqTimeStart = now;
   }
+  lass_service();
+
   // Keep the system responsive, but don't hog resources
   sleep(BOARD_SERVICE_SLEEP_MS/1000);
   return sim_console_state.toExit;
@@ -136,19 +176,6 @@ static int shiftMessage(void) {
   return 0;
 }
 
-uint32_t marble_init(void) {
-  _fpgaDoneTimeStart = BSP_GET_SYSTICK();
-  _systickIrqTimeStart = BSP_GET_SYSTICK();
-  _fpgaDonePend = 1;
-  signal(SIGINT, _sigHandler);
-  fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK);
-  sim_console_state.toExit = 0;
-  sim_console_state.msgReady = 0;
-  eeprom_init();
-  init_sim_ltm4673();
-  return 0;
-}
-
 void pwr_autoboot(void) {
   return;
 }
@@ -171,6 +198,7 @@ void marble_UART_init(void) {
   return;
 }
 
+/*
 int marble_UART_send(const char *str, int size) {
 #ifdef DEBUG_TX_OUT
   USART_Tx_LL_Queue((char *)str, size);
@@ -191,6 +219,7 @@ int marble_UART_recv(char *str, int size) {
   *str = (char)outByte;
   return 0;
 }
+*/
 
 void marble_LED_set(uint8_t led_num, bool on) {
   return;
@@ -242,7 +271,13 @@ void marble_print_GPIO_status(void) {
   return;
 }
 
+void marble_list_GPIOs(void) {
+  printf("Sim list_GPIOs\r\n");
+  return;
+}
+
 void reset_fpga(void) {
+  enable_fpga();
   return;
 }
 
@@ -256,21 +291,6 @@ void enable_fpga(void) {
 void disable_fpga(void) {
   fpga_enabled = 0;
   return;
-}
-
-typedef void *SSP_PORT;
-
-int marble_SSP_write16(SSP_PORT ssp, uint16_t *buffer, unsigned size) {
-  // TODO - What is SSP?
-  return 0;
-}
-
-int marble_SSP_read16(SSP_PORT ssp, uint16_t *buffer, unsigned size) {
-  return 0;
-}
-
-int marble_SSP_exch16(SSP_PORT ssp, uint16_t *tx_buf, uint16_t *rx_buf, unsigned size) {
-  return 0;
 }
 
 void marble_GPIOint_handlers(void (*FPGA_DONE_handler)(void)) {
@@ -325,19 +345,6 @@ uint32_t marble_get_tick(void) {
   return BSP_GET_SYSTICK();
 }
 
-void bsp_FPGAWD_set_period(uint16_t preload) {
-  _UNUSED(preload);
-  return;
-}
-
-void bsp_FPGAWD_pet(void) {
-  return;
-}
-
-void bsp_FPGAWD_ISR(void) {
-  return;
-}
-
 uint8_t fsynthGetAddr(void) {
   return 0;
 }
@@ -358,4 +365,30 @@ int get_hw_rnd(uint32_t *result) {
 
 void marble_MGTMUX_set_all(uint8_t mgt_cfg) {
   _UNUSED(mgt_cfg);
+}
+
+void marble_pmod_config_outputs(void) {
+  return;
+}
+
+void marble_pmod_config_inputs(void) {
+  return;
+}
+
+void marble_pmod_set_gpio(uint8_t pinnum, bool state) {
+  _UNUSED(pinnum);
+  _UNUSED(state);
+  return;
+}
+
+void marble_pmod_timer_enable(void) {
+  return;
+}
+
+void marble_pmod_timer_disable(void) {
+  return;
+}
+
+void marble_pmod_timer_config(void) {
+  return;
 }

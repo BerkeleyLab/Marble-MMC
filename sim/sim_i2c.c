@@ -3,6 +3,7 @@
  *
  */
 #include "marble_api.h"
+#include "sim_api.h"
 #include "i2c_pm.h"
 #include "ltm4673.h"
 #include <stdio.h>
@@ -107,7 +108,7 @@ static void init_sim_ltm4673_config(void);
  *  marble_board.c because this is actually emulating the behavior of the
  *  I2C hardware (which is why the 'const' qualifier is absent from data).
  *  For reads (rnw=1) the value of 'data' will not be read but may be
- *  changed, so a pointer to uninitialized memory is valid. For writes 
+ *  changed, so a pointer to uninitialized memory is valid. For writes
  *  (rnw=0), data is only read, so behaves as if qualified with 'const'.
  */
 static int i2c_emu(I2C_BUS I2C_bus, uint8_t addr, uint8_t rnw,
@@ -175,7 +176,7 @@ static int i2c_emu_ltm4673(uint8_t rnw, int reg, uint8_t *data, int len) {
       // LSB-to-MSB
       regval |= (data[n] << 8*(n-offset));
     }
-    printf("Writing 0x%x to page %d, reg 0x%x\r\n", regval, page, reg);
+    //printf("Writing 0x%x to page %u, reg 0x%x\r\n", regval, page, (unsigned)reg);
     if (page == 0xff) {
       // Write to all pages
       ltm4673.page0[(uint8_t)(reg & 0xff)] = regval;
@@ -616,4 +617,3 @@ static void init_sim_ltm4673_config(void) {
   ltm4673.page3[LTM4673_MFR_TEMP_1_OFFSET] = 0x8000;
   return;
 }
-

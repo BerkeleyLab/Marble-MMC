@@ -75,5 +75,3 @@ def readLines(argv):
 if __name__ == "__main__":
     import sys
     sys.exit(readLines(sys.argv))
-
-
