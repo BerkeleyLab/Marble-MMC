@@ -28,3 +28,4 @@ doc/mailbox_map.*
 # Special auto-generated files
 src/mailbox_def.c
 inc/mailbox_def.h
+.aider*

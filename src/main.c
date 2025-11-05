@@ -37,8 +37,6 @@ int main(void) {
    //~ marble_PSU_pwr(true);
 
    system_init();
-   reset_cause_t reset_cause = reset_cause_get();
-   printf("Last system reset cause is \"%s\"\n", reset_cause_get_name(reset_cause));
 
    /* Turn on LEDs */
    marble_LED_set(0, true);   // LD15
@@ -64,13 +62,6 @@ int main(void) {
    // Send demo string over UART at 115200 BAUD
    marble_UART_send(DEMO_STRING, strlen(DEMO_STRING));
 
-   // char buf[128];
-   // int n = snprintf(buf, sizeof(buf),
-   //                "Last system reset cause is \"%s\"\n",
-   //                reset_cause_get_name(reset_cause));
-   // if (n > 0) {
-   // marble_UART_send(buf, (n < (int)sizeof(buf) ? n : (int)sizeof(buf) - 1));
-   // }   
    while (1) {
       // Service system (application logic)
       system_service();
