@@ -176,12 +176,8 @@ class SipHash_2_4(object):
         return v[0] ^ v[1] ^ v[2] ^ v[3]
 
     def hash_nopad(self):
-<<<<<<< HEAD
-        # reduced-complexity case that assumes the length is well-known
-=======
         # LRD-added reduced-complexity case
         # potentially useful if the length is well-known and a multiple of 8
->>>>>>> master
         assert len(self.s) == 0
         v = self.v
         v = list(v)
@@ -210,34 +206,6 @@ siphash24 = SipHash_2_4
 SipHash24 = SipHash_2_4
 
 
-<<<<<<< HEAD
-def byteswap32(x):
-    rv = (((x << 24) & 0xFF000000) |
-          ((x << 8) & 0x00FF0000) |
-          ((x >> 8) & 0x0000FF00) |
-          ((x >> 24) & 0x000000FF))
-    # print(x, rv)
-    return rv
-
-
-# local_hash and output mac are pairs of uint32
-# for compatibility with some ARM C-code.
-def uint_sip_mac(local_hash, tkey, verbose=False):
-    # foo = struct.pack("II", byteswap32(local_hash[0]), byteswap32(local_hash[1]))
-    foo = struct.pack("II", byteswap32(local_hash[1]), byteswap32(local_hash[0]))
-    r = SipHash_2_4(tkey, foo, verbose=verbose).hash_nopad()
-    mac = byteswap32(r >> 32), byteswap32(r & 0xffffffff)
-    return mac
-
-
-def test_sip_int32(local_hash, desired_mac, key):
-    got_mac = uint_sip_mac(local_hash, key, verbose=True)
-    ok = (got_mac == desired_mac)
-    got_str = tuple(list(got_mac) + ["OK" if ok else "BAD"])
-    print("in   0x%08x 0x%08x" % local_hash)
-    print("want 0x%08x 0x%08x" % desired_mac)
-    print("got  0x%08x 0x%08x  %s" % got_str)
-=======
 def test_sip_nopad(local_nonce, desired_mac, key):
     print("in   " + local_nonce)
     print("want " + desired_mac)
@@ -247,7 +215,6 @@ def test_sip_nopad(local_nonce, desired_mac, key):
     ok = (got_mac == desired_mac)
     ok_str = "OK" if ok else "BAD"
     print("got  " + got_mac + "  " + ok_str)
->>>>>>> master
     return ok
 
 
@@ -312,16 +279,6 @@ if __name__ == "__main__":
     doctest.OutputChecker = MyOutputChecker
     # Monkey patching done. Go for doctests:
 
-<<<<<<< HEAD
-    if doctest.testmod(optionflags=EVAL_FLAG)[0] == 0:
-        print("all tests ok")
-
-    print("LRD hacking")
-    r = SipHash_2_4(key, "ABCDEFGH".encode('utf-8'), verbose=True).hash_nopad()
-    print(binascii.hexlify(_oneQ.pack(r)))
-    if True:
-        # I'm not a fan of python strings .. or bytearrays .. or lists .. or whatever
-=======
     ok = doctest.testmod(optionflags=EVAL_FLAG)[0] == 0
 
     # above code mostly grabbed from https://github.com/majek/pysiphash
@@ -333,21 +290,10 @@ if __name__ == "__main__":
 
     if True:
         # these next two test cases cross-check operation of keepalive.py
->>>>>>> master
         tkey = bytearray()
         tkey.extend("super secret key".encode())
 
         print("--")
-<<<<<<< HEAD
-        local_hash = (0x00000000, 0x00000000)
-        desired_mac = (0x526ea2cd, 0x9447a3dc)
-        test_sip_int32(local_hash, desired_mac, tkey)
-
-        print("--")
-        local_hash = (0x6cf3f85b, 0xfd51f6ad)
-        desired_mac = (0x483a1f3a, 0x0f8045fb)
-        test_sip_int32(local_hash, desired_mac, tkey)
-=======
         local_nonce = "0000000000000000"
         desired_mac = "cda26e52dca34794"
         ok &= test_sip_nopad(local_nonce, desired_mac, tkey)
@@ -364,4 +310,3 @@ if __name__ == "__main__":
 
     print("PASS" if ok else "FAIL")
     exit(0 if ok else 1)
->>>>>>> master

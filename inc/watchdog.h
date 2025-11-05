@@ -13,11 +13,6 @@ extern "C" {
 
 #include <stdint.h>
 
-<<<<<<< HEAD
-uint32_t FPGAWD_GetNonce(unsigned int index);
-void FPGAWD_DoneHandler(void);
-void FPGAWD_HandleHash(uint32_t hash, unsigned int index);
-=======
 typedef enum {
   STATE_BOOT,     // Waiting for first DONE rising edge     (disable watchdog)
   STATE_GOLDEN,   // Assumed to be running golden image     (disable watchdog)
@@ -28,23 +23,15 @@ typedef enum {
 void FPGAWD_GetNonce(uint8_t *pdata);
 void FPGAWD_DoneHandler(void);
 void FPGAWD_HandleHash(const uint8_t *hash);
->>>>>>> master
 void FPGAWD_Poll(void);
 int FPGAWD_SetPeriod(unsigned int period);
 int FPGAWD_GetPeriod(void);
 void FPGAWD_ShowState(void);
-<<<<<<< HEAD
-=======
 void FPGAWD_SelfReset(void);
 FPGAWD_State_t FPGAWD_GetState(void);
->>>>>>> master
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif // __WATCHDOG_H
-<<<<<<< HEAD
-
-=======
->>>>>>> master

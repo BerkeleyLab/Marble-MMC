@@ -66,7 +66,6 @@
 #define SMBA_PIN GPIO_PIN_15
 #endif
 
-
 #define PRINT_POWER_STATE(subs, on) do {\
    char s[3] = {'f', 'f', '\0'}; \
    if (on) {s[0] = 'n'; s[1] = '\0';} \

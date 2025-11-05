@@ -63,9 +63,6 @@ typedef struct {
   X(5, overtemp,  raw, 1, {85}) \
   X(6, mgt_mux,   raw, 1, {0}) \
   X(7, fsynth,    raw, 6, {0, 0, 0, 0, 0, 0}) \
-<<<<<<< HEAD:inc/st-eeprom.h
-  X(8, wd_period, raw, 1, {0})
-=======
   X(8, wd_period, raw, 1, {0}) \
   X(9, wd_key_0,  raw, 6, {'s','u','p','e','r',' '}) \
   X(10,wd_key_1,  raw, 6, {'s','e','c','r','e','t'}) \
@@ -73,7 +70,6 @@ typedef struct {
   X(12,mbox_en,   raw, 1, {1}) \
   X(13,tach_en,   raw, 1, {1}) \
   X(14,pmod_mode, raw, 1, {0})
->>>>>>> master:inc/eeprom.h
 
 typedef enum {
   ee_RESERVED,

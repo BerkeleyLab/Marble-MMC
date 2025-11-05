@@ -1,10 +1,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-<<<<<<< HEAD
-=======
 #include <ctype.h>
->>>>>>> master
 #include <stdlib.h>
 #include "refsip.h"
 
@@ -21,19 +18,11 @@ static int sip_sign(const unsigned char *key)
 	unsigned int ix=0;
 	unsigned char msg[1024], hash[8];
 	while (EOF != (c=getchar())) {
-<<<<<<< HEAD
-		printf("%2.2x\n", c);
-		if (ix<sizeof msg) msg[ix++] = c;
-	}
-	if (ix%8 != 0) {
-		printf("error: byte count not a mult of 8: %d\n", ix);
-=======
 		printf("%2.2x\n", (unsigned) c);
 		if (ix<sizeof msg) msg[ix++] = c;
 	}
 	if (ix%8 != 0) {
 		printf("error: byte count not a mult of 8: %u\n", ix);
->>>>>>> master
 		return 1;
 	}
 	core_siphash(hash, msg, ix, key);
@@ -72,33 +61,6 @@ static int sip_check(const unsigned char *key)
 	return fail;
 }
 
-<<<<<<< HEAD
-#define HASH_SIZE (2)
-static int spot_check1(uint32_t local_hash[], uint32_t desired_mac[])
-{
-	const unsigned char *tkey = (const unsigned char *) "super secret key";
-	uint32_t result_mac[HASH_SIZE];
-	int ok;
-	core_siphash((unsigned char *) result_mac, (unsigned char *) local_hash, 8, tkey);
-	ok = desired_mac[0] == result_mac[0] && desired_mac[1] == result_mac[1];
-	printf("desired_mac = %8.8lx %8.8lx %s\r\n", desired_mac[0], desired_mac[1], ok ? "OK" : "BAD");
-	return !ok;
-}
-
-static int spot_check(void)
-{
-	uint32_t local_hash[HASH_SIZE], desired_mac[HASH_SIZE];
-	int rc = 0;
-	local_hash[0] = 0x00000000;  local_hash[1] = 0x00000000;
-	desired_mac[0] = 0x526ea2cd;  desired_mac[1] = 0x9447a3dc;
-	if (spot_check1(local_hash, desired_mac)) rc = 1;
-	local_hash[0] = 0xd8612c21;  local_hash[1] = 0xbd33c82e;
-	desired_mac[0] = 0xd40e5c3d; desired_mac[1] = 0x0056a781;
-	if (spot_check1(local_hash, desired_mac)) rc = 1;
-	local_hash[0] = 0x6cf3f85b;  local_hash[1] = 0xfd51f6ad;
-	desired_mac[0] = 0x483a1f3a; desired_mac[1] = 0x0f8045fb;
-	if (spot_check1(local_hash, desired_mac)) rc = 1;
-=======
 static void print64(const char *header, const uint8_t *data, unsigned len)
 {
 	printf(header);
@@ -149,17 +111,12 @@ static int spot_check(void)
 	unhexlify(local_nonce, "8b8ec08cfce55e6f", HASH_SIZE);
 	unhexlify(desired_mac, "8e763fc0499f581c", HASH_SIZE);
 	if (spot_check1(local_nonce, desired_mac)) rc = 1;
->>>>>>> master
 	return rc;
 }
 
 static void usage(void)
 {
-<<<<<<< HEAD
-	printf("Usage: refsip {sign, check}\n  I/O through stdin and stdout\n");
-=======
 	printf("Usage: refsip {sign, check, spot}\n  I/O through stdin and stdout\n");
->>>>>>> master
 }
 
 int main(int argc, char *argv[])
