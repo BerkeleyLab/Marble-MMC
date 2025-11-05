@@ -99,7 +99,7 @@ CFLAGS += -Wstrict-prototypes -Wwrite-strings
 CFLAGS += -Wpointer-arith -Wredundant-decls -Wunreachable-code
 # to do:  -Wcast-align -Wcast-qual -Wmissing-prototypes
 
-ASFLAGS = $(FLAGS_AS) $(ARCH_FLAGS)
+ASFLAGS = $(ARCH_FLAGS)
 LDFLAGS = $(FLAGS) $(LINKER_FLAGS) -Wextra $(ARCH_FLAGS)
 
 OUTPUT_ELF=$(OUTPUT_DIR)/$(PROJECT_NAME).elf
@@ -166,8 +166,8 @@ $(OUTPUT_DIR)/%.o: %.s
 # / linker was run with -g) is created, alongside .hex and .bin files. A just
 # about human-readable .map is also created.
 #
-$(OUTPUT_ELF): $(OBJECTS) $(LINKERS) gdbscript
-	@$(SED_INLINE) 's/^file.*$$/file $(OUTPUT_DIR)\/$(PROJECT_NAME)\.elf/' gdbscript
+$(OUTPUT_DIR)/$(PROJECT_NAME).elf: $(OBJECTS) $(LINKERS) gdbscript
+	@$(SED) -i '' 's/^file.*$$/file $(OUTPUT_DIR)\/$(PROJECT_NAME)\.elf/' gdbscript
 	@$(ECHO)
 	@$(ECHO) 'Linking $@...'
 	$(CC) $(LDFLAGS) $(addprefix -T,$(LINKERS)) -Wl,-Map,$(@:.elf=.map) -o $@ $(OBJECTS)
