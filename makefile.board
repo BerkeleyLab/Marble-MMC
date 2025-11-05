@@ -62,7 +62,15 @@ MKDIR	:= mkdir -p
 RM	:= rm -rf
 SED	:= sed
 SHUF	:= shuf
-SED_INLINE := $(shell if [[ "$(OSTYPE)" == darwin* ]]; then echo -i ''; else echo -i; fi)
+ifeq ($(shell uname),Darwin)
+SED_INLINE := -i ''
+else
+SED_INLINE := -i
+endif
+
+# SED_INLINE := $(shell case "$(OSTYPE)" in darwin*) echo "-i ''" ;; *) echo "-i" ;; esac)
+
+# SED_INLINE := $(shell if [[ "$(OSTYPE)" == darwin* ]]; then echo -i ''; else echo -i; fi)
 
 
 # ARM GNU Toolchain
@@ -167,7 +175,7 @@ $(OUTPUT_DIR)/%.o: %.s
 # about human-readable .map is also created.
 #
 $(OUTPUT_DIR)/$(PROJECT_NAME).elf: $(OBJECTS) $(LINKERS) gdbscript
-	@$(SED) @(SED_INLINE) 's/^file.*$$/file $(OUTPUT_DIR)\/$(PROJECT_NAME)\.elf/' gdbscript
+	@$(SED) $(SED_INLINE) 's/^file.*$$/file $(OUTPUT_DIR)\/$(PROJECT_NAME)\.elf/' gdbscript
 	@$(ECHO)
 	@$(ECHO) 'Linking $@...'
 	$(CC) $(LDFLAGS) $(addprefix -T,$(LINKERS)) -Wl,-Map,$(@:.elf=.map) -o $@ $(OBJECTS)
