@@ -588,8 +588,6 @@ static void pmod_subsystem_service(void) {
   return;
 }
 
-
-
 #ifdef MARBLE_V2
 /// @brief      Obtain the STM32 system reset cause
 /// @param      None
@@ -657,7 +655,6 @@ static reset_cause_t reset_cause_get(void)
 // Therefore, you must check the Brownout Reset flag, `RCC_FLAG_BORRST`, *after*
 // first checking the `RCC_FLAG_PORRST` flag in order to ensure first that the
 // reset cause is NOT a POR/PDR reset.
-
 
 /// @brief      Obtain the system reset cause as an ASCII-printable name string 
 ///             from a reset cause type

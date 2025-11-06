@@ -369,7 +369,6 @@ void I2C_PM_bus_display(void)
    else ltm4673_read_telem(LTM4673);
 }
 
-
 /* int i2c_pm_hook(uint8_t addr, uint8_t rnw, int cmd, const uint8_t *data, int len);
  *  Callback (hook) function for side-effects of transactions on the I2C_PM bus.
  *  In blocking mode, this function is called AFTER a successful return of the I2C_write
@@ -399,7 +398,6 @@ void i2c_pm_hook(uint8_t addr, uint8_t rnw, int cmd, const uint8_t *data, int le
   }
   return;
 }
-
 
 int PMBridge_xact(uint16_t *xact, int len) {
   // Msg bytes:

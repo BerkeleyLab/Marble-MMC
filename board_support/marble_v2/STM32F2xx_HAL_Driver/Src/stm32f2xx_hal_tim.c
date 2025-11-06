@@ -4829,7 +4829,6 @@ static void TIM_OC1_SetConfig(TIM_TypeDef *TIMx, TIM_OC_InitTypeDef *OC_Config)
   /* Set the Output Compare Polarity */
   tmpccer |= OC_Config->OCPolarity;
 
-
   if(IS_TIM_ADVANCED_INSTANCE(TIMx) != RESET)
   {
     /* Reset the Output N Polarity level */
@@ -5115,7 +5114,6 @@ static void TIM_SlaveTimer_SetConfig(TIM_HandleTypeDef *htim,
     break;
   }
 }
-
 
 /**
   * @brief  Configure the Polarity and Filter for TI1.

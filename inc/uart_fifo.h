@@ -14,7 +14,6 @@ extern "C" {
 #include <stdint.h>
 #include <stdarg.h>
 
-
 // ============================== Exported Macros ==============================
 #define UART_QUEUE_ITEMS                            (100)
 #define UART_QUEUE_OK                              (0x00)

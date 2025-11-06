@@ -61,7 +61,6 @@
       (+) Write an amount of data in blocking mode to a specific memory address using HAL_I2C_Mem_Write()
       (+) Read an amount of data in blocking mode from a specific memory address using HAL_I2C_Mem_Read()
 
-
     *** Interrupt mode IO operation ***
     ===================================
     [..]
@@ -181,7 +180,6 @@
       (+) In case of transfer Error, HAL_I2C_ErrorCallback() function is executed and user can
            add his own code by customization of function pointer HAL_I2C_ErrorCallback
 
-
      *** I2C HAL driver macros list ***
      ==================================
      [..]
@@ -196,7 +194,6 @@
 
      [..]
        (@) You can refer to the I2C HAL driver header file for more useful macros
-
 
   @endverbatim
   ******************************************************************************

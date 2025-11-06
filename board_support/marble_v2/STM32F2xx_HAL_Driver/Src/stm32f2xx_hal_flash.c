@@ -29,7 +29,6 @@
       (+) 64 cache lines of 128 bits on I-Code
       (+) 8 cache lines of 128 bits on D-Code
 
-
                      ##### How to use this driver #####
   ==============================================================================
     [..]

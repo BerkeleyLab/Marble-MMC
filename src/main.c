@@ -43,7 +43,6 @@ int main(void) {
    marble_LED_set(1, true);   // LD11
    marble_LED_set(2, true);   // LD12
    
-
    // Boot the power supply controller if needed
    pwr_autoboot();
 

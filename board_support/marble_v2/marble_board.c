@@ -145,7 +145,6 @@ void disable_all_IRQs(void) {
    return;
 }
 
-
 /* void board_init(void);
  *  Board-related (not MMC-related) initialization
  */
@@ -168,9 +167,6 @@ void board_init(void) {
 
   return;
 }
-
-
-
 
 // PC7: OVER_TEMP (low-true)
 #define OVER_TEMP_PORT              GPIOC
@@ -528,7 +524,6 @@ void enable_fpga(void) {
 void FPGA_DONE_dummy(void) {}
 void (*volatile marble_FPGA_DONE_handler)(void) = FPGA_DONE_dummy;
 
-
 // Override default (weak) IRQHandler and redirect to HAL shim
 void EXTI0_IRQHandler(void)
 {
@@ -696,13 +691,11 @@ static int marble_MGTMUX_store(void) {
   return rval;
 }
 
-
 /************
 * I2C
 ************/
 #define SPEED_100KHZ 100000
 #define I2C_TIMEOUT_MS 10
-
 
 /* Non-destructive I2C probe function based on empty data command, i.e. S+[A,RW]+P */
 int marble_I2C_probe(I2C_BUS I2C_bus, uint8_t addr) {
@@ -710,7 +703,6 @@ int marble_I2C_probe(I2C_BUS I2C_bus, uint8_t addr) {
    i2cBusStatus |= rc;
    return rc;
 }
-
 
 static void marble_I2C_error_handler(I2C_BUS I2C_bus, int rc) {
   if (rc == HAL_TIMEOUT) {
@@ -766,7 +758,6 @@ int marble_I2C_send(I2C_BUS I2C_bus, uint8_t addr, const uint8_t *data, int size
    }
    return rc;
 }
-
 
 int marble_I2C_cmdsend(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, const uint8_t *data, int size) {
   // first make sure that the bus is available
@@ -986,7 +977,6 @@ void marble_SLEEP_us(uint32_t delay)
    return; // XXX Not available unless HAL weak definitions are overridden
    // Good thing nobody depends on this (yet)
 }
-
 
 /************
 * Board Init

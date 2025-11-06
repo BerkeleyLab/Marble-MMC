@@ -69,7 +69,6 @@ typedef enum reset_cause_e
 } reset_cause_t;
 #endif
 
-
 #ifdef __cplusplus
 }
 #endif

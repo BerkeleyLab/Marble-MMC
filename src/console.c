@@ -1479,7 +1479,6 @@ static int PMBridgeConsumeArg(const char *s, int len, volatile int *arg) {
 }
 #endif
 
-
 /*
  * void console_pend_FPGA_enable(void);
  *    NOTE! This is called from an ISR.
@@ -1536,7 +1535,6 @@ const char *decode_errno(int err) {
   }
 }
 #endif
-
 
 uint8_t _LTM_console_active(void) {
     uint32_t now = marble_get_tick();

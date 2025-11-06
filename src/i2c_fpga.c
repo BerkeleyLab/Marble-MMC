@@ -360,7 +360,6 @@ void adn4600_printStatus()
    }
 }
 
-
 // Try read the values at all the registers 0x42 and 0x44
 void pca9555_status()
 {
@@ -375,7 +374,6 @@ void pca9555_status()
        }
    }
 }
-
 
 void pca9555_config()
 {

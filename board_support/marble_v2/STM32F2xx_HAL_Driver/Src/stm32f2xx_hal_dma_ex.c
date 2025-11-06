@@ -85,7 +85,6 @@ static void DMA_MultiBufferSetConfig(DMA_HandleTypeDef *hdma, uint32_t SrcAddres
   * @{
   */
 
-
 /** @addtogroup DMAEx_Exported_Functions_Group1
   *
 @verbatim
@@ -102,7 +101,6 @@ static void DMA_MultiBufferSetConfig(DMA_HandleTypeDef *hdma, uint32_t SrcAddres
 @endverbatim
   * @{
   */
-
 
 /**
   * @brief  Starts the multi_buffer DMA Transfer.

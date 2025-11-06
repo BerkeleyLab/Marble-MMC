@@ -49,7 +49,6 @@
 #error No UART selected for undefined board
 #endif
 
-
 /* Transmit and receive ring buffers */
 STATIC RINGBUFF_T txring, rxring;
 

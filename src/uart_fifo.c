@@ -479,7 +479,6 @@ int marble_UART_send(const char *str, int size)
 //   return;
 // }
 
-
 int marble_UART_recv(char *str, int size) {
   return USART_Rx_LL_Queue((volatile char *)str, size);
 }

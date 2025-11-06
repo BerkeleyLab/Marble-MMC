@@ -1363,6 +1363,7 @@ def parse_readback(lines, compare_prog=None, do_print=False):
         print_prog(_readback)
     return (_readback, compare_pass)
 
+
 def chunk_readback(readback_log, chunk, do_print=False):
     readback = []
     if readback_log and readback_log[-1].startswith('(0x'):  # make sure the last line contains readback data

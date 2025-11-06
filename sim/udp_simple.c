@@ -15,7 +15,6 @@
 
 #include "udp_simple.h"
 
-
 typedef struct {
   unsigned char buf[ETH_MAXLEN];
 } pkt_t;
