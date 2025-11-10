@@ -112,9 +112,12 @@ def readDevice(sdev, wait_on, do_print=False, do_log=False):
     _done = True
     return True
 
-def readbackDevice(sdev, close_conn, do_print=False, do_log=False):
+def readbackDevice(sdev, close_conn, do_print=False, do_log=False, timeout=0.1):
     global _log, _done
+    start_time = time.time()
     while True:
+        if time.time() - start_time > timeout:
+            break
         line = sdev.readline()
         # readline returns None on device open fail
         # Returns empty string on timeout
@@ -209,6 +212,8 @@ def loadCommands(dev, baud=115200, commands=None, do_print=False, do_log=False):
     return 0
 
 def openConnection(dev, baud=115200):
+    INTERCOMMAND_SLEEP = 0#0.01 # seconds
+    POST_SLEEP = 0#0.01 # seconds
     sdev = StreamSerial(dev, baud)
 
     time.sleep(1)
@@ -220,6 +225,8 @@ def openConnection(dev, baud=115200):
     return sdev
 
 def readbackCommands(sdev, commands=None, close_conn = True, do_print=False, do_log=False):
+    INTERCOMMAND_SLEEP = 0.01 # seconds
+    POST_SLEEP = 0.01 # seconds
     if commands is None:
         print("Missing mandatory filename")
         return 1
@@ -227,7 +234,7 @@ def readbackCommands(sdev, commands=None, close_conn = True, do_print=False, do_
     executor = Executor(max_workers = 2)
     global task1, task2
     task1 = executor.submit(serveCommands, sdev, *commands)
-    task2 = executor.submit(readbackDevice, sdev, close_conn,do_print, do_log)
+    task2 = executor.submit(readbackDevice, sdev, close_conn,do_print, do_log, timeout=0.1)
     return 0
 
 def loadFile(dev, baud=115200, filename=None):
@@ -263,7 +270,11 @@ def doLoad(argv):
     if args.filename is not None:
         loadFile(args.dev, args.baud, args.filename)
     elif len(args.commands) > 0:
-        loadCommands(args.dev, args.baud, args.commands, do_print=True)
+        # Open connection and send commands, then read back responses
+        sdev = openConnection(args.dev, args.baud)
+        if sdev is None:
+            return 1
+        return readbackCommands(sdev, args.commands, close_conn=True, do_print=True)
     return 0
 
 if __name__ == "__main__":

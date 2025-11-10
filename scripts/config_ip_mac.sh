@@ -32,18 +32,38 @@ if [ -z "$snum" ]; then
 fi
 
 if [ -z "$dev" ]; then
-  if [ -n "$TTY_MMC" ]; then
-    dev=$TTY_MMC
-  else
-    dev=/dev/ttyUSB3
-  fi
+    if [ -n "$TTY_MMC" ]; then
+        dev="$TTY_MMC"
+    else
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            # macOS: find device starting with 'usbserial' and ending with '3'
+            dev=$(ls /dev/cu.usbserial*3 2>/dev/null | head -n 1)
+            if [[ -z "$dev" ]]; then
+                echo "Error: No matching USB serial device found for FMC."
+                exit 1
+            fi
+        else
+            dev=/dev/ttyUSB3
+        fi
+    fi
 fi
+echo "Using device: $dev"
 
 mac=$(printf "12:55:55:0:1:%x" "$snum")
 ip=$(printf "192.168.19.%s" "$snum")
 
 echo "ip = $ip; mac = $mac; dev = $dev"
-
 python3 $SCRIPT_DIR/load.py -d "$dev" "m $ip" "n $mac"
+
+# readback
+READBACK=$(python3 $SCRIPT_DIR/load.py -d "$dev" "6")
+if [[ $READBACK == *$mac* ]] && [[ $READBACK == *$ip* ]]; then
+    echo "Successfully wrote IP and MAC to marble_mmc"
+    exit 0
+else
+    echo "Failed to write IP and MAC to marble_mmc"
+    echo "Readback: $READBACK"
+    #exit 1
+fi
 
 exit 0

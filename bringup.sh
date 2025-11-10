@@ -80,12 +80,34 @@ if [ "$paths_complete" -eq 0 ]; then
 fi
 
 # Optional Environment Variables Check.
+
 if [ -z "$TTY_MMC" ]; then
-  TTY_MMC=/dev/ttyUSB3
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS: find device starting with 'usbserial' and ending with '3'
+        TTY_MMC=$(ls /dev/cu.usbserial*3 2>/dev/null | head -n 1)
+        if [[ -z "$TTY_MMC" ]]; then
+            echo "Error: No matching USB serial device found for FMC."
+            exit 1
+        fi
+    else
+        TTY_MMC="/dev/ttyUSB3"
+    fi
 fi
+echo "Using TTY_MMC: $TTY_MMC"  #TTY_MMC=/dev/ttyUSB3
+
 if [ -z "$TTY_FPGA" ]; then
-  TTY_FPGA=/dev/ttyUSB2
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS: find device starting with 'usbserial' and ending with '2'
+        TTY_FPGA=$(ls /dev/cu.usbserial*2 2>/dev/null | head -n 1)
+        if [[ -z "$TTY_FPGA" ]]; then
+            echo "Error: No matching USB serial device found for FPGA."
+            exit 1
+        fi
+    else
+        TTY_FPGA="/dev/ttyUSB2"
+    fi
 fi
+echo "Using TTY_FPGA: $TTY_FPGA"  #TTY_FPGA=/dev/ttyUSB2
 
 # Handy Params
 UDPRTX=udprtx
@@ -144,16 +166,18 @@ if ! "$FTDI_PATH/verifyid.sh" "$SERIAL_NUM"; then
     exit 1
   fi
 fi
-
+echo "Success (Task 1 of 7) – FTDI Configuration"
 echo "##################################"
 # 4. Write IP and MAC addresses to marble_mmc based on serial number
 echo "Write IP and MAC addresses to marble_mmc based on serial number..."
 "$SCRIPTS_PATH/config_ip_mac.sh" -d "$TTY_MMC" "$SERIAL_NUM"
+echo "Success (Task 2 of 7) – IP/MAC Configuration"
 
-echo "##################################"
+cho "##################################"
 # 4. Write Si570 parameters to marble_mmc based on PCB version
 echo "Write Si570 parameters to marble_mmc based on PCB version"
 "$SCRIPTS_PATH/config_si57x.sh" -d "$TTY_MMC"
+echo "Success (Task 3 of 7) – Si570 Configuration"
 
 echo "##################################"
 # 4. Load bitfile to FPGA
@@ -175,10 +199,17 @@ python3 "$SCRIPTS_PATH/readfromtty.py" -d "$TTY_FPGA" -b 9600 4 -m 24
 
 echo "##################################"
 # Cross check that the test packets can get _out_ of this workstation
-if ! ip route get "$IP" | grep -E "eth|enp|enx"; then
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  connected=$(route get "$IP"| awk '/interface:/ {print $2}')
+else
+  connected=$(ip route get "$IP" | grep -E "eth|enp|enx")
+fi
+echo $connected
+if [[ -z "$connected" ]]; then
   echo "No wired route to $IP?"
   exit 1
 fi
+echo "Success (Task 4 of 7) – FPGA Bitfile Load"
 
 echo "##################################"
 # 5. Ping IP 3 times
@@ -188,9 +219,12 @@ if ! ping -c3 "$IP"; then
 else
   echo "Successfully pinged from IP $IP"
 fi
+echo "Success (Task 5 of 7) – Ping Test"
 
 echo "##################################"
 # 6. UDP Stress test
+
+cd "$BEDROCK_PATH/badger/tests"
 echo "Testing UDP with 100k packets"
 if ! $UDPRTX "$IP" 100000 8; then
   echo "UDP test failed"
@@ -203,6 +237,7 @@ if ! $UDPRTX "$IP" 1000000 8; then
   echo "UDP test failed"
   exit 1
 fi
+echo "Success (Task 6 of 7) – UDP Stress Test"  
 
 # 7. Record various device readouts and save it to a file
 # three INA219 Voltage + current, SI570 output frequency
@@ -218,7 +253,8 @@ tt=$(mktemp quick_XXXXXX)
 python3 "$BEDROCK_PATH/badger/tests/spi_test.py" --ip "$IP" --udp 804 --otp --pages=1 --dump "$tt"
 hexdump "$tt" | head -n 2
 rm "$tt"
+echo "Success (Task 7 of 7) – Peripheral Device Readouts"
 
 exit 0
 } 2>&1 | tee "bringup_logfile_$SERIAL_NUM"
-echo "bringup DONE"
+echo "Marble bringup successful! Log saved to bringup_logfile_$SERIAL_NUM"

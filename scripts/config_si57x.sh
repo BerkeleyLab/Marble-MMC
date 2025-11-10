@@ -25,17 +25,29 @@ if [ -z "$dev" ]; then
     if [ -n "$TTY_MMC" ]; then
         dev="$TTY_MMC"
     else
-        # Try to find tty associated to mmc (first one)
-        dev=$(ls -l /dev/serial/by-id/ 2>/dev/null | grep "LBNL_Marble.*if03" | sed 's/.*ttyUSB/\/dev\/ttyUSB/')
-        dev=$(echo "$dev" | sed 's/ .*//')
-        if [ -z "$dev" ]; then
-            dev="/dev/ttyUSB3"
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            # macOS: find device starting with 'usbserial' and ending with '3'
+            dev=$(ls /dev/cu.usbserial*3 2>/dev/null | head -n 1)
+            if [[ -z "$dev" ]]; then
+                echo "Error: No matching USB serial device found for FMC."
+                exit 1
+            fi
+        else
+            # Try to find tty associated to mmc (first one)
+            dev=$(ls -l /dev/serial/by-id/ 2>/dev/null | grep "LBNL_Marble.*if03" | sed 's/.*ttyUSB/\/dev\/ttyUSB/')
+            dev=$(echo "$dev" | sed 's/ .*//')
+            if [ -z "$dev" ]; then
+                dev="/dev/ttyUSB3"
+            fi
         fi
     fi
 fi
+echo "Using device: $dev"
 
 # Query the board for PCB revision using load.py
-PCB_REV=$(python3 "$SCRIPT_DIR"/load.py -d "$dev" 0 2>/dev/null | tr '\r' '\n' | grep -i 'pcb rev' | grep -oE '[0-9]+\.[0-9]+')
+PCB_REV=$(python3 "$SCRIPT_DIR"/load.py -d "$dev" "0" | tr '\r' '\n' | grep -i 'pcb rev' | grep -oE '[0-9]+\.[0-9]+')
+#2>/dev/null 
+echo "readback: " $PCB_REV
 if [ -z "$PCB_REV" ]; then
     echo "Could not detect PCB revision via console."
     exit 1
