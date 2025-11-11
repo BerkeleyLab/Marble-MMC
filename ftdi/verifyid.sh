@@ -31,10 +31,8 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
       /^$/ { inblock=0 }                            # Blank line ends the block
       inblock && /Vendor ID:/ { print $0 }      # If inside the block and Serial Number line, print it
   ')
-  
 else
   temp=$(lsusb -v -d 0403:6011 | grep -E "iProduct|iSerial")
-
   if [ -z "$temp" ]; then
     echo "Could not find FTDI device.  Is Marble plugged in?"
     exit 1
@@ -45,7 +43,6 @@ else
   sn=$(echo "$temp" | sed     -e 's/[ ][ ]*iProduct[ ][ ]*2[ ][ ]*[^ ][^ ]*//' -e 's/[ ][ ]*iSerial[ ][ ]*3[ ][ ]*[\n\r\v]*//')
   # Yikes! Apparently you need this '-z' option to get sed to recognize the newline char
   sn=$(echo "$sn" | sed -z -e 's/[^0-9][^0-9]*//')
-
 fi
 
   # remove the leading zeros from the input

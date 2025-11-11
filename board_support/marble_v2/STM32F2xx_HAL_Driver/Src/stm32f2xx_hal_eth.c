@@ -312,6 +312,7 @@ HAL_StatusTypeDef HAL_ETH_Init(ETH_HandleTypeDef *heth)
       }
     } while (((phyreg & PHY_LINKED_STATUS) != PHY_LINKED_STATUS));
 
+
     /* Enable Auto-Negotiation */
     if((HAL_ETH_WritePHYRegister(heth, PHY_BCR, PHY_AUTONEGOTIATION)) != HAL_OK)
     {
@@ -1550,6 +1551,7 @@ HAL_StatusTypeDef HAL_ETH_ConfigDMA(ETH_HandleTypeDef *heth, ETH_DMAInitTypeDef 
   and the data flow.
        (+) Get the ETH handle state:
            HAL_ETH_GetState();
+
 
   @endverbatim
   * @{

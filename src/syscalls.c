@@ -54,6 +54,7 @@
 #include <sys/times.h>
 #include "fake_newlib.h"
 
+
 /* Variables */
 #undef errno
 extern int errno;
@@ -62,6 +63,7 @@ extern int __io_getchar(void) __attribute__((weak));
 
 char *__env[1] = { 0 };
 char **environ = __env;
+
 
 /* Functions */
 void initialise_monitor_handles(void)

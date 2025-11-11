@@ -120,6 +120,7 @@
   * @{
   */
 
+
 /** @defgroup CORTEX_Exported_Functions_Group1 Initialization and de-initialization functions
  *  @brief    Initialization and Configuration functions
  *
@@ -134,6 +135,7 @@
 @endverbatim
   * @{
   */
+
 
 /**
   * @brief  Sets the priority grouping field (preemption priority and subpriority)
@@ -258,6 +260,7 @@ uint32_t HAL_SYSTICK_Config(uint32_t TicksNumb)
     [..]
       This subsection provides a set of functions allowing to control the CORTEX
       (NVIC, SYSTICK, MPU) functionalities.
+
 
 @endverbatim
   * @{

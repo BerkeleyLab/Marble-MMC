@@ -46,7 +46,7 @@ echo "Using device: $dev"
 
 # Query the board for PCB revision using load.py
 PCB_REV=$(python3 "$SCRIPT_DIR"/load.py -d "$dev" "0" | tr '\r' '\n' | grep -i 'pcb rev' | grep -oE '[0-9]+\.[0-9]+')
-#2>/dev/null 
+#2>/dev/null
 echo "readback: " $PCB_REV
 if [ -z "$PCB_REV" ]; then
     echo "Could not detect PCB revision via console."

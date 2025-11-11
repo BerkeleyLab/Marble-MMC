@@ -130,6 +130,7 @@
                                                   SYSCFG->MEMRMP |= (SYSCFG_MEMRMP_MEM_MODE_1);\
                                                  }while(0);
 
+
 /**
   * @}
   */

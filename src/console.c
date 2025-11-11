@@ -1284,7 +1284,7 @@ static int handle_pmod_mode(const char *rx_msg, int len) {
       printf("    %d: %s\r\n", n, pmod_mode_string((pmod_mode_t)n));
     }
     return 0;
-  } 
+  }
   int mode = -1;
   int index = sscanfNext(rx_msg+1, len) + 1;
   mode = sscanfUnsignedDecimal(rx_msg+index, len-index);

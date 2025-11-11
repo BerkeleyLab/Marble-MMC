@@ -462,7 +462,7 @@ int marble_UART_send(const char *str, int size)
 }
 
 // // A tiny UART‑only printf helper.
-// void marble_UART_printf(const char *fmt, ...) 
+// void marble_UART_printf(const char *fmt, ...)
 // {
 //   char msg[CONSOLE_MAX_MESSAGE_LENGTH];
 //   va_list args;

@@ -237,7 +237,7 @@ if ! $UDPRTX "$IP" 1000000 8; then
   echo "UDP test failed"
   exit 1
 fi
-echo "Success (Task 6 of 7) – UDP Stress Test"  
+echo "Success (Task 6 of 7) – UDP Stress Test"
 
 # 7. Record various device readouts and save it to a file
 # three INA219 Voltage + current, SI570 output frequency

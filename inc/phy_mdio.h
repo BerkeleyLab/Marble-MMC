@@ -70,4 +70,5 @@ typedef union {
   unsigned short val;
 } reg_cu_sp_stat;
 
+
 #endif // __PHY_MDIO_H__

@@ -15,6 +15,7 @@
 #include "board.h"
 #include "rtc.h"
 
+
 int rtc_initialize (void)
 {
 	static int init;

@@ -193,6 +193,7 @@ HAL_StatusTypeDef HAL_RNG_Init(RNG_HandleTypeDef *hrng)
   /* Change RNG peripheral state */
   hrng->State = HAL_RNG_STATE_BUSY;
 
+
   /* Enable the RNG Peripheral */
   __HAL_RNG_ENABLE(hrng);
 
@@ -800,6 +801,7 @@ __weak void HAL_RNG_ErrorCallback(RNG_HandleTypeDef *hrng)
   * @}
   */
 
+
 /** @addtogroup RNG_Exported_Functions_Group3
  *  @brief   Peripheral State functions
  *
@@ -843,6 +845,7 @@ uint32_t HAL_RNG_GetError(RNG_HandleTypeDef *hrng)
 /**
   * @}
   */
+
 
 #endif /* HAL_RNG_MODULE_ENABLED */
 /**

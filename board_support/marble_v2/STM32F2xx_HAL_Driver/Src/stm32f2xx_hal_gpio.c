@@ -76,6 +76,7 @@
 
     (#) To lock pin configuration until next reset use HAL_GPIO_LockPin().
 
+
     (#) During and just after reset, the alternate functions are not
         active and the GPIO pins are configured in input floating mode (except JTAG
         pins).
@@ -173,6 +174,7 @@
 @endverbatim
   * @{
   */
+
 
 /**
   * @brief  Initializes the GPIOx peripheral according to the specified parameters in the GPIO_Init.

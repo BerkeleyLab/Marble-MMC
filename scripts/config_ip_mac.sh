@@ -63,7 +63,7 @@ if [[ $READBACK == *$mac* ]] && [[ $READBACK == *$ip* ]]; then
 else
     echo "Failed to write IP and MAC to marble_mmc"
     echo "Readback: $READBACK"
-    #exit 1
+    exit 1
 fi
 
 exit 0

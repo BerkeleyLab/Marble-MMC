@@ -406,7 +406,7 @@ void marble_PSU_pwr(bool on)
    // Sch net EN_PSU_CH. Assert when on==true
    HAL_GPIO_WritePin(EN_PSU_CH_PORT, EN_PSU_CH_PIN, on ? EN_PSU_CH_ASSERTED : EN_PSU_CH_DEASSERTED);
    // PSU reset; Power reset pin for LTM4673. Deassert when on==true
-      
+
    HAL_GPIO_WritePin(PWR_RESET_PORT, PWR_RESET_PIN, on ? PWR_RESET_DEASSERTED : PWR_RESET_ASSERTED);
    if (on) {
       SystemClock_Config(); // switch back to external clock source
@@ -748,7 +748,7 @@ int marble_I2C_send(I2C_BUS I2C_bus, uint8_t addr, const uint8_t *data, int size
   if(marble_I2C_bus_prepare(I2C_bus) != 0) {
     return 1; // bus not available
   }
-  // I2C action and error handling 
+  // I2C action and error handling
   int rc = HAL_I2C_Master_Transmit(I2C_bus, (uint16_t)addr, data, size, I2C_TIMEOUT_MS);
    marble_I2C_error_handler(I2C_bus, rc);
    i2cBusStatus |= rc;
@@ -813,7 +813,7 @@ int marble_I2C_cmdsend_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, const uin
   if(marble_I2C_bus_prepare(I2C_bus) != 0) {
     return 1; // bus not available
   }
-  // I2C action and error handling 
+  // I2C action and error handling
   int rc = HAL_I2C_Mem_Write(I2C_bus, (uint16_t)addr, cmd, 2, (uint8_t *)data, size, I2C_TIMEOUT_MS);
    marble_I2C_error_handler(I2C_bus, rc);
    i2cBusStatus |= rc;

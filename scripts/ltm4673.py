@@ -1338,9 +1338,9 @@ def parse_readback(lines, compare_prog=None, do_print=False):
         if rval is not None: #if data
             command, val = rval
             _prog.append((command, val))
-        else: #if no data in line 
+        else: #if no data in line
             rval = match_page(line) # --> check if this is a page number description ("# LTM4673_PAGE X")
-            if rval is not None: 
+            if rval is not None:
                 if newpage is not None:
                     if oldpage != newpage:
                         _readback.append((newpage, _prog)) #_readback is a list of tuples in format [(page, _prog[[command,val],[command,val]),(...) ,(page, _prog[...])]
