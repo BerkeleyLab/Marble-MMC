@@ -173,7 +173,7 @@ echo "Write IP and MAC addresses to marble_mmc based on serial number..."
 "$SCRIPTS_PATH/config_ip_mac.sh" -d "$TTY_MMC" "$SERIAL_NUM"
 echo "Success (Task 2 of 7) – IP/MAC Configuration"
 
-cho "##################################"
+echo "##################################"
 # 4. Write Si570 parameters to marble_mmc based on PCB version
 echo "Write Si570 parameters to marble_mmc based on PCB version"
 "$SCRIPTS_PATH/config_si57x.sh" -d "$TTY_MMC"
@@ -254,7 +254,6 @@ python3 "$BEDROCK_PATH/badger/tests/spi_test.py" --ip "$IP" --udp 804 --otp --pa
 hexdump "$tt" | head -n 2
 rm "$tt"
 echo "Success (Task 7 of 7) – Peripheral Device Readouts"
-
+echo "Marble bringup successful! Log saved to bringup_logfile_$SERIAL_NUM"
 exit 0
 } 2>&1 | tee "bringup_logfile_$SERIAL_NUM"
-echo "Marble bringup successful! Log saved to bringup_logfile_$SERIAL_NUM"
