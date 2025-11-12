@@ -205,11 +205,14 @@ python3 "$SCRIPTS_PATH/readfromtty.py" -d "$TTY_FPGA" -b 9600 4 -m 24
 
 echo "##################################"
 # Cross check that the test packets can get _out_ of this workstation
-if [[ "$OSTYPE" == "darwin"* ]]; then
-  connected=$(route get "$IP"| awk '/interface:/ {print $2}')
-else
-  connected=$(ip route get "$IP" | grep -E "eth|enp|enx")
-fi
+case "$OSTYPE" in
+  darwin*)
+    connected=$(route get "$IP" | awk '/interface:/ {print $2}')
+    ;;
+  *)
+    connected=$(ip route get "$IP" | grep -E "eth|enp|enx")
+    ;;
+esac
 echo $connected
 if [[ -z "$connected" ]]; then
   echo "No wired route to $IP?"

@@ -53,12 +53,15 @@ esac
   snum=$(printf "%06d" "$snum")
 
 # Ensure it's called "Marble"
-if [[ $marble == *Marble* ]]; then
-  echo "Correct name: $marble"
-else
-  echo "Incorrect name: $marble"
-  exit 1
-fi
+case "$marble" in
+  *Marble*)
+    echo "Correct name: $marble"
+    ;;
+  *)
+    echo "Incorrect name: $marble"
+    exit 1
+    ;;
+esac
 
 # Ensure it has the correct serial number
 if [ "$sn" != "$snum" ]; then

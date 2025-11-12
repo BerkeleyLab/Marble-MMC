@@ -32,20 +32,24 @@ if [ -z "$snum" ]; then
 fi
 
 if [ -z "$dev" ]; then
-    if [ -n "$TTY_MMC" ]; then
-        dev="$TTY_MMC"
-    else
-        if [[ "$OSTYPE" == "darwin"* ]]; then
-            # macOS: find device starting with 'usbserial' and ending with '3'
-            dev=$(ls /dev/cu.usbserial*3 2>/dev/null | head -n 1)
-            if [[ -z "$dev" ]]; then
-                echo "Error: No matching USB serial device found for FMC."
-                exit 1
-            fi
-        else
-            dev=/dev/ttyUSB3
+  if [ -n "$TTY_MMC" ]; then
+    dev="$TTY_MMC"
+  else
+    case "$OSTYPE" in
+      darwin*)
+        # macOS: find device starting with 'usbserial' and ending with '3'
+        dev=$(ls /dev/cu.usbserial*3 2>/dev/null | head -n 1)
+        if [[ -z "$dev" ]]; then
+          echo "Error: No matching USB serial device found for FMC."
+          exit 1
         fi
-    fi
+        ;;
+      *)
+        # Linux
+        dev=/dev/ttyUSB3
+        ;;
+      esac
+  fi
 fi
 echo "Using device: $dev"
 
@@ -57,13 +61,24 @@ python3 $SCRIPT_DIR/load.py -d "$dev" "m $ip" "n $mac"
 
 # readback
 READBACK=$(python3 $SCRIPT_DIR/load.py -d "$dev" "6")
-if [[ $READBACK == *$mac* ]] && [[ $READBACK == *$ip* ]]; then
-    echo "Successfully wrote IP and MAC to marble_mmc"
-    exit 0
-else
-    echo "Failed to write IP and MAC to marble_mmc"
-    echo "Readback: $READBACK"
-    exit 1
-fi
+
+case "$READBACK" in
+  *"$mac"*)
+    case "$READBACK" in
+      *"$ip"*)
+        echo "Successfully wrote IP and MAC to marble_mmc"
+        exit 0
+        ;;
+      *)
+        ;;
+    esac
+    ;;
+  *)
+    ;;
+esac
+
+echo "Failed to write IP and MAC to marble_mmc"
+echo "Readback: $READBACK"
+exit 1
 
 exit 0
