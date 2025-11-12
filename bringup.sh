@@ -82,30 +82,36 @@ fi
 # Optional Environment Variables Check.
 
 if [ -z "$TTY_MMC" ]; then
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        # macOS: find device starting with 'usbserial' and ending with '3'
-        TTY_MMC=$(ls /dev/cu.usbserial*3 2>/dev/null | head -n 1)
-        if [[ -z "$TTY_MMC" ]]; then
-            echo "Error: No matching USB serial device found for FMC."
-            exit 1
-        fi
-    else
-        TTY_MMC="/dev/ttyUSB3"
-    fi
+    case "$OSTYPE" in
+      darwin*)
+          # macOS: find device starting with 'usbserial' and ending with '3'
+          TTY_MMC=$(ls /dev/cu.usbserial*3 2>/dev/null | head -n 1)
+          if [[ -z "$TTY_MMC" ]]; then
+              echo "Error: No matching USB serial device found for FMC."
+              exit 1
+          fi
+          ;;
+      *)
+          TTY_MMC="/dev/ttyUSB3"
+          ;;
+    esac
 fi
 echo "Using TTY_MMC: $TTY_MMC"  #TTY_MMC=/dev/ttyUSB3
 
 if [ -z "$TTY_FPGA" ]; then
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        # macOS: find device starting with 'usbserial' and ending with '2'
-        TTY_FPGA=$(ls /dev/cu.usbserial*2 2>/dev/null | head -n 1)
-        if [[ -z "$TTY_FPGA" ]]; then
-            echo "Error: No matching USB serial device found for FPGA."
-            exit 1
+    case "$OSTYPE" in
+      darwin*)
+          # macOS: find device starting with 'usbserial' and ending with '2'
+          TTY_FPGA=$(ls /dev/cu.usbserial*2 2>/dev/null | head -n 1)
+          if [[ -z "$TTY_FPGA" ]]; then
+              echo "Error: No matching USB serial device found for FPGA."
+              exit 1
         fi
-    else
+        ;;
+      *)
         TTY_FPGA="/dev/ttyUSB2"
-    fi
+        ;;
+    esac
 fi
 echo "Using TTY_FPGA: $TTY_FPGA"  #TTY_FPGA=/dev/ttyUSB2
 
