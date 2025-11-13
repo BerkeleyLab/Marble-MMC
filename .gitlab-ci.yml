@@ -1,5 +1,6 @@
 stages:
   - pre-build
+  - check
   - build
 
 variables:
@@ -18,6 +19,11 @@ services:
 
 include:
   - local: .gitlab/ci/build.gitlab-ci.yml
+
+flake8:
+  stage: check
+  script:
+    - flake8 scripts/*.py
 
 marble_mini_build:
   stage: build
