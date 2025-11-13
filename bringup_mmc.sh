@@ -83,12 +83,12 @@ if ! make marble_download; then
   echo "Could not program marble_mmc. Is Segger J-Link attached? Is board powered?"
   exit 1
 else
-  echo "Successfully programmed MMC!"
+  echo "Successfully programmed MMC! - Proceeding..."
 fi
 echo "##################################"
 
 # Sleep for a few seconds to give the MMC time to boot
-echo "So much code! Give me a few seconds to read through this..."
+echo "Sleeping for 4 seconds to give the MMC time to boot..."
 sleep 4
 
 # 2. Program LTM4673 power management chip
@@ -99,13 +99,13 @@ if ! python3 "$SCRIPTS_PATH"/ltm4673.py -d "$TTY_MMC" write_read -f "$LTM_SCRIPT
 else
   echo "##################################"
   python3 "$SCRIPTS_PATH"/ltm4673.py -d "$TTY_MMC" store
-  echo "I need a second to let this sink in..."
+  echo "Processing for 1 second before powering down..."
   sleep 1
-  echo "I need to sleep over this. Powering off..."
+  echo "Power off for 2 seconds, then power back on..."
   python3 "$SCRIPTS_PATH"/load.py -d "$TTY_MMC" "4b"
   sleep 2
   python3 "$SCRIPTS_PATH"/load.py -d "$TTY_MMC" "4B"
-  echo "Wakey wakey eggs and bakey! My LTM4673 has been programmed successfully!"
+  echo "LTM4673 has been programmed successfully!"
 fi
 
 echo "bringup_mmc DONE"
