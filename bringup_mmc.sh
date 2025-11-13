@@ -43,17 +43,20 @@ fi
 
 # Optional Environment Variables Check.
 if [ -z "$TTY_MMC" ]; then
-	if [[ "$OSTYPE" == "darwin"* ]]; then
-		# macOS: find device starting with 'usbserial' and ending with '3'
-		TTY_MMC=$(ls /dev/cu.usbserial*3 2>/dev/null | head -n 1)
-		if [[ -z "$TTY_MMC" ]]; then
-			echo "Error: No matching USB serial device found."
-			exit 1
-		fi
-	else
-		# Linux
-		TTY_MMC="/dev/ttyUSB3"
-	fi
+	case "$OSTYPE" in
+		darwin*)
+			# macOS: find device starting with 'usbserial' and ending with '3'
+			TTY_MMC=$(ls /dev/cu.usbserial*3 2>/dev/null | head -n 1)
+			if [[ -z "$TTY_MMC" ]]; then
+				echo "Error: No matching USB serial device found."
+				exit 1
+		  fi
+      ;;
+    *)
+		  # Linux
+		  TTY_MMC="/dev/ttyUSB3"
+      ;;
+	esac
 	echo "Using TTY: $TTY_MMC"  #TTY_MMC=/dev/ttyUSB3
 fi
 
