@@ -24,6 +24,7 @@ flake8:
   stage: check
   script:
     - find scripts/ -name "*.py" -not -name "ltm4673.py" | xargs flake8
+    - src/*.py
 
 marble_mini_build:
   stage: build
