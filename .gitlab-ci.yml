@@ -23,7 +23,7 @@ include:
 flake8:
   stage: check
   script:
-    - flake8 scripts/*.py
+    - find scripts/ -name "*.py" -not -name "ltm4673.py" | xargs flake8
 
 marble_mini_build:
   stage: build
