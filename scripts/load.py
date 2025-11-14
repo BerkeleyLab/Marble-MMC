@@ -1,7 +1,5 @@
 #! /usr/bin/python3
-
 # Load a script of marble_mmc commands to the target device via UART
-
 # Goals:
 #   1. Handle esc/backspace gracefully
 #   2. Show both input and output
@@ -14,8 +12,9 @@ import os
 import time
 from concurrent.futures import ThreadPoolExecutor as Executor
 
-INTERCOMMAND_SLEEP = 0#0.01 # seconds
-POST_SLEEP = 0#0.01 # seconds
+
+INTERCOMMAND_SLEEP = 0  # 0.01 # seconds
+POST_SLEEP = 0  # 0.01 # seconds
 
 # A global log of read lines
 _log = []
@@ -28,10 +27,10 @@ class LoadError(Exception):
 
 
 class StreamSerial():
-    def __init__(self, port = None, baud = 115200, flush=True):
+    def __init__(self, port=None, baud=115200, flush=True):
         self._ready = False
         self.line = None
-        if (port == None):
+        if port is None:
             return None
         try:
             self.dev = serial.Serial(port=port, baudrate=baud, timeout=0.1)
@@ -74,7 +73,7 @@ class StreamSerial():
                 continue
             else:
                 r = r.decode('utf-8')
-                #print("r = {}".format(r))
+                # print("r = {}".format(r))
                 buf.append(r)
                 if r in ('\n', '\r'):
                     self.line = ''.join(buf)
@@ -89,6 +88,7 @@ class StreamSerial():
     def close(self):
         if hasattr(self, 'dev') and hasattr(self.dev, 'close'):
             self.dev.close()
+
 
 def readDevice(sdev, wait_on, do_print=False, do_log=False):
     global _log, _done
@@ -111,6 +111,7 @@ def readDevice(sdev, wait_on, do_print=False, do_log=False):
     sdev.close()
     _done = True
     return True
+
 
 def readbackDevice(sdev, close_conn, do_print=False, do_log=False, timeout=0.1):
     global _log, _done
@@ -138,6 +139,7 @@ def readbackDevice(sdev, close_conn, do_print=False, do_log=False, timeout=0.1):
     _done = True
     return True
 
+
 def getLines(filename):
     if not os.path.exists(filename):
         print("File {} does not exist".format(filename))
@@ -151,10 +153,12 @@ def getLines(filename):
                 lines.append(line)
     return lines
 
+
 def serveFile(sdev, filename):
     lines = getLines(filename)
-    #return serveLines(sdev, lines)
+    # return serveLines(sdev, lines)
     return serveCommands(sdev, lines)
+
 
 def serveCommands(sdev, *commands):
     nlines = 0
@@ -169,6 +173,7 @@ def serveCommands(sdev, *commands):
     # print(f">   Wrote {nlines} lines")
     return
 
+
 def testReadLines(argv):
     USAGE = "python3 {} scriptname".format(argv[0])
     if len(argv) < 2:
@@ -178,6 +183,7 @@ def testReadLines(argv):
     lines = getLines(filename)
     print("got {}".format(lines))
     return True
+
 
 def get_log():
     global _log
@@ -193,6 +199,7 @@ def get_log():
     _log = []
     return log
 
+
 def loadCommands(dev, baud=115200, commands=None, do_print=False, do_log=False):
     if commands is None:
         print("Missing mandatory filename")
@@ -205,15 +212,16 @@ def loadCommands(dev, baud=115200, commands=None, do_print=False, do_log=False):
 
     if sdev.failed():
         return 1
-    executor = Executor(max_workers = 2)
+    executor = Executor(max_workers=2)
     global task1, task2
     task1 = executor.submit(serveCommands, sdev, *commands)
     task2 = executor.submit(readDevice, sdev, task1, do_print, do_log)
     return 0
 
+
 def openConnection(dev, baud=115200):
-    INTERCOMMAND_SLEEP = 0#0.01 # seconds
-    POST_SLEEP = 0#0.01 # seconds
+    # INTERCOMMAND_SLEEP = 0  # 0.01 # seconds
+    # POST_SLEEP = 0  # 0.01 # seconds
     sdev = StreamSerial(dev, baud)
 
     time.sleep(1)
@@ -224,18 +232,20 @@ def openConnection(dev, baud=115200):
         return None
     return sdev
 
-def readbackCommands(sdev, commands=None, close_conn = True, do_print=False, do_log=False):
-    INTERCOMMAND_SLEEP = 0.01 # seconds
-    POST_SLEEP = 0.01 # seconds
+
+def readbackCommands(sdev, commands=None, close_conn=True, do_print=False, do_log=False):
+    # INTERCOMMAND_SLEEP = 0.01  # seconds
+    # POST_SLEEP = 0.01  # seconds
     if commands is None:
         print("Missing mandatory filename")
         return 1
 
-    executor = Executor(max_workers = 2)
+    executor = Executor(max_workers=2)
     global task1, task2
     task1 = executor.submit(serveCommands, sdev, *commands)
-    task2 = executor.submit(readbackDevice, sdev, close_conn,do_print, do_log, timeout=0.1)
+    task2 = executor.submit(readbackDevice, sdev, close_conn, do_print, do_log, timeout=0.1)
     return 0
+
 
 def loadFile(dev, baud=115200, filename=None):
     if filename is None:
@@ -244,11 +254,12 @@ def loadFile(dev, baud=115200, filename=None):
     sdev = StreamSerial(dev, baud)
     if sdev.failed():
         return 1
-    executor = Executor(max_workers = 2)
+    executor = Executor(max_workers=2)
     global task1, task2
     task1 = executor.submit(serveFile, sdev, filename)
     task2 = executor.submit(readDevice, sdev, task1)
     return 0
+
 
 def ArgParser():
     parser = argparse.ArgumentParser(description="Script loader for marble_mmc")
@@ -256,6 +267,7 @@ def ArgParser():
                         help='Device descriptor of TTY/COM port for marble_mmc')
     parser.add_argument('-b', '--baud', default=115200, help="UART Baud rate")
     return parser
+
 
 def doLoad(argv):
     # Unused 'argv' since argparse is handling everything
@@ -277,7 +289,8 @@ def doLoad(argv):
         return readbackCommands(sdev, args.commands, close_conn=True, do_print=True)
     return 0
 
+
 if __name__ == "__main__":
     import sys
     sys.exit(doLoad(sys.argv))
-    #testReadLines(sys.argv)
+    # testReadLines(sys.argv)

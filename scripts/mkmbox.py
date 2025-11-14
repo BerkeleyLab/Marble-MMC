@@ -1,7 +1,5 @@
 #! /usr/bin/python3
-
 # Make mailbox.h from mailbox definition file (JSON with comments)
-
 # TODO
 #   After merging with hashbox, write the hash to the top of the memory map files
 
@@ -12,26 +10,28 @@ import sys
 import hashlib
 import pickle
 import math
-
 import htools
 
-PAGE_SIZE=16
-NPAGES=128
+PAGE_SIZE = 16
+NPAGES = 128
 MAILBOX_SIZE = PAGE_SIZE * NPAGES
+
 
 def _int(x):
     try:
         return int(x)
-    except:
+    except ValueError:
         return int(x, 16)
+
 
 class JSONHack():
     """A hack to allow an arbitrary number of comment lines within an otherwise JSON-compliant file.
     The comments are ignored.  Every other line in the file is passed to the JSON interpreter.
     Comments are full line and must begin with a '#' symbol (no end-of-line comments)."""
     _commentChar = "#"
-    def __init__(self, filename = None):
-        if filename == None:
+
+    def __init__(self, filename=None):
+        if filename is None:
             filename = "mbox.def"
         self.filename = filename
         self._fileHash = None
@@ -46,32 +46,35 @@ class JSONHack():
         with open(self.filename, 'r') as fd:
             line = True
             while line:
-                #line = fd.readline().strip("\n") # severely undercounts lines...
+                # line = fd.readline().strip("\n") # severely undercounts lines...
                 line = fd.readline()
                 if line.strip().startswith(self._commentChar):
                     # Skip any lines that begin with the comment char
-                    s.append("") # Append a blank line to ensure accurate line count on error
+                    s.append("")  # Append a blank line to ensure accurate line count on error
                     continue
                 if len(line.strip('\n').replace('\r', '')) > 0:
-                    #print("len({}) = {}".format(line, len(line)))
+                    # print("len({}) = {}".format(line, len(line)))
                     s.append(line.strip('\n'))
                 else:
-                    s.append("") # Append a blank line to ensure accurate line count on error
+                    s.append("")  # Append a blank line to ensure accurate line count on error
         try:
             o = json.loads('\n'.join(s))
         except json.decoder.JSONDecodeError as jerr:
             # This line number is not correct. Why?
             print("JSON Decoder Error:\n{}".format(jerr))
             o = {}
-        #hl = hashlib.sha256(bytes(''.join(s), 'utf-8'))
-        #self._fileHash = hl.digest()
-        #self._fileHashStr = hl.hexdigest()
+        # hl = hashlib.sha256(bytes(''.join(s), 'utf-8'))
+        # self._fileHash = hl.digest()
+        # self._fileHashStr = hl.hexdigest()
         return o
+
 
 class MailboxInterface():
     _defaultDefinitionFile = "mbox.def"
     _defaultDocumentationFile = "mbox.doc"
+
     @staticmethod
+
     def _extractNumber(s):
         r = re.search("(\d+)", s)
         if r:
@@ -84,6 +87,7 @@ class MailboxInterface():
         return None
 
     @staticmethod
+
     def _getShiftOR(fmt, size):
         l = []
         for m in range(size):
@@ -93,6 +97,7 @@ class MailboxInterface():
         return " | ".join(l)
 
     @staticmethod
+
     def _format(fmt, val):
         """Allow for both old-style (printf) and newstyle format strings."""
         if '%' in fmt:
@@ -104,6 +109,7 @@ class MailboxInterface():
         return fmt.format(val)
 
     @staticmethod
+
     def _combine(*args):
         """Combine the bytes in 'args' into a single integer by shifting and OR'ing.
         Assumes args come in LSB-to-MSB."""
@@ -114,6 +120,7 @@ class MailboxInterface():
         return s
 
     @staticmethod
+
     def _splitBytes(val, size):
         l = []
         for m in range(size):
@@ -152,7 +159,7 @@ class MailboxInterface():
         hashPageList = []
         # Dict parameters to include in hash calculation (fields we care about)
         filterList = ("name", "size", "output", "input")
-        for npage, elementList in self._pageList: # Each entry is (npage, [(name, paramDict),...])
+        for npage, elementList in self._pageList:  # Each entry is (npage, [(name, paramDict),...])
             hashElementList = []
             for n in range(len(elementList)):
                 hashParamDict = {}
@@ -215,13 +222,13 @@ class MailboxInterface():
     def interpret(self):
         jdict = self.load()
         self._pageNumbers = []
-        self._pageList = [] # Each entry is (npage, [(name, paramDict),...])
+        self._pageList = []  # Each entry is (npage, [(name, paramDict),...])
         for page, mlist in jdict.items():
             if page == "include":
                 self._includes = mlist
                 continue
             if page == "control":
-                self._handleControl(mlist) # 'mlist' is actually a dict, but who cares
+                self._handleControl(mlist)  # 'mlist' is actually a dict, but who cares
                 continue
             npage = self._extractNumber(page)
             if npage == None:
@@ -274,13 +281,13 @@ class MailboxInterface():
         """'contents' is a list of bytes (length <= 2048) which is all pages concatenated."""
         nbytes = len(contents)
         decoded = []
-        for npage, elementList in self._pageList: # Each entry is (npage, [(name, paramDict),...])
+        for npage, elementList in self._pageList:  # Each entry is (npage, [(name, paramDict),...])
             indexStart = npage*PAGE_SIZE
             indexEnd = indexStart + PAGE_SIZE
             pageList = []
             print("Page{}".format(npage))
             if indexEnd <= nbytes:
-                #pageData = contents[indexStart:indexEnd]
+                # pageData = contents[indexStart:indexEnd]
                 for n in range(len(elementList)):
                     name, paramDict = elementList[n]
                     desc = paramDict.get('desc', "")
@@ -308,13 +315,13 @@ class MailboxInterface():
         return decoded
 
     def _hasPage(self, nPage):
-        for npage, elementList in self._pageList: # Each entry is (npage, [(name, paramDict),...])
+        for npage, elementList in self._pageList:  # Each entry is (npage, [(name, paramDict),...])
             if npage == nPage:
                 return True
         return False
 
     def _getElementList(self, nPage):
-        for npage, elementList in self._pageList: # Each entry is (npage, [(name, paramDict),...])
+        for npage, elementList in self._pageList:  # Each entry is (npage, [(name, paramDict),...])
             if npage == nPage:
                 return elementList
         return None
@@ -371,7 +378,7 @@ class MailboxInterface():
             return print(*args, **kwargs, file = self._fd)
 
     def makeEnums(self):
-        for npage, elementList in self._pageList: # Each entry is (npage, [(name, paramDict),...])
+        for npage, elementList in self._pageList:  # Each entry is (npage, [(name, paramDict),...])
             self._fp("typedef enum {")
             mbprefix = f"  MB{npage}_"
             index = 0
@@ -406,7 +413,7 @@ class MailboxInterface():
 
     def makeUpdateInput(self):
         self._fp("void mailbox_update_input(void) {")
-        for npage, elementList in self._pageList: # Each entry is (npage, [(name, paramDict),...])
+        for npage, elementList in self._pageList:  # Each entry is (npage, [(name, paramDict),...])
             hasInputs = False
             hasBigval = False
             hasAck = False
@@ -434,7 +441,7 @@ class MailboxInterface():
                     size = paramDict.get('size', 1)
                     # TODO - Add 'aspointer' boolean option to mbox.def?
                     aspointer = paramDict.get('aspointer', False)
-                    if (size > 4) or aspointer:    # Use array-mode for sizes > 4
+                    if (size > 4) or aspointer:  # Use array-mode for sizes > 4
                         s = "    {};".format(pinput.replace('@', f"&page[{enumName}_{size-1}]"))
                         s = s.replace("&&", '&')  # Replace any double-ampersands
                         self._fp(s)
@@ -485,7 +492,7 @@ class MailboxInterface():
 
     def makeUpdateOutput(self):
         self._fp("void mailbox_update_output(void) {")
-        for npage, elementList in self._pageList: # Each entry is (npage, [(name, paramDict),...])
+        for npage, elementList in self._pageList:  # Each entry is (npage, [(name, paramDict),...])
             hasOutputs = False
             hasBigval = False
             mbprefix = f"MB{npage}_"
@@ -622,7 +629,7 @@ class MailboxInterface():
             def printf(*args, **kwargs):
                 print(*args, **kwargs, file=fd)
             printf("# Mailbox Documentation\n\n(autogenerated by mkmbox.py)\n")
-            for npage, elementList in self._pageList: # Each entry is (npage, [(name, paramDict),...])
+            for npage, elementList in self._pageList:  # Each entry is (npage, [(name, paramDict),...])
                 printf(f"# Page {npage}\n")
                 printf("Offset|Name|Size|Direction|Desc|Note")
                 printf("------|----|----|---------|----|----")
@@ -672,6 +679,7 @@ class MailboxInterface():
                 'j', 'json', 'JSON' : JSON register map
         """
         cmt = "//"
+
         def comment(*args, **kwargs):
             if cmt is not None:
                 print(cmt, *args, **kwargs, file=fd)
@@ -723,7 +731,7 @@ class MailboxInterface():
         first = True
         if pre is not None:
             fd.write(pre)
-        for npage, elementList in self._pageList: # Each entry is (npage, [(name, paramDict),...])
+        for npage, elementList in self._pageList:  # Each entry is (npage, [(name, paramDict),...])
             comment(f" Page {npage}")
             index = 0
             offset = 0
@@ -760,6 +768,7 @@ def write(msg, fd=None):
     else:
         fd.write(msg + '\n')
 
+
 def test_extractNumber(argv):
     if len(argv) < 2:
         print("gimme a number")
@@ -767,6 +776,7 @@ def test_extractNumber(argv):
     s = argv[1]
     print("{} => {}".format(s, MailboxInterface._extractNumber(s)))
     return 0
+
 
 def testJSONRead(argv):
     parser = argparse.ArgumentParser(description="JSON-ish mailbox defintion reader")
@@ -779,6 +789,7 @@ def testJSONRead(argv):
     jdict = rdr.load()
     print(jdict)
     return 0
+
 
 def test_getShiftOR(argv):
     fmtNext = False
@@ -794,6 +805,7 @@ def test_getShiftOR(argv):
             size = int(arg)
     print(MailboxInterface._getShiftOR(fmt, size))
     return 0
+
 
 def main(argv):
     parser = argparse.ArgumentParser(description="JSON-ish mailbox defintion interface")
@@ -848,7 +860,7 @@ def main(argv):
         print(ihash)
         return 0
     mbox.interpret()
-    #print(mbox)
+    # print(mbox)
     if makeh:
         mbox.makeHeader()
     if makes:
@@ -859,9 +871,10 @@ def main(argv):
         mbox.makeMemoryMap(fd=None, offset=_int(args.offset), style=style, filename=args.output_file)
     return 0
 
+
 if __name__ == "__main__":
     import argparse
-    #sys.exit(testJSONRead(sys.argv))
-    #test_extractNumber(sys.argv)
-    #test_getShiftOR(sys.argv)
+    # sys.exit(testJSONRead(sys.argv))
+    # test_extractNumber(sys.argv)
+    # test_getShiftOR(sys.argv)
     sys.exit(main(sys.argv))

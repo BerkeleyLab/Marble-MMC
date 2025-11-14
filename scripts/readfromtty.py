@@ -1,18 +1,17 @@
 #! /usr/bin/python3
 
 # Read and print N lines from a tty device
-
 import argparse
 import serial
-from load import StreamSerial
+
 
 class TTYReader():
-    def __init__(self, port = None, baud = 115200, timeout = 1, encoding = 'utf-8'):
+    def __init__(self, port=None, baud=115200, timeout=1, encoding='utf-8'):
         self._ready = False
         self.line = None
         self._timeout = float(timeout)
         self._encoding = encoding
-        if (port == None):
+        if port is None:
             return None
         try:
             self.dev = serial.Serial(port=port, baudrate=baud, timeout=self._timeout)
@@ -25,17 +24,18 @@ class TTYReader():
 
     def readLine(self):
         # It seems like neither readline() nor read_until() actually respect the timeout
-        l = self.dev.readline()
-        #l = self.dev.read_until()
-        if l is not None and hasattr(l, "decode"):
+        ll = self.dev.readline()
+        # ll = self.dev.read_until()
+        if ll is not None and hasattr(ll, "decode"):
             try:
-                return l.decode(self._encoding).strip()
+                return ll.decode(self._encoding).strip()
             except UnicodeDecodeError:
                 return None
         return None
 
     def close(self):
         self.dev.close()
+
 
 def readLines(argv):
     parser = argparse.ArgumentParser(description="Read and print N lines from TTY device")
@@ -44,7 +44,8 @@ def readLines(argv):
     parser.add_argument('-b', '--baud', default=115200, help="UART Baud rate")
     parser.add_argument('-t', '--timeout', default=100, help="TTY device timeout in milliseconds")
     parser.add_argument('-e', '--encoding', default='utf-8', help="Encoding of characters received from TTY.")
-    parser.add_argument('-m', '--minchars', default=8, help="The minimum number of characters to read to be considered a valid line.")
+    parser.add_argument('-m', '--minchars', default=8,
+                        help="The minimum number of characters to read to be considered a valid line.")
     parser.add_argument("nlines", default=1, help="Number of lines to read from device")
     args = parser.parse_args()
     try:
@@ -63,14 +64,15 @@ def readLines(argv):
         nlines = 1
     n = 0
     while True:
-        l = dev.readLine()
-        if l is not None and len(l.strip()) != 0:
-            if len(l) >= minchars:
-                print(l)
+        ll = dev.readLine()
+        if ll is not None and len(ll.strip()) != 0:
+            if len(ll) >= minchars:
+                print(ll)
                 n += 1
             if n >= nlines:
                 break
     dev.close()
+
 
 if __name__ == "__main__":
     import sys

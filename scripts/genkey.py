@@ -1,8 +1,6 @@
 #! /usr/bin/python3
-
 # Generate a shared secret key for Marble MMC watchdog authentication
 # Stores key to local disk and optionally loads to MMC via console.
-
 import os
 import sys
 import platform
@@ -12,10 +10,12 @@ import re
 import serial
 from serial.tools import list_ports
 
+
 MMC_CONSOLE_CHAR_WATCHDOG_KEY = 'v'
 DEFAULT_KEY_FILE = "mmc_key"
-
 system = platform.system()
+
+
 def get_default_key_path():
     if system == "Linux":
         home = os.environ.get("HOME", None)
@@ -29,16 +29,20 @@ def get_default_key_path():
         print("System {} unsupported".format(system))
     return None
 
+
 DEFAULT_KEY_PATH = get_default_key_path()
+
 
 def get_default_key_file(_id=None):
     filename = make_filename(_id)
     filedir = os.environ.get("MMC_KEY_PATH", DEFAULT_KEY_PATH)
     return os.path.join(filedir, filename)
 
+
 def list_devs():
     ports = list_ports.comports()
     return [p.device for p in ports]
+
 
 def make_filename(_id=None):
     if _id is None:
@@ -46,8 +50,10 @@ def make_filename(_id=None):
     else:
         return "{}_{}".format(DEFAULT_KEY_FILE, _id)
 
+
 def make_key_string():
-    return "{:032x}".format(random.randint(0, (1<<128)))
+    return "{:032x}".format(random.randint(0, (1 << 128)))
+
 
 def open_file(filedir=None, _id=None, force=False):
     """Returns (file_descriptor, filepath_exists)"""
@@ -69,6 +75,7 @@ def open_file(filedir=None, _id=None, force=False):
         return (None, filepath)
     return (fd, filepath)
 
+
 def store_key_string(fd, ks):
     if fd is None:
         return False
@@ -79,12 +86,8 @@ def store_key_string(fd, ks):
     fd.write(ks)
     return True
 
+
 def try_serial_device(tty=None, baud=115200):
-    try:
-        import load
-    except ImportError:
-        print("Failed to import load.py. Please append its path to PYTHONPATH")
-        return False
     if tty is None:
         print("No serial device specified. Available devices: {}".format(list_devs()))
         return False
@@ -97,6 +100,7 @@ def try_serial_device(tty=None, baud=115200):
         return False
     return True
 
+
 def load_key_string(ks, tty=None):
     try:
         import load
@@ -108,13 +112,14 @@ def load_key_string(ks, tty=None):
         return False
     commands = [MMC_CONSOLE_CHAR_WATCHDOG_KEY + " " + ks]
     if load.loadCommands(tty, commands=commands, do_log=True) == 0:
-        log = load.get_log() # Just a hack to wait for commands to be loaded
+        # log = load.get_log()  # Just a hack to wait for commands to be loaded
         # TODO - Vet the log to confirm success?
         print("Key loaded to MMC\r\n")
         return True
     print("Failed to load to device {}. Verify the device path and permissions.".format(tty))
     print("Available devices: {}".format(list_devs()))
     return False
+
 
 def get_key_string(filepath):
     if not os.path.exists(filepath):
@@ -124,12 +129,14 @@ def get_key_string(filepath):
         matched = vet_key_string_line(fd.readline())
     return matched
 
+
 def vet_key_string_line(line):
     restr = "^[a-fA-F0-9]{32}$"
     matched = re.match(restr, line)
     if matched:
         return line
     return None
+
 
 def test_key_gen_match():
     ks = make_key_string()
@@ -153,6 +160,7 @@ def test_key_gen_match():
     print(f"line = {line}")
     return
 
+
 def main():
     parser = argparse.ArgumentParser(description="Marble MMC Authentication Key Generator and Loader")
     parser.add_argument('-d', '--dev', default=None,
@@ -160,9 +168,10 @@ def main():
     parser.add_argument('-b', '--baud', default=115200, help="UART Baud rate")
     parser.add_argument('-k', '--keyfile', default=None, help="Existing file to load to MMC")
     parser.add_argument('-i', '--id', default=None, help="Board ID (i.e. serial number)")
-    parser.add_argument('-r', '--regen', default=False, action="store_true", help="Regenerate (overwrite key file if exists)")
+    parser.add_argument('-r', '--regen', default=False, action="store_true",
+                        help="Regenerate (overwrite key file if exists)")
     args = parser.parse_args()
-    if DEFAULT_KEY_PATH == None:
+    if DEFAULT_KEY_PATH is None:
         sys.exit(1)
 
     # Check serial device
@@ -200,6 +209,7 @@ def main():
             return 1
     print("SUCCESS")
     return 0
+
 
 if __name__ == "__main__":
     # test_key_gen_match()

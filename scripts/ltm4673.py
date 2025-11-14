@@ -1,9 +1,8 @@
 #! /usr/bin/python3
-
 # LTM4673 PMBus protocol definitions
-
 import re
 import load
+
 
 # SMBus
 # Legend:
@@ -214,6 +213,7 @@ commands = {
 
 for name, arg in commands.items():
     globals()[name] = arg[0]
+
 
 def _hexint(s):
     n = int(s)
@@ -1536,7 +1536,7 @@ class ParserSyntaxError(Exception):
 
 def get_program_from_file(filename):
     prog = []
-    #0x60,-1,WB,0x10,0x00,WRITE_PROTECT
+    # 0x60,-1,WB,0x10,0x00,WRITE_PROTECT
     res = r"^([0-9a-fA-Fx]+)\s*,([0-9a-fA-Fx\-]+)\s*,(WB|WW|RB|RW),([0-9a-fA-Fx]+)\s*,([0-9a-fA-Fx]+)\s*,(\w+)"
     with open(filename, 'r') as fd:
         line = True
@@ -1553,18 +1553,18 @@ def get_program_from_file(filename):
                 continue
             _match = re.match(res, line)
             if _match:
-                #0x60,-1,WB,0x10,0x00,WRITE_PROTECT
+                # 0x60,-1,WB,0x10,0x00,WRITE_PROTECT
                 devaddr, page, oper, reg, val, name = _match.groups()
-                page = _int(page) & 0xff # Gotta turn -1 into 0xff
+                page = _int(page) & 0xff  # Gotta turn -1 into 0xff
                 reg = _int(reg)
                 val = _int(val)
                 if _page is None:
                     _page = page
-                else:#elif _page != page:
+                else:  # elif _page != page:
                     prog.append((_page, pagelist))
                     pagelist = []
                     _page = page
-                #else:
+                # else:
                     pagelist.append((reg, val))
             else:
                 raise ParserSyntaxError("Syntax error on line {}: {}".format(nline, line) + \
@@ -1859,7 +1859,7 @@ def handle_telem(args):
     # Just waiting on load via the "get_log" command
     log = load.get_log()
     readback, compare_pass = parse_readback(log, compare_prog=None, do_print=True)
-    #print(readback)
+    # print(readback)
     if len(readback) == 0:
         print(f"Failed to read from tty.  Is {args.dev} open in another terminal application?")
         return load_rval
@@ -1885,13 +1885,13 @@ def handle_status(args):
     log = load.get_log()
     readback, compare_pass = parse_readback(log, compare_prog=None, do_print=False)
     # TODO parse status bits
-    #print(readback)
+    # print(readback)
     for page, regvals in readback:
         print("PAGE: {}".format(_hexint(page)))
         for regnum, val in regvals:
             regname, decoded = decode_bits(regnum, val)
             print("{}:{}".format(regname, decoded))
-            #print("  {}: {}".format(regnum, val))
+            # print("  {}: {}".format(regnum, val))
     if load_rval == 0:
         print("Success")
     else:
@@ -1948,6 +1948,7 @@ def main(argv):
     args = parser.parse_args()
     return args.handler(args)
 
+
 """
 Common PMBridge commands
 // Select page 0
@@ -1968,12 +1969,13 @@ t 0xc0 0x21 0x00 0x30
 t 0xc0 0x21 0xcc 0x54
 """
 
+
 if __name__ == "__main__":
     import sys
     sys.exit(main(sys.argv))
-    #testV_TO_L11(sys.argv)
-    #print_commands_c()
-    #_init_sim_mem()
-    #_init_sim_telem()
-    #test_get_program_from_file(sys.argv)
-    #test_to_si(sys.argv)
+    # testV_TO_L11(sys.argv)
+    # print_commands_c()
+    # _init_sim_mem()
+    # _init_sim_telem()
+    # test_get_program_from_file(sys.argv)
+    # test_to_si(sys.argv)

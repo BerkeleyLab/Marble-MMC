@@ -1,23 +1,22 @@
 #! python3
-
 # Set Marble power supplies to slightly above/below their nominal values to
 # test engineering margin on hardware
-
 import ltm4673
 import re
 
+
 nominal_volts = {
     # page: nominal rail voltage
-    0: 1.0, # 1.0V is page 0
-    1: 1.8, # 1.8V is page 1
-    2: 2.5, # 2.5V is page 2
-    3: 3.3, # 3.3V is page 3
+    0: 1.0,  # 1.0V is page 0
+    1: 1.8,  # 1.8V is page 1
+    2: 2.5,  # 2.5V is page 2
+    3: 3.3,  # 3.3V is page 3
 }
 
 
 def get_voltage(vs, page):
     nominal_voltage = nominal_volts[page]
-    _rePercent = "^([0-9.]+)\%"
+    _rePercent = r"^([0-9.]+)\%"
     _reVoltage = "^([0-9.]+)V|v"
     _match = re.match(_rePercent, vs)
     voltage = None
@@ -29,17 +28,18 @@ def get_voltage(vs, page):
         if _match:
             voltage = float(_match.groups()[0])
         else:
-            voltage = float(vs) # will error out if garbage is given
+            voltage = float(vs)  # will error out if garbage is given
     if voltage is None:
         raise Exception("Invalid voltage string {}".format(vs))
     # Check desired voltage against limits
-    limits = ltm4673.ltm4673_limits[page][ltm4673.VOUT_COMMAND] # (mask, min, max)
+    limits = ltm4673.ltm4673_limits[page][ltm4673.VOUT_COMMAND]  # (mask, min, max)
     mask, _min, _max = limits
     vmin = ltm4673.L16_TO_V(_min)
     vmax = ltm4673.L16_TO_V(_max)
     if voltage < vmin or voltage > vmax:
-        raise Exception("Requested voltage ({:.2f}V) for {:.1f}V rail is beyond hard-coded limits ({:.2f}V : {:.2f}V)".format(
-            voltage, nominal_voltage, vmin, vmax))
+        error_msg = ("Requested voltage ({:.2f}V) for {:.1f}V rail is beyond "
+                     "hard-coded limits ({:.2f}V : {:.2f}V)").format(voltage, nominal_voltage, vmin, vmax)
+        raise Exception(error_msg)
     return voltage
 
 
@@ -62,10 +62,10 @@ def handle_args(args):
     xacts = []
     _rails = (
         # Argstr, page, nominal voltage
-        ("s1v0", 0), # 1.0V is page 0
-        ("s1v8", 1), # 1.8V is page 1
-        ("s2v5", 2), # 2.5V is page 2
-        ("s3v3", 3), # 3.3V is page 3
+        ("s1v0", 0),  # 1.0V is page 0
+        ("s1v8", 1),  # 1.8V is page 1
+        ("s2v5", 2),  # 2.5V is page 2
+        ("s3v3", 3),  # 3.3V is page 3
     )
     for arg, page in _rails:
         sarg = getattr(args, arg)
@@ -98,7 +98,7 @@ def handle_args(args):
     load_rval = load.loadCommands(args.dev, args.baud, lines, do_print=args.verbose, do_log=True)
     log = load.get_log()
     readback, compare_pass = ltm4673.parse_readback(log, compare_prog=None, do_print=True)
-    #print(log)
+    # print(log)
     if load_rval == 0:
         print("Success")
     else:

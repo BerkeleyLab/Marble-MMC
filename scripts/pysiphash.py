@@ -69,11 +69,11 @@ def _doublesipround(v, m):
     h = (f + i) & 0xffffffffffffffff
 
     k = ((e << 32) | (e >> 32)) + j
-    l = (((i & 0x7fffffffffff) << 17) | (i >> 47)) ^ h
+    ll = (((i & 0x7fffffffffff) << 17) | (i >> 47)) ^ h
     o = (((j << 21) | (j >> 43)) ^ k) & 0xffffffffffffffff
 
-    p = (k + l) & 0xffffffffffffffff
-    q = (((l & 0x7ffffffffffff) << 13) | (l >> 51)) ^ p
+    p = (k + ll) & 0xffffffffffffffff
+    q = (((ll & 0x7ffffffffffff) << 13) | (ll >> 51)) ^ p
     r = ((h << 32) | (h >> 32)) + o
     s = (((o << 16) | (o >> 48)) ^ r) & 0xffffffffffffffff
     t = (r + q) & 0xffffffffffffffff
@@ -155,10 +155,10 @@ class SipHash_2_4(object):
         return self
 
     def hash(self):
-        l = len(self.s)
-        assert l < 8
+        ll = len(self.s)
+        assert ll < 8
 
-        b = (((self.b + l) & 0xff) << 56)
+        b = (((self.b + ll) & 0xff) << 56)
         b |= _oneQ.unpack_from(self.s+_zeroes)[0]
         v = self.v
 
@@ -237,7 +237,7 @@ if __name__ == "__main__":
         "b274cb8ebf87870a", "6f9bb4203de7b381", "eaecb2a30b22a87f", "9924a43cc1315724",
         "bd838d3aafbf8db7", "0b1a2a3265d51aea", "135079a3231ce660", "932b2846e4d70666",
         "e1915f5cb1eca46c", "f325965ca16d629f", "575ff28e60381be5", "724506eb4c328a95",
-        ]]
+    ]]
 
     key = ''.join(chr(i) for i in range(16)).encode('utf-8')
     plaintext = ''.join(chr(i) for i in range(64)).encode('utf-8')
