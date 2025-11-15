@@ -690,7 +690,7 @@ Marble_PCB_Rev_t marble_get_pcb_rev(void) {
   return Marble_v1_2;
 }
 
-void marble_print_pcb_rev(void) {
+void marble_print_ID_status(void) {
    // TODO
    printf("PCB Rev: Marble-Mini\r\n");
    return;

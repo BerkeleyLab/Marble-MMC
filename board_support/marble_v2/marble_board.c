@@ -72,7 +72,44 @@
    if (on) {s[0] = 'n'; s[1] = '\0';} \
    printf(subs " Power O%s\r\n", s); } while (0)
 
-void Error_Handler(void) {}
+static const char *ErrorCodeStrings[ERROR_CODE_COUNT] = { // triggers compile warning if not all enum values are covered
+    "ERROR_NONE",
+    "ERROR_RCC_OSC_CONFIG",
+    "ERROR_RCC_CLOCK_CONFIG",
+    "ERROR_ETH_INIT",
+    "ERROR_I2C1_INIT",
+    "ERROR_I2C3_INIT",
+    "ERROR_I2C_DEINIT",
+    "ERROR_SPI1_INIT",
+    "ERROR_UART_CONSOLE_INIT",
+    "ERROR_I2C_FPGA_NONE - No error",
+    "ERROR_I2C_FPGA_BERR - Bus error",
+    "ERROR_I2C_FPGA_ARLO - Arbitration lost",
+    "ERROR_I2C_FPGA_AF - No ACK received",
+    "ERROR_I2C_FPGA_OVR - Overrun error",
+    "ERROR_I2C_FPGA_DMA - DMA transfer error",
+    "ERROR_I2C_FPGA_TIMEOUT - Timeout error",
+    "ERROR_I2C_FPGA_BUSY - Bus busy",
+    "ERROR_I2C_FPGA_HW_BUSY",
+    "ERROR_I2C_FPGA_LOCKUP",
+    "ERROR_I2C_FPGA_UNDEFINED - Undefined I2C FPGA error",
+    "ERROR_I2C_PM_NONE - No error",
+    "ERROR_I2C_PM_BERR - Bus error",
+    "ERROR_I2C_PM_ARLO - Arbitration lost",
+    "ERROR_I2C_PM_AF - No ACK received",
+    "ERROR_I2C_PM_OVR - Overrun error",
+    "ERROR_I2C_PM_DMA - DMA transfer error",
+    "ERROR_I2C_PM_TIMEOUT - Timeout error",
+    "ERROR_I2C_PM_BUSY - Warning: Bus busy",
+    "ERROR_I2C_PM_HW_BUSY",
+    "ERROR_I2C_PM_LOCKUP",
+    "ERROR_I2C_PM_UNDEFINED - Undefined I2C PM error",
+    "ERROR_UNDEFINED"
+};
+
+static uint32_t errorCounters[ERROR_CODE_COUNT] = {0};
+static uint32_t errorLastTick[ERROR_CODE_COUNT] = {0};
+
 #ifdef  USE_FULL_ASSERT
 void assert_failed(uint8_t *file, uint32_t line) {}
 #endif /* USE_FULL_ASSERT */
@@ -96,7 +133,12 @@ UART_HandleTypeDef huart3;  // Used for nucleo
 static Marble_PCB_Rev_t marble_pcb_rev;
 static uint32_t boot_id = 0xDEADBEEF;
 
+#ifdef MARBLE_V2
+static reset_cause_t reset_cause = RESET_CAUSE_UNKNOWN;
+#endif
+
 static int i2cBusStatus = 0;
+static int i2c_error_counter = 0;
 static int i2c_pm_alert = 0;
 static int _over_temp = 0;
 // PWR_GOOD sets the length of the PWRGD glitch filter. Higher values means longer.
@@ -120,8 +162,9 @@ I2C_BUS I2C_PM;
 static void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_ETH_Init(void);
-static void MX_I2C1_Init(void);
-static void MX_I2C3_Init(void);
+static void MX_I2C_BusInit(I2C_HandleTypeDef *hi2c, I2C_BUS *bus, I2C_TypeDef *instance);
+static void MX_I2C_BusReInit(I2C_BUS I2C_bus);
+static void I2C_ClearBus(I2C_BUS I2C_bus);
 static void MX_SPI1_Init(void);
 //static void MX_SPI2_Init(void);
 //static void MX_USART1_UART_Init(void);
@@ -136,6 +179,11 @@ static void show_chip_ID(void);
 static void pmod_timer_interrupt_enable(void);
 static void pmod_timer_interrupt_disable(void);
 static void pmod_config_direction(uint32_t direction);
+
+#ifdef MARBLE_V2
+static reset_cause_t reset_cause_get(void);
+static const char * reset_cause_get_name(void);
+#endif
 
 void disable_all_IRQs(void) {
    // STM32F2 has 80 interrupt channels (plus the 14 in the ARM Cortex-M)
@@ -188,6 +236,38 @@ void board_init(void) {
 #define PWR_RESET_PIN               GPIO_PIN_14
 #define PWR_RESET_ASSERTED          GPIO_PIN_RESET
 #define PWR_RESET_DEASSERTED        GPIO_PIN_SET
+
+/* Error handling functions
+ */
+void Error_Handler(MarbleErrorCode_t code) { // prints error and logs it
+    uint8_t idx = (code < ERROR_CODE_COUNT) ? code : ERROR_UNDEFINED;
+    errorCounters[idx]++;
+    errorLastTick[idx] = marble_get_tick();
+    printf(">>> MMC ERROR: %s <<<\r\n", ErrorCodeStrings[idx]);
+}
+
+static void print_error_log(void) {
+    int any = 0;
+    for (int i = 0; i < ERROR_CODE_COUNT; i++) {
+        if (errorCounters[i] > 0) {
+            any = 1;
+            break;
+        }
+    }
+    if (!any) {
+        printf("No errors have occurred since boot\r\n");
+        return;
+    }
+    else {
+        printf("Error codes encountered since boot:\r\n");
+        for (int i = 0; i < ERROR_CODE_COUNT; i++) {
+            if (errorCounters[i] > 0) {
+                printf(" - %s: %lu occurrences, last at %lu ms\r\n", ErrorCodeStrings[i], (unsigned long)errorCounters[i], (unsigned long)errorLastTick[i]);
+            }
+        }
+    }
+    return;
+}
 
 /* int board_service(void);
  *  Call in main loop. Handles routines scheduled from interrupts.
@@ -705,25 +785,43 @@ int marble_I2C_probe(I2C_BUS I2C_bus, uint8_t addr) {
 }
 
 static void marble_I2C_error_handler(I2C_BUS I2C_bus, int rc) {
-  if (rc == HAL_TIMEOUT) {
-     printf("*** I2C_cmdsend TIMEOUT\r\n");
-   } else if (rc == HAL_BUSY) {
-     printf("*** I2C_cmdsend BUSY\r\n");
-   } else if (rc == HAL_ERROR) {
-     printf("*** I2C_send ERROR: ");
-     switch ((I2C_bus)->ErrorCode) {
-       case HAL_I2C_ERROR_NONE:     printf("No error"); break;
-       case HAL_I2C_ERROR_BERR:     printf("Bus error (BERR)"); break;
-       case HAL_I2C_ERROR_ARLO:     printf("Arbitration lost (ARLO)"); break;
-       case HAL_I2C_ERROR_AF:       printf("No ACK received (AF)"); break;
-       case HAL_I2C_ERROR_OVR:      printf("Overrun error (OVR)"); break;
-       case HAL_I2C_ERROR_DMA:      printf("DMA transfer error"); break;
-       case HAL_I2C_ERROR_TIMEOUT:  printf("Timeout error"); break;
-       default: printf("Unknown error code: 0x%lx", (I2C_bus)->ErrorCode); break;
-     }
-     I2C_bus->Instance->CR1 |= I2C_CR1_STOP; // force I2C STOP condition
-     printf("\r\n");
-   }
+    bool isFPGA = (I2C_bus == I2C_FPGA);
+    bool isPM   = (I2C_bus == I2C_PM);
+
+    // Handle function return codes first
+    if (rc == HAL_TIMEOUT) {
+        Error_Handler(isFPGA ? ERROR_I2C_FPGA_TIMEOUT : 
+                     isPM   ? ERROR_I2C_PM_TIMEOUT   : ERROR_UNDEFINED);
+        return;
+    } 
+    else if (rc == HAL_BUSY) {
+        Error_Handler(isFPGA ? ERROR_I2C_FPGA_BUSY : 
+                     isPM   ? ERROR_I2C_PM_BUSY   : ERROR_UNDEFINED);
+        return;
+    } 
+    else if (rc == HAL_ERROR) {
+        // If we reach here, rc == HAL_ERROR, so check HAL error flags
+        uint32_t halErr = I2C_bus->ErrorCode;
+
+        // Force STOP condition on HAL error
+        I2C_bus->Instance->CR1 |= I2C_CR1_STOP;
+
+        // Map each HAL error bit to our MarbleErrorCode_t and log it
+        if (halErr & HAL_I2C_ERROR_NONE)
+            Error_Handler(isFPGA ? ERROR_I2C_FPGA_NONE : ERROR_I2C_PM_NONE);
+        if (halErr & HAL_I2C_ERROR_BERR)
+            Error_Handler(isFPGA ? ERROR_I2C_FPGA_BERR : ERROR_I2C_PM_BERR);
+        if (halErr & HAL_I2C_ERROR_ARLO)
+            Error_Handler(isFPGA ? ERROR_I2C_FPGA_ARLO : ERROR_I2C_PM_ARLO);
+        if (halErr & HAL_I2C_ERROR_AF)
+            Error_Handler(isFPGA ? ERROR_I2C_FPGA_AF : ERROR_I2C_PM_AF);
+        if (halErr & HAL_I2C_ERROR_OVR)
+            Error_Handler(isFPGA ? ERROR_I2C_FPGA_OVR : ERROR_I2C_PM_OVR);
+        if (halErr & HAL_I2C_ERROR_DMA)
+            Error_Handler(isFPGA ? ERROR_I2C_FPGA_DMA : ERROR_I2C_PM_DMA);
+        if (halErr & HAL_I2C_ERROR_TIMEOUT)
+            Error_Handler(isFPGA ? ERROR_I2C_FPGA_TIMEOUT : ERROR_I2C_PM_TIMEOUT);
+    }
 }
 
 static int marble_I2C_bus_prepare(I2C_BUS I2C_bus) {
@@ -734,10 +832,24 @@ static int marble_I2C_bus_prepare(I2C_BUS I2C_bus) {
     i++;
     //printf("Warning: I2C hardware busy (flag 0x%08x)\r\n", (__HAL_I2C_GET_FLAG(I2C_bus, I2C_FLAG_BUSY)));
   }
-  if(i >= 50) { //after 1ms, timeout
+  if(i >= 50) { //after 0.5ms, timeout
+    bool isFPGA = (I2C_bus == I2C_FPGA);
+
+    i2c_error_counter++;
+    Error_Handler(isFPGA ? ERROR_I2C_FPGA_HW_BUSY : ERROR_I2C_PM_HW_BUSY);
     printf("Error: Timeout - I2C hardware busy (flag 0x%08x), I2C bus state %d\r\n", (__HAL_I2C_GET_FLAG(I2C_bus, I2C_FLAG_BUSY)), HAL_I2C_GetState(I2C_bus));
+    if (i2c_error_counter >= 5) {
+      Error_Handler(isFPGA ? ERROR_I2C_FPGA_LOCKUP : ERROR_I2C_PM_LOCKUP);
+      printf("%s appears to be stuck. Attempting re-init...\r\n",
+        I2C_bus->Instance == I2C1 ? "I2C1" :
+        I2C_bus->Instance == I2C2 ? "I2C2" :
+        I2C_bus->Instance == I2C3 ? "I2C3" : "Unknown I2C Bus");
+      MX_I2C_BusReInit(I2C_bus);
+      i2c_error_counter = 0;
+    }
     return 1; // might want a different return value
   }
+  i2c_error_counter = 0;
   return 0;
 }
 
@@ -996,8 +1108,8 @@ uint32_t marble_init(void)
 
   marble_PSU_pwr(true);
   MX_ETH_Init();
-  MX_I2C1_Init();
-  MX_I2C3_Init();
+  MX_I2C_BusInit(&hi2c1, &I2C_FPGA, I2C1);
+  MX_I2C_BusInit(&hi2c3, &I2C_PM, I2C3);
   MX_SPI1_Init();
   //MX_SPI2_Init();
 
@@ -1007,13 +1119,16 @@ uint32_t marble_init(void)
   rng_init_status = HAL_RNG_Init(&hrng);
 
   get_hw_rnd(&boot_id);
+  #ifdef MARBLE_V2
+  reset_cause = reset_cause_get();
+  #endif
 
   marble_LED_init();
   marble_SW_init();
   marble_UART_init();
 
   printf("** Marble init done **\r\n");
-  marble_print_pcb_rev();
+  marble_print_ID_status();
 
   // Init SSP busses
   //marble_SSP_init(LPC_SSP0);
@@ -1023,7 +1138,7 @@ uint32_t marble_init(void)
   return 0;
 }
 
-void marble_print_pcb_rev(void) {
+void marble_print_ID_status(void) {
 #ifdef NUCLEO
   printf("PCB Rev: Nucleo\r\n");
 #else
@@ -1058,8 +1173,11 @@ void marble_print_pcb_rev(void) {
   show_chip_ID();
   printf("Firmware revision: " GIT_REV " [Git]\r\n");// placeholder for GIT_REV
   uint32_t uptime = marble_get_tick();
-  printf("Boot ID: 0x%08lx\n", boot_id);
-  printf("Uptime: %lu ms [wraps at 4.29e9]\n", uptime);  return;
+  printf("MMC Boot ID: 0x%08lx\n", boot_id);
+  printf("Uptime: %lu ms [wraps at 4.29e9]\n", uptime);
+  print_reset_cause();
+  print_error_log();
+  return;
 }
 
 Marble_PCB_Rev_t marble_get_pcb_rev(void) {
@@ -1122,7 +1240,7 @@ static void SystemClock_Config(void)
    RCC_OscInitStruct.PLL.PLLQ = CONFIG_CLK_PLLQ;
    if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
    {
-      Error_Handler();
+      Error_Handler(ERROR_RCC_OSC_CONFIG);
    }
    /** Initializes the CPU, AHB and APB busses clocks */
    RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
@@ -1134,7 +1252,7 @@ static void SystemClock_Config(void)
 
    if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK)
    {
-      Error_Handler();
+      Error_Handler(ERROR_RCC_CLOCK_CONFIG);
    }
 }
 
@@ -1155,7 +1273,7 @@ void SystemClock_Config_HSI(void)
    RCC_OscInitStruct.PLL.PLLQ = 5;
    if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
    {
-     Error_Handler();
+     Error_Handler(ERROR_RCC_OSC_CONFIG);
    }
    /** Initializes the CPU, AHB and APB busses clocks */
    RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
@@ -1167,7 +1285,7 @@ void SystemClock_Config_HSI(void)
 
    if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK)
    {
-      Error_Handler();
+      Error_Handler(ERROR_RCC_CLOCK_CONFIG);
    }
 }
 
@@ -1191,43 +1309,104 @@ static void MX_ETH_Init(void)
 
   if (HAL_ETH_Init(&heth) != HAL_OK)
   {
-    Error_Handler();
+    Error_Handler(ERROR_ETH_INIT);
   }
 }
 
-static void MX_I2C1_Init(void)
+static void MX_I2C_BusInit(I2C_HandleTypeDef *hi2c, I2C_BUS *bus, I2C_TypeDef *instance)
 {
-   hi2c1.Instance = I2C1;
-   hi2c1.Init.ClockSpeed = SPEED_100KHZ;
-   hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
-   hi2c1.Init.OwnAddress1 = 0;
-   hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
-   hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
-   hi2c1.Init.OwnAddress2 = 0;
-   hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
-   hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
-   if (HAL_I2C_Init(&hi2c1) != HAL_OK) {
-      Error_Handler();
-   }
-   I2C_FPGA = &hi2c1;  // set global
+    hi2c->Instance = instance;
+    hi2c->Init.ClockSpeed = SPEED_100KHZ;
+    hi2c->Init.DutyCycle = I2C_DUTYCYCLE_2;
+    hi2c->Init.OwnAddress1 = 0;
+    hi2c->Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+    hi2c->Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+    hi2c->Init.OwnAddress2 = 0;
+    hi2c->Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+    hi2c->Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+    if (HAL_I2C_Init(hi2c) != HAL_OK)
+    {
+        if (hi2c->Instance == I2C1) {
+            Error_Handler(ERROR_I2C1_INIT);
+        } else if (hi2c->Instance == I2C3) {
+            Error_Handler(ERROR_I2C3_INIT);
+        } else {
+            Error_Handler(ERROR_UNDEFINED);
+        }
+    }
+    *bus = hi2c;
 }
 
-static void MX_I2C3_Init(void)
+static void MX_I2C_BusReInit(I2C_BUS I2C_bus)
 {
-   hi2c3.Instance = I2C3;
-   hi2c3.Init.ClockSpeed = SPEED_100KHZ;
-   hi2c3.Init.DutyCycle = I2C_DUTYCYCLE_2;
-   hi2c3.Init.OwnAddress1 = 0;
-   hi2c3.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
-   hi2c3.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
-   hi2c3.Init.OwnAddress2 = 0;
-   hi2c3.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
-   hi2c3.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
-   if (HAL_I2C_Init(&hi2c3) != HAL_OK)
-   {
-      Error_Handler();
-   }
-   I2C_PM = &hi2c3;  // set global
+    if (HAL_I2C_DeInit(I2C_bus) != HAL_OK)
+    {
+        Error_Handler(ERROR_I2C_DEINIT);
+    }
+    printf("Flushing the bus...\r\n");
+    I2C_ClearBus(I2C_bus);
+    if (HAL_I2C_Init(I2C_bus) != HAL_OK)
+    {
+        if (I2C_bus->Instance == I2C1) {
+            Error_Handler(ERROR_I2C1_INIT);
+        } else if (I2C_bus->Instance == I2C3) {
+            Error_Handler(ERROR_I2C3_INIT);
+        } else {
+            Error_Handler(ERROR_UNDEFINED);
+        }
+    }
+    else {
+        printf("Bus re-init successful.\r\n");
+    }
+}
+
+static void I2C_ClearBus(I2C_BUS I2C_bus)
+{
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+    GPIO_TypeDef *sclPort, *sdaPort;
+    uint16_t sclPin, sdaPin;
+
+    // Select SCL/SDA pins for the I2C instance
+    if (I2C_bus->Instance == I2C1) { // see HAL_I2C_MspInit for pin mapping
+        __HAL_RCC_GPIOB_CLK_ENABLE();
+        sclPort = GPIOB; sclPin = GPIO_PIN_6;
+        sdaPort = GPIOB; sdaPin = GPIO_PIN_7;
+    } else if (I2C_bus->Instance == I2C3) {
+        __HAL_RCC_GPIOA_CLK_ENABLE();
+        __HAL_RCC_GPIOC_CLK_ENABLE();
+        sclPort = GPIOA; sclPin = GPIO_PIN_8;
+        sdaPort = GPIOC; sdaPin = GPIO_PIN_9;
+    } else {
+        return;
+    }
+
+    // Configure SCL and SDA as GPIO open-drain outputs
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+
+    GPIO_InitStruct.Pin = sclPin;
+    HAL_GPIO_Init(sclPort, &GPIO_InitStruct);
+    GPIO_InitStruct.Pin = sdaPin;
+    HAL_GPIO_Init(sdaPort, &GPIO_InitStruct);
+
+    // Clock SCL up to 9 pulses if SDA is held low
+    for (int i = 0; i < 9 && HAL_GPIO_ReadPin(sdaPort, sdaPin) == GPIO_PIN_RESET; i++) {
+        HAL_GPIO_WritePin(sclPort, sclPin, GPIO_PIN_SET);
+        marble_SLEEP_us(5);
+        HAL_GPIO_WritePin(sclPort, sclPin, GPIO_PIN_RESET);
+        marble_SLEEP_us(5);
+    }
+
+    // Generate STOP condition: SCL high then SDA high
+    HAL_GPIO_WritePin(sclPort, sclPin, GPIO_PIN_SET);
+    marble_SLEEP_us(5);
+    HAL_GPIO_WritePin(sdaPort, sdaPin, GPIO_PIN_SET);
+    marble_SLEEP_us(5);
+
+    // Restore pins to default (de-init GPIO so I2C AF can reconfigure)
+    HAL_GPIO_DeInit(sclPort, sclPin);
+    HAL_GPIO_DeInit(sdaPort, sdaPin);
 }
 
 static void MX_SPI1_Init(void)
@@ -1246,7 +1425,7 @@ static void MX_SPI1_Init(void)
    hspi1.Init.CRCPolynomial = 10;
    if (HAL_SPI_Init(&hspi1) != HAL_OK)
    {
-      Error_Handler();
+      Error_Handler(ERROR_SPI1_INIT);
    }
    SSP_FPGA = &hspi1;
 }
@@ -1318,7 +1497,7 @@ static void CONSOLE_USART_Init(void) {
   huart_console.Init.OverSampling = UART_OVERSAMPLING_16;
   if (HAL_UART_Init(&huart_console) != HAL_OK)
   {
-     Error_Handler();
+     Error_Handler(ERROR_UART_CONSOLE_INIT);
   }
   // Enable RXNE, TXE interrupts
   SET_BIT(CONSOLE_USART->CR1, USART_CR1_RXNEIE);
@@ -1732,3 +1911,117 @@ void assert_failed(uint8_t *file, uint32_t line)
 }
 #endif /* USE_FULL_ASSERT */
 
+
+#ifdef MARBLE_V2
+/// @brief      Obtain the STM32 system reset cause
+/// @param      None
+/// @return     The system reset cause
+static reset_cause_t reset_cause_get(void)
+{
+    if (__HAL_RCC_GET_FLAG(RCC_FLAG_LPWRRST))
+    {
+        reset_cause = RESET_CAUSE_LOW_POWER_RESET;
+    }
+    else if (__HAL_RCC_GET_FLAG(RCC_FLAG_WWDGRST))
+    {
+        reset_cause = RESET_CAUSE_WINDOW_WATCHDOG_RESET;
+    }
+    else if (__HAL_RCC_GET_FLAG(RCC_FLAG_IWDGRST))
+    {
+        reset_cause = RESET_CAUSE_INDEPENDENT_WATCHDOG_RESET;
+    }
+    else if (__HAL_RCC_GET_FLAG(RCC_FLAG_SFTRST))
+    {
+        // This reset is induced by calling the ARM CMSIS
+        // `NVIC_SystemReset()` function!
+        reset_cause = RESET_CAUSE_SOFTWARE_RESET;
+    }
+    else if (__HAL_RCC_GET_FLAG(RCC_FLAG_PORRST))
+    {
+        reset_cause = RESET_CAUSE_POWER_ON_POWER_DOWN_RESET;
+    }
+    else if (__HAL_RCC_GET_FLAG(RCC_FLAG_PINRST))
+    {
+        reset_cause = RESET_CAUSE_EXTERNAL_RESET_PIN_RESET;
+    }
+    // Needs to come *after* checking the `RCC_FLAG_PORRST` flag in order to
+    // ensure first that the reset cause is NOT a POR/PDR reset. See note
+    // below.
+    else if (__HAL_RCC_GET_FLAG(RCC_FLAG_BORRST))
+    {
+        reset_cause = RESET_CAUSE_BROWNOUT_RESET;
+    }
+    else
+    {
+        reset_cause = RESET_CAUSE_UNKNOWN;
+    }
+
+    // Clear all the reset flags or else they will remain set during future
+    // resets until system power is fully removed.
+    __HAL_RCC_CLEAR_RESET_FLAGS();
+
+    return reset_cause;
+}
+
+// Note: any of the STM32 Hardware Abstraction Layer (HAL) Reset and Clock
+// Controller (RCC) header files, such as
+// "STM32Cube_FW_F7_V1.12.0/Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_rcc.h",
+// "STM32Cube_FW_F2_V1.7.0/Drivers/STM32F2xx_HAL_Driver/Inc/stm32f2xx_hal_rcc.h",
+// etc., indicate that the brownout flag, `RCC_FLAG_BORRST`, will be set in
+// the event of a "POR/PDR or BOR reset". This means that a Power-On Reset
+// (POR), Power-Down Reset (PDR), OR Brownout Reset (BOR) will trip this flag.
+// See the doxygen just above their definition for the
+// `__HAL_RCC_GET_FLAG()` macro to see this:
+//      "@arg RCC_FLAG_BORRST: POR/PDR or BOR reset." <== indicates the Brownout
+//      Reset flag will *also* be set in the event of a POR/PDR.
+// Therefore, you must check the Brownout Reset flag, `RCC_FLAG_BORRST`, *after*
+// first checking the `RCC_FLAG_PORRST` flag in order to ensure first that the
+// reset cause is NOT a POR/PDR reset.
+
+/// @brief      Obtain the system reset cause as an ASCII-printable name string
+///             from a reset cause type
+/// @param[in]  reset_cause     The previously-obtained system reset cause
+/// @return     A null-terminated ASCII name string describing the system
+///             reset cause
+static const char * reset_cause_get_name(void)
+{
+    const char * reset_cause_name = "TBD";
+
+    switch (reset_cause)
+    {
+        case RESET_CAUSE_UNKNOWN:
+            reset_cause_name = "UNKNOWN";
+            break;
+        case RESET_CAUSE_LOW_POWER_RESET:
+            reset_cause_name = "LOW_POWER_RESET";
+            break;
+        case RESET_CAUSE_WINDOW_WATCHDOG_RESET:
+            reset_cause_name = "WINDOW_WATCHDOG_RESET";
+            break;
+        case RESET_CAUSE_INDEPENDENT_WATCHDOG_RESET:
+            reset_cause_name = "INDEPENDENT_WATCHDOG_RESET";
+            break;
+        case RESET_CAUSE_SOFTWARE_RESET:
+            reset_cause_name = "SOFTWARE_RESET";
+            break;
+        case RESET_CAUSE_POWER_ON_POWER_DOWN_RESET:
+            reset_cause_name = "POWER-ON_RESET (POR) / POWER-DOWN_RESET (PDR)";
+            break;
+        case RESET_CAUSE_EXTERNAL_RESET_PIN_RESET:
+            reset_cause_name = "EXTERNAL_RESET_PIN_RESET";
+            break;
+        case RESET_CAUSE_BROWNOUT_RESET:
+            reset_cause_name = "BROWNOUT_RESET (BOR)";
+            break;
+    }
+
+    return reset_cause_name;
+}
+
+void print_reset_cause(void)
+{
+    printf("Last system reset cause is \"%s\"\r\n",
+           reset_cause_get_name());
+    return;
+}
+#endif

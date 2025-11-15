@@ -31,7 +31,7 @@ const char unk_str[] = " > Unknown option. Press '?' for help.";
 const char *menu_str[] = {"\r\n",
   "Build based on git commit " GIT_REV "\r\n",
   "Menu:\r\n",
-  "0 - Show board/chip identification\r\n"
+  "0 - Show board/chip identification and status info\r\n"
   "1 [-v] - Show MDIO/PHY Status (-v for verbose output)\r\n",
   "2 - I2C monitor\r\n",
   "3 - Status & counters\r\n",
@@ -152,7 +152,7 @@ static int console_handle_msg(char *rx_msg, int len)
            }
            break;
         case '0':
-           marble_print_pcb_rev();
+           marble_print_ID_status();
            break;
         case '1':
            handle_mdio_phy_print(rx_msg, len);

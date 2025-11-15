@@ -151,6 +151,49 @@ typedef enum {
   BOARD_STATUS_POWERDOWN,
 } Board_Status_t;
 
+// Error codes for identifying source of errors
+typedef enum {
+    ERROR_NONE = 0,
+    ERROR_RCC_OSC_CONFIG,
+    ERROR_RCC_CLOCK_CONFIG,
+    ERROR_ETH_INIT,
+    ERROR_I2C1_INIT,
+    ERROR_I2C3_INIT,
+    ERROR_I2C_DEINIT,
+    ERROR_SPI1_INIT,
+    ERROR_UART_CONSOLE_INIT,
+    // I2C FPGA errors
+    ERROR_I2C_FPGA_NONE,
+    ERROR_I2C_FPGA_BERR,
+    ERROR_I2C_FPGA_ARLO,
+    ERROR_I2C_FPGA_AF,
+    ERROR_I2C_FPGA_OVR,
+    ERROR_I2C_FPGA_DMA,
+    ERROR_I2C_FPGA_TIMEOUT,
+    ERROR_I2C_FPGA_BUSY,
+    ERROR_I2C_FPGA_HW_BUSY,
+    ERROR_I2C_FPGA_LOCKUP,
+    ERROR_I2C_FPGA_UNDEFINED,
+    // I2C PM errors
+    ERROR_I2C_PM_NONE,
+    ERROR_I2C_PM_BERR,
+    ERROR_I2C_PM_ARLO,
+    ERROR_I2C_PM_AF,
+    ERROR_I2C_PM_OVR,
+    ERROR_I2C_PM_DMA,
+    ERROR_I2C_PM_TIMEOUT,
+    ERROR_I2C_PM_BUSY,
+    ERROR_I2C_PM_HW_BUSY,
+    ERROR_I2C_PM_LOCKUP,
+    ERROR_I2C_PM_UNDEFINED,
+    ERROR_UNDEFINED
+} MarbleErrorCode_t;
+
+#define ERROR_CODE_COUNT (ERROR_UNDEFINED + 1)
+
+// New Error_Handler signature taking an ErrorCode
+void Error_Handler(MarbleErrorCode_t code);
+
 /****
 * Top-level Application Functionality
 ****/
@@ -176,7 +219,7 @@ int mgtclk_xpoint_en(void);
  */
 Marble_PCB_Rev_t marble_get_pcb_rev(void);
 
-void marble_print_pcb_rev(void);
+void marble_print_ID_status(void);
 
 // The Board ID is (PCB revision) | (BOARD_TYPE_...)
 uint8_t marble_get_board_id(void);

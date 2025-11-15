@@ -67,6 +67,9 @@ typedef enum reset_cause_e
     RESET_CAUSE_EXTERNAL_RESET_PIN_RESET,
     RESET_CAUSE_BROWNOUT_RESET,
 } reset_cause_t;
+
+/// @brief      print the name of a reset cause
+void print_reset_cause(void);
 #endif
 
 #ifdef __cplusplus

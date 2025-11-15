@@ -1692,7 +1692,6 @@ def handle_write_read(args):
         # print("these are the chunks:")
         # for chunk in chunks:
         #     print(chunk)
-        print("I swear I'm busy. I'll print some dots to show my progress.")
         for idx, chunk in enumerate(chunks):
             if (idx + 1) % (len(chunks)//20) == 0:
                 print(".", end="", flush=True)
