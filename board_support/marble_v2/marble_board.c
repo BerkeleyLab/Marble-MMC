@@ -254,9 +254,10 @@ void board_init(void) {
 #define PWR_RESET_ASSERTED          GPIO_PIN_RESET
 #define PWR_RESET_DEASSERTED        GPIO_PIN_SET
 
-/* Error handling functions
+/* Error handling functions: prints errors and logs time and count
+ * Only V2 has error handler (todo - implement for Marble Mini)
  */
-void Marble_Error_Handler(MarbleErrorCode_t code) { // prints error and logs it
+void Marble_Error_Handler(MarbleErrorCode_t code) {
     uint8_t idx = (code < ERROR_CODE_COUNT) ? code : ERROR_UNDEFINED;
     errorCounters[idx]++;
     errorLastTick[idx] = marble_get_tick();

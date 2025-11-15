@@ -1291,7 +1291,9 @@ static int handle_pmod_mode(const char *rx_msg, int len) {
     if ((index = system_set_pmod_mode(mode)) == 0) {
       printf("\r\n");
     } else {
-      Marble_Error_Handler(ERROR_MARBLE_PMOD);
+      #ifdef MARBLE_V2 // Only V2 has error handler (todo - implement for Marble Mini)
+        Marble_Error_Handler(ERROR_MARBLE_PMOD);
+      #endif
       printf("Failed. Error code %d\r\n", index);
       return -1;
     }
