@@ -154,12 +154,16 @@ typedef enum {
 // Error codes for identifying source of errors
 typedef enum {
     ERROR_NONE = 0,
+    ERROR_MARBLE_POWERDOWN,
+    ERROR_MARBLE_OVERTEMP,
+    ERROR_MARBLE_PMOD,
     ERROR_RCC_OSC_CONFIG,
     ERROR_RCC_CLOCK_CONFIG,
     ERROR_ETH_INIT,
     ERROR_I2C1_INIT,
     ERROR_I2C3_INIT,
-    ERROR_I2C_DEINIT,
+    ERROR_I2C1_DEINIT,
+    ERROR_I2C3_DEINIT,
     ERROR_SPI1_INIT,
     ERROR_UART_CONSOLE_INIT,
     // I2C FPGA errors
@@ -186,13 +190,26 @@ typedef enum {
     ERROR_I2C_PM_HW_BUSY,
     ERROR_I2C_PM_LOCKUP,
     ERROR_I2C_PM_UNDEFINED,
+    // LTM errors
+    ERROR_LTM_VOUT,
+    ERROR_LTM_IOUT,
+    ERROR_LTM_VIN,
+    ERROR_LTM_MFR,
+    ERROR_LTM_POWERNGD,
+    ERROR_LTM_BUSY,
+    ERROR_LTM_NOPOWER,
+    ERROR_LTM_VOUTOVER,
+    ERROR_LTM_IOUTOVER,
+    ERROR_LTM_VINUNDER,
+    ERROR_LTM_OVERTEMP,
+    ERROR_LTM_COMM,
     ERROR_UNDEFINED
 } MarbleErrorCode_t;
 
 #define ERROR_CODE_COUNT (ERROR_UNDEFINED + 1)
 
 // New Error_Handler signature taking an ErrorCode
-void Error_Handler(MarbleErrorCode_t code);
+void Marble_Error_Handler(MarbleErrorCode_t code);
 
 /****
 * Top-level Application Functionality

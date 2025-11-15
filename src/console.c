@@ -622,13 +622,7 @@ static int toggle_gpio(char c) {
       break;
     case 'B':
       marble_PSU_pwr(1);
-      printf("PSU Powered On\r\n");
-      #ifdef MARBLE_V2
-        marble_SLEEP_ms(800);
-        mgtclk_xpoint_en();
-        // TODO - Does this trigger a double-reset? The PWRGOOD line should assert soon after this.
-        FPGAWD_SelfReset();
-      #endif
+      printf("PSU Power On\r\n");
       break;
     case 'c':
       // PMOD3_5 J16[4]
@@ -1297,6 +1291,7 @@ static int handle_pmod_mode(const char *rx_msg, int len) {
     if ((index = system_set_pmod_mode(mode)) == 0) {
       printf("\r\n");
     } else {
+      Marble_Error_Handler(ERROR_MARBLE_PMOD);
       printf("Failed. Error code %d\r\n", index);
       return -1;
     }

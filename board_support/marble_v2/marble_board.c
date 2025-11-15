@@ -74,12 +74,16 @@
 
 static const char *ErrorCodeStrings[ERROR_CODE_COUNT] = { // triggers compile warning if not all enum values are covered
     "ERROR_NONE",
+    "ERROR_MARBLE_POWERDOWN: Power failure detected",
+    "ERROR_MARBLE_OVERTEMP: Over-temperature detected",
+    "ERROR_MARBLE_PMOD: PMOD configuration error",
     "ERROR_RCC_OSC_CONFIG",
     "ERROR_RCC_CLOCK_CONFIG",
     "ERROR_ETH_INIT",
-    "ERROR_I2C1_INIT",
-    "ERROR_I2C3_INIT",
-    "ERROR_I2C_DEINIT",
+    "ERROR_I2C1_INIT - I2C_FPGA bus init failed",
+    "ERROR_I2C3_INIT - I2C_PM bus init failed",
+    "ERROR_I2C1_DEINIT - I2C_FPGA bus de-init failed",
+    "ERROR_I2C3_DEINIT - I2C_PM bus de-init failed",
     "ERROR_SPI1_INIT",
     "ERROR_UART_CONSOLE_INIT",
     "ERROR_I2C_FPGA_NONE - No error",
@@ -104,8 +108,21 @@ static const char *ErrorCodeStrings[ERROR_CODE_COUNT] = { // triggers compile wa
     "ERROR_I2C_PM_HW_BUSY",
     "ERROR_I2C_PM_LOCKUP",
     "ERROR_I2C_PM_UNDEFINED - Undefined I2C PM error",
-    "ERROR_UNDEFINED"
+    "ERROR_LTM_VOUT - An output voltage fault or warning has occurred",
+    "ERROR_LTM_IOUT - An output current fault or warning has occurred",
+    "ERROR_LTM_VIN - An input voltage fault or warning has occurred",
+    "ERROR_LTM_MFR - A manufacturer specific fault has occurred",
+    "ERROR_LTM_POWERNGD - The PWRGD pin, if enabled, is negated. Power is not good",
+    "ERROR_LTM_BUSY - Device busy when PMBus command received",
+    "ERROR_LTM_NOPOWER - The unit is not providing power to the output",
+    "ERROR_LTM_VOUTOVER - An output overvoltage fault has occurred",
+    "ERROR_LTM_IOUTOVER - An output overcurrent fault has occurred",
+    "ERROR_LTM_VINUNDER - A VIN undervoltage fault has occurred",
+    "ERROR_LTM_OVERTEMP - A temperature fault or warning has occurred",
+    "ERROR_LTM_COMM - A communication, memory or logic fault has occurred",
+    "ERROR_UNDEFINED - Good luck figuring this one out!"
 };
+
 
 static uint32_t errorCounters[ERROR_CODE_COUNT] = {0};
 static uint32_t errorLastTick[ERROR_CODE_COUNT] = {0};
@@ -144,7 +161,7 @@ static int _over_temp = 0;
 // PWR_GOOD sets the length of the PWRGD glitch filter. Higher values means longer.
 #define PWR_GOOD 3
 #define PWR_FAIL 0
-// Assert this so that the first rising edge of PWRGOOD doesn't trigger re-init
+// Assert this so that the first rising edge of PWR_GOOD doesn't trigger re-init
 static int _pwr_state = PWR_GOOD;
 static int _pwr_good = 1;
 
@@ -239,7 +256,7 @@ void board_init(void) {
 
 /* Error handling functions
  */
-void Error_Handler(MarbleErrorCode_t code) { // prints error and logs it
+void Marble_Error_Handler(MarbleErrorCode_t code) { // prints error and logs it
     uint8_t idx = (code < ERROR_CODE_COUNT) ? code : ERROR_UNDEFINED;
     errorCounters[idx]++;
     errorLastTick[idx] = marble_get_tick();
@@ -278,7 +295,7 @@ int board_service(void) {
    int gpio = HAL_GPIO_ReadPin(OVER_TEMP_PORT, OVER_TEMP_PIN);
    if ((!_over_temp) && (gpio == OVER_TEMP_ASSERTED)) {
       // Detect asserting edge
-      printf("ALERT: Over-Temperature Shutdown Detected\r\n");
+      Marble_Error_Handler(ERROR_MARBLE_OVERTEMP);
       _over_temp = 1;
    } else if ((_over_temp) && (gpio == OVER_TEMP_DEASSERTED)) {
       // Detect de-asserting edge
@@ -307,6 +324,7 @@ int board_service(void) {
           if (((++_pwr_state) == PWR_GOOD) && (_pwr_good == 0)) {
             // Detect asserting edge
             printf("ALERT: Power good. Re-initializing.\r\n");
+            marble_SLEEP_ms(500); // wait for power to stabilize and peripherals to come up
             _pwr_good = 1;
             board_init();
             FPGAWD_SelfReset();
@@ -318,7 +336,7 @@ int board_service(void) {
         if (_pwr_state != PWR_FAIL) {
           if (((--_pwr_state) == 0) && (_pwr_good > 0)) {
             // Detect de-asserting edge
-            printf("ALERT: Lost power.\r\n");
+            Marble_Error_Handler(ERROR_MARBLE_POWERDOWN);
             _pwr_good = 0;
           } else {
             //printf("PWR STATE CHANGE: _pwr_state = %d;  _pwr_good = %d\r\n", _pwr_state, _pwr_good);
@@ -790,12 +808,12 @@ static void marble_I2C_error_handler(I2C_BUS I2C_bus, int rc) {
 
     // Handle function return codes first
     if (rc == HAL_TIMEOUT) {
-        Error_Handler(isFPGA ? ERROR_I2C_FPGA_TIMEOUT : 
+        Marble_Error_Handler(isFPGA ? ERROR_I2C_FPGA_TIMEOUT : 
                      isPM   ? ERROR_I2C_PM_TIMEOUT   : ERROR_UNDEFINED);
         return;
     } 
     else if (rc == HAL_BUSY) {
-        Error_Handler(isFPGA ? ERROR_I2C_FPGA_BUSY : 
+        Marble_Error_Handler(isFPGA ? ERROR_I2C_FPGA_BUSY : 
                      isPM   ? ERROR_I2C_PM_BUSY   : ERROR_UNDEFINED);
         return;
     } 
@@ -808,19 +826,19 @@ static void marble_I2C_error_handler(I2C_BUS I2C_bus, int rc) {
 
         // Map each HAL error bit to our MarbleErrorCode_t and log it
         if (halErr & HAL_I2C_ERROR_NONE)
-            Error_Handler(isFPGA ? ERROR_I2C_FPGA_NONE : ERROR_I2C_PM_NONE);
+            Marble_Error_Handler(isFPGA ? ERROR_I2C_FPGA_NONE : ERROR_I2C_PM_NONE);
         if (halErr & HAL_I2C_ERROR_BERR)
-            Error_Handler(isFPGA ? ERROR_I2C_FPGA_BERR : ERROR_I2C_PM_BERR);
+            Marble_Error_Handler(isFPGA ? ERROR_I2C_FPGA_BERR : ERROR_I2C_PM_BERR);
         if (halErr & HAL_I2C_ERROR_ARLO)
-            Error_Handler(isFPGA ? ERROR_I2C_FPGA_ARLO : ERROR_I2C_PM_ARLO);
+            Marble_Error_Handler(isFPGA ? ERROR_I2C_FPGA_ARLO : ERROR_I2C_PM_ARLO);
         if (halErr & HAL_I2C_ERROR_AF)
-            Error_Handler(isFPGA ? ERROR_I2C_FPGA_AF : ERROR_I2C_PM_AF);
+            Marble_Error_Handler(isFPGA ? ERROR_I2C_FPGA_AF : ERROR_I2C_PM_AF);
         if (halErr & HAL_I2C_ERROR_OVR)
-            Error_Handler(isFPGA ? ERROR_I2C_FPGA_OVR : ERROR_I2C_PM_OVR);
+            Marble_Error_Handler(isFPGA ? ERROR_I2C_FPGA_OVR : ERROR_I2C_PM_OVR);
         if (halErr & HAL_I2C_ERROR_DMA)
-            Error_Handler(isFPGA ? ERROR_I2C_FPGA_DMA : ERROR_I2C_PM_DMA);
+            Marble_Error_Handler(isFPGA ? ERROR_I2C_FPGA_DMA : ERROR_I2C_PM_DMA);
         if (halErr & HAL_I2C_ERROR_TIMEOUT)
-            Error_Handler(isFPGA ? ERROR_I2C_FPGA_TIMEOUT : ERROR_I2C_PM_TIMEOUT);
+            Marble_Error_Handler(isFPGA ? ERROR_I2C_FPGA_TIMEOUT : ERROR_I2C_PM_TIMEOUT);
     }
 }
 
@@ -836,10 +854,10 @@ static int marble_I2C_bus_prepare(I2C_BUS I2C_bus) {
     bool isFPGA = (I2C_bus == I2C_FPGA);
 
     i2c_error_counter++;
-    Error_Handler(isFPGA ? ERROR_I2C_FPGA_HW_BUSY : ERROR_I2C_PM_HW_BUSY);
+    Marble_Error_Handler(isFPGA ? ERROR_I2C_FPGA_HW_BUSY : ERROR_I2C_PM_HW_BUSY);
     printf("Error: Timeout - I2C hardware busy (flag 0x%08x), I2C bus state %d\r\n", (__HAL_I2C_GET_FLAG(I2C_bus, I2C_FLAG_BUSY)), HAL_I2C_GetState(I2C_bus));
     if (i2c_error_counter >= 5) {
-      Error_Handler(isFPGA ? ERROR_I2C_FPGA_LOCKUP : ERROR_I2C_PM_LOCKUP);
+      Marble_Error_Handler(isFPGA ? ERROR_I2C_FPGA_LOCKUP : ERROR_I2C_PM_LOCKUP);
       printf("%s appears to be stuck. Attempting re-init...\r\n",
         I2C_bus->Instance == I2C1 ? "I2C1" :
         I2C_bus->Instance == I2C2 ? "I2C2" :
@@ -1240,7 +1258,7 @@ static void SystemClock_Config(void)
    RCC_OscInitStruct.PLL.PLLQ = CONFIG_CLK_PLLQ;
    if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
    {
-      Error_Handler(ERROR_RCC_OSC_CONFIG);
+      Marble_Error_Handler(ERROR_RCC_OSC_CONFIG);
    }
    /** Initializes the CPU, AHB and APB busses clocks */
    RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
@@ -1252,7 +1270,7 @@ static void SystemClock_Config(void)
 
    if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK)
    {
-      Error_Handler(ERROR_RCC_CLOCK_CONFIG);
+      Marble_Error_Handler(ERROR_RCC_CLOCK_CONFIG);
    }
 }
 
@@ -1273,7 +1291,7 @@ void SystemClock_Config_HSI(void)
    RCC_OscInitStruct.PLL.PLLQ = 5;
    if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
    {
-     Error_Handler(ERROR_RCC_OSC_CONFIG);
+     Marble_Error_Handler(ERROR_RCC_OSC_CONFIG);
    }
    /** Initializes the CPU, AHB and APB busses clocks */
    RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
@@ -1285,7 +1303,7 @@ void SystemClock_Config_HSI(void)
 
    if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK)
    {
-      Error_Handler(ERROR_RCC_CLOCK_CONFIG);
+      Marble_Error_Handler(ERROR_RCC_CLOCK_CONFIG);
    }
 }
 
@@ -1309,7 +1327,7 @@ static void MX_ETH_Init(void)
 
   if (HAL_ETH_Init(&heth) != HAL_OK)
   {
-    Error_Handler(ERROR_ETH_INIT);
+    Marble_Error_Handler(ERROR_ETH_INIT);
   }
 }
 
@@ -1327,11 +1345,11 @@ static void MX_I2C_BusInit(I2C_HandleTypeDef *hi2c, I2C_BUS *bus, I2C_TypeDef *i
     if (HAL_I2C_Init(hi2c) != HAL_OK)
     {
         if (hi2c->Instance == I2C1) {
-            Error_Handler(ERROR_I2C1_INIT);
+            Marble_Error_Handler(ERROR_I2C1_INIT);
         } else if (hi2c->Instance == I2C3) {
-            Error_Handler(ERROR_I2C3_INIT);
+            Marble_Error_Handler(ERROR_I2C3_INIT);
         } else {
-            Error_Handler(ERROR_UNDEFINED);
+            Marble_Error_Handler(ERROR_UNDEFINED);
         }
     }
     *bus = hi2c;
@@ -1341,18 +1359,24 @@ static void MX_I2C_BusReInit(I2C_BUS I2C_bus)
 {
     if (HAL_I2C_DeInit(I2C_bus) != HAL_OK)
     {
-        Error_Handler(ERROR_I2C_DEINIT);
+        if (I2C_bus->Instance == I2C1) {
+            Marble_Error_Handler(ERROR_I2C1_DEINIT);
+        } else if (I2C_bus->Instance == I2C3) {
+            Marble_Error_Handler(ERROR_I2C3_DEINIT);
+        } else {
+            Marble_Error_Handler(ERROR_UNDEFINED);
+        }
     }
     printf("Flushing the bus...\r\n");
     I2C_ClearBus(I2C_bus);
     if (HAL_I2C_Init(I2C_bus) != HAL_OK)
     {
         if (I2C_bus->Instance == I2C1) {
-            Error_Handler(ERROR_I2C1_INIT);
+            Marble_Error_Handler(ERROR_I2C1_INIT);
         } else if (I2C_bus->Instance == I2C3) {
-            Error_Handler(ERROR_I2C3_INIT);
+            Marble_Error_Handler(ERROR_I2C3_INIT);
         } else {
-            Error_Handler(ERROR_UNDEFINED);
+            Marble_Error_Handler(ERROR_UNDEFINED);
         }
     }
     else {
@@ -1425,7 +1449,7 @@ static void MX_SPI1_Init(void)
    hspi1.Init.CRCPolynomial = 10;
    if (HAL_SPI_Init(&hspi1) != HAL_OK)
    {
-      Error_Handler(ERROR_SPI1_INIT);
+      Marble_Error_Handler(ERROR_SPI1_INIT);
    }
    SSP_FPGA = &hspi1;
 }
@@ -1447,7 +1471,7 @@ static void MX_SPI2_Init(void)
    hspi2.Init.CRCPolynomial = 10;
    if (HAL_SPI_Init(&hspi2) != HAL_OK)
    {
-      Error_Handler();
+      Marble_Error_Handler();
    }
    SSP_PMOD = &hspi2;
 }
@@ -1475,7 +1499,7 @@ static void MX_USART1_UART_Init(void)
    huart_console.Init.OverSampling = UART_OVERSAMPLING_16;
    if (HAL_UART_Init(&huart_console) != HAL_OK)
    {
-      Error_Handler();
+      Marble_Error_Handler();
    }
    // Enable RXNE, TXE interrupts
    SET_BIT(huart_console.Instance->CR1, USART_CR1_RXNEIE);
@@ -1497,7 +1521,7 @@ static void CONSOLE_USART_Init(void) {
   huart_console.Init.OverSampling = UART_OVERSAMPLING_16;
   if (HAL_UART_Init(&huart_console) != HAL_OK)
   {
-     Error_Handler(ERROR_UART_CONSOLE_INIT);
+     Marble_Error_Handler(ERROR_UART_CONSOLE_INIT);
   }
   // Enable RXNE, TXE interrupts
   SET_BIT(CONSOLE_USART->CR1, USART_CR1_RXNEIE);
@@ -1517,7 +1541,7 @@ static void MX_USART2_UART_Init(void)
    huart2.Init.OverSampling = UART_OVERSAMPLING_16;
    if (HAL_UART_Init(&huart2) != HAL_OK)
    {
-      Error_Handler();
+      Marble_Error_Handler();
    }
 }
 */

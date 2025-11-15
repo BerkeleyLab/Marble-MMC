@@ -483,18 +483,18 @@ static int ltm4673_vet_status_word(uint16_t stat) {
   if (stat) {
     printf("Status 0x%04x:\r\n", stat);
   }
-  if (stat & (1 << 15)) printf("  * An output voltage fault or warning has occurred\r\n");
-  if (stat & (1 << 14)) printf("  * An output current fault or warning has occurred.\r\n");
-  if (stat & (1 << 13)) printf("  * An input voltage fault or warning has occurred.\r\n");
-  if (stat & (1 << 12)) printf("  * A manufacturer specific fault has occurred.\r\n");
-  if (stat & (1 << 11)) printf("  * The PWRGD pin, if enabled, is negated. Power is not good.\r\n");
-  if (stat & (1 << 7)) printf("  * Device busy when PMBus command received.\r\n");
-  if (stat & (1 << 6)) printf("  * The unit is not providing power to the output.\r\n");
-  if (stat & (1 << 5)) printf("  * An output overvoltage fault has occurred.\r\n");
-  if (stat & (1 << 4)) printf("  * An output overcurrent fault has occurred.\r\n");
-  if (stat & (1 << 3)) printf("  * A VIN undervoltage fault has occurred.\r\n");
-  if (stat & (1 << 2)) printf("  * A temperature fault or warning has occurred.\r\n");
-  if (stat & (1 << 1)) printf("  * A communication, memory or logic fault has occurred.\r\n");
+  if (stat & (1 << 15)) Marble_Error_Handler(ERROR_LTM_VOUT);
+  if (stat & (1 << 14)) Marble_Error_Handler(ERROR_LTM_IOUT);
+  if (stat & (1 << 13)) Marble_Error_Handler(ERROR_LTM_VIN);
+  if (stat & (1 << 12)) Marble_Error_Handler(ERROR_LTM_MFR);
+  if (stat & (1 << 11)) Marble_Error_Handler(ERROR_LTM_POWERNGD);
+  if (stat & (1 << 7)) Marble_Error_Handler(ERROR_LTM_BUSY);
+  if (stat & (1 << 6)) Marble_Error_Handler(ERROR_LTM_NOPOWER);
+  if (stat & (1 << 5)) Marble_Error_Handler(ERROR_LTM_VOUTOVER);
+  if (stat & (1 << 4)) Marble_Error_Handler(ERROR_LTM_IOUTOVER);
+  if (stat & (1 << 3)) Marble_Error_Handler(ERROR_LTM_VINUNDER);
+  if (stat & (1 << 2)) Marble_Error_Handler(ERROR_LTM_OVERTEMP);
+  if (stat & (1 << 1)) Marble_Error_Handler(ERROR_LTM_COMM);
   return (int)(stat == 0);
 }
 
