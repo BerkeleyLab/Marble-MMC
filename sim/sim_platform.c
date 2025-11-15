@@ -392,3 +392,7 @@ void marble_pmod_timer_disable(void) {
 void marble_pmod_timer_config(void) {
   return;
 }
+
+void marble_error_handler(MarbleErrorCode_t code){
+  return;
+}

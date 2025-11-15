@@ -46,7 +46,7 @@ void switch_i2c_bus(uint8_t i)
    marble_I2C_send(I2C_FPGA, addr, &data, 1);
 }
 
-void ina219_init()
+void ina219_init(void)
 {
    setCalibration_16V_2A();
 }
@@ -282,7 +282,7 @@ float getCurrentAmps(uint8_t ina)
 * ADN4600 interface
 ************/
 
-void adn4600_init()
+void adn4600_init(void)
 {
    uint8_t disables[] = {0xD0, 0xD8, 0xF0, 0xF};  // Channels 2, 3, 6, 7
    uint8_t configs[] = {
@@ -349,7 +349,7 @@ void adn4600_init()
    printf("> ADN4600 Update (rc=%d)\r\n", rc);
 }
 
-void adn4600_printStatus()
+void adn4600_printStatus(void)
 {
    uint8_t status;
 
@@ -362,7 +362,7 @@ void adn4600_printStatus()
 
 
 // Try read the values at all the registers 0x42 and 0x44
-void pca9555_status()
+void pca9555_status(void)
 {
    uint8_t val;
    switch_i2c_bus(6);
@@ -377,7 +377,7 @@ void pca9555_status()
 }
 
 
-void pca9555_config()
+void pca9555_config(void)
 {
    switch_i2c_bus(6);
    uint8_t si570_config = fsynthGetConfig();
@@ -434,7 +434,7 @@ void pca9555_config()
 }
 
 // Compute the current SI570 Frequency
-void si570_status()
+void si570_status(void)
 {
    uint8_t i2c_addr = fsynthGetAddr();
    uint8_t config = fsynthGetConfig();

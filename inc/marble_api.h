@@ -209,7 +209,7 @@ typedef enum {
 #define ERROR_CODE_COUNT (ERROR_UNDEFINED + 1)
 
 // New Error_Handler signature taking an ErrorCode
-void Marble_Error_Handler(MarbleErrorCode_t code);
+void marble_error_handler(MarbleErrorCode_t code);
 
 /****
 * Top-level Application Functionality

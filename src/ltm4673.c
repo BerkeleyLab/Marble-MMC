@@ -483,18 +483,18 @@ static int ltm4673_vet_status_word(uint16_t stat) {
   if (stat) {
     printf("Status 0x%04x:\r\n", stat);
   }
-  if (stat & (1 << 15)) Marble_Error_Handler(ERROR_LTM_VOUT);
-  if (stat & (1 << 14)) Marble_Error_Handler(ERROR_LTM_IOUT);
-  if (stat & (1 << 13)) Marble_Error_Handler(ERROR_LTM_VIN);
-  if (stat & (1 << 12)) Marble_Error_Handler(ERROR_LTM_MFR);
-  if (stat & (1 << 11)) Marble_Error_Handler(ERROR_LTM_POWERNGD);
-  if (stat & (1 << 7)) Marble_Error_Handler(ERROR_LTM_BUSY);
-  if (stat & (1 << 6)) Marble_Error_Handler(ERROR_LTM_NOPOWER);
-  if (stat & (1 << 5)) Marble_Error_Handler(ERROR_LTM_VOUTOVER);
-  if (stat & (1 << 4)) Marble_Error_Handler(ERROR_LTM_IOUTOVER);
-  if (stat & (1 << 3)) Marble_Error_Handler(ERROR_LTM_VINUNDER);
-  if (stat & (1 << 2)) Marble_Error_Handler(ERROR_LTM_OVERTEMP);
-  if (stat & (1 << 1)) Marble_Error_Handler(ERROR_LTM_COMM);
+  if (stat & (1 << 15)) marble_error_handler(ERROR_LTM_VOUT);
+  if (stat & (1 << 14)) marble_error_handler(ERROR_LTM_IOUT);
+  if (stat & (1 << 13)) marble_error_handler(ERROR_LTM_VIN);
+  if (stat & (1 << 12)) marble_error_handler(ERROR_LTM_MFR);
+  if (stat & (1 << 11)) marble_error_handler(ERROR_LTM_POWERNGD);
+  if (stat & (1 << 7)) marble_error_handler(ERROR_LTM_BUSY);
+  if (stat & (1 << 6)) marble_error_handler(ERROR_LTM_NOPOWER);
+  if (stat & (1 << 5)) marble_error_handler(ERROR_LTM_VOUTOVER);
+  if (stat & (1 << 4)) marble_error_handler(ERROR_LTM_IOUTOVER);
+  if (stat & (1 << 3)) marble_error_handler(ERROR_LTM_VINUNDER);
+  if (stat & (1 << 2)) marble_error_handler(ERROR_LTM_OVERTEMP);
+  if (stat & (1 << 1)) marble_error_handler(ERROR_LTM_COMM);
   return (int)(stat == 0);
 }
 
