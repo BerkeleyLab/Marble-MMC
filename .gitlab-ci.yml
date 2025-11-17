@@ -26,6 +26,14 @@ flake8:
     - find scripts/ -name "*.py" -not -name "ltm4673.py" | xargs flake8
     - flake8 src/*.py
 
+clang-lint:
+  stage: check
+  before_script:
+    - apt-get update
+    - apt-get install clang-format
+  script:
+    - find . -name '*.c' -o -name '*.h' -o -name '*.cpp' -o -name '*.hpp' | xargs clang-format --dry-run -Werror
+
 marble_mini_build:
   stage: build
   script:
