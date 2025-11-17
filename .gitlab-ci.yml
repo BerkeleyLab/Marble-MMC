@@ -30,7 +30,7 @@ clang-lint:
   stage: check
   before_script:
     - apt-get update
-    - apt-get install clang-format
+    - apt-get install -y clang-format
   script:
     - find . -name '*.c' -o -name '*.h' -o -name '*.cpp' -o -name '*.hpp' | xargs clang-format --dry-run -Werror
 
