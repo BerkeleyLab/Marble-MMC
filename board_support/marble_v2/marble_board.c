@@ -505,10 +505,10 @@ void marble_PSU_pwr(bool on)
    // Sch net EN_PSU_CH. Assert when on==true
    HAL_GPIO_WritePin(EN_PSU_CH_PORT, EN_PSU_CH_PIN, on ? EN_PSU_CH_ASSERTED : EN_PSU_CH_DEASSERTED);
    // PSU reset; Power reset pin for LTM4673. Deassert when on==true
-
    HAL_GPIO_WritePin(PWR_RESET_PORT, PWR_RESET_PIN, on ? PWR_RESET_DEASSERTED : PWR_RESET_ASSERTED);
    if (on) {
-      SystemClock_Config(); // switch back to external clock source
+       marble_SLEEP_ms(50); // wait for external oscillator to stabilize
+       SystemClock_Config(); // switch to external clock source
    }
    return;
 }
@@ -1245,72 +1245,112 @@ static void marble_read_pcb_rev(void) {
 
 static void SystemClock_Config(void)
 {
-   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
-   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  uint32_t FLatency;
 
-   /** Initializes the CPU, AHB and APB busses clocks */
-   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
-   RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
-   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-   RCC_OscInitStruct.PLL.PLLM = CONFIG_CLK_PLLM;
-   RCC_OscInitStruct.PLL.PLLN = CONFIG_CLK_PLLN;
-   RCC_OscInitStruct.PLL.PLLP = CONFIG_CLK_PLLP;
-   RCC_OscInitStruct.PLL.PLLQ = CONFIG_CLK_PLLQ;
-   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
-   {
+  /* Ensure SYSCLK is not currently PLL before touching PLL config */
+  /* Read current flash latency */
+  HAL_RCC_GetClockConfig(&RCC_ClkInitStruct, &FLatency);
+
+  /* Switch SYSCLK to HSI temporarily */
+  RCC_ClkInitStruct.ClockType    = RCC_CLOCKTYPE_SYSCLK;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLatency) != HAL_OK)
+  {
+      marble_error_handler(ERROR_RCC_CLOCK_CONFIG);
+  }
+
+  /** Initializes the CPU, AHB and APB busses clocks */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLM = CONFIG_CLK_PLLM;
+  RCC_OscInitStruct.PLL.PLLN = CONFIG_CLK_PLLN;
+  RCC_OscInitStruct.PLL.PLLP = CONFIG_CLK_PLLP;
+  RCC_OscInitStruct.PLL.PLLQ = CONFIG_CLK_PLLQ;
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
+      uint32_t cr  = RCC->CR;
+      printf("RCC->CR = 0x%08lx\r\n", cr);
+      if (!(cr & RCC_CR_HSERDY))
+          printf("HSE failed to start or stabilize\r\n");
+
+      if ((cr & RCC_CR_HSERDY) && !(cr & RCC_CR_PLLRDY))
+          printf("PLL failed to lock\r\n");
       marble_error_handler(ERROR_RCC_OSC_CONFIG);
    }
-   /** Initializes the CPU, AHB and APB busses clocks */
-   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-   RCC_ClkInitStruct.AHBCLKDivider = AHBCLK_DIV;
-   RCC_ClkInitStruct.APB1CLKDivider = APB1CLK_DIV;
-   RCC_ClkInitStruct.APB2CLKDivider = APB2CLK_DIV;
+  /** Initializes the CPU, AHB and APB busses clocks */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+  RCC_ClkInitStruct.AHBCLKDivider = AHBCLK_DIV;
+  RCC_ClkInitStruct.APB1CLKDivider = APB1CLK_DIV;
+  RCC_ClkInitStruct.APB2CLKDivider = APB2CLK_DIV;
 
-   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK)
-   {
-      marble_error_handler(ERROR_RCC_CLOCK_CONFIG);
-   }
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK)
+  {
+    marble_error_handler(ERROR_RCC_CLOCK_CONFIG);
+  }
 }
 
-void SystemClock_Config_HSI(void)
+void SystemClock_Config_HSI(void)  // switch to internal clock source, external clock is powered from 3V3!
 {
-   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
-   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  uint32_t FLatency;
 
-   /** Initializes the CPU, AHB and APB busses clocks */
-   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-   RCC_OscInitStruct.PLL.PLLM = 13;
-   RCC_OscInitStruct.PLL.PLLN = 195;
-   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-   RCC_OscInitStruct.PLL.PLLQ = 5;
-   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
-   {
-     marble_error_handler(ERROR_RCC_OSC_CONFIG);
-   }
-   /** Initializes the CPU, AHB and APB busses clocks */
-   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
-   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
+  /* Ensure SYSCLK is not currently PLL before touching PLL config */
+  /* Read current flash latency */
+  HAL_RCC_GetClockConfig(&RCC_ClkInitStruct, &FLatency);
 
-   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK)
-   {
+  /* Switch SYSCLK to HSI temporarily */
+  RCC_ClkInitStruct.ClockType    = RCC_CLOCKTYPE_SYSCLK;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLatency) != HAL_OK)
+  {
       marble_error_handler(ERROR_RCC_CLOCK_CONFIG);
-   }
+  }
+
+  /** Initializes the CPU, AHB and APB busses clocks */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+  RCC_OscInitStruct.PLL.PLLM = 13;
+  RCC_OscInitStruct.PLL.PLLN = 195;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+  RCC_OscInitStruct.PLL.PLLQ = 5;
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
+    uint32_t cr  = RCC->CR;
+    printf("RCC->CR = 0x%08lx\r\n", cr);
+    if (!(cr & RCC_CR_HSERDY))
+        printf("HSE failed to start or stabilize\r\n");
+
+    if ((cr & RCC_CR_HSERDY) && !(cr & RCC_CR_PLLRDY))
+        printf("PLL failed to lock\r\n");
+    marble_error_handler(ERROR_RCC_OSC_CONFIG);
+  }
+  /** Initializes the CPU, AHB and APB busses clocks */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
+
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK)
+  {
+    marble_error_handler(ERROR_RCC_CLOCK_CONFIG);
+  }
 }
 
 static void MX_ETH_Init(void)
 {
-   uint8_t MACAddr[6] ;
+  uint8_t MACAddr[6] ;
 
   heth.Instance = ETH;
   heth.Init.AutoNegotiation = ETH_AUTONEGOTIATION_DISABLE;
