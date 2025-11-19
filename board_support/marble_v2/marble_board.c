@@ -531,27 +531,8 @@ static void print_clock_info(void)
 void marble_PSU_pwr(bool on)
 {
     marble_SLEEP_ms(1);
-    
-/*
-    HAL_UART_DeInit(&huart_console);
-
-    // Step 0: Force TX pin to GPIO idle before changing clocks
-    CLEAR_BIT(huart_console.Instance->CR1, USART_CR1_TE); // disable TX peripheral
-    GPIO_InitTypeDef GPIO_InitStruct = {0};
-    GPIO_InitStruct.Pin = GPIO_PIN_9; // change if TX elsewhere
-    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_SET); // line idles high
-*/
-    // HAL_UART_DeInit(&huart_console);
     if (on == false) {
         SystemClock_Config_HSI(); // switch to internal clock source, external clock is powered from 3V3!
-/*
-        HAL_UART_DeInit(&huart_console);
-        CONSOLE_USART_Init();
-*/
     }
     // Sch net EN_PSU_CH. Assert when on==true
     HAL_GPIO_WritePin(EN_PSU_CH_PORT, EN_PSU_CH_PIN, on ? EN_PSU_CH_ASSERTED : EN_PSU_CH_DEASSERTED);
@@ -561,14 +542,6 @@ void marble_PSU_pwr(bool on)
         marble_SLEEP_ms(1000); // wait for external oscillator to stabilize
         SystemClock_Config(); // switch to external clock source
     }
-/*
-    // Only now switch pin back to AF mode for UART
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Alternate = GPIO_AF7_USART1; // adjust for your USART
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-    HAL_UART_DeInit(&huart_console);
-    CONSOLE_USART_Init(); // Re-enable TX/RX
-*/
     print_clock_info();
     marble_SLEEP_ms(1);
     printf("marble_PSU_pwr: done\r\n");
