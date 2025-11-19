@@ -39,6 +39,7 @@
 #include "ltm4673.h"
 #include "watchdog.h"
 #include "rev.h"
+#include "phy_mdio.h"
 
 #define AHBCLK_DIV        (RCC_SYSCLK_DIV1)
 #define APB1CLK_DIV       (RCC_HCLK_DIV4)
@@ -79,7 +80,8 @@ static const char *ErrorCodeStrings[ERROR_CODE_COUNT] = { // triggers compile wa
     "ERROR_MARBLE_PMOD: PMOD configuration error",
     "ERROR_RCC_OSC_CONFIG",
     "ERROR_RCC_CLOCK_CONFIG",
-    "ERROR_ETH_INIT",
+    "ERROR_ETH_MDIO_INIT",
+    "ERROR_ETH_MDIO_ID - PHY ID mismatch",
     "ERROR_I2C1_INIT - I2C_FPGA bus init failed",
     "ERROR_I2C3_INIT - I2C_PM bus init failed",
     "ERROR_I2C1_DEINIT - I2C_FPGA bus de-init failed",
@@ -123,15 +125,13 @@ static const char *ErrorCodeStrings[ERROR_CODE_COUNT] = { // triggers compile wa
     "ERROR_UNDEFINED - Good luck figuring this one out!"
 };
 
-
-static uint32_t errorCounters[ERROR_CODE_COUNT] = {0};
-static uint32_t errorLastTick[ERROR_CODE_COUNT] = {0};
+static uint32_t error_counters[ERROR_CODE_COUNT] = {0};
+static uint32_t error_last_tick[ERROR_CODE_COUNT] = {0};
+static uint8_t tick_overflow_count = 0;
 
 #ifdef  USE_FULL_ASSERT
 void assert_failed(uint8_t *file, uint32_t line) {}
 #endif /* USE_FULL_ASSERT */
-
-void SystemClock_Config_HSI(void);
 
 ETH_HandleTypeDef heth;
 RNG_HandleTypeDef hrng;
@@ -177,8 +177,9 @@ I2C_BUS I2C_FPGA;
 I2C_BUS I2C_PM;
 /* Private function prototypes -----------------------------------------------*/
 static void SystemClock_Config(void);
+static void SystemClock_Config_HSI(void);
 static void MX_GPIO_Init(void);
-static void MX_ETH_Init(void);
+static void MX_ETH_MDIO_Init(void);
 static void MX_I2C_BusInit(I2C_HandleTypeDef *hi2c, I2C_BUS *bus, I2C_TypeDef *instance);
 static void MX_I2C_BusReInit(I2C_BUS I2C_bus);
 static void I2C_ClearBus(I2C_BUS I2C_bus);
@@ -192,7 +193,10 @@ static int marble_MGTMUX_store(void);
 static void I2C_PM_smba_handler(void);
 static int i2c_hook(I2C_BUS I2C_bus, uint8_t addr, uint8_t rnw,
                     int cmd, const uint8_t *data, int len);
-static void show_chip_ID(void);
+static void show_mmc_ID(void);
+static void show_PHY_ID(void);
+static void print_uptime(void);
+static void print_clock_info(void);
 static void pmod_timer_interrupt_enable(void);
 static void pmod_timer_interrupt_disable(void);
 static void pmod_config_direction(uint32_t direction);
@@ -259,15 +263,18 @@ void board_init(void) {
  */
 void marble_error_handler(MarbleErrorCode_t code) {
     uint8_t idx = (code < ERROR_CODE_COUNT) ? code : ERROR_UNDEFINED;
-    errorCounters[idx]++;
-    errorLastTick[idx] = marble_get_tick();
+    uint32_t tick_milliseconds = marble_get_tick();
+    uint64_t total_ms = (uint64_t)tick_overflow_count * (uint64_t)UINT32_MAX + (uint64_t)tick_milliseconds;
+    uint32_t total_seconds = total_ms/1000;
+    error_counters[idx]++;
+    error_last_tick[idx] = total_seconds;
     printf(">>> MMC ERROR: %s <<<\r\n", ErrorCodeStrings[idx]);
 }
 
 static void print_error_log(void) {
     int any = 0;
     for (int i = 0; i < ERROR_CODE_COUNT; i++) {
-        if (errorCounters[i] > 0) {
+        if (error_counters[i] > 0) {
             any = 1;
             break;
         }
@@ -279,8 +286,8 @@ static void print_error_log(void) {
     else {
         printf("Error codes encountered since boot:\r\n");
         for (int i = 0; i < ERROR_CODE_COUNT; i++) {
-            if (errorCounters[i] > 0) {
-                printf(" - %s: %lu occurrences, last at %lu ms\r\n", ErrorCodeStrings[i], (unsigned long)errorCounters[i], (unsigned long)errorLastTick[i]);
+            if (error_counters[i] > 0) {
+                printf(" - %s: %lu occurrences, last at %lu s\r\n", ErrorCodeStrings[i], (unsigned long)error_counters[i], (unsigned long)error_last_tick[i]);
             }
         }
     }
@@ -496,21 +503,76 @@ uint8_t marble_FMC_status(void)
    return status;
 }
 
+
+
+static void print_clock_info(void)
+{
+    uint32_t sysclk_source = __HAL_RCC_GET_SYSCLK_SOURCE();
+
+    // Determine source string
+    const char *src_str = "UNKNOWN";
+    switch (sysclk_source) {
+        case RCC_SYSCLKSOURCE_STATUS_HSI:    src_str = "HSI";  break;
+        case RCC_SYSCLKSOURCE_STATUS_HSE:    src_str = "HSE";  break;
+        case RCC_SYSCLKSOURCE_STATUS_PLLCLK: src_str = "PLL";  break;
+    }
+
+    // Update frequency info
+    SystemCoreClockUpdate();
+
+    // Short status print
+    printf("Clock: %s @ %lu Hz (PCLK2: %lu Hz)\n",
+           src_str,
+           HAL_RCC_GetSysClockFreq(),
+           HAL_RCC_GetPCLK2Freq());
+}
+
+
 void marble_PSU_pwr(bool on)
 {
-   if (on == false) {
-      SystemClock_Config_HSI(); // switch to internal clock source, external clock is powered from 3V3!
-      marble_SLEEP_ms(50);
-   }
-   // Sch net EN_PSU_CH. Assert when on==true
-   HAL_GPIO_WritePin(EN_PSU_CH_PORT, EN_PSU_CH_PIN, on ? EN_PSU_CH_ASSERTED : EN_PSU_CH_DEASSERTED);
-   // PSU reset; Power reset pin for LTM4673. Deassert when on==true
-   HAL_GPIO_WritePin(PWR_RESET_PORT, PWR_RESET_PIN, on ? PWR_RESET_DEASSERTED : PWR_RESET_ASSERTED);
-   if (on) {
-       marble_SLEEP_ms(50); // wait for external oscillator to stabilize
-       SystemClock_Config(); // switch to external clock source
-   }
-   return;
+    marble_SLEEP_ms(1);
+    
+/*
+    HAL_UART_DeInit(&huart_console);
+
+    // Step 0: Force TX pin to GPIO idle before changing clocks
+    CLEAR_BIT(huart_console.Instance->CR1, USART_CR1_TE); // disable TX peripheral
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+    GPIO_InitStruct.Pin = GPIO_PIN_9; // change if TX elsewhere
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_SET); // line idles high
+*/
+    // HAL_UART_DeInit(&huart_console);
+    if (on == false) {
+        SystemClock_Config_HSI(); // switch to internal clock source, external clock is powered from 3V3!
+/*
+        HAL_UART_DeInit(&huart_console);
+        CONSOLE_USART_Init();
+*/
+    }
+    // Sch net EN_PSU_CH. Assert when on==true
+    HAL_GPIO_WritePin(EN_PSU_CH_PORT, EN_PSU_CH_PIN, on ? EN_PSU_CH_ASSERTED : EN_PSU_CH_DEASSERTED);
+    // PSU reset; Power reset pin for LTM4673. Deassert when on==true
+    HAL_GPIO_WritePin(PWR_RESET_PORT, PWR_RESET_PIN, on ? PWR_RESET_DEASSERTED : PWR_RESET_ASSERTED);
+    if (on) {
+        marble_SLEEP_ms(1000); // wait for external oscillator to stabilize
+        SystemClock_Config(); // switch to external clock source
+    }
+/*
+    // Only now switch pin back to AF mode for UART
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Alternate = GPIO_AF7_USART1; // adjust for your USART
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+    HAL_UART_DeInit(&huart_console);
+    CONSOLE_USART_Init(); // Re-enable TX/RX
+*/
+    print_clock_info();
+    marble_SLEEP_ms(1);
+    printf("marble_PSU_pwr: done\r\n");
+    return;
 }
 
 void marble_PSU_reset_write(bool on) {
@@ -1071,7 +1133,11 @@ void SysTick_Handler(void)
 }
 
 uint32_t marble_get_tick(void) {
-  return (uint32_t)HAL_GetTick();
+  uint32_t previousTick = 0;
+  uint32_t newTick = (uint32_t)HAL_GetTick();
+  if (previousTick > newTick)
+    tick_overflow_count++;
+  return newTick;
 }
 
 /* Register user-defined interrupt handlers */
@@ -1119,6 +1185,10 @@ uint32_t marble_init(void)
   HAL_Init();
   SystemClock_Config_HSI();
 
+  marble_UART_init();
+  printf("\r\nInitializing...\r\n");
+  marble_SLEEP_ms(1);
+
   MX_GPIO_Init();
 
   // Configure GPIO interrupts
@@ -1126,7 +1196,8 @@ uint32_t marble_init(void)
   marble_read_pcb_rev();
 
   marble_PSU_pwr(true);
-  MX_ETH_Init();
+
+  MX_ETH_MDIO_Init();
   MX_I2C_BusInit(&hi2c1, &I2C_FPGA, I2C1);
   MX_I2C_BusInit(&hi2c3, &I2C_PM, I2C3);
   MX_SPI1_Init();
@@ -1144,10 +1215,11 @@ uint32_t marble_init(void)
 
   marble_LED_init();
   marble_SW_init();
-  marble_UART_init();
 
   printf("** Marble init done **\r\n");
   marble_print_ID_status();
+
+  UARTQUEUE_Init(); // Flush the bus before console starts
 
   // Init SSP busses
   //marble_SSP_init(LPC_SSP0);
@@ -1189,11 +1261,12 @@ void marble_print_ID_status(void) {
       break;
   }
 #endif
-  show_chip_ID();
+  show_mmc_ID();
+  show_PHY_ID();
   printf("Firmware revision: " GIT_REV " [Git]\r\n");// placeholder for GIT_REV
-  uint32_t uptime = marble_get_tick();
   printf("MMC Boot ID: 0x%08lx\n", boot_id);
-  printf("Uptime: %lu ms [wraps at 4.29e9]\n", uptime);
+  print_clock_info();
+  print_uptime();
   print_reset_cause();
   print_error_log();
   return;
@@ -1245,12 +1318,12 @@ static void marble_read_pcb_rev(void) {
 
 static void SystemClock_Config(void)
 {
+
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
   uint32_t FLatency;
 
   /* Ensure SYSCLK is not currently PLL before touching PLL config */
-  /* Read current flash latency */
   HAL_RCC_GetClockConfig(&RCC_ClkInitStruct, &FLatency);
 
   /* Switch SYSCLK to HSI temporarily */
@@ -1261,7 +1334,7 @@ static void SystemClock_Config(void)
       marble_error_handler(ERROR_RCC_CLOCK_CONFIG);
   }
 
-  /** Initializes the CPU, AHB and APB busses clocks */
+/* Configure and enable external oscillator (HSE) and PLL */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
@@ -1281,7 +1354,7 @@ static void SystemClock_Config(void)
           printf("PLL failed to lock\r\n");
       marble_error_handler(ERROR_RCC_OSC_CONFIG);
    }
-  /** Initializes the CPU, AHB and APB busses clocks */
+  /* Initialize the CPU, AHB and APB busses clocks */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
@@ -1302,7 +1375,6 @@ void SystemClock_Config_HSI(void)  // switch to internal clock source, external 
   uint32_t FLatency;
 
   /* Ensure SYSCLK is not currently PLL before touching PLL config */
-  /* Read current flash latency */
   HAL_RCC_GetClockConfig(&RCC_ClkInitStruct, &FLatency);
 
   /* Switch SYSCLK to HSI temporarily */
@@ -1313,7 +1385,7 @@ void SystemClock_Config_HSI(void)  // switch to internal clock source, external 
       marble_error_handler(ERROR_RCC_CLOCK_CONFIG);
   }
 
-  /** Initializes the CPU, AHB and APB busses clocks */
+  /* Configure and enable external oscillator (HSE) and PLL */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
@@ -1348,28 +1420,31 @@ void SystemClock_Config_HSI(void)  // switch to internal clock source, external 
   }
 }
 
-static void MX_ETH_Init(void)
+static void MX_ETH_MDIO_Init(void)
 {
-  uint8_t MACAddr[6] ;
+    // Enable ETH clock (needed for MDIO hardware)
+    __HAL_RCC_ETH_CLK_ENABLE();
 
-  heth.Instance = ETH;
-  heth.Init.AutoNegotiation = ETH_AUTONEGOTIATION_DISABLE;
-  heth.Init.PhyAddress = PHY_USER_NAME_PHY_ADDRESS;
-  MACAddr[0] = 0x00;
-  MACAddr[1] = 0x80;
-  MACAddr[2] = 0xE1;
-  MACAddr[3] = 0x00;
-  MACAddr[4] = 0x00;
-  MACAddr[5] = 0x00;
-  heth.Init.MACAddr = &MACAddr[0];
-  heth.Init.RxMode = ETH_RXPOLLING_MODE;
-  heth.Init.ChecksumMode = ETH_CHECKSUM_BY_HARDWARE;
-  heth.Init.MediaInterface = ETH_MEDIA_INTERFACE_RMII;
+    // ETH handle just needs the Instance and PhyAddress for MDIO ops
+    heth.Instance = ETH;
+    heth.Init.PhyAddress = PHY_USER_NAME_PHY_ADDRESS;
 
-  if (HAL_ETH_Init(&heth) != HAL_OK)
-  {
-    marble_error_handler(ERROR_ETH_INIT);
-  }
+    __HAL_ETH_RESET_HANDLE_STATE(&heth);
+    HAL_ETH_MspInit(&heth);
+
+    uint32_t id1, id2;
+    if (HAL_ETH_ReadPHYRegister(&heth, MDIO_PHY_REG_PHY_ID_1, &id1) == HAL_OK &&
+        HAL_ETH_ReadPHYRegister(&heth, MDIO_PHY_REG_PHY_ID_2, &id2) == HAL_OK)
+    {
+        if(id1 == 0x0141)
+          printf("MDIO initialized successfully. PHY ID: 0x%04lx 0x%04lx\n", id1, id2);
+        else
+          marble_error_handler(ERROR_ETH_MDIO_ID);
+    }
+    else
+    {
+        marble_error_handler(ERROR_ETH_MDIO_INIT);
+    }
 }
 
 static void MX_I2C_BusInit(I2C_HandleTypeDef *hi2c, I2C_BUS *bus, I2C_TypeDef *instance)
@@ -1810,8 +1885,16 @@ int mgtclk_xpoint_en(void)
    return rval;
 }
 
-static void show_chip_ID(void) {
+static void show_mmc_ID(void) {
    printf("MMC CHIP ID: DEVID 0x%04x REVID 0x%04x\r\n", (uint16_t)(HAL_GetDEVID() & 0xffff), (uint16_t)(HAL_GetREVID() & 0xffff));
+   return;
+}
+
+static void show_PHY_ID(void) {
+    uint32_t id1, id2;
+    HAL_ETH_ReadPHYRegister(&heth, MDIO_PHY_REG_PHY_ID_1, &id1);
+    HAL_ETH_ReadPHYRegister(&heth, MDIO_PHY_REG_PHY_ID_2, &id2);
+   printf("PHY ID: 0x%04lx 0x%04lx\r\n", id1, id2);
    return;
 }
 
@@ -2085,8 +2168,30 @@ static const char * reset_cause_get_name(void)
 
 void print_reset_cause(void)
 {
-    printf("Last system reset cause is \"%s\"\r\n",
+    printf("Last MMC reset cause is \"%s\"\r\n",
            reset_cause_get_name());
     return;
 }
 #endif
+
+static void print_uptime(void) //wraps around at ~136 years
+{
+    uint32_t uptime_ms = marble_get_tick();  // current tick in ms (uint32_t)
+    uint64_t total_ms = (uint64_t)tick_overflow_count * (uint64_t)UINT32_MAX
+                      + (uint64_t)uptime_ms;
+    uint32_t total_seconds = total_ms / 1000;
+
+    uint32_t days    = total_seconds / 86400;
+    uint32_t hours   = (total_seconds % 86400) / 3600;
+    uint32_t minutes = (total_seconds % 3600) / 60;
+    uint32_t seconds = total_seconds % 60;
+    uint32_t ms_remainder  = total_ms % 1000;
+    printf(
+        "Uptime: %lu days, %02lu:%02lu:%02lu.%03lu\n",
+        (unsigned long) days,
+        (unsigned long) hours,
+        (unsigned long) minutes,
+        (unsigned long) seconds,
+        (unsigned long) ms_remainder
+    );
+}

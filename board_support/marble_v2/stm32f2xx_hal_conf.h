@@ -98,7 +98,7 @@
 #endif /* HSE_VALUE */
 
 #if !defined  (HSE_STARTUP_TIMEOUT)
-  #define HSE_STARTUP_TIMEOUT    ((uint32_t)100U)   /*!< Time out for HSE start up, in ms */
+  #define HSE_STARTUP_TIMEOUT    ((uint32_t)1000U)   /*!< Time out for HSE start up, in ms (increased from 100ms to 1s)*/
 #endif /* HSE_STARTUP_TIMEOUT */
 
 /**

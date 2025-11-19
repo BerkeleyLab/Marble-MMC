@@ -31,7 +31,7 @@ const char unk_str[] = " > Unknown option. Press '?' for help.";
 const char *menu_str[] = {"\r\n",
   "Build based on git commit " GIT_REV "\r\n",
   "Menu:\r\n",
-  "0 - Show board/chip identification and status info\r\n"
+  "0 - Show board/chip identification and MMC status info\r\n"
   "1 [-v] - Show MDIO/PHY Status (-v for verbose output)\r\n",
   "2 - I2C monitor\r\n",
   "3 - Status & counters\r\n",

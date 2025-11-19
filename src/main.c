@@ -21,7 +21,7 @@ int main(void) {
    disable_all_IRQs();
 
    UARTQUEUE_Init();
-      
+
 #ifdef MARBLEM_V1
    uint32_t sysclk_freq = marble_init();
    // Initialize Marble(mini) board with IRC, so it works even when
@@ -42,7 +42,7 @@ int main(void) {
    marble_LED_set(0, true);   // LD15
    marble_LED_set(1, true);   // LD11
    marble_LED_set(2, true);   // LD12
-   
+
    // Boot the power supply controller if needed
    pwr_autoboot();
 
