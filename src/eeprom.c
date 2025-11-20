@@ -18,11 +18,13 @@ static int eeprom_populate_val(ee_tags_t tag, const uint8_t *paddr, int len);
 static int eeprom_restore_all(void);
 
 int eeprom_init(void) {
+  printf("    Init eeprom...\r\n");
   eeprom_system_init();
   // Write default values of all missing tags
   eeprom_restore_all();
   // Get those restored values written ASAP
   eeprom_update();
+  marble_SLEEP_ms(10);
   return 0;
 }
 

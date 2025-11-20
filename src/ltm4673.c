@@ -382,6 +382,7 @@ static int ltm4673_vet_status_word(uint16_t stat);
  *  Read page from LTM4673 to synchronize internal page tracking
  */
 void ltm4673_init(void) {
+  printf("    Init LTM4673...\r\n");
   uint8_t page;
   if (marble_I2C_cmdrecv(I2C_PM, LTM4673_DEV_ADDR_8BIT, LTM4673_PAGE, &page, 1) == HAL_OK) {
     ltm4673_page = page;
@@ -469,7 +470,7 @@ int ltm4673_ch_status(uint8_t dev)
     // marble_I2C_cmd_recv should return 0, if everything is good, see page 100
     int rc = marble_I2C_cmdrecv(I2C_PM, dev, LTM4673_STATUS_WORD, i2c_dat, 2);
     if (rc == HAL_OK) {
-      printf("LTM4673 Page 0x%02x: ", page);
+      // printf("LTM4673 Page 0x%02x: ", page);
       uint16_t status_word = ((unsigned int) i2c_dat[1] << 8) | i2c_dat[0];
       ltm4673_vet_status_word(status_word); // Print all errors/warnings
     }

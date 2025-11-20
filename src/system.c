@@ -121,6 +121,7 @@ void system_init(void) {
   system_apply_internal_params();
   //system_apply_params();
 
+  printf("    Init irq handlers...\r\n");
   // Register GPIO interrupt handlers
   marble_GPIOint_handlers(fpga_done_handler);
 
@@ -129,7 +130,8 @@ void system_init(void) {
 
   // Register System Timer interrupt handler
   marble_SYSTIMER_handler(timer_int_handler);
-  
+  marble_SLEEP_ms(10); // settle and print
+
   // UART console service
   console_init();
 
@@ -236,6 +238,7 @@ void system_apply_params(void) {
 }
 
 static void system_apply_internal_params(void) {
+  printf("    Applying eeprom params...\r\n");
   uint8_t val;
   // MGT MUX
   if (eeprom_read_mgt_mux(&val, 1)) {
@@ -262,20 +265,22 @@ static void system_apply_internal_params(void) {
     //system_set_pmod_mode((pmod_mode_t)val);
     pmod_mode = (pmod_mode_t)val;
   }
+  marble_SLEEP_ms(10);
   return;
 }
 
 static void system_apply_external_params(void) {
   uint8_t val;
   // Fan speed
+  printf("    Applying external parameters...\r\n");
   if (eeprom_read_fan_speed(&val, 1)) {
-    printf("Could not read current fan speed.\r\n");
+    marble_error_handler(ERROR_EEPROM_FAN);
   } else {
     max6639_set_fans((int)val);
   }
   // Over-temperature threshold
   if (eeprom_read_overtemp(&val, 1)) {
-    printf("Could not read over-temperature threshold.\r\n");
+    marble_error_handler(ERROR_EEPROM_OVERTEMP);
   } else {
     max6639_set_overtemp(val);
     LM75_set_overtemp((int)val);
@@ -350,6 +355,7 @@ static void system_pmod_mode_led(void) {
 }
 
 static void pmod_subsystem_init(void) {
+  printf("    Init Pmod...\r\n");
   switch (pmod_mode) {
     case PMOD_MODE_DISABLED:
       // Nothing to do

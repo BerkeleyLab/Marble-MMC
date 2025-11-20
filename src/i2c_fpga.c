@@ -321,32 +321,44 @@ void adn4600_init(void)
    marble_SLEEP_ms(100);
 
    // Disable Tx channels (ones that have N/C on PCB)
+   // printf("        Disabling reg [0x%2.2x] - [0x%2.2x] - [0x%2.2x] - [0x%2.2x]\r\n", 
+   //       disables[0], disables[1], disables[2], disables[3]);
    const unsigned disable_len = sizeof disables / sizeof disables[0];
    for (unsigned ix=0; ix < disable_len; ix++) {
       uint8_t disable = disables[ix];
       config = 0;
       rc = marble_I2C_cmdsend(I2C_FPGA, ADN4600, disable, &config, 1);
-      printf("> ADN4600 reg[0x%2.2x] <= 0x%2.2x (rc=%d)\r\n", disable, config, rc);
+      if (rc != HAL_OK)
+         marble_error_handler(ERROR_I2C_FPGA_ADN4600);
+      //printf("> ADN4600 reg[0x%2.2x] <= 0x%2.2x (rc=%d)\r\n", disable, config, rc);
    }
-
+   // printf("        ADN4600 XPT Conf - 0x%2.2x - 0x%2.2x - 0x%2.2x - 0x%2.2x\r\n",
+   //       configs[0], configs[1], configs[2], configs[3]);
    const unsigned config_len = sizeof configs / sizeof configs[0];
    for (unsigned ix=0; ix < config_len; ix++) {
       config = configs[ix];
       rc = marble_I2C_cmdsend(I2C_FPGA, ADN4600, ADN4600_XPT_Conf, &config, 1);
-      printf("> ADN4600 XPT Conf <= 0x%2.2x (rc=%d)\r\n", config, rc);
+      if (rc != HAL_OK)
+         marble_error_handler(ERROR_I2C_FPGA_ADN4600);
+      // printf("> ADN4600 XPT Conf <= 0x%2.2x (rc=%d)\r\n", config, rc);
    }
 
    // Table 9. Switch Core Temporary Registers
    uint8_t status;
+   // printf("        ADN4600 XPT Conf");
    for (unsigned ix=0; ix<4; ix++) {
       uint8_t cmd = 0x58 + ix;
       rc = marble_I2C_cmdrecv(I2C_FPGA, ADN4600, cmd, &status, 1);
-      printf("> ADN4600 XPT Temp %u r[0x%x] = 0x%2.2x (rc=%d)\r\n", ix, cmd, status, rc);
+      if (rc != HAL_OK)
+         marble_error_handler(ERROR_I2C_FPGA_ADN4600);
+      // printf(" - 0x%2.2x", status);
+      // printf("> ADN4600 XPT Temp %u r[0x%x] = 0x%2.2x (rc=%d)\r\n", ix, cmd, status, rc);
    }
+   // printf("\r\n");
 
    config = 1;
    rc = marble_I2C_cmdsend(I2C_FPGA, ADN4600, ADN4600_XPT_Update, &config, 1);
-   printf("> ADN4600 Update (rc=%d)\r\n", rc);
+   // printf("> ADN4600 Update (rc=%d)\r\n", rc);
 }
 
 void adn4600_printStatus(void)

@@ -21,6 +21,7 @@ int main(void) {
    disable_all_IRQs();
 
    UARTQUEUE_Init();
+   printf("\r\nInitializing:\r\n");
 
 #ifdef MARBLEM_V1
    uint32_t sysclk_freq = marble_init();
@@ -33,10 +34,12 @@ int main(void) {
 #endif
    //~ marble_PSU_pwr(false);
    //~ printf("Let's wait a second and turn on the psu");
-   //~ marble_SLEEP_ms(1000);
+   marble_SLEEP_ms(300);
    //~ marble_PSU_pwr(true);
+   printf("MMC initialized\r\n");
 
    system_init();
+   printf("System functions initialized\r\n");
 
    /* Turn on LEDs */
    marble_LED_set(0, true);   // LD15
@@ -48,6 +51,10 @@ int main(void) {
 
    // Initialize off-chip components
    board_init();
+   printf("All peripherals initialized\r\n\r\n");
+
+   marble_print_ID_status();
+   marble_SLEEP_ms(200); // settle and print
 
    // Power FMCs
    marble_FMC_pwr(true);
@@ -58,8 +65,13 @@ int main(void) {
       printf("**\r\n");
    }
 
+   printf("MMC init done\r\n\r\n");
+   marble_SLEEP_ms(1); // settle and print
+
+   UARTQUEUE_Init(); // Flush the bus before console starts
+
    // Send demo string over UART at 115200 BAUD
-   marble_UART_send(DEMO_STRING, strlen(DEMO_STRING));
+   // marble_UART_send(DEMO_STRING, strlen(DEMO_STRING));
 
    while (1) {
       // Service system (application logic)
@@ -71,12 +83,4 @@ int main(void) {
       }
    }
    cleanup(); // Only used for simulation
-}
-
-// This probably belongs in some other file, but which one?
-int __io_putchar(int ch);
-int __io_putchar(int ch)
-{
-  marble_UART_send((const char *)&ch, 1);
-  return ch;
 }

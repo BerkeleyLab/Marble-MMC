@@ -78,6 +78,8 @@ static const char *ErrorCodeStrings[ERROR_CODE_COUNT] = { // triggers compile wa
     "ERROR_MARBLE_POWERDOWN: Power failure detected",
     "ERROR_MARBLE_OVERTEMP: Over-temperature detected",
     "ERROR_MARBLE_PMOD: PMOD configuration error",
+    "ERROR_EEPROM_FAN: fan speed",
+    "ERROR_EEPROM_OVERTEMP: over-temperature threshold.\r\n",
     "ERROR_RCC_OSC_CONFIG",
     "ERROR_RCC_CLOCK_CONFIG",
     "ERROR_ETH_MDIO_INIT",
@@ -98,6 +100,7 @@ static const char *ErrorCodeStrings[ERROR_CODE_COUNT] = { // triggers compile wa
     "ERROR_I2C_FPGA_BUSY - Bus busy",
     "ERROR_I2C_FPGA_HW_BUSY",
     "ERROR_I2C_FPGA_LOCKUP",
+    "ERROR_I2C_FPGA_ADN4600",
     "ERROR_I2C_FPGA_UNDEFINED - Undefined I2C FPGA error",
     "ERROR_I2C_PM_NONE - No error",
     "ERROR_I2C_PM_BERR - Bus error",
@@ -127,6 +130,8 @@ static const char *ErrorCodeStrings[ERROR_CODE_COUNT] = { // triggers compile wa
 
 static uint32_t error_counters[ERROR_CODE_COUNT] = {0};
 static uint32_t error_last_tick[ERROR_CODE_COUNT] = {0};
+uint8_t previous_error = 0xff;
+uint8_t repeating_error = 0xff;
 static uint8_t tick_overflow_count = 0;
 
 #ifdef  USE_FULL_ASSERT
@@ -185,6 +190,7 @@ static void MX_I2C_BusReInit(I2C_BUS I2C_bus);
 static void I2C_ClearBus(I2C_BUS I2C_bus);
 static void MX_SPI1_Init(void);
 //static void MX_SPI2_Init(void);
+static void RNG_Init(void);
 //static void MX_USART1_UART_Init(void);
 static void CONSOLE_USART_Init(void);
 //static void MX_USART2_UART_Init(void);
@@ -261,14 +267,23 @@ void board_init(void) {
 /* Error handling functions: prints errors and logs time and count
  * Only V2 has error handler (todo - implement for Marble Mini)
  */
+
 void marble_error_handler(MarbleErrorCode_t code) {
     uint8_t idx = (code < ERROR_CODE_COUNT) ? code : ERROR_UNDEFINED;
+    uint32_t error_previous_tick = error_last_tick[idx];
     uint32_t tick_milliseconds = marble_get_tick();
     uint64_t total_ms = (uint64_t)tick_overflow_count * (uint64_t)UINT32_MAX + (uint64_t)tick_milliseconds;
     uint32_t total_seconds = total_ms/1000;
     error_counters[idx]++;
     error_last_tick[idx] = total_seconds;
-    printf(">>> MMC ERROR: %s <<<\r\n", ErrorCodeStrings[idx]);
+    if((error_last_tick[idx] - error_previous_tick > 2) || idx != previous_error){
+      printf("\033[31m>>> MMC ERROR: %s <<<\033[0m\r\n", ErrorCodeStrings[idx]);
+      repeating_error = 0xff;
+    } else if (idx != repeating_error){
+      printf("\033[31m>>> MMC ERROR: repeating <<<\033[0m\r\n");
+      repeating_error = idx;
+    }
+    previous_error = idx;
 }
 
 static void print_error_log(void) {
@@ -393,14 +408,16 @@ void cleanup(void) {
 /* Initialize UART pins */
 void marble_UART_init(void)
 {
-   /* PA9, PA10 - MMC_CONS_PROG */
-   //MX_USART1_UART_Init();
-   CONSOLE_USART_Init();
-   /* PD5, PD6 - UART4 (Pmod3_7/3_6) */
-   // This is disabled to use Pmod3 to drive UI board
-   // It only had development use anyhow
-   //MX_USART2_UART_Init();
-   i2cBusStatus = 0;
+    printf("    Init UART...\r\n");
+    /* PA9, PA10 - MMC_CONS_PROG */
+    // MX_USART1_UART_Init();
+    CONSOLE_USART_Init();
+    /* PD5, PD6 - UART4 (Pmod3_7/3_6) */
+    // This is disabled to use Pmod3 to drive UI board
+    // It only had development use anyhow
+    // MX_USART2_UART_Init();
+    i2cBusStatus = 0;
+    marble_SLEEP_ms(10); // settle and print
 }
 
 void pwr_autoboot(void) {
@@ -530,7 +547,8 @@ static void print_clock_info(void)
 
 void marble_PSU_pwr(bool on)
 {
-    marble_SLEEP_ms(1);
+    printf("    Init Clocks and power supplies...\r\n        ");
+    marble_SLEEP_ms(10);
     if (on == false) {
         SystemClock_Config_HSI(); // switch to internal clock source, external clock is powered from 3V3!
     }
@@ -544,7 +562,6 @@ void marble_PSU_pwr(bool on)
     }
     print_clock_info();
     marble_SLEEP_ms(1);
-    printf("marble_PSU_pwr: done\r\n");
     return;
 }
 
@@ -681,6 +698,7 @@ void EXTI15_10_IRQHandler(void) {
 
 void marble_GPIOint_init(void)
 {
+  printf("    Init GPIO Interrupts...\r\n");
    /*Configure GPIO pin : PD0 - FPGA_DONE rising edge interrupt */
    GPIO_InitTypeDef GPIO_InitStruct = {0};
    GPIO_InitStruct.Pin = GPIO_PIN_0;
@@ -1154,51 +1172,31 @@ void marble_SLEEP_us(uint32_t delay)
 
 uint32_t marble_init(void)
 {
-  // Must happen before any other clock manipulations:
   HAL_Init();
   SystemClock_Config_HSI();
 
   marble_UART_init();
-  printf("\r\nInitializing...\r\n");
-  marble_SLEEP_ms(1);
-
   MX_GPIO_Init();
-
-  // Configure GPIO interrupts
   marble_GPIOint_init();
   marble_read_pcb_rev();
-
   marble_PSU_pwr(true);
-
   MX_ETH_MDIO_Init();
+
+  printf("    Init I2C FPGA interface...\r\n");
   MX_I2C_BusInit(&hi2c1, &I2C_FPGA, I2C1);
+  printf("    Init I2C PM interface...\r\n");
   MX_I2C_BusInit(&hi2c3, &I2C_PM, I2C3);
+
   MX_SPI1_Init();
-  //MX_SPI2_Init();
-
-  // RNG
-  hrng.Instance = RNG;
-  __HAL_RCC_RNG_CLK_ENABLE();
-  rng_init_status = HAL_RNG_Init(&hrng);
-
-  get_hw_rnd(&boot_id);
-  #ifdef MARBLE_V2
+  RNG_Init();
   reset_cause = reset_cause_get();
-  #endif
 
-  marble_LED_init();
-  marble_SW_init();
-
-  printf("** Marble init done **\r\n");
-  marble_print_ID_status();
-
-  UARTQUEUE_Init(); // Flush the bus before console starts
+  marble_LED_init(); // empty function
+  marble_SW_init();// empty function
 
   // Init SSP busses
   //marble_SSP_init(LPC_SSP0);
   //marble_SSP_init(LPC_SSP1);
-
-  //marble_MDIO_init();
   return 0;
 }
 
@@ -1242,6 +1240,7 @@ void marble_print_ID_status(void) {
   print_uptime();
   print_reset_cause();
   print_error_log();
+  printf("\r\n");
   return;
 }
 
@@ -1257,6 +1256,7 @@ uint8_t marble_get_board_id(void) {
 // bits 12-15 end up reversed and shifted, as in: (MSB->LSB) |b12|b13|b14|b15|
 #define MARBLE_PCB_REV_XFORM(gpio_idr)    ((__RBIT(gpio_idr) >> 16) & 0xF)
 static void marble_read_pcb_rev(void) {
+  printf("    Read Marble PCB Rev...\r\n");
   uint32_t pcbid = MARBLE_PCB_REV_XFORM(GPIOD->IDR);
   // Explicit case check rather than simple cast to catch unenumerated values
   // in 'default'
@@ -1287,6 +1287,7 @@ static void marble_read_pcb_rev(void) {
       break;
   }
   return;
+  marble_SLEEP_ms(1); // settle and print
 }
 
 static void SystemClock_Config(void)
@@ -1395,6 +1396,7 @@ void SystemClock_Config_HSI(void)  // switch to internal clock source, external 
 
 static void MX_ETH_MDIO_Init(void)
 {
+    printf("    Init Ethernet MDIO interface...\r\n");
     // Enable ETH clock (needed for MDIO hardware)
     __HAL_RCC_ETH_CLK_ENABLE();
 
@@ -1409,15 +1411,16 @@ static void MX_ETH_MDIO_Init(void)
     if (HAL_ETH_ReadPHYRegister(&heth, MDIO_PHY_REG_PHY_ID_1, &id1) == HAL_OK &&
         HAL_ETH_ReadPHYRegister(&heth, MDIO_PHY_REG_PHY_ID_2, &id2) == HAL_OK)
     {
-        if(id1 == 0x0141)
-          printf("MDIO initialized successfully. PHY ID: 0x%04lx 0x%04lx\n", id1, id2);
-        else
+        if(id1 != 0x0141){
+          printf("PHY ID: 0x%04lx 0x%04lx\n", id1, id2);
           marble_error_handler(ERROR_ETH_MDIO_ID);
+        }
     }
     else
     {
         marble_error_handler(ERROR_ETH_MDIO_INIT);
     }
+    marble_SLEEP_ms(10); // settle and print
 }
 
 static void MX_I2C_BusInit(I2C_HandleTypeDef *hi2c, I2C_BUS *bus, I2C_TypeDef *instance)
@@ -1442,6 +1445,7 @@ static void MX_I2C_BusInit(I2C_HandleTypeDef *hi2c, I2C_BUS *bus, I2C_TypeDef *i
         }
     }
     *bus = hi2c;
+    marble_SLEEP_ms(1); // settle and print
 }
 
 static void MX_I2C_BusReInit(I2C_BUS I2C_bus)
@@ -1524,23 +1528,26 @@ static void I2C_ClearBus(I2C_BUS I2C_bus)
 
 static void MX_SPI1_Init(void)
 {
-   hspi1.Instance = SPI1;
-   hspi1.Init.Mode = SPI_MODE_MASTER;
-   hspi1.Init.Direction = SPI_DIRECTION_2LINES;
-   hspi1.Init.DataSize = SPI_DATASIZE_16BIT;
-   hspi1.Init.CLKPolarity = SPI_POLARITY_HIGH;
-   hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
-   hspi1.Init.NSS = SPI_NSS_SOFT;
-   hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_128;
-   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
-   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
-   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
-   hspi1.Init.CRCPolynomial = 10;
-   if (HAL_SPI_Init(&hspi1) != HAL_OK)
-   {
-      marble_error_handler(ERROR_SPI1_INIT);
-   }
-   SSP_FPGA = &hspi1;
+    printf("    Init SPI interface...\r\n");
+    hspi1.Instance = SPI1;
+    hspi1.Init.Mode = SPI_MODE_MASTER;
+    hspi1.Init.Direction = SPI_DIRECTION_2LINES;
+    hspi1.Init.DataSize = SPI_DATASIZE_16BIT;
+    hspi1.Init.CLKPolarity = SPI_POLARITY_HIGH;
+    hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
+    hspi1.Init.NSS = SPI_NSS_SOFT;
+    hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_128;
+    hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
+    hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
+    hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
+    hspi1.Init.CRCPolynomial = 10;
+    if (HAL_SPI_Init(&hspi1) != HAL_OK)
+    {
+        marble_error_handler(ERROR_SPI1_INIT);
+    }
+    SSP_FPGA = &hspi1;
+    marble_SLEEP_ms(1); // settle and print
+
 }
 
 /*
@@ -1568,11 +1575,11 @@ static void MX_SPI2_Init(void)
 
 static void SPI_CSB_SET(SSP_PORT ssp, bool set)
 {
-   if (ssp == SSP_FPGA) {
-      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, set ? GPIO_PIN_SET : GPIO_PIN_RESET);
-   } else {
-      HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, set ? GPIO_PIN_SET : GPIO_PIN_RESET);
-   }
+    if (ssp == SSP_FPGA) {
+        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, set ? GPIO_PIN_SET : GPIO_PIN_RESET);
+    } else {
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, set ? GPIO_PIN_SET : GPIO_PIN_RESET);
+    }
 }
 
 /*
@@ -1594,6 +1601,15 @@ static void MX_USART1_UART_Init(void)
    SET_BIT(huart_console.Instance->CR1, USART_CR1_RXNEIE);
 }
 */
+
+static void RNG_Init(void){
+  printf("    Init random number generator...\r\n");
+  hrng.Instance = RNG;
+  __HAL_RCC_RNG_CLK_ENABLE();
+  rng_init_status = HAL_RNG_Init(&hrng);
+  get_hw_rnd(&boot_id);
+  marble_SLEEP_ms(1); // settle and print
+}
 
 static void CONSOLE_USART_Init(void) {
 #ifdef NUCLEO
@@ -1637,6 +1653,7 @@ static void MX_USART2_UART_Init(void)
 
 static void MX_GPIO_Init(void)
 {
+    printf("    Init GPIO...\r\n");
    GPIO_InitTypeDef GPIO_InitStruct = {0};
 
    /* GPIO Ports Clock Enable */
@@ -1843,13 +1860,13 @@ int mgtclk_xpoint_en(void)
 {
   int rval=0;
    if ((marble_get_pcb_rev() <= Marble_v1_3) & xrp_ch_status(XRP7724, 1)) { // CH1: 3.3V
-      printf("Using XRP7724 and adn4600_init\r\n");
+      printf("    Init XRP7724 and adn4600\r\n");
       adn4600_init();
    } else if ((marble_get_pcb_rev() >= Marble_v1_4) & ltm4673_ch_status(LTM4673)) {
-      printf("Using LTM4673 and adn4600_init\r\n");
+      printf("    Init adn4600...\r\n");
       adn4600_init();
    } else {
-      printf("Skipping adn4600_init\r\n");
+      printf("    Skipping adn4600 init\r\n");
       _pwr_good = 0;
       // This will trigger a board_init in the main loop if PWRGD is asserted on the first check
       _pwr_state = PWR_GOOD-1;
@@ -2033,12 +2050,12 @@ void assert_failed(uint8_t *file, uint32_t line)
 #endif /* USE_FULL_ASSERT */
 
 
-#ifdef MARBLE_V2
 /// @brief      Obtain the STM32 system reset cause
 /// @param      None
 /// @return     The system reset cause
 static reset_cause_t reset_cause_get(void)
 {
+    printf("    Retrieving last reset cause...\r\n");
     if (__HAL_RCC_GET_FLAG(RCC_FLAG_LPWRRST))
     {
         reset_cause = RESET_CAUSE_LOW_POWER_RESET;
@@ -2080,7 +2097,7 @@ static reset_cause_t reset_cause_get(void)
     // Clear all the reset flags or else they will remain set during future
     // resets until system power is fully removed.
     __HAL_RCC_CLEAR_RESET_FLAGS();
-
+    marble_SLEEP_ms(10); // settle and print
     return reset_cause;
 }
 
@@ -2145,7 +2162,6 @@ void print_reset_cause(void)
            reset_cause_get_name());
     return;
 }
-#endif
 
 static void print_uptime(void) //wraps around at ~136 years
 {
