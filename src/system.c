@@ -121,7 +121,8 @@ void system_init(void) {
   system_apply_internal_params();
   //system_apply_params();
 
-  printf("    Init irq handlers...\r\n");
+  printf("+ Init irq handlers...\r\n");
+  fflush(stdout);
   // Register GPIO interrupt handlers
   marble_GPIOint_handlers(fpga_done_handler);
 
@@ -130,7 +131,6 @@ void system_init(void) {
 
   // Register System Timer interrupt handler
   marble_SYSTIMER_handler(timer_int_handler);
-  marble_SLEEP_ms(10); // settle and print
 
   // UART console service
   console_init();
@@ -169,7 +169,6 @@ void system_service(void) {
   if ((fpga_net_prog_pend) && (BSP_GET_SYSTICK() > fpga_done_tickval + FPGA_PUSH_DELAY_MS)) {
     console_print_mac_ip();
     console_push_fpga_mac_ip();
-    printf("DONE\r\n");
     fpga_net_prog_pend=0;
   }
   // Handle re-enabling FPGA after scheduled reset
@@ -238,41 +237,46 @@ void system_apply_params(void) {
 }
 
 static void system_apply_internal_params(void) {
-  printf("    Applying eeprom params...\r\n");
+  printf("+ Applying eeprom params...\r\n");
+  fflush(stdout);
   uint8_t val;
   // MGT MUX
   if (eeprom_read_mgt_mux(&val, 1)) {
     printf("Could not read MGT MUX config.\r\n");
+    fflush(stdout);
   } else {
     marble_MGTMUX_set_all(val);
   }
   // Watchdog period
   if (eeprom_read_wd_period(&val, 1)) {
     printf("Could not read watchdog period.\r\n");
+    fflush(stdout);
   } else {
     FPGAWD_SetPeriod((int)val);
   }
   // Mailbox enable
   if (eeprom_read_mbox_en(&val, 1)) {
     printf("Could not read mailbox enable setting.\r\n");
+    fflush(stdout);
   } else {
     mbox_set_enable(val);
   }
   // Pmod mode
   if (eeprom_read_pmod_mode(&val, 1)) {
     printf("Could not read Pmod mode setting.\r\n");
+    fflush(stdout);
   } else {
     //system_set_pmod_mode((pmod_mode_t)val);
     pmod_mode = (pmod_mode_t)val;
   }
-  marble_SLEEP_ms(10);
   return;
 }
 
 static void system_apply_external_params(void) {
   uint8_t val;
   // Fan speed
-  printf("    Applying external parameters...\r\n");
+  printf("+ Applying external parameters...\r\n");
+  fflush(stdout);
   if (eeprom_read_fan_speed(&val, 1)) {
     marble_error_handler(ERROR_EEPROM_FAN);
   } else {
@@ -355,7 +359,8 @@ static void system_pmod_mode_led(void) {
 }
 
 static void pmod_subsystem_init(void) {
-  printf("    Init Pmod...\r\n");
+  printf("+ Init Pmod...\r\n");
+  fflush(stdout);
   switch (pmod_mode) {
     case PMOD_MODE_DISABLED:
       // Nothing to do

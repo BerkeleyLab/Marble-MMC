@@ -396,3 +396,7 @@ void marble_pmod_timer_config(void) {
 void marble_error_handler(MarbleErrorCode_t code){
   return;
 }
+
+void reset_error_repeat(void) {
+  return;
+}

@@ -382,7 +382,8 @@ static int ltm4673_vet_status_word(uint16_t stat);
  *  Read page from LTM4673 to synchronize internal page tracking
  */
 void ltm4673_init(void) {
-  printf("    Init LTM4673...\r\n");
+  printf("+ Init LTM4673...\r\n");
+  fflush(stdout);
   uint8_t page;
   if (marble_I2C_cmdrecv(I2C_PM, LTM4673_DEV_ADDR_8BIT, LTM4673_PAGE, &page, 1) == HAL_OK) {
     ltm4673_page = page;

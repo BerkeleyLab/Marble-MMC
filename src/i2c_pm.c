@@ -39,19 +39,19 @@ void I2C_PM_scan(void)
    {
       // Using 8-bit I2C addresses
       if (marble_I2C_probe(I2C_PM, (uint8_t) (i<<1)) != HAL_OK) {
-         printf("."); // No ACK received at that address
+         // printf("."); // No ACK received at that address
       } else {
-         printf("0x%02X", i << 1); // Received an ACK at that address
+         printf("0x%02X ", i << 1); // Received an ACK at that address
       }
    }
    printf("\r\n");
 }
 
 static int max6639_init(void) {
-  printf("    Init MAX6639...\r\n");
+  printf("+ Init MAX6639...\r\n");
+  fflush(stdout);
   uint8_t tach_en = max6639_get_tach_en();
   max6639_set_tach_en(tach_en);
-  marble_SLEEP_ms(10);
   return 0;
 }
 
@@ -268,7 +268,8 @@ void LM75_print_decoded(uint8_t dev)
 /*
  */
 void LM75_Init(void) {
-  printf("    Init LM75...\r\n");
+  printf("+ Init LM75...\r\n");
+  fflush(stdout);
   LM75_write(LM75_0, LM75_CFG, LM75_CFG_DEFAULT);
   LM75_write(LM75_1, LM75_CFG, LM75_CFG_DEFAULT);
   return;
@@ -554,7 +555,8 @@ static void PMBridge_hook_write(uint8_t addr, const uint8_t *data, int len) {
 void xrp_boot(void)
 {
    if (marble_get_pcb_rev() > Marble_v1_3) {
-     printf("    XRP7724 not present; bypassed.\n");
+     printf("+ XRP7724 not present; bypassed.\n");
+     fflush(stdout);
      return;
    }
    uint8_t pwr_on=0;
@@ -586,7 +588,8 @@ void xrp_boot(void)
 int xrp_set2(uint8_t dev, uint16_t addr, uint8_t data)
 {
   if (marble_get_pcb_rev() > Marble_v1_3) {
-    printf("    XRP7724 not present; bypassed.\n");
+    printf("+ XRP7724 not present; bypassed.\n");
+    fflush(stdout);
     return 0;
   }
    int rc = marble_I2C_cmdsend_a2(I2C_PM, dev, addr, &data, 1);
@@ -594,7 +597,6 @@ int xrp_set2(uint8_t dev, uint16_t addr, uint8_t data)
       printf("xrp_set2: failure writing r[%4.4x] <= %2.2x\n", addr, data);
       return rc;
    }
-   marble_SLEEP_ms(10);
    uint8_t chk = 0x55;
    rc = marble_I2C_cmdrecv_a2(I2C_PM, dev, addr, &chk, 1);
    if (rc != HAL_OK || data != chk) {
@@ -606,7 +608,8 @@ int xrp_set2(uint8_t dev, uint16_t addr, uint8_t data)
 unsigned int xrp_read2(uint8_t dev, uint16_t addr)
 {
   if (marble_get_pcb_rev() > Marble_v1_3) {
-    printf("    XRP7724 not present; bypassed.\n");
+    printf("+ XRP7724 not present; bypassed.\n");
+    fflush(stdout);
     return 0;
   }
    uint8_t chk = 0x55;
@@ -621,7 +624,8 @@ unsigned int xrp_read2(uint8_t dev, uint16_t addr)
 void xrp_dump(uint8_t dev)
 {
   if (marble_get_pcb_rev() > Marble_v1_3) {
-    printf("    XRP7724 not present; bypassed.\n");
+    printf("+ XRP7724 not present; bypassed.\n");
+    fflush(stdout);
     return;
   }
    // https://www.maxlinear.com/appnote/anp-38.pdf
@@ -666,7 +670,8 @@ void xrp_dump(uint8_t dev)
 int xrp_ch_status(uint8_t dev, uint8_t chn)
 {
   if (marble_get_pcb_rev() > Marble_v1_3) {
-    printf("    XRP7724 not present; bypassed.\n");
+    printf("+ XRP7724 not present; bypassed.\n");
+    fflush(stdout);
     return 0;
   }
    const uint8_t XRP_STS = 0x9;
@@ -681,7 +686,8 @@ int xrp_ch_status(uint8_t dev, uint8_t chn)
 static int xrp_reg_write(uint8_t dev, uint8_t regno, uint16_t d)
 {
   if (marble_get_pcb_rev() > Marble_v1_3) {
-    printf("    XRP7724 not present; bypassed.\n");
+    printf("+ XRP7724 not present; bypassed.\n");
+    fflush(stdout);
     return 0;
   }
    uint8_t i2c_dat[4];
@@ -697,7 +703,8 @@ static int xrp_reg_write(uint8_t dev, uint8_t regno, uint16_t d)
 static int xrp_reg_write_check(uint8_t dev, uint8_t regno, uint16_t d)
 {
   if (marble_get_pcb_rev() > Marble_v1_3) {
-    printf("    XRP7724 not present; bypassed.\n");
+    printf("+ XRP7724 not present; bypassed.\n");
+    fflush(stdout);
     return 0;
   }
    xrp_reg_write(dev, regno, d);
@@ -736,7 +743,8 @@ static void xrp_print_reg(uint8_t dev, uint8_t regno)
 int xrp_push_low(uint8_t dev, uint16_t addr, const uint8_t data[], unsigned len)
 {
   if (marble_get_pcb_rev() > Marble_v1_3) {
-    printf("    XRP7724 not present; bypassed.\n");
+    printf("+ XRP7724 not present; bypassed.\n");
+    fflush(stdout);
     return 0;
   }
    printf("xrp_push_low WIP 0x%4.4x\n", addr);
@@ -824,7 +832,8 @@ static int xrp_pull(uint8_t dev, unsigned len)
 static int xrp_process_flash(uint8_t dev, int page_no, int cmd, int mode, int dwell)
 {
   if (marble_get_pcb_rev() > Marble_v1_3) {
-    printf("    XRP7724 not present; bypassed.\n");
+    printf("+ XRP7724 not present; bypassed.\n");
+    fflush(stdout);
     return 0;
   }
    int rc;
@@ -1000,7 +1009,8 @@ void xrp_flash(uint8_t dev)
 void xrp_go(uint8_t dev)
 {
   if (marble_get_pcb_rev() > Marble_v1_3) {
-    printf("    XRP7724 not present; bypassed.\n");
+    printf("+ XRP7724 not present; bypassed.\n");
+    fflush(stdout);
     return;
   }
    printf("XRP7724 go [%2.2x]\n", dev);
@@ -1025,7 +1035,8 @@ void xrp_go(uint8_t dev)
 void xrp_hex_in(uint8_t dev)
 {
   if (marble_get_pcb_rev() > Marble_v1_3) {
-    printf("    XRP7724 not present; bypassed.\n");
+    printf("+ XRP7724 not present; bypassed.\n");
+    fflush(stdout);
     return;
   }
    printf("XRP7724 hex in (WIP) [%2.2x]\n", dev);

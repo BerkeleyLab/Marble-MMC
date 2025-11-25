@@ -29,59 +29,60 @@
 const char unk_str[] = " > Unknown option. Press '?' for help.";
 
 const char *menu_str[] = {"\r\n",
-  "Build based on git commit " GIT_REV "\r\n",
-  "Menu:\r\n",
-  "0 - Show board/chip identification and MMC status info\r\n"
-  "1 [-v] - Show MDIO/PHY Status (-v for verbose output)\r\n",
-  "2 - I2C monitor\r\n",
-  "3 - Status & counters\r\n",
-  "4 gpio - GPIO control\r\n",
-  "5 - Reset FPGA\r\n",
-  "6 - Push IP&MAC\r\n",
-  "7 - Readout MAX6639 (Thermometer and fan controller).\r\n",
-  "8 - Readout LM75_0 (Thermometer, U29)\r\n",
-  "9 - Readout LM75_1 (Thermometer, U28)\r\n",
-  "a - I2C scan all ports\r\n",
+  // "Build based on git commit " GIT_REV "\r\n",
+  "Commands:\r\n",
+  "    0               Show board/chip identification and MMC status info\r\n"
+  "    1 [-v]          Show MDIO/PHY Status (-v for verbose output)\r\n",
+  "    2               I2C monitor\r\n",
+  "    3               Status & counters\r\n",
+  "    4 gpio          GPIO control\r\n",
+  "    5               Reset FPGA\r\n",
+  "    6               Push IP&MAC\r\n",
+  "    7               Readout MAX6639 (Thermometer and fan controller).\r\n",
+  "    8               Readout LM75_0 (Thermometer, U29)\r\n",
+  "    9               Readout LM75_1 (Thermometer, U28)\r\n",
+  "    a               I2C scan all ports\r\n",
 #ifdef APP_MARBLE
-  "b - Config ADN4600 (Clock mux)\r\n",
+  "    b               Config ADN4600 (Clock mux)\r\n",
 #endif
-  "c - Readout INA219 (Current monitors)\r\n",
+  "    c               Readout INA219 (Current monitors)\r\n",
 #ifdef APP_MARBLE
-  "d - MGT MUX - switch to QSFP 2\r\n",
+  "    d               MGT MUX - switch to QSFP 2\r\n",
 #endif
-  "e - I2C_PM bus display\r\n",
+  "    e               I2C_PM bus display\r\n",
 #ifdef APP_MARBLE
 //  "f - Flash XRP7724 (Power supply, Marble v1.1-1.3)\r\n",
 #endif
 #ifdef APP_MINI
-  "f - Flash XRP7724 (Power supply)\r\n",
+  "    f               Flash XRP7724 (Power supply)\r\n",
 #endif
-  "g - Enable XRP7724\r\n",
+  "    g               Enable XRP7724\r\n",
 #ifdef APP_MARBLE
-  "h - FMC MGT MUX set\r\n",
+  "    h               FMC MGT MUX set\r\n",
 #endif
-  "i - Timer check/cal\r\n",
-  "j - Read SPI mailbox\r\n",
-  "k - Readout PCA9555 (I2C GPIO expanders U34 and U39)\r\n",
-  "l - Config PCA9555\r\n",
-  "m d.d.d.d - Set IP Address\r\n",
-  "n d:d:d:d:d:d - Set MAC Address\r\n",
+  "    i               Timer check/cal\r\n",
+  "    j               Read SPI mailbox\r\n",
+  "    k               Readout PCA9555 (I2C GPIO expanders U34 and U39)\r\n",
+  "    l               Config PCA9555\r\n",
+  "    m d.d.d.d       Set IP Address\r\n",
+  "    n d:d:d:d:d:d   Set MAC Address\r\n",
 #ifdef APP_MARBLE
-  "o - SI570 (Frequency synthesizer) status\r\n",
+  "    o               SI570 (Frequency synthesizer) status\r\n",
 #endif
-  "p speed[%] - Set fan speed (0-120 or 0%-100%)\r\n",
-  "q otemp - Set overtemperature threshold (degC)\r\n",
-  "r enable - Set mailbox enable/disable (1/0, on/off)\r\n",
+  "    p speed[%]      Set fan speed (0-120 or 0%-100%)\r\n",
+  "    q otemp         Set overtemperature threshold (degC)\r\n",
+  "    r bool          Set mailbox enable/disable (1/0, on/off)\r\n",
 #ifdef APP_MARBLE
-  "s addr_hex freq_hz config_hex - Set Si570 configuration\r\n",
+  "    s addr f cfg    Set Si570: addr[hex], f[Hz}, cfg[hex]\r\n",
 #endif
 #ifdef APP_MARBLE
-  "t pmbus_msg - Forward PMBus transaction to LTM4673\r\n",
+  "    t pmbus_msg     Forward PMBus transaction to LTM4673\r\n",
 #endif
-  "u period - Set/get watchdog timeout period (in seconds)\r\n",
-  "v key - Set a new 128-bit secret key (non-volatile, write only).\r\n",
-  "w enable - Set fan tachometer enable/disable (1/0, on/off)\r\n",
-  "x mode - Set MMC Pmod usage mode\r\n",
+  "    u period        Set/get watchdog timeout period (in seconds)\r\n",
+  "    v key           Set a new 128-bit secret key (non-volatile, write only).\r\n",
+  "    w bool          Set fan tachometer enable/disable (1/0, on/off)\r\n",
+  "    x mode          Set MMC Pmod usage mode\r\n",
+  "    ?               Help\r\n",
 };
 #define MENU_LEN (sizeof(menu_str)/sizeof(*menu_str))
 
@@ -142,6 +143,9 @@ int console_init(void) {
 
 static int console_handle_msg(char *rx_msg, int len)
 {
+  #ifdef APP_MARBLE
+  reset_error_repeat();
+  #endif
   // TODO all these should return 0 on success, 1 on failure
   //      then we should print a simple global help string on failure
   // Switch behavior based on first char
@@ -293,6 +297,9 @@ static int console_handle_msg(char *rx_msg, int len)
            printf("%s [%c] 0x%02X \r\n", unk_str, *rx_msg, *rx_msg);
            break;
      }
+  fflush(stdout);
+  printf("> ");
+  fflush(stdout);
   return 0;
 }
 
