@@ -1,5 +1,6 @@
 stages:
   - pre-build
+  - test
   - build
 
 variables:
@@ -18,6 +19,12 @@ services:
 
 include:
   - local: .gitlab/ci/build.gitlab-ci.yml
+
+flake8:
+  stage: test
+  script:
+    - find scripts/ -name "*.py" -not -name "ltm4673.py" | xargs flake8
+    - flake8 src/*.py
 
 marble_mini_build:
   stage: build
