@@ -19,7 +19,7 @@
 #ifdef MARBLE_V2
 // NOTE - Support for the oled UI board will be re-introduced once licensing has been ironed out
 // NOTE - Currently only supported on Marble (not Marble-mini)
-// #define UI_BOARD_SUPPORTED
+#define UI_BOARD_SUPPORTED
 #include "display.h"
 #endif
 
