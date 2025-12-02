@@ -14,8 +14,8 @@ import os
 import time
 from concurrent.futures import ThreadPoolExecutor as Executor
 
-INTERCOMMAND_SLEEP = 0#0.01 # seconds
-POST_SLEEP = 0#0.01 # seconds
+INTERCOMMAND_SLEEP = 0  # 0.01 # seconds
+POST_SLEEP = 0  # 0.01 # seconds
 
 # A global log of read lines
 _log = []
@@ -113,6 +113,7 @@ def readDevice(sdev, wait_on, do_print=False, do_log=False):
     # _done = True
     return True
 
+
 def readbackDevice(sdev, close_conn, do_print=False, do_log=False, timeout=0.1):
     global _log, _done
     start_time = time.time()
@@ -208,8 +209,6 @@ def loadCommands(dev, baud=115200, commands=None, do_print=False, do_log=False):
 
     time.sleep(1)
     sdev.flush()
-    # print("Serial bus flushed!")
-
     if sdev.failed():
         return 1
     executor = Executor(max_workers=2)
@@ -218,9 +217,12 @@ def loadCommands(dev, baud=115200, commands=None, do_print=False, do_log=False):
     task2 = executor.submit(readDevice, sdev, task1, do_print, do_log)
     return 0
 
+
 def openConnection(dev, baud=115200):
-    INTERCOMMAND_SLEEP = 0#0.01 # seconds
-    POST_SLEEP = 0#0.01 # seconds
+    # global INTERCOMMAND_SLEEP
+    # global POST_SLEEP
+    # INTERCOMMAND_SLEEP = 0  # seconds
+    # POST_SLEEP = 0  # seconds
     sdev = StreamSerial(dev, baud)
     time.sleep(1)
     sdev.flush()
@@ -230,16 +232,18 @@ def openConnection(dev, baud=115200):
     return sdev
 
 
-def readbackCommands(sdev, commands=None, close_conn = True, do_print=False, do_log=False):
-    INTERCOMMAND_SLEEP = 0.01 # seconds
-    POST_SLEEP = 0.01 # seconds
+def readbackCommands(sdev, commands=None, close_conn=True, do_print=False, do_log=False):
+    # global INTERCOMMAND_SLEEP
+    # global POST_SLEEP
+    # INTERCOMMAND_SLEEP = 0.01  # seconds
+    # POST_SLEEP = 0.01  # seconds
     if commands is None:
         print("Missing mandatory filename")
         return 1
-    executor = Executor(max_workers = 2)
+    executor = Executor(max_workers=2)
     global task1, task2
     task1 = executor.submit(serveCommands, sdev, *commands)
-    task2 = executor.submit(readbackDevice, sdev, close_conn,do_print, do_log, timeout=0.1)
+    task2 = executor.submit(readbackDevice, sdev, close_conn, do_print, do_log, timeout=0.1)
     return 0
 
 
