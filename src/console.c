@@ -3,6 +3,7 @@
  * Desc: Encapsulate console (UART) interaction API
  *       Line-based comms (not char-based).
  *       Non-blocking if possible.
+ *       marble_error_handler caller_id reserved: 64-79
  */
 
 #include <string.h>
@@ -26,9 +27,9 @@
 #define OVERTEMP_HARD_MAXIMUM   (125)
 #define LTM_CONSOLE_ACTIVE_TIMEOUT_MS (5000)
 
-const char unk_str[] = " > Unknown option. Press '?' for help.";
+const char unk_str[] = "Unknown option. Press '?' for help.\r\n";
 
-const char *menu_str[] = {"\r\n",
+const char *menu_str[] = {
   // "Build based on git commit " GIT_REV "\r\n",
   "Commands:\r\n",
   "    0               Show board/chip identification and MMC status info\r\n"
@@ -93,6 +94,7 @@ static uint32_t _LTM_console_timestamp = 0;
 // TODO - find a better home for these
 static int console_handle_msg(char *rx_msg, int len);
 //static int console_shift_all(uint8_t *pData);
+static void handle_menu_print(int len);
 static int console_shift_msg(uint8_t *pData);
 static void ina219_test(void);
 static void handle_gpio(const char *msg, int len);
@@ -151,79 +153,126 @@ static int console_handle_msg(char *rx_msg, int len)
   // Switch behavior based on first char
   switch (*rx_msg) {
         case '?':
-           for (unsigned kx=0; kx<MENU_LEN; kx++) {
-               printf("%s", menu_str[kx]);
-           }
+           handle_menu_print(len);
            break;
         case '0':
-           marble_print_ID_status();
+           marble_print_ID_status(len);
            break;
         case '1':
            handle_mdio_phy_print(rx_msg, len);
            break;
         case '2':
-           I2C_PM_probe();
+           I2C_PM_probe(len);
            break;
         case '3':
-           print_status_counters();
+           print_status_counters(len);
            break;
         case '4':
            handle_gpio(rx_msg, len);
            break;
         case '5':
-           printf("Resetting FPGA\r\n");
-           FPGAWD_SelfReset();
+           if(len == 2){
+            printf("Resetting FPGA\r\n");
+            FPGAWD_SelfReset();
+            marble_SLEEP_ms(1000);
+          } else {
+            printf(unk_str);
+          }
            break;
         case '6':
-           console_print_mac_ip();
-           console_push_fpga_mac_ip();
-           printf("DONE\r\n");
+           if(len == 2){
+            console_print_mac_ip();
+            console_push_fpga_mac_ip();
+            printf("DONE\r\n");
+           } else {
+            printf(unk_str);
+           }
            break;
         case '7':
-           printf("Start\r\n");
-           print_max6639_decoded();
+           if(len == 2){
+            printf("Start\r\n");
+            print_max6639_decoded();
+           } else {
+            printf(unk_str);
+           }
            break;
         case '8':
-           LM75_print_decoded(LM75_0);
+           if(len == 2){
+            LM75_print_decoded(LM75_0);
+           } else {
+            printf(unk_str);
+           }
            break;
         case '9':
-           LM75_print_decoded(LM75_1);
+           if(len == 2){
+            LM75_print_decoded(LM75_1);
+           } else {
+            printf(unk_str);
+           }
            break;
         case 'a':
+          if(len == 2){
            printf("I2C scanner\r\n");
            I2C_PM_scan();
            I2C_FPGA_scan();
+          } else {
+            printf(unk_str);
+           }
            break;
 #ifdef APP_MARBLE
         case 'b':
+          if(len == 2){
            printf("ADN4600\r\n");
            adn4600_init();
            adn4600_printStatus();
+          } else {
+            printf(unk_str);
+           }
            break;
 #endif
         case 'c':
+          if(len == 2){
            printf("Readout INA219\r\n");
            ina219_test();
+          } else {
+            printf(unk_str);
+           }
            break;
 #ifdef APP_MARBLE
         case 'd':
+          if(len == 2){
            printf("Switch MGT to QSFP 2\r\n");
            marble_MGTMUX_set(3, true);
-           break;
+          } else {
+            printf(unk_str);
+          }
+          break;
 #endif
         case 'e':
+          if(len == 2){
            printf("PM bus display\r\n");
            I2C_PM_bus_display();
-           break;
+          } else {
+            printf(unk_str);
+          }
+          break;
 #ifdef APP_MINI
         case 'f':
+          if(len == 2){
            printf("XRP flash\r\n");
            xrp_flash(XRP7724);
+          } else {
+            printf(unk_str);
+          }
            break;
 #endif
         case 'g':
+          if(len == 2){
            printf("Enabling XRP7724\r\n");
            xrp_boot();
+          } else {
+            printf(unk_str);
+          }
            break;
 #ifdef APP_MARBLE
         case 'h':
@@ -231,20 +280,36 @@ static int console_handle_msg(char *rx_msg, int len)
            break;
 #endif
         case 'i':
+          if(len == 2){
            for (unsigned ix=0; ix<10; ix++) {
               printf("%u\r\n", ix);
               marble_SLEEP_ms(1000);
            }
-           break;
+          } else {
+            printf(unk_str);
+          }
+          break;
         case 'j':
+          if(len == 2){
            //mbox_peek();
            mailbox_read_print_all();
+          } else {
+            printf(unk_str);
+          }
            break;
         case 'k':
-           pca9555_status();
+          if(len == 2){
+            pca9555_status();
+          } else {
+            printf(unk_str);
+          }
            break;
         case 'l':
+          if(len == 2){
            pca9555_config();
+          } else {
+            printf(unk_str);
+          }
            break;
         case 'm':
            handle_msg_IP(rx_msg, len);
@@ -301,6 +366,16 @@ static int console_handle_msg(char *rx_msg, int len)
   printf("> ");
   fflush(stdout);
   return 0;
+}
+
+static void handle_menu_print(int len) {
+  if(len == 2) {
+    for (unsigned kx=0; kx<MENU_LEN; kx++) {
+        printf("%s", menu_str[kx]);
+    }
+  } else {
+    printf(unk_str);
+  }
 }
 
 static int handle_mdio_phy_print(const char *rx_msg, int len) {
@@ -586,22 +661,20 @@ static int handle_msg_MGTMUX(char *rx_msg, int len) {
 static void handle_gpio(const char *msg, int len) {
   char c = 0;
   int found = 0;
+  c = *(msg + 1);
+  if(len == 3 || ((len == 4) && (c == ' '))) {
   //printf("len = %d\r\n", len);
   // Look for alphabetic characters and respond accordingly
   // (skips the first char which is the command char)
-  for (int n = 1; n < len; n++) {
+  // for (int n = 1; n < len; n++) {
+    int n = len - 2;
     c = *(msg + n);
     if (c == '?') {
       found = -1;
-      break;
-    }
-    if (c >= 'A') {
+    } else if(c >= 'A') {
       found |= toggle_gpio(c);
-      if (found) {
-        break;
-      }
     }
-  }
+  // }
   if (found == -1) {
     // Print state
     marble_print_GPIO_status();
@@ -610,6 +683,9 @@ static void handle_gpio(const char *msg, int len) {
     marble_list_GPIOs();
   }
   return;
+  } else {
+    printf(unk_str);
+  }
 }
 
 static int toggle_gpio(char c) {
@@ -626,9 +702,11 @@ static int toggle_gpio(char c) {
     case 'b':
       marble_PSU_pwr(0);
       printf("PSU Power Off\r\n");
+      marble_SLEEP_ms(100);
       break;
     case 'B':
       marble_PSU_pwr(1);
+      marble_SLEEP_ms(1500);
       printf("PSU Power On\r\n");
       break;
     case 'c':
@@ -1299,7 +1377,7 @@ static int handle_pmod_mode(const char *rx_msg, int len) {
       printf("\r\n");
     } else {
       #ifdef MARBLE_V2 // Only V2 has error handler (todo - implement for Marble Mini)
-        marble_error_handler(ERROR_MARBLE_PMOD);
+        marble_error_handler(ERROR_MARBLE_PMOD, 64);
       #endif
       printf("Failed. Error code %d\r\n", index);
       return -1;

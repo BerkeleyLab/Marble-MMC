@@ -41,6 +41,9 @@
 #include "rev.h"
 #include "phy_mdio.h"
 
+//#define DEBUG_PRINT
+#include "dbg.h"
+
 #define AHBCLK_DIV        (RCC_SYSCLK_DIV1)
 #define APB1CLK_DIV       (RCC_HCLK_DIV4)
 #define APB2CLK_DIV       (RCC_HCLK_DIV2)
@@ -79,7 +82,10 @@ static const char *ErrorCodeStrings[ERROR_CODE_COUNT] = { // triggers compile wa
     "ERROR_MARBLE_OVERTEMP: Over-temperature detected",
     "ERROR_MARBLE_PMOD: PMOD configuration error",
     "ERROR_EEPROM_FAN: fan speed",
-    "ERROR_EEPROM_OVERTEMP: over-temperature threshold.\r\n",
+    "ERROR_EEPROM_OVERTEMP: over-temperature threshold",
+    "ERROR_EEPROM_UPDATE: failed to store page",
+    "ERROR_EEPROM_STORE",
+    "ERROR_EEPROM_READ",
     "ERROR_RCC_OSC_CONFIG",
     "ERROR_RCC_CLOCK_CONFIG",
     "ERROR_ETH_MDIO_INIT",
@@ -130,9 +136,12 @@ static const char *ErrorCodeStrings[ERROR_CODE_COUNT] = { // triggers compile wa
 
 static uint32_t error_counters[ERROR_CODE_COUNT] = {0};
 static uint32_t error_last_tick[ERROR_CODE_COUNT] = {0};
+static uint8_t error_last_caller_id[ERROR_CODE_COUNT] = {0};
 uint8_t previous_error = 0xff;
 uint8_t repeating_error = 0xff;
 static uint8_t tick_overflow_count = 0;
+
+static uint32_t marble_SN[3] = {0};
 
 #ifdef  USE_FULL_ASSERT
 void assert_failed(uint8_t *file, uint32_t line) {}
@@ -201,6 +210,9 @@ static int i2c_hook(I2C_BUS I2C_bus, uint8_t addr, uint8_t rnw,
                     int cmd, const uint8_t *data, int len);
 static void show_mmc_ID(void);
 static void show_PHY_ID(void);
+static void marble_get_SN(void);
+static void show_marble_SN(void);
+static void print_time(uint32_t total_seconds);
 static void print_uptime(void);
 static void print_clock_info(void);
 static void pmod_timer_interrupt_enable(void);
@@ -267,20 +279,21 @@ void board_init(void) {
 /* Error handling functions: prints errors and logs time and count
  * Only V2 has error handler (todo - implement for Marble Mini)
  */
-void marble_error_handler(MarbleErrorCode_t code) {
+void marble_error_handler(MarbleErrorCode_t code, uint8_t caller_id) {
     uint8_t idx = (code < ERROR_CODE_COUNT) ? code : ERROR_UNDEFINED;
     uint32_t error_previous_tick = error_last_tick[idx];
     uint32_t tick_milliseconds = marble_get_tick();
     uint64_t total_ms = (uint64_t)tick_overflow_count * (uint64_t)UINT32_MAX + (uint64_t)tick_milliseconds;
-    uint32_t total_seconds = total_ms/1000;
+    uint32_t total_seconds = total_ms/1000; // overflow after 123 years or so
     error_counters[idx]++;
     error_last_tick[idx] = total_seconds;
+    error_last_caller_id[idx] = caller_id;
     if((error_last_tick[idx] - error_previous_tick > 2) || idx != previous_error){
-      printf("\033[31m*** MMC ERROR: %s ***\033[0m\r\n", ErrorCodeStrings[idx]);
+      printf("\r\033[31m*** MMC ERROR: %s [%d]***\033[0m\r\n", ErrorCodeStrings[idx], caller_id);
       repeating_error = 0xff;
     } else {
       if (idx != repeating_error){
-        printf("\033[31m*** MMC ERROR: repeating ***\033[0m\r\n");
+        printf("\r\033[31m*** MMC ERROR: repeating ***\033[0m\r\n> ");
         repeating_error = idx;
       } else {
         if (error_last_tick[idx] - error_previous_tick == 2){ 
@@ -299,6 +312,10 @@ void reset_error_repeat(void){
 
 static void print_error_log(void) {
     int any = 0;
+    uint32_t tick_milliseconds = marble_get_tick();
+    uint64_t total_ms = (uint64_t)tick_overflow_count * (uint64_t)UINT32_MAX + (uint64_t)tick_milliseconds;
+    uint32_t total_seconds = total_ms/1000;
+    uint32_t seconds_ago = 0;
     for (int i = 0; i < ERROR_CODE_COUNT; i++) {
         if (error_counters[i] > 0) {
             any = 1;
@@ -313,7 +330,10 @@ static void print_error_log(void) {
         printf("Error codes encountered since boot:\r\n");
         for (int i = 0; i < ERROR_CODE_COUNT; i++) {
             if (error_counters[i] > 0) {
-                printf(" - %s: %lu occurrences, last at %lu s\r\n", ErrorCodeStrings[i], (unsigned long)error_counters[i], (unsigned long)error_last_tick[i]);
+                seconds_ago = total_seconds - (unsigned long)error_last_tick[i];
+                printf(" - %s: %lu occurrences, last caller [%d], ", ErrorCodeStrings[i], (unsigned long)error_counters[i], error_last_caller_id[i]);
+                print_time(seconds_ago);
+                printf(" ago\r\n");
             }
         }
     }
@@ -329,7 +349,7 @@ int board_service(void) {
    int gpio = HAL_GPIO_ReadPin(OVER_TEMP_PORT, OVER_TEMP_PIN);
    if ((!_over_temp) && (gpio == OVER_TEMP_ASSERTED)) {
       // Detect asserting edge
-      marble_error_handler(ERROR_MARBLE_OVERTEMP);
+      marble_error_handler(ERROR_MARBLE_OVERTEMP, 1);
       _over_temp = 1;
    } else if ((_over_temp) && (gpio == OVER_TEMP_DEASSERTED)) {
       // Detect de-asserting edge
@@ -370,7 +390,7 @@ int board_service(void) {
         if (_pwr_state != PWR_FAIL) {
           if (((--_pwr_state) == 0) && (_pwr_good > 0)) {
             // Detect de-asserting edge
-            marble_error_handler(ERROR_MARBLE_POWERDOWN);
+            marble_error_handler(ERROR_MARBLE_POWERDOWN, 2);
             _pwr_good = 0;
           } else {
             //printf("PWR STATE CHANGE: _pwr_state = %d;  _pwr_good = %d\r\n", _pwr_state, _pwr_good);
@@ -872,41 +892,47 @@ int marble_I2C_probe(I2C_BUS I2C_bus, uint8_t addr) {
 static void marble_I2C_error_handler(I2C_BUS I2C_bus, int rc) {
     bool isFPGA = (I2C_bus == I2C_FPGA);
     bool isPM   = (I2C_bus == I2C_PM);
-
+    //i2c_error_counter++;
     // Handle function return codes first
-    if (rc == HAL_TIMEOUT) {
-        marble_error_handler(isFPGA ? ERROR_I2C_FPGA_TIMEOUT : 
-                     isPM   ? ERROR_I2C_PM_TIMEOUT   : ERROR_UNDEFINED);
-        return;
-    } 
-    else if (rc == HAL_BUSY) {
-        marble_error_handler(isFPGA ? ERROR_I2C_FPGA_BUSY : 
-                     isPM   ? ERROR_I2C_PM_BUSY   : ERROR_UNDEFINED);
-        return;
-    } 
-    else if (rc == HAL_ERROR) {
-        // If we reach here, rc == HAL_ERROR, so check HAL error flags
-        uint32_t halErr = I2C_bus->ErrorCode;
+    switch (rc) {
+        case HAL_TIMEOUT:{
+            marble_error_handler(isFPGA ? ERROR_I2C_FPGA_TIMEOUT : 
+                        isPM   ? ERROR_I2C_PM_TIMEOUT   : ERROR_UNDEFINED, 3);
+            break;
+          }
+        case HAL_BUSY:{
+            marble_error_handler(isFPGA ? ERROR_I2C_FPGA_BUSY : 
+                        isPM   ? ERROR_I2C_PM_BUSY   : ERROR_UNDEFINED, 4);
+            break;
+          }
+        case HAL_ERROR: {
+            // If we reach here, rc == HAL_ERROR, so check HAL error flags
+            uint32_t halErr = I2C_bus->ErrorCode;
 
-        // Force STOP condition on HAL error
-        I2C_bus->Instance->CR1 |= I2C_CR1_STOP;
+            // Force STOP condition on HAL error
+            I2C_bus->Instance->CR1 |= I2C_CR1_STOP;
 
-        // Map each HAL error bit to our MarbleErrorCode_t and log it
-        if (halErr & HAL_I2C_ERROR_NONE)
-            marble_error_handler(isFPGA ? ERROR_I2C_FPGA_NONE : ERROR_I2C_PM_NONE);
-        if (halErr & HAL_I2C_ERROR_BERR)
-            marble_error_handler(isFPGA ? ERROR_I2C_FPGA_BERR : ERROR_I2C_PM_BERR);
-        if (halErr & HAL_I2C_ERROR_ARLO)
-            marble_error_handler(isFPGA ? ERROR_I2C_FPGA_ARLO : ERROR_I2C_PM_ARLO);
-        if (halErr & HAL_I2C_ERROR_AF)
-            marble_error_handler(isFPGA ? ERROR_I2C_FPGA_AF : ERROR_I2C_PM_AF);
-        if (halErr & HAL_I2C_ERROR_OVR)
-            marble_error_handler(isFPGA ? ERROR_I2C_FPGA_OVR : ERROR_I2C_PM_OVR);
-        if (halErr & HAL_I2C_ERROR_DMA)
-            marble_error_handler(isFPGA ? ERROR_I2C_FPGA_DMA : ERROR_I2C_PM_DMA);
-        if (halErr & HAL_I2C_ERROR_TIMEOUT)
-            marble_error_handler(isFPGA ? ERROR_I2C_FPGA_TIMEOUT : ERROR_I2C_PM_TIMEOUT);
-    }
+            // Map each HAL error bit to our MarbleErrorCode_t and log it
+            if (halErr & HAL_I2C_ERROR_NONE)
+                marble_error_handler(isFPGA ? ERROR_I2C_FPGA_NONE : ERROR_I2C_PM_NONE, 5);
+            if (halErr & HAL_I2C_ERROR_BERR)
+                marble_error_handler(isFPGA ? ERROR_I2C_FPGA_BERR : ERROR_I2C_PM_BERR, 6);
+            if (halErr & HAL_I2C_ERROR_ARLO)
+                marble_error_handler(isFPGA ? ERROR_I2C_FPGA_ARLO : ERROR_I2C_PM_ARLO, 7);
+            if (halErr & HAL_I2C_ERROR_AF)
+                marble_error_handler(isFPGA ? ERROR_I2C_FPGA_AF : ERROR_I2C_PM_AF, 8);
+            if (halErr & HAL_I2C_ERROR_OVR)
+                marble_error_handler(isFPGA ? ERROR_I2C_FPGA_OVR : ERROR_I2C_PM_OVR, 9);
+            if (halErr & HAL_I2C_ERROR_DMA)
+                marble_error_handler(isFPGA ? ERROR_I2C_FPGA_DMA : ERROR_I2C_PM_DMA, 10);
+            if (halErr & HAL_I2C_ERROR_TIMEOUT)
+                marble_error_handler(isFPGA ? ERROR_I2C_FPGA_TIMEOUT : ERROR_I2C_PM_TIMEOUT, 11);
+            break;
+          }
+        default:
+            i2c_error_counter = 0;
+            break;
+      }
 }
 
 static int marble_I2C_bus_prepare(I2C_BUS I2C_bus) {
@@ -915,16 +941,15 @@ static int marble_I2C_bus_prepare(I2C_BUS I2C_bus) {
   while(((HAL_I2C_GetState(I2C_bus) != HAL_I2C_STATE_READY)||(__HAL_I2C_GET_FLAG(I2C_bus, I2C_FLAG_BUSY))) && (i<50)) {
     marble_SLEEP_us(10); //sleep one i2c clock cycle at 100kHz
     i++;
-    //printf("Warning: I2C hardware busy (flag 0x%08x)\r\n", (__HAL_I2C_GET_FLAG(I2C_bus, I2C_FLAG_BUSY)));
+    //printf("Warning: I2C hardware busy (flag 0x%08X)\r\n", (__HAL_I2C_GET_FLAG(I2C_bus, I2C_FLAG_BUSY)));
   }
-  if(i >= 50) { //after 0.5ms, timeout
+  if((i >= 50) || i2c_error_counter >=5) { //after 0.5ms, timeout
     bool isFPGA = (I2C_bus == I2C_FPGA);
-
     i2c_error_counter++;
-    marble_error_handler(isFPGA ? ERROR_I2C_FPGA_HW_BUSY : ERROR_I2C_PM_HW_BUSY);
-    printf("Error: Timeout - I2C hardware busy (flag 0x%08x), I2C bus state %d\r\n", (__HAL_I2C_GET_FLAG(I2C_bus, I2C_FLAG_BUSY)), HAL_I2C_GetState(I2C_bus));
+    marble_error_handler(isFPGA ? ERROR_I2C_FPGA_HW_BUSY : ERROR_I2C_PM_HW_BUSY, 12);
+    printf("Error: Timeout - I2C hardware busy (flag 0x%08X), I2C bus state %d\r\n", (__HAL_I2C_GET_FLAG(I2C_bus, I2C_FLAG_BUSY)), HAL_I2C_GetState(I2C_bus));
     if (i2c_error_counter >= 5) {
-      marble_error_handler(isFPGA ? ERROR_I2C_FPGA_LOCKUP : ERROR_I2C_PM_LOCKUP);
+      marble_error_handler(isFPGA ? ERROR_I2C_FPGA_LOCKUP : ERROR_I2C_PM_LOCKUP, 13);
       printf("%s appears to be stuck. Attempting re-init...\r\n",
         I2C_bus->Instance == I2C1 ? "I2C1" :
         I2C_bus->Instance == I2C2 ? "I2C2" :
@@ -934,7 +959,6 @@ static int marble_I2C_bus_prepare(I2C_BUS I2C_bus) {
     }
     return 1; // might want a different return value
   }
-  i2c_error_counter = 0;
   return 0;
 }
 
@@ -947,13 +971,17 @@ int marble_I2C_send(I2C_BUS I2C_bus, uint8_t addr, const uint8_t *data, int size
   }
   // I2C action and error handling
   int rc = HAL_I2C_Master_Transmit(I2C_bus, (uint16_t)addr, data, size, I2C_TIMEOUT_MS);
-   marble_I2C_error_handler(I2C_bus, rc);
-   i2cBusStatus |= rc;
-   if (rc == HAL_OK) {
-      // rnw=0, cmd=-1
-      i2c_hook(I2C_bus, addr, 0, -1, data, size);
-   }
-   return rc;
+  marble_I2C_error_handler(I2C_bus, rc);
+  i2cBusStatus |= rc;
+  if (rc == HAL_OK) {
+    // rnw=0, cmd=-1
+    i2c_hook(I2C_bus, addr, 0, -1, data, size);
+  }
+  else{
+    printd("rc = %d\r\n", rc);
+    printd("marble_I2C_send(addr 0x%2x, data 0x%2x, size %d)\r\n", addr, (unsigned int)*data, size);
+  }
+  return rc;
 }
 
 int marble_I2C_cmdsend(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, const uint8_t *data, int size) {
@@ -964,12 +992,16 @@ int marble_I2C_cmdsend(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, const uint8_t
   // I2C action and error handling
   int rc = HAL_I2C_Mem_Write(I2C_bus, (uint16_t)addr, cmd, 1, (uint8_t *)data, size, I2C_TIMEOUT_MS);
   marble_I2C_error_handler(I2C_bus, rc);
-   if (rc == HAL_OK) {
-      // rnw=0, cmd=cmd
-      i2c_hook(I2C_bus, addr, 0, cmd, data, size);
-   }
-   i2cBusStatus |= rc;
-   return rc;
+  if (rc == HAL_OK) {
+    // rnw=0, cmd=cmd
+    i2c_hook(I2C_bus, addr, 0, cmd, data, size);
+  }
+  else{
+    printd("rc = %d\r\n", rc);
+    printd("HAL_I2C_Mem_Write(addr 0x%2x, data 0x%2x, size %d)\r\n", addr, (unsigned int)*data, size);
+  }
+  i2cBusStatus |= rc;
+  return rc;
 }
 
 int marble_I2C_recv(I2C_BUS I2C_bus, uint8_t addr, uint8_t *data, int size) {
@@ -978,14 +1010,18 @@ int marble_I2C_recv(I2C_BUS I2C_bus, uint8_t addr, uint8_t *data, int size) {
     return 1; // bus not available
   }
   // I2C action and error handling
-   int rc = HAL_I2C_Master_Receive(I2C_bus, (uint16_t)addr, data, size, I2C_TIMEOUT_MS);
-   marble_I2C_error_handler(I2C_bus, rc);
-   i2cBusStatus |= rc;
-   if (rc == HAL_OK) {
-      // rnw=1, cmd=-1
-      i2c_hook(I2C_bus, addr, 1, -1, data, size);
-   }
-   return rc;
+  int rc = HAL_I2C_Master_Receive(I2C_bus, (uint16_t)addr, data, size, I2C_TIMEOUT_MS);
+  marble_I2C_error_handler(I2C_bus, rc);
+  i2cBusStatus |= rc;
+  if (rc == HAL_OK) {
+    // rnw=1, cmd=-1
+    i2c_hook(I2C_bus, addr, 1, -1, data, size);
+  }
+  else{
+    printd("rc = %d\r\n", rc);
+    printd("marble_I2C_recv(addr 0x%2x, data 0x%2x, size %d)\r\n", addr, (unsigned int)*data, size);
+  }
+  return rc;
 }
 
 int marble_I2C_cmdrecv(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data, int size) {
@@ -994,14 +1030,18 @@ int marble_I2C_cmdrecv(I2C_BUS I2C_bus, uint8_t addr, uint8_t cmd, uint8_t *data
     return 1; // bus not available
   }
   // I2C action and error handling
-   int rc = HAL_I2C_Mem_Read(I2C_bus, (uint16_t)addr, cmd, 1, data, size, I2C_TIMEOUT_MS);
-   marble_I2C_error_handler(I2C_bus, rc);
-   i2cBusStatus |= rc;
-   if (rc == HAL_OK) {
-      // rnw=1, cmd=cmd
-      i2c_hook(I2C_bus, addr, 1, cmd, data, size);
-   }
-   return rc;
+  int rc = HAL_I2C_Mem_Read(I2C_bus, (uint16_t)addr, cmd, 1, data, size, I2C_TIMEOUT_MS);
+  marble_I2C_error_handler(I2C_bus, rc);
+  i2cBusStatus |= rc;
+  if (rc == HAL_OK) {
+    // rnw=1, cmd=cmd
+    i2c_hook(I2C_bus, addr, 1, cmd, data, size);
+  }
+  else{
+    printd("rc = %d\r\n", rc);
+    printd("marble_I2C_cmdrecv(addr 0x%2x, data 0x%2x, size %d)\r\n", addr, (unsigned int)*data, size);
+  }
+  return rc;
 }
 
 /* Same but 2-byte register addresses */
@@ -1012,13 +1052,17 @@ int marble_I2C_cmdsend_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, const uin
   }
   // I2C action and error handling
   int rc = HAL_I2C_Mem_Write(I2C_bus, (uint16_t)addr, cmd, 2, (uint8_t *)data, size, I2C_TIMEOUT_MS);
-   marble_I2C_error_handler(I2C_bus, rc);
-   i2cBusStatus |= rc;
-   if (rc == HAL_OK) {
-      // rnw=0, cmd=cmd
-      i2c_hook(I2C_bus, addr, 0, cmd, data, size);
-   }
-   return rc;
+  marble_I2C_error_handler(I2C_bus, rc);
+  i2cBusStatus |= rc;
+  if (rc == HAL_OK) {
+    // rnw=0, cmd=cmd
+    i2c_hook(I2C_bus, addr, 0, cmd, data, size);
+  }
+  else{
+    printd("rc = %d\r\n", rc);
+    printd("marble_I2C_cmdsend_a2(addr 0x%2x, data 0x%2x, size %d)\r\n", addr, (unsigned int)*data, size);
+  }
+  return rc;
 }
 int marble_I2C_cmdrecv_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *data, int size) {
   // first make sure that the bus is available
@@ -1033,6 +1077,10 @@ int marble_I2C_cmdrecv_a2(I2C_BUS I2C_bus, uint8_t addr, uint16_t cmd, uint8_t *
       // rnw=1, cmd=cmd
       i2c_hook(I2C_bus, addr, 1, cmd, data, size);
    }
+   else{
+    printd("rc = %d\r\n", rc);
+    printd("marble_I2C_cmdrecv_a2(addr 0x%2x, data 0x%2x, size %d)\r\n", addr, (unsigned int)*data, size);
+  }
    return rc;
 }
 
@@ -1075,26 +1123,26 @@ static void SPI_CSB_SET(SSP_PORT ssp, bool set);
 
 int marble_SSP_write16(SSP_PORT ssp, uint16_t *buffer, unsigned size)
 {
-   SPI_CSB_SET(ssp, false);
-   int rc = HAL_SPI_Transmit(ssp, (uint8_t*) buffer, size, HAL_MAX_DELAY);
-   SPI_CSB_SET(ssp, true);
-   return rc;
+  SPI_CSB_SET(ssp, false);
+  int rc = HAL_SPI_Transmit(ssp, (uint8_t*) buffer, size, HAL_MAX_DELAY);
+  SPI_CSB_SET(ssp, true);
+  return rc;
 }
 
 int marble_SSP_read16(SSP_PORT ssp, uint16_t *buffer, unsigned size)
 {
-   SPI_CSB_SET(ssp, false);
-   int rc = HAL_SPI_Receive(ssp, (uint8_t*) buffer, size, HAL_MAX_DELAY);
-   SPI_CSB_SET(ssp, true);
-   return rc;
+  SPI_CSB_SET(ssp, false);
+  int rc = HAL_SPI_Receive(ssp, (uint8_t*) buffer, size, HAL_MAX_DELAY);
+  SPI_CSB_SET(ssp, true);
+  return rc;
 }
 
 int marble_SSP_exch16(SSP_PORT ssp, uint16_t *tx_buf, uint16_t *rx_buf, unsigned size)
 {
-   SPI_CSB_SET(ssp, false);
-   int rc = HAL_SPI_TransmitReceive(ssp, (uint8_t*) tx_buf, (uint8_t*) rx_buf,size, HAL_MAX_DELAY);
-   SPI_CSB_SET(ssp, true);
-   return rc;
+  SPI_CSB_SET(ssp, false);
+  int rc = HAL_SPI_TransmitReceive(ssp, (uint8_t*) tx_buf, (uint8_t*) rx_buf,size, HAL_MAX_DELAY);
+  SPI_CSB_SET(ssp, true);
+  return rc;
 }
 
 /************
@@ -1102,24 +1150,24 @@ int marble_SSP_exch16(SSP_PORT ssp, uint16_t *tx_buf, uint16_t *rx_buf, unsigned
 ************/
 void marble_MDIO_init(void)
 {
-   //Chip_Clock_EnablePeriphClock(SYSCTL_CLOCK_ENET);
+  //Chip_Clock_EnablePeriphClock(SYSCTL_CLOCK_ENET);
 
-   /* Setup MII clock rate and PHY address */
-   //Chip_ENET_SetupMII(LPC_ETHERNET, Chip_ENET_FindMIIDiv(LPC_ETHERNET, 2500000), 0);
+  /* Setup MII clock rate and PHY address */
+  //Chip_ENET_SetupMII(LPC_ETHERNET, Chip_ENET_FindMIIDiv(LPC_ETHERNET, 2500000), 0);
 }
 
 void marble_MDIO_write(uint16_t reg, uint32_t data)
 {
-   //Chip_ENET_StartMIIWrite(LPC_ETHERNET, reg, data);
-   HAL_ETH_WritePHYRegister(&heth, reg, data);
-   //while (Chip_ENET_IsMIIBusy(LPC_ETHERNET));
+  //Chip_ENET_StartMIIWrite(LPC_ETHERNET, reg, data);
+  HAL_ETH_WritePHYRegister(&heth, reg, data);
+  //while (Chip_ENET_IsMIIBusy(LPC_ETHERNET));
 }
 
 uint32_t marble_MDIO_read(uint16_t reg)
 {
-   uint32_t value;
-   HAL_ETH_ReadPHYRegister(&heth, reg, &value);
-   return value;
+  uint32_t value;
+  HAL_ETH_ReadPHYRegister(&heth, reg, &value);
+  return value;
 }
 
 /************
@@ -1131,9 +1179,9 @@ void (*volatile marble_SysTick_Handler)(void) = SysTick_Handler_dummy;
 // Override default (weak) SysTick_Handler
 void SysTick_Handler(void)
 {
-   HAL_IncTick(); // Advances HAL timebase used in HAL_Delay
-   if (marble_SysTick_Handler)
-      marble_SysTick_Handler();
+  HAL_IncTick(); // Advances HAL timebase used in HAL_Delay
+  if (marble_SysTick_Handler)
+    marble_SysTick_Handler();
 }
 
 uint32_t marble_get_tick(void) {
@@ -1152,31 +1200,31 @@ void marble_SYSTIMER_handler(void (*handler)(void)) {
 /* Configures 24-bit count-down timer and enables systimer interrupt */
 uint32_t marble_SYSTIMER_ms(uint32_t delay)
 {
-   // WARNING: Hardcoded to 1 ms since this is what increments HAL_IncTick() and
-   // enables HAL_Delay
-   delay = 1; // TODO: Consider decoupling stopwatch from system timer
+  // WARNING: Hardcoded to 1 ms since this is what increments HAL_IncTick() and
+  // enables HAL_Delay
+  delay = 1; // TODO: Consider decoupling stopwatch from system timer
 
-   const uint32_t MAX_TICKS = (1<<24)-1;
-   const uint32_t MAX_DELAY_MS = (SystemCoreClock * 1000U) / MAX_TICKS;
-   uint32_t ticks = (SystemCoreClock / 1000U) * delay;
-   if (delay > MAX_DELAY_MS) {
-      ticks = MAX_TICKS;
-      delay = MAX_DELAY_MS;
-   }
-   SysTick_Config(ticks);
-   return delay;
+  const uint32_t MAX_TICKS = (1<<24)-1;
+  const uint32_t MAX_DELAY_MS = (SystemCoreClock * 1000U) / MAX_TICKS;
+  uint32_t ticks = (SystemCoreClock / 1000U) * delay;
+  if (delay > MAX_DELAY_MS) {
+    ticks = MAX_TICKS;
+    delay = MAX_DELAY_MS;
+  }
+  SysTick_Config(ticks);
+  return delay;
 }
 
 void marble_SLEEP_ms(uint32_t delay)
 {
-   HAL_Delay(delay); // TODO: Consider replacing with stopwatch built from timer peripheral
+  HAL_Delay(delay); // TODO: Consider replacing with stopwatch built from timer peripheral
 }
 
 void marble_SLEEP_us(uint32_t delay)
 {
-   (void) delay;
-   return; // XXX Not available unless HAL weak definitions are overridden
-   // Good thing nobody depends on this (yet)
+  (void) delay;
+  return; // XXX Not available unless HAL weak definitions are overridden
+  // Good thing nobody depends on this (yet)
 }
 
 /************
@@ -1192,6 +1240,7 @@ uint32_t marble_init(void)
   MX_GPIO_Init();
   marble_GPIOint_init();
   marble_read_pcb_rev();
+  marble_get_SN();
   marble_PSU_pwr(true);
   MX_ETH_MDIO_Init();
 
@@ -1214,48 +1263,53 @@ uint32_t marble_init(void)
   return 0;
 }
 
-void marble_print_ID_status(void) {
-#ifdef NUCLEO
-  printf("PCB Rev: Nucleo\r\n");
-#else
-  switch (marble_pcb_rev) {
-    case Marble_v1_3:
-      printf("PCB Rev: Marble v1.3\r\n");
-      break;
-    case Marble_v1_4:
-      printf("PCB Rev: Marble v1.4\r\n");
-      //printf("PCB Rev: Marble v1.4\r\n");
-      break;
-    case Marble_v1_5:
-      printf("PCB Rev: Marble v1.5\r\n");
-      break;
-    case Marble_v1_6:
-      printf("PCB Rev: Marble v1.6\r\n");
-      break;
-    case Marble_v1_7:
-      printf("PCB Rev: Marble v1.7\r\n");
-      break;
-    case Marble_v1_8:
-      printf("PCB Rev: Marble v1.8\r\n");
-      break;
-    case Marble_v1_9:
-      printf("PCB Rev: Marble v1.9\r\n");
-      break;
-    default:
-      printf("PCB Rev: Marble v1.2\r\n");
-      break;
+void marble_print_ID_status(int len) {
+  if(len ==2){
+  #ifdef NUCLEO
+    printf("PCB Rev: Nucleo\r\n");
+  #else
+    switch (marble_pcb_rev) {
+      case Marble_v1_3:
+        printf("PCB Rev: Marble v1.3\r\n");
+        break;
+      case Marble_v1_4:
+        printf("PCB Rev: Marble v1.4\r\n");
+        //printf("PCB Rev: Marble v1.4\r\n");
+        break;
+      case Marble_v1_5:
+        printf("PCB Rev: Marble v1.5\r\n");
+        break;
+      case Marble_v1_6:
+        printf("PCB Rev: Marble v1.6\r\n");
+        break;
+      case Marble_v1_7:
+        printf("PCB Rev: Marble v1.7\r\n");
+        break;
+      case Marble_v1_8:
+        printf("PCB Rev: Marble v1.8\r\n");
+        break;
+      case Marble_v1_9:
+        printf("PCB Rev: Marble v1.9\r\n");
+        break;
+      default:
+        printf("PCB Rev: Marble v1.2\r\n");
+        break;
+    }
+  #endif
+    show_marble_SN();
+    show_mmc_ID();
+    show_PHY_ID();
+    printf("Firmware revision: " GIT_REV " [Git]\r\n");// placeholder for GIT_REV
+    printf("MMC Boot ID: 0x%08lX\n", boot_id);
+    console_print_mac_ip();
+    print_clock_info();
+    print_uptime();
+    print_reset_cause();
+    print_error_log();
+    return;
+  } else {
+    printf("%s",unk_str);
   }
-#endif
-  show_mmc_ID();
-  show_PHY_ID();
-  printf("Firmware revision: " GIT_REV " [Git]\r\n");// placeholder for GIT_REV
-  printf("MMC Boot ID: 0x%08lx\n", boot_id);
-  console_print_mac_ip();
-  print_clock_info();
-  print_uptime();
-  print_reset_cause();
-  print_error_log();
-  return;
 }
 
 Marble_PCB_Rev_t marble_get_pcb_rev(void) {
@@ -1304,6 +1358,15 @@ static void marble_read_pcb_rev(void) {
   return;
 }
 
+// Read unique 32-bit ID (from 96-bit identifier)
+static void marble_get_SN(void) {
+  HAL_GetUID(marble_SN);
+}
+
+static void show_marble_SN(void) {
+   printf("Marble Serial Number: 0x%08lX%08lX%08lX\r\n", marble_SN[2], marble_SN[1], marble_SN[0]);
+}
+
 static void SystemClock_Config(void)
 {
 
@@ -1319,7 +1382,7 @@ static void SystemClock_Config(void)
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLatency) != HAL_OK)
   {
-      marble_error_handler(ERROR_RCC_CLOCK_CONFIG);
+    marble_error_handler(ERROR_RCC_CLOCK_CONFIG, 14);
   }
 
 /* Configure and enable external oscillator (HSE) and PLL */
@@ -1334,13 +1397,13 @@ static void SystemClock_Config(void)
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
       uint32_t cr  = RCC->CR;
-      printf("RCC->CR = 0x%08lx\r\n", cr);
+      printf("RCC->CR = 0x%08lX\r\n", cr);
       if (!(cr & RCC_CR_HSERDY))
           printf("HSE failed to start or stabilize\r\n");
 
       if ((cr & RCC_CR_HSERDY) && !(cr & RCC_CR_PLLRDY))
           printf("PLL failed to lock\r\n");
-      marble_error_handler(ERROR_RCC_OSC_CONFIG);
+      marble_error_handler(ERROR_RCC_OSC_CONFIG, 15);
    }
   /* Initialize the CPU, AHB and APB busses clocks */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
@@ -1352,7 +1415,7 @@ static void SystemClock_Config(void)
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK)
   {
-    marble_error_handler(ERROR_RCC_CLOCK_CONFIG);
+    marble_error_handler(ERROR_RCC_CLOCK_CONFIG, 16);
   }
 }
 
@@ -1370,7 +1433,7 @@ void SystemClock_Config_HSI(void)  // switch to internal clock source, external 
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLatency) != HAL_OK)
   {
-      marble_error_handler(ERROR_RCC_CLOCK_CONFIG);
+      marble_error_handler(ERROR_RCC_CLOCK_CONFIG, 17);
   }
 
   /* Configure and enable external oscillator (HSE) and PLL */
@@ -1386,13 +1449,13 @@ void SystemClock_Config_HSI(void)  // switch to internal clock source, external 
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     uint32_t cr  = RCC->CR;
-    printf("RCC->CR = 0x%08lx\r\n", cr);
+    printf("RCC->CR = 0x%08lX\r\n", cr);
     if (!(cr & RCC_CR_HSERDY))
         printf("HSE failed to start or stabilize\r\n");
 
     if ((cr & RCC_CR_HSERDY) && !(cr & RCC_CR_PLLRDY))
         printf("PLL failed to lock\r\n");
-    marble_error_handler(ERROR_RCC_OSC_CONFIG);
+    marble_error_handler(ERROR_RCC_OSC_CONFIG, 18);
   }
   /** Initializes the CPU, AHB and APB busses clocks */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
@@ -1404,7 +1467,7 @@ void SystemClock_Config_HSI(void)  // switch to internal clock source, external 
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK)
   {
-    marble_error_handler(ERROR_RCC_CLOCK_CONFIG);
+    marble_error_handler(ERROR_RCC_CLOCK_CONFIG, 19);
   }
 }
 
@@ -1427,13 +1490,13 @@ static void MX_ETH_MDIO_Init(void)
         HAL_ETH_ReadPHYRegister(&heth, MDIO_PHY_REG_PHY_ID_2, &id2) == HAL_OK)
     {
         if(id1 != 0x0141){
-          printf("PHY ID: 0x%04lx 0x%04lx\n", id1, id2);
-          marble_error_handler(ERROR_ETH_MDIO_ID);
+          printf("PHY ID: 0x%04lX 0x%04lX\n", id1, id2);
+          marble_error_handler(ERROR_ETH_MDIO_ID, 20);
         }
     }
     else
     {
-        marble_error_handler(ERROR_ETH_MDIO_INIT);
+        marble_error_handler(ERROR_ETH_MDIO_INIT, 21);
     }
 }
 
@@ -1451,11 +1514,11 @@ static void MX_I2C_BusInit(I2C_HandleTypeDef *hi2c, I2C_BUS *bus, I2C_TypeDef *i
     if (HAL_I2C_Init(hi2c) != HAL_OK)
     {
         if (hi2c->Instance == I2C1) {
-            marble_error_handler(ERROR_I2C1_INIT);
+            marble_error_handler(ERROR_I2C1_INIT, 22);
         } else if (hi2c->Instance == I2C3) {
-            marble_error_handler(ERROR_I2C3_INIT);
+            marble_error_handler(ERROR_I2C3_INIT, 23);
         } else {
-            marble_error_handler(ERROR_UNDEFINED);
+            marble_error_handler(ERROR_UNDEFINED, 24);
         }
     }
     *bus = hi2c;
@@ -1467,11 +1530,11 @@ static void MX_I2C_BusReInit(I2C_BUS I2C_bus)
     if (HAL_I2C_DeInit(I2C_bus) != HAL_OK)
     {
         if (I2C_bus->Instance == I2C1) {
-            marble_error_handler(ERROR_I2C1_DEINIT);
+            marble_error_handler(ERROR_I2C1_DEINIT, 25);
         } else if (I2C_bus->Instance == I2C3) {
-            marble_error_handler(ERROR_I2C3_DEINIT);
+            marble_error_handler(ERROR_I2C3_DEINIT, 26);
         } else {
-            marble_error_handler(ERROR_UNDEFINED);
+            marble_error_handler(ERROR_UNDEFINED, 27);
         }
     }
     printf("Flushing the bus...\r\n");
@@ -1479,11 +1542,11 @@ static void MX_I2C_BusReInit(I2C_BUS I2C_bus)
     if (HAL_I2C_Init(I2C_bus) != HAL_OK)
     {
         if (I2C_bus->Instance == I2C1) {
-            marble_error_handler(ERROR_I2C1_INIT);
+            marble_error_handler(ERROR_I2C1_INIT, 28);
         } else if (I2C_bus->Instance == I2C3) {
-            marble_error_handler(ERROR_I2C3_INIT);
+            marble_error_handler(ERROR_I2C3_INIT, 29);
         } else {
-            marble_error_handler(ERROR_UNDEFINED);
+            marble_error_handler(ERROR_UNDEFINED, 30);
         }
     }
     else {
@@ -1558,7 +1621,7 @@ static void MX_SPI1_Init(void)
     hspi1.Init.CRCPolynomial = 10;
     if (HAL_SPI_Init(&hspi1) != HAL_OK)
     {
-        marble_error_handler(ERROR_SPI1_INIT);
+        marble_error_handler(ERROR_SPI1_INIT, 31);
     }
     SSP_FPGA = &hspi1;
 }
@@ -1639,7 +1702,7 @@ static void CONSOLE_USART_Init(void) {
   huart_console.Init.OverSampling = UART_OVERSAMPLING_16;
   if (HAL_UART_Init(&huart_console) != HAL_OK)
   {
-     marble_error_handler(ERROR_UART_CONSOLE_INIT);
+     marble_error_handler(ERROR_UART_CONSOLE_INIT, 32);
   }
   // Enable RXNE, TXE interrupts
   SET_BIT(CONSOLE_USART->CR1, USART_CR1_RXNEIE);
@@ -1860,9 +1923,9 @@ int get_hw_rnd(uint32_t *result) {
   HAL_StatusTypeDef rc;
   rc = HAL_RNG_GenerateRandomNumber(&hrng, result);
   /*
-  printf("CR = 0x%08lx\r\n", hrng.Instance->CR);
-  printf("SR = 0x%08lx\r\n", hrng.Instance->SR);
-  printf("DR = 0x%08lx\r\n", hrng.Instance->DR);
+  printf("CR = 0x%08lX\r\n", hrng.Instance->CR);
+  printf("SR = 0x%08lX\r\n", hrng.Instance->SR);
+  printf("DR = 0x%08lX\r\n", hrng.Instance->DR);
   */
   return rc;
 }
@@ -1893,7 +1956,7 @@ int mgtclk_xpoint_en(void)
 }
 
 static void show_mmc_ID(void) {
-   printf("MMC CHIP ID: DEVID 0x%04x REVID 0x%04x\r\n", (uint16_t)(HAL_GetDEVID() & 0xffff), (uint16_t)(HAL_GetREVID() & 0xffff));
+   printf("MMC CHIP ID: DEVID 0x%04X REVID 0x%04X\r\n", (uint16_t)(HAL_GetDEVID() & 0xffff), (uint16_t)(HAL_GetREVID() & 0xffff));
    return;
 }
 
@@ -1901,7 +1964,7 @@ static void show_PHY_ID(void) {
     uint32_t id1, id2;
     HAL_ETH_ReadPHYRegister(&heth, MDIO_PHY_REG_PHY_ID_1, &id1);
     HAL_ETH_ReadPHYRegister(&heth, MDIO_PHY_REG_PHY_ID_2, &id2);
-   printf("PHY ID: 0x%04lx 0x%04lx\r\n", id1, id2);
+   printf("PHY ID: 0x%04lX 0x%04lX\r\n", id1, id2);
    return;
 }
 
@@ -2180,24 +2243,30 @@ void print_reset_cause(void)
     return;
 }
 
+
+static void print_time(uint32_t total_seconds){
+    uint32_t days    = total_seconds / 86400;
+    uint32_t hours   = (total_seconds % 86400) / 3600;
+    uint32_t minutes = (total_seconds % 3600) / 60;
+    uint32_t seconds = total_seconds % 60;
+    // uint32_t ms_remainder  = total_ms % 1000;
+    printf(
+        "%lu days, %02lu:%02lu:%02lu",
+        (unsigned long) days,
+        (unsigned long) hours,
+        (unsigned long) minutes,
+        (unsigned long) seconds
+        // (unsigned long) ms_remainder
+    );
+}
+
 static void print_uptime(void) //wraps around at ~136 years
 {
     uint32_t uptime_ms = marble_get_tick();  // current tick in ms (uint32_t)
     uint64_t total_ms = (uint64_t)tick_overflow_count * (uint64_t)UINT32_MAX
                       + (uint64_t)uptime_ms;
     uint32_t total_seconds = total_ms / 1000;
-
-    uint32_t days    = total_seconds / 86400;
-    uint32_t hours   = (total_seconds % 86400) / 3600;
-    uint32_t minutes = (total_seconds % 3600) / 60;
-    uint32_t seconds = total_seconds % 60;
-    uint32_t ms_remainder  = total_ms % 1000;
-    printf(
-        "Uptime: %lu days, %02lu:%02lu:%02lu.%03lu\n",
-        (unsigned long) days,
-        (unsigned long) hours,
-        (unsigned long) minutes,
-        (unsigned long) seconds,
-        (unsigned long) ms_remainder
-    );
+    printf("Uptime: ");
+    print_time(total_seconds);
+    printf("\r\n");
 }

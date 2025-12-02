@@ -54,7 +54,7 @@ int main(void) {
    board_init();
    printf("++++++++++++++++++++++++ | Initialization Complete | ++++++++++++++++++++++++\r\n");
 
-   marble_print_ID_status();
+   marble_print_ID_status(2);
    marble_SLEEP_ms(200); // settle and print
 
    // Power FMCs

@@ -232,8 +232,8 @@ void LM75_print(uint8_t dev)
    static const uint8_t rlist[LM75_MAX] = {LM75_TEMP, LM75_CFG, LM75_HYST, LM75_OS};
    int i;
    int recv;
-   const char ok_str[] = "> LM75 %x: [%d]: %d\r\n";
-   const char fail_str[] = "> LM75 %x: [%d]: FAIL\r\n";
+   const char ok_str[] = "LM75 %x: [%d]: %d\r\n";
+   const char fail_str[] = "LM75 %x: [%d]: FAIL\r\n";
    char p_buf[40];
 
    for (i = 0; i < LM75_MAX; i++) {
@@ -325,44 +325,48 @@ int LM75_get_cached_temperature(uint8_t dev) {
 
 static const uint8_t i2c_list[I2C_NUM] = {LM75_0, LM75_1, MAX6639, XRP7724};
 
-const char i2c_ok[] = "> Found I2C slave: %x\r\n";
-const char i2c_nok[] = "> I2C slave not found: %x\r\n";
-const char i2c_ret[] = "> %x\r\n";
+const char i2c_ok[] = "Found I2C slave: %x\r\n";
+const char i2c_nok[] = "I2C slave not found: %x\r\n";
+const char i2c_ret[] = "%x\r\n";
 
 /* Perform basic sanity check and print result to UART */
-void I2C_PM_probe(void)
+void I2C_PM_probe(int len)
 {
-   int i;
-   int i2c_stat=0;
-   uint8_t i2c_dat[4];
-   char p_buf[40];
+  if(len == 2) {
+    int i;
+    int i2c_stat=0;
+    uint8_t i2c_dat[4];
+    char p_buf[40];
 
-   for (i = 0; i < I2C_NUM; i++) {
-      switch (i2c_list[i]) {
-         case LM75_0:
-         case LM75_1:
-            i2c_stat = marble_I2C_recv(I2C_PM, i2c_list[i], i2c_dat, 2);
-            break;
-         case MAX6639:
-            i2c_stat = marble_I2C_recv(I2C_PM, i2c_list[i], i2c_dat, 1);
-            break;
-         case XRP7724:
-            // Needs work
-            i2c_dat[0] = 0x9;
-            i2c_stat = marble_I2C_send(I2C_PM, i2c_list[i], i2c_dat, 1); // PWR_GET_STATUS
-            i2c_stat = marble_I2C_recv(I2C_PM, i2c_list[i], i2c_dat, 2);
-            break;
-      }
-      if (i2c_stat == 0) {
-         snprintf(p_buf, 40, i2c_ok, i2c_list[i]);
-      } else {
-         snprintf(p_buf, 40, i2c_nok, i2c_list[i]);
-      }
-      marble_UART_send(p_buf, strlen(p_buf));
-      snprintf(p_buf, 40, i2c_ret, *i2c_dat);
-      marble_UART_send(p_buf, strlen(p_buf));
-   }
-   return;
+    for (i = 0; i < I2C_NUM; i++) {
+        switch (i2c_list[i]) {
+          case LM75_0:
+          case LM75_1:
+              i2c_stat = marble_I2C_recv(I2C_PM, i2c_list[i], i2c_dat, 2);
+              break;
+          case MAX6639:
+              i2c_stat = marble_I2C_recv(I2C_PM, i2c_list[i], i2c_dat, 1);
+              break;
+          case XRP7724:
+              // Needs work
+              i2c_dat[0] = 0x9;
+              i2c_stat = marble_I2C_send(I2C_PM, i2c_list[i], i2c_dat, 1); // PWR_GET_STATUS
+              i2c_stat = marble_I2C_recv(I2C_PM, i2c_list[i], i2c_dat, 2);
+              break;
+        }
+        if (i2c_stat == 0) {
+          snprintf(p_buf, 40, i2c_ok, i2c_list[i]);
+        } else {
+          snprintf(p_buf, 40, i2c_nok, i2c_list[i]);
+        }
+        marble_UART_send(p_buf, strlen(p_buf));
+        snprintf(p_buf, 40, i2c_ret, *i2c_dat);
+        marble_UART_send(p_buf, strlen(p_buf));
+    }
+    return;
+  } else {
+    printf("%s", unk_str);
+  }
 }
 
 void I2C_PM_bus_display(void)

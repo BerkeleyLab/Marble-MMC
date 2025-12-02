@@ -1,5 +1,6 @@
 /* File: system.c
  * Desc: Non-board-specific routines that are not part of a particular subsystem
+ * marble_error_handler caller_id reserved: 128-143
  */
 
 #include "marble_api.h"
@@ -278,13 +279,13 @@ static void system_apply_external_params(void) {
   printf("+ Applying external parameters...\r\n");
   fflush(stdout);
   if (eeprom_read_fan_speed(&val, 1)) {
-    marble_error_handler(ERROR_EEPROM_FAN);
+    marble_error_handler(ERROR_EEPROM_FAN, 128);
   } else {
     max6639_set_fans((int)val);
   }
   // Over-temperature threshold
   if (eeprom_read_overtemp(&val, 1)) {
-    marble_error_handler(ERROR_EEPROM_OVERTEMP);
+    marble_error_handler(ERROR_EEPROM_OVERTEMP, 129);
   } else {
     max6639_set_overtemp(val);
     LM75_set_overtemp((int)val);
@@ -300,7 +301,8 @@ void reset_fpga_with_callback(void (*cb)(void)) {
   return;
 }
 
-void print_status_counters(void) {
+void print_status_counters(int len) {
+  if(len == 2) {
   marble_print_status();
   printf("Live counter: %u\r\n", live_cnt);
   printf("FPGA prog counter: %u\r\n", fpga_prog_cnt);
@@ -311,6 +313,9 @@ void print_status_counters(void) {
   printf("MGT CLK Mux: %x\r\n", marble_MGTMUX_status());
 #endif
   return;
+} else {
+  printf("%s",unk_str);
+}
 }
 
 int system_set_pmod_mode(pmod_mode_t mode) {

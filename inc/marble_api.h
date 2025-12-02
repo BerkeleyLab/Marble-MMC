@@ -17,6 +17,8 @@ extern "C" {
 #include "common.h"
 #include "system.h"
 
+extern const char unk_str[];
+
 #ifdef SIMULATION
   #include <stddef.h>
   #include <errno.h>
@@ -160,6 +162,9 @@ typedef enum {
     // EEPROM errors
     ERROR_EEPROM_FAN,
     ERROR_EEPROM_OVERTEMP,
+    ERROR_EEPROM_UPDATE,
+    ERROR_EEPROM_STORE,
+    ERROR_EEPROM_READ,
     // Clock config errors
     ERROR_RCC_OSC_CONFIG,
     ERROR_RCC_CLOCK_CONFIG,
@@ -219,7 +224,7 @@ typedef enum {
 #define ERROR_CODE_COUNT (ERROR_UNDEFINED + 1)
 
 // New Error_Handler signature taking an ErrorCode
-void marble_error_handler(MarbleErrorCode_t code);
+void marble_error_handler(MarbleErrorCode_t code, uint8_t caller_id);
 void reset_error_repeat(void);
 
 /****
@@ -247,7 +252,7 @@ int mgtclk_xpoint_en(void);
  */
 Marble_PCB_Rev_t marble_get_pcb_rev(void);
 
-void marble_print_ID_status(void);
+void marble_print_ID_status(int len);
 
 // The Board ID is (PCB revision) | (BOARD_TYPE_...)
 uint8_t marble_get_board_id(void);

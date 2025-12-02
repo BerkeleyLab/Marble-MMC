@@ -1,5 +1,6 @@
 /* All the LTM4673-related stuff in one place
  * LTM4673 is new power management chip used on Marble >= 1.4
+ * marble_error_handler caller_id reserved: 80-95
  */
 
 #include <stdio.h>
@@ -485,18 +486,18 @@ static int ltm4673_vet_status_word(uint16_t stat) {
   if (stat) {
     printf("Status 0x%04x:\r\n", stat);
   }
-  if (stat & (1 << 15)) marble_error_handler(ERROR_LTM_VOUT);
-  if (stat & (1 << 14)) marble_error_handler(ERROR_LTM_IOUT);
-  if (stat & (1 << 13)) marble_error_handler(ERROR_LTM_VIN);
-  if (stat & (1 << 12)) marble_error_handler(ERROR_LTM_MFR);
-  if (stat & (1 << 11)) marble_error_handler(ERROR_LTM_POWERNGD);
-  if (stat & (1 << 7)) marble_error_handler(ERROR_LTM_BUSY);
-  if (stat & (1 << 6)) marble_error_handler(ERROR_LTM_NOPOWER);
-  if (stat & (1 << 5)) marble_error_handler(ERROR_LTM_VOUTOVER);
-  if (stat & (1 << 4)) marble_error_handler(ERROR_LTM_IOUTOVER);
-  if (stat & (1 << 3)) marble_error_handler(ERROR_LTM_VINUNDER);
-  if (stat & (1 << 2)) marble_error_handler(ERROR_LTM_OVERTEMP);
-  if (stat & (1 << 1)) marble_error_handler(ERROR_LTM_COMM);
+  if (stat & (1 << 15)) marble_error_handler(ERROR_LTM_VOUT, 80);
+  if (stat & (1 << 14)) marble_error_handler(ERROR_LTM_IOUT, 81);
+  if (stat & (1 << 13)) marble_error_handler(ERROR_LTM_VIN, 82);
+  if (stat & (1 << 12)) marble_error_handler(ERROR_LTM_MFR, 83);
+  if (stat & (1 << 11)) marble_error_handler(ERROR_LTM_POWERNGD, 84);
+  if (stat & (1 << 7)) marble_error_handler(ERROR_LTM_BUSY, 85);
+  if (stat & (1 << 6)) marble_error_handler(ERROR_LTM_NOPOWER, 86);
+  if (stat & (1 << 5)) marble_error_handler(ERROR_LTM_VOUTOVER, 87);
+  if (stat & (1 << 4)) marble_error_handler(ERROR_LTM_IOUTOVER, 88);
+  if (stat & (1 << 3)) marble_error_handler(ERROR_LTM_VINUNDER, 89);
+  if (stat & (1 << 2)) marble_error_handler(ERROR_LTM_OVERTEMP, 90);
+  if (stat & (1 << 1)) marble_error_handler(ERROR_LTM_COMM, 91);
   return (int)(stat == 0);
 }
 
@@ -532,7 +533,7 @@ void ltm4673_read_telem(uint8_t dev) {
       // telemetry data for all 4 channels
       uint8_t page = 0x00 + jx;
       marble_I2C_cmdsend(I2C_PM, dev, 0x00, &page, 1);
-      printf("> Read page/channel: %x\n", page);
+      printf("Read page/channel: %x\n", page);
       const unsigned tlen = sizeof(r_table)/sizeof(r_table[0]);
       for (unsigned ix=0; ix<tlen; ix++) {
           uint8_t i2c_dat[4];

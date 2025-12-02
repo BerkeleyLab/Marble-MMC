@@ -29,7 +29,7 @@ void system_service(void);
 void system_apply_params(void);
 
 /* Print various status fields */
-void print_status_counters(void);
+void print_status_counters(int len);
 
 /* Reset FPGA and schedule callback function 'cb' to execute after reset */
 void reset_fpga_with_callback(void (*cb)(void));

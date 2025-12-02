@@ -41,7 +41,7 @@ typedef enum {
 
 void I2C_PM_init(void);
 void I2C_PM_scan(void);
-void I2C_PM_probe(void);
+void I2C_PM_probe(int len);
 void I2C_PM_bus_display(void);
 void i2c_pm_hook(uint8_t addr, uint8_t rnw, int cmd, const uint8_t *data, int len);
 int PM_GetTelem(PM_telem_enum_t elem);
