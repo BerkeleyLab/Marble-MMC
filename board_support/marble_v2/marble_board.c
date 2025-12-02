@@ -418,6 +418,10 @@ void marble_print_status(void) {
     if (!_pwr_good) printf(" Lost power (power supply PWRGD deasserted).");
   }
   printf("\r\n");
+  print_clock_info();
+  print_uptime();
+  print_reset_cause();
+  print_error_log();
   return;
 }
 
@@ -1302,10 +1306,10 @@ void marble_print_ID_status(int len) {
     printf("Firmware revision: " GIT_REV " [Git]\r\n");// placeholder for GIT_REV
     printf("MMC Boot ID: 0x%08lX\n", boot_id);
     console_print_mac_ip();
-    print_clock_info();
-    print_uptime();
-    print_reset_cause();
-    print_error_log();
+    // print_clock_info();
+    // print_uptime();
+    // print_reset_cause();
+    // print_error_log();
     return;
   } else {
     printf("%s",unk_str);
