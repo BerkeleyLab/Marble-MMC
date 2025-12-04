@@ -1,4 +1,6 @@
 // A patch between the STM32 HAL codebase and the picorv32-based UI board driver
+// marble_error_handler caller_id reserved: 160-175
+
 
 #include "spi.h"
 #include "stm32f2xx_hal.h"
@@ -68,9 +70,9 @@ void ui_board_spi_init(SPI_TypeDef *spi, int init, int nbits, uint32_t clk_div) 
     return;
   }
   _spi_initialized = 1;
-  printf("ui_board_spi_init\r\n");
+  printf("        ui board spi init\r\n");
   SPI_HandleTypeDef hspi = {0};
-  hspi.Instance = spi;
+  hspi.Instance = spi;  // in this implementation: spi.h --> SPI_INIT --> settings.h: #define OLED_SPI   SPI2
   hspi.Init.Mode = SPI_MODE_MASTER;
   hspi.Init.Direction = SPI_DIRECTION_2LINES;
   if (nbits == 8) {
@@ -106,8 +108,16 @@ void ui_board_spi_init(SPI_TypeDef *spi, int init, int nbits, uint32_t clk_div) 
   hspi.Init.CRCPolynomial = 10;
   // Initialize peripheral
   hspi.State = HAL_SPI_STATE_RESET;
-  HAL_SPI_Init(&hspi); // Calls HAL_SPI_MspInit() to init SPI pins
-  /**Need to initialize non-SPI GPIOs
+  if (HAL_SPI_Init(&hspi) != HAL_OK)
+    {
+        marble_error_handler(ERROR_SPI2_INIT, 160);
+    }
+  /** HAL_SPI_Init(&hspi); // Calls HAL_SPI_MspInit() to init SPI pins
+  PC2 -> MISO
+  PC3 -> MOSI
+  PB10 -> SCK
+  */
+  /** Need to initialize non-SPI GPIOs
   PB9 -> GPIO Output (push-pull)
   PB14-> GPIO Input
   PB15-> GPIO Output (push-pull)
@@ -165,6 +175,7 @@ static int wait_for_txe(SPI_TypeDef *spi, uint32_t timeout) {
     }
   }
   if (timeout == 0) {
+    marble_error_handler(ERROR_SPI2_SR_TXE, 161);
     return -1;
   }
   return 0;
@@ -177,6 +188,7 @@ static int wait_for_txne(SPI_TypeDef *spi, uint32_t timeout) {
     }
   }
   if (timeout == 0) {
+    marble_error_handler(ERROR_SPI2_SR_TXNE, 162);
     return -1;
   }
   return 0;
@@ -189,6 +201,7 @@ static int wait_for_rxne(SPI_TypeDef *spi, uint32_t timeout) {
     }
   }
   if (timeout == 0) {
+    marble_error_handler(ERROR_SPI2_SR_RXNE, 163);
     return -1;
   }
   return 0;
@@ -201,6 +214,7 @@ static int wait_for_nbusy(SPI_TypeDef *spi, uint32_t timeout) {
     }
   }
   if (timeout == 0) {
+    marble_error_handler(ERROR_SPI2_SR_BSY, 164);
     return -1;
   }
   return 0;

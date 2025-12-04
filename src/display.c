@@ -594,7 +594,7 @@ static int update_page_temperature(int refresh) {
 
 void display_init(void) {
   // For lack of a better place, let's put this here for now
-  printf("Initializing UI board\r\n");
+  printf("        Initializing UI board\r\n");
   uiBoardInit();
   set_inverted(0);
 

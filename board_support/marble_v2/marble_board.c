@@ -94,7 +94,15 @@ static const char *ErrorCodeStrings[ERROR_CODE_COUNT] = { // triggers compile wa
     "ERROR_I2C3_INIT - I2C_PM bus init failed",
     "ERROR_I2C1_DEINIT - I2C_FPGA bus de-init failed",
     "ERROR_I2C3_DEINIT - I2C_PM bus de-init failed",
+    "ERROR_SPI_TRANSMIT",
+    "ERROR_SPI_READ16",
+    "ERROR_SPI_EXCH16",
     "ERROR_SPI1_INIT",
+    "ERROR_SPI2_INIT",
+    "ERROR_SPI2_SR_TXE - Timeout",
+    "ERROR_SPI2_SR_TXNE - Timeout",
+    "ERROR_SPI2_SR_RXNE - Timeout",
+    "ERROR_SPI2_SR_BSY - Timeout",
     "ERROR_UART_CONSOLE_INIT",
     "ERROR_I2C_FPGA_NONE - No error",
     "ERROR_I2C_FPGA_BERR - Bus error",
@@ -1129,6 +1137,9 @@ int marble_SSP_write16(SSP_PORT ssp, uint16_t *buffer, unsigned size)
 {
   SPI_CSB_SET(ssp, false);
   int rc = HAL_SPI_Transmit(ssp, (uint8_t*) buffer, size, HAL_MAX_DELAY);
+  if (rc != HAL_OK) {
+        marble_error_handler(ERROR_SPI_TRANSMIT, 33);
+  }
   SPI_CSB_SET(ssp, true);
   return rc;
 }
@@ -1137,6 +1148,9 @@ int marble_SSP_read16(SSP_PORT ssp, uint16_t *buffer, unsigned size)
 {
   SPI_CSB_SET(ssp, false);
   int rc = HAL_SPI_Receive(ssp, (uint8_t*) buffer, size, HAL_MAX_DELAY);
+  if (rc != HAL_OK) {
+        marble_error_handler(ERROR_SPI_READ16, 34);
+  }
   SPI_CSB_SET(ssp, true);
   return rc;
 }
@@ -1145,6 +1159,9 @@ int marble_SSP_exch16(SSP_PORT ssp, uint16_t *tx_buf, uint16_t *rx_buf, unsigned
 {
   SPI_CSB_SET(ssp, false);
   int rc = HAL_SPI_TransmitReceive(ssp, (uint8_t*) tx_buf, (uint8_t*) rx_buf,size, HAL_MAX_DELAY);
+  if (rc != HAL_OK) {
+        marble_error_handler(ERROR_SPI_EXCH16, 35);
+  }
   SPI_CSB_SET(ssp, true);
   return rc;
 }
@@ -1630,7 +1647,7 @@ static void MX_SPI1_Init(void)
     SSP_FPGA = &hspi1;
 }
 
-/*
+/** SPI2 is used by UI_board (ui_board_spi.c)
 static void MX_SPI2_Init(void)
 {
    hspi2.Instance = SPI2;
