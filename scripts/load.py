@@ -219,10 +219,10 @@ def loadCommands(dev, baud=115200, commands=None, do_print=False, do_log=False):
 
 
 def openConnection(dev, baud=115200):
-    # global INTERCOMMAND_SLEEP
-    # global POST_SLEEP
-    # INTERCOMMAND_SLEEP = 0  # seconds
-    # POST_SLEEP = 0  # seconds
+    global INTERCOMMAND_SLEEP
+    global POST_SLEEP
+    INTERCOMMAND_SLEEP = 0  # seconds
+    POST_SLEEP = 0  # seconds
     sdev = StreamSerial(dev, baud)
     time.sleep(1)
     sdev.flush()
@@ -233,10 +233,10 @@ def openConnection(dev, baud=115200):
 
 
 def readbackCommands(sdev, commands=None, close_conn=True, do_print=False, do_log=False):
-    # global INTERCOMMAND_SLEEP
-    # global POST_SLEEP
-    # INTERCOMMAND_SLEEP = 0.01  # seconds
-    # POST_SLEEP = 0.01  # seconds
+    global INTERCOMMAND_SLEEP
+    global POST_SLEEP
+    INTERCOMMAND_SLEEP = 0.01  # seconds
+    POST_SLEEP = 0.01  # seconds
     if commands is None:
         print("Missing mandatory filename")
         return 1
