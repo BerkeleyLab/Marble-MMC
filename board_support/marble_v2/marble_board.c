@@ -145,6 +145,7 @@ static const char *ErrorCodeStrings[ERROR_CODE_COUNT] = { // triggers compile wa
 static uint32_t error_counters[ERROR_CODE_COUNT] = {0};
 static uint32_t error_last_tick[ERROR_CODE_COUNT] = {0};
 static uint8_t error_last_caller_id[ERROR_CODE_COUNT] = {0};
+static uint8_t error_nack[ERROR_CODE_COUNT] = {0};
 uint8_t previous_error = 0xff;
 uint8_t repeating_error = 0xff;
 static uint8_t tick_overflow_count = 0;
@@ -296,6 +297,7 @@ void marble_error_handler(MarbleErrorCode_t code, uint8_t caller_id) {
     error_counters[idx]++;
     error_last_tick[idx] = total_seconds;
     error_last_caller_id[idx] = caller_id;
+    error_nack[idx] = 1;
     if((error_last_tick[idx] - error_previous_tick > 2) || idx != previous_error){
       printf("\r\033[31m*** MMC ERROR: %s [%d]***\033[0m\r\n", ErrorCodeStrings[idx], caller_id);
       repeating_error = 0xff;
@@ -316,6 +318,18 @@ void marble_error_handler(MarbleErrorCode_t code, uint8_t caller_id) {
 void reset_error_repeat(void){
   repeating_error = 0xff;
   previous_error = 0xff;
+}
+
+void marble_error_ack(uint8_t idx) {
+  if (idx == 0xff) {
+    // Ack all
+    for (int i = 0; i < ERROR_CODE_COUNT; i++) {
+      error_nack[i] = 0;
+    }
+  } else if (idx < ERROR_CODE_COUNT) {
+    error_nack[idx] = 0;
+  }
+  return;
 }
 
 static void print_error_log(void) {

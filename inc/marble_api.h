@@ -234,6 +234,7 @@ typedef enum {
 // New Error_Handler signature taking an ErrorCode
 void marble_error_handler(MarbleErrorCode_t code, uint8_t caller_id);
 void reset_error_repeat(void);
+void marble_error_ack(uint8_t idx);
 
 /****
 * Top-level Application Functionality
