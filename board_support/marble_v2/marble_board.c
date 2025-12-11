@@ -284,7 +284,7 @@ void marble_error_handler(MarbleErrorCode_t code, uint8_t caller_id) {
     uint32_t error_previous_tick = error_last_tick[idx];
     uint32_t tick_milliseconds = marble_get_tick();
     uint64_t total_ms = (uint64_t)tick_overflow_count * (uint64_t)UINT32_MAX + (uint64_t)tick_milliseconds;
-    uint32_t total_seconds = total_ms/1000; // overflow after 123 years or so
+    uint32_t total_seconds = total_ms/1000; // overflow after 123 years
     error_counters[idx]++;
     error_last_tick[idx] = total_seconds;
     error_last_caller_id[idx] = caller_id;
