@@ -54,7 +54,7 @@ if [ -z "$TTY_MMC" ]; then
       ;;
     *)
 		  # Linux
-		  TTY_MMC="/dev/ttyUSB3"
+		  TTY_MMC=$(ls /dev/ttyUSB* | sort -V | tail -n 1) # Usually "/dev/ttyUSB3"
       ;;
 	esac
 	echo "Using TTY: $TTY_MMC"  #TTY_MMC=/dev/ttyUSB3

@@ -293,7 +293,7 @@ void marble_error_handler(MarbleErrorCode_t code, uint8_t caller_id) {
     uint32_t error_previous_tick = error_last_tick[idx];
     uint32_t tick_milliseconds = marble_get_tick();
     uint64_t total_ms = (uint64_t)tick_overflow_count * (uint64_t)UINT32_MAX + (uint64_t)tick_milliseconds;
-    uint32_t total_seconds = total_ms/1000; // overflow after 123 years or so
+    uint32_t total_seconds = total_ms/1000; // overflow after 123 years
     error_counters[idx]++;
     error_last_tick[idx] = total_seconds;
     error_last_caller_id[idx] = caller_id;
@@ -1270,13 +1270,13 @@ uint32_t marble_init(void)
 {
   HAL_Init();
   SystemClock_Config_HSI();
-
   marble_UART_init();
   MX_GPIO_Init();
   marble_GPIOint_init();
   marble_read_pcb_rev();
   marble_get_SN();
   marble_PSU_pwr(true);
+  printf("        PSU and clocks initialized (%ld)\r\n", marble_get_tick());
   MX_ETH_MDIO_Init();
 
   printf("+ Init I2C FPGA interface...\r\n");
@@ -1404,7 +1404,7 @@ static void show_marble_SN(void) {
 
 static void SystemClock_Config(void)
 {
-
+  // HSE_STARTUP_TIMEOUT defined in stm32f2xx_hal_conf.h defines timeout for HSE start-up
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
   uint32_t FLatency;
@@ -1519,7 +1519,7 @@ static void MX_ETH_MDIO_Init(void)
 
     __HAL_ETH_RESET_HANDLE_STATE(&heth);
     HAL_ETH_MspInit(&heth);
-    marble_SLEEP_ms(10);
+    marble_SLEEP_ms(100);
     uint32_t id1, id2;
     if (HAL_ETH_ReadPHYRegister(&heth, MDIO_PHY_REG_PHY_ID_1, &id1) == HAL_OK &&
         HAL_ETH_ReadPHYRegister(&heth, MDIO_PHY_REG_PHY_ID_2, &id2) == HAL_OK)
