@@ -62,7 +62,7 @@ typedef struct {
 } pmod_led_t;
 
 /* ============================ Static Variables ============================ */
-static unsigned int live_cnt=0;
+// static unsigned int live_cnt=0;
 static unsigned int fpga_prog_cnt=0;
 static unsigned int fpga_done_tickval=0;
 static unsigned int fpga_net_prog_pend=0;
@@ -304,7 +304,7 @@ void reset_fpga_with_callback(void (*cb)(void)) {
 void print_status_counters(int len) {
   if(len == 2) {
   marble_print_status();
-  printf("Live counter: %u\r\n", live_cnt);
+  // printf("Live counter: %u\r\n", live_cnt);
   printf("FPGA prog counter: %u\r\n", fpga_prog_cnt);
   FPGAWD_ShowState();
   printf("FMC status: %x\r\n", marble_FMC_status());
@@ -568,7 +568,7 @@ static void timer_int_handler(void)
       marble_LED_toggle(1);
    led_cnt = (led_cnt + 1) % 1000;
 #endif /* LED_SNAKE */
-   live_cnt++;
+  //  live_cnt++;
 }
 
 static void pmod_subsystem_service(void) {

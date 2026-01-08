@@ -458,6 +458,8 @@ void marble_SYSTIMER_handler(void (*handler)(void));
 void marble_SLEEP_ms(uint32_t delay);
 void marble_SLEEP_us(uint32_t delay);
 
+char* print_uptime(void);
+
 /************
 * FPGA Watchdog Support
 ************/

@@ -221,8 +221,8 @@ static void show_mmc_ID(void);
 static void show_PHY_ID(void);
 static void marble_get_SN(void);
 static void show_marble_SN(void);
-static void print_time(uint32_t total_seconds);
-static void print_uptime(void);
+static char* print_time(uint32_t total_seconds);
+// static char* print_uptime(void);
 static void print_clock_info(void);
 static void pmod_timer_interrupt_enable(void);
 static void pmod_timer_interrupt_disable(void);
@@ -353,9 +353,7 @@ static void print_error_log(void) {
         for (int i = 0; i < ERROR_CODE_COUNT; i++) {
             if (error_counters[i] > 0) {
                 seconds_ago = total_seconds - (unsigned long)error_last_tick[i];
-                printf(" - %s: %lu occurrences, last caller [%d], ", ErrorCodeStrings[i], (unsigned long)error_counters[i], error_last_caller_id[i]);
-                print_time(seconds_ago);
-                printf(" ago\r\n");
+                printf(" - %s: %lu occurrences, last caller [%d], %s ago\r\n", ErrorCodeStrings[i], (unsigned long)error_counters[i], error_last_caller_id[i], print_time(seconds_ago));
             }
         }
     }
@@ -441,7 +439,7 @@ void marble_print_status(void) {
   }
   printf("\r\n");
   print_clock_info();
-  print_uptime();
+  printf("Uptime: %s\r\n", print_uptime());
   print_reset_cause();
   print_error_log();
   return;
@@ -2279,13 +2277,15 @@ void print_reset_cause(void)
 }
 
 
-static void print_time(uint32_t total_seconds){
+static char* print_time(uint32_t total_seconds){
+    static char buffer[30];
     uint32_t days    = total_seconds / 86400;
     uint32_t hours   = (total_seconds % 86400) / 3600;
     uint32_t minutes = (total_seconds % 3600) / 60;
     uint32_t seconds = total_seconds % 60;
     // uint32_t ms_remainder  = total_ms % 1000;
-    printf(
+    snprintf(
+        buffer, sizeof(buffer),
         "%lu days, %02lu:%02lu:%02lu",
         (unsigned long) days,
         (unsigned long) hours,
@@ -2293,15 +2293,15 @@ static void print_time(uint32_t total_seconds){
         (unsigned long) seconds
         // (unsigned long) ms_remainder
     );
+    return buffer;
 }
 
-static void print_uptime(void) //wraps around at ~136 years
+char* print_uptime(void) //wraps around at ~136 years
 {
+    static char buffer[40];
     uint32_t uptime_ms = marble_get_tick();  // current tick in ms (uint32_t)
     uint64_t total_ms = (uint64_t)tick_overflow_count * (uint64_t)UINT32_MAX
                       + (uint64_t)uptime_ms;
     uint32_t total_seconds = total_ms / 1000;
-    printf("Uptime: ");
-    print_time(total_seconds);
-    printf("\r\n");
+    return print_time(total_seconds);
 }

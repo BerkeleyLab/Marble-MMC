@@ -19,7 +19,7 @@
 
 // ======================= Policy ===========================
 #define DISPLAY_TIMEOUT_MS      (10*60*1000)
-#define UPDATE_INTERVAL_MS            (1000)
+#define UPDATE_INTERVAL_MS            (10)
 #define USE_FONT_17
 // TODO - Warning! The lv_font_roboto_12 font is not monospace, so ensuring any
 //        future value fits inside the initial bounding box is somewhat tedious.
@@ -27,10 +27,56 @@
 // This violates the "don't spam the I2C bus" policy of the MMC, so it's disabled
 // by default and may be removed completely.
 #define ENABLE_FMC_CURRENT_CHECK         (0)
+#define PAGE_INFO_ITEMS           (5) // Number of items on the INFO page
 // ==========================================================
 
 extern lv_font_t lv_font_roboto_12, lv_font_roboto_mono_17, lv_font_fa;
 
+typedef enum {
+  MENU=0,
+  STATUS,
+  INFO,
+  POWER,
+#if ENABLE_FMC_CURRENT_CHECK
+  PAGE_FMC,
+#endif
+  TEMPERATURE,
+  ERRORS,
+  CONFIG_WARNING,
+  SET_IP,
+  NUMBER_OF_PAGES, // Keep me at the end
+} display_page_t;
+/*
+  CONFIG,
+  SET_MAC,
+// CONFIG pages:
+*/
+
+static const char *MenuItems[NUMBER_OF_PAGES] = { // triggers compile warning if not all enum values are covered
+  "Main Menu",
+	"Status",
+  "Info",
+	"Power",
+	"Temperature",
+	"Error logs",
+	"Set IP Address",
+};
+/*
+	"Configuration", // new menu page
+	"Set MAC Address"
+*/
+
+static display_page_t menu(unsigned btns);
+static display_page_t config_warning(unsigned btns);
+// static display_page_t config(unsigned btns);
+static display_page_t set_IP(unsigned btns);
+// static display_page_t demo2(unsigned btns); REMOVE
+
+static void scrollbar(int16_t percentage);
+static void window_scrollbar(int16_t pos, int16_t total);
+static void errorLight(unsigned frm);
+
+/* REMOVE
 typedef enum {
   PAGE_STATE=0,
   PAGE_POWER,
@@ -40,12 +86,13 @@ typedef enum {
   PAGE_TEMPERATURE,
   NUMBER_OF_PAGES, // Keep me at the end
 } display_page_t;
+ */
 
 // These will remain correct even if the page order changes in the enum above
 #define PAGE_FIRST        (0)
 #define PAGE_LAST         (NUMBER_OF_PAGES-1)
 
-static display_page_t current_page = PAGE_STATE;
+// static display_page_t current_page = PAGE_STATE; REMOVE
 
 // Vertical line spacing depending on whether we're using lv_font_roboto_12 or lv_font_roboto_mono_17
 // Hack to align labels. The 12pt font is not monospace, so assume the widest character for offsets.
@@ -75,6 +122,15 @@ uint32_t last_touch = 0;
 static t_label label_test_12;
 static t_label label_test_17;
 */
+static t_label menu_item;
+static t_label label_warning_1;
+static t_label label_warning_2;
+static t_label label_warning_cancel;
+static t_label label_warning_proceed;
+static t_label IP_item;
+static t_label error_light;
+static t_label label_title;
+
 
 // =================== ERROR Overlay ========================
 // NOTE! The error overlay only works if the UI board is supplied with an alternate
@@ -100,10 +156,12 @@ static t_label label_ip;
 // MAC: aa:bb:cc:dd:ee:ff
 static t_label label_mac;
 
+static t_label label_uptime;
+
 //Over-Temperature
 //Powerdown
 //                                      "Marble v1.4 Golden Image"
-static const char label_marble_init[] = "Marble v1.              ";
+static const char label_marble_init[] = "Marble v1.                ";
 #define LABEL_MARBLE_SIZE     (sizeof(label_marble_init)/sizeof(char))
 
 static const char label_ip_init[] = "IP: xxx.xxx.xxx.xxx";
@@ -215,7 +273,8 @@ static void init_page_state(void);
 static void init_page_power(void);
 static void init_page_temperature(void);
 static void update_display_error(int refresh);
-static int update_page_state(int refresh);
+static display_page_t page_status(unsigned btns);
+static display_page_t page_info(unsigned btns);
 static int update_page_power(int refresh);
 #if ENABLE_FMC_CURRENT_CHECK
 static void init_page_fmc(void);
@@ -234,6 +293,379 @@ static int array_updated_uint8_t(volatile uint8_t *old, const uint8_t *new, int 
 static int array_updated_int(volatile int *old, const int *new, int len);
 static void update_led(void);
 
+
+
+void display_update(void) {
+	static display_page_t current_page = MENU;
+  uint8_t btns = uiBoardPoll();
+  display_enable();
+  static uint32_t last_update = 0;
+  static Board_Status_t status = BOARD_STATUS_GOOD;
+  Board_Status_t new_status = marble_get_status();
+
+  // Check encoder knob
+  int refresh = 0;
+  if (do_update(last_update) || btns) {
+    if (new_status == BOARD_STATUS_GOOD) {
+      if (display_enabled) {
+        // update_page(refresh);
+        switch(current_page) {
+          case MENU:
+            current_page = menu(btns);
+            break;
+          case STATUS:
+            current_page = page_status(btns); // FIXME
+            break;
+          case INFO:
+            current_page = page_info(btns); // FIXME
+            break;
+          case CONFIG_WARNING:
+            current_page = config_warning(btns);
+            break;
+          // case CONFIG:
+          //   current_page = config(btns);
+          //   break;
+          case SET_IP:
+            current_page = set_IP(btns);
+            break;
+          default:
+            current_page = MENU;
+            break;
+        }
+        send_fb();
+      }
+    } else {
+      display_enable();
+      if (status != new_status) {
+        update_display_error(1);
+      }
+    }
+    last_update = BSP_GET_SYSTICK();
+    status = new_status;
+  }
+  if (display_enabled) {
+    display_timeout();
+    update_led();
+  }
+  return;
+}
+
+
+static display_page_t menu(unsigned btns)
+{
+	static unsigned frm = 0;
+	static int16_t cursor_y_goal = 23;
+	static int16_t text_cursor = DISPLAY_HEIGHT;
+	static int16_t selection_id = 0;
+	static uint8_t blink = 0;
+
+	fill(0);
+
+	if (btns & (1 << 0)) {  // left
+		selection_id--;
+	} else if (btns & (1 << 1)) {  // right
+		selection_id++;
+	}
+	
+	cursor_y_goal = 43-(20*selection_id);
+	if(text_cursor == (text_cursor+cursor_y_goal)/2) {
+		text_cursor = cursor_y_goal;
+		if(selection_id >= CONFIG_WARNING+1) // bounce back at the end
+			selection_id = CONFIG_WARNING;
+		if(selection_id <= 0) // bounce back at the end
+			selection_id = STATUS;
+		cursor_y_goal = 43-(20*selection_id);
+	}
+	else {
+		text_cursor=(text_cursor+cursor_y_goal)/2;
+	}
+
+	for(display_page_t p=STATUS; p<=CONFIG_WARNING; p++) {
+    lv_init_label(&menu_item, DISPLAY_WIDTH/2, text_cursor + 20*(p-1), &lv_font_roboto_mono_17, MenuItems[p], LV_CENTER, true);
+	}
+
+	if(text_cursor == cursor_y_goal && selection_id >=STATUS && selection_id <= CONFIG_WARNING) {
+		if (btns & (1 << 2))  // push
+			blink++;
+		if (blink > 0) {
+			if((blink>>1)%2)
+				// invertRoundedRect(6, 22, 250, 42, 10);
+        invertRoundedRect(0, LINE_SPACING_17+2, DISPLAY_WIDTH, 2*LINE_SPACING_17+1, (LINE_SPACING_17-2)/2); // white background for title
+			else {
+				// emptyRoundedRect(6, 22, 250, 42, 10, 1);
+        emptyRoundedRect(0, LINE_SPACING_17+2, DISPLAY_WIDTH, 2*LINE_SPACING_17+1, (LINE_SPACING_17-2)/2,1); // white background for title
+			}
+			blink++;
+			if (blink > 6) {// selection made
+				blink = 0;
+				return selection_id;
+			}
+		} else {
+			// invertRoundedRect(6, 22, 250, 42, 10);
+      invertRoundedRect(0, LINE_SPACING_17+2, DISPLAY_WIDTH, 2*LINE_SPACING_17+1, (LINE_SPACING_17-2)/2); // white background for title
+		}
+	}
+	else {
+			// emptyRoundedRect(6, 22, 250, 42, 10, 1);
+      emptyRoundedRect(0, LINE_SPACING_17+2, DISPLAY_WIDTH, 2*LINE_SPACING_17+1, (LINE_SPACING_17-2)/2,1); // white background for title
+	}
+	
+	errorLight(frm);
+	frm++;
+	return MENU; // stay in menu
+}
+
+
+static display_page_t config_warning(unsigned btns)
+{
+	static unsigned frm = 0;
+	static int16_t selection_id = 0;
+
+	const int rectangle_coordinates[][4] = {
+		{DISPLAY_WIDTH/2 - 98, 44, DISPLAY_WIDTH/2 - 23, 64},  // CANCEL
+		{DISPLAY_WIDTH/2 + 22, 44, DISPLAY_WIDTH/2 + 107, 64}  // Proceed
+	};
+
+	fill(0);
+
+  lv_init_label(&label_warning_1, DISPLAY_WIDTH/2, 2, &lv_font_roboto_mono_17, "WARNING", LV_CENTER, true);
+  lv_init_label(&label_warning_2, DISPLAY_WIDTH/2, 21, &lv_font_roboto_12, "You are about to change critical device settings", LV_CENTER, true);
+  lv_init_label(&label_warning_cancel, DISPLAY_WIDTH/2 - 90, 44, &lv_font_roboto_mono_17, "Cancel", LV_LEFT, true);
+  lv_init_label(&label_warning_proceed, DISPLAY_WIDTH/2 + 30, 44, &lv_font_roboto_mono_17, "Proceed", LV_LEFT, true);
+		// navigate menu
+		if (btns & (1 << 0)) {  // left
+			selection_id--;
+		} else if (btns & (1 << 1)) {  // right
+			selection_id++;
+		}
+		if(selection_id >= 2) // bounce back at the end
+			selection_id = 0;
+		if(selection_id <= -1) // bounce back at the end
+			selection_id = 1;
+	
+
+	if(selection_id == 0) {
+		invertRoundedRect(rectangle_coordinates[0][0]-1, rectangle_coordinates[0][1]-1, rectangle_coordinates[0][2]+1, rectangle_coordinates[0][3]+1, 10);
+		emptyRoundedRect(rectangle_coordinates[1][0]-1, rectangle_coordinates[1][1]-1, rectangle_coordinates[1][2]+1, rectangle_coordinates[1][3]+1, 10, 1);
+		if (btns & (1 << 2)) { // push
+			selection_id = 0; // default cancel button
+			return MENU; // back to config menu
+		}
+	} else if (selection_id == 1) {
+		emptyRoundedRect(rectangle_coordinates[0][0]-1, rectangle_coordinates[0][1]-1, rectangle_coordinates[0][2]+1, rectangle_coordinates[0][3]+1, 10, 1);
+		invertRoundedRect(rectangle_coordinates[1][0]-1, rectangle_coordinates[1][1]-1, rectangle_coordinates[1][2]+1, rectangle_coordinates[1][3]+1, 10);
+		if (btns & (1 << 2)) { // push
+			selection_id = 0; // default cancel button
+			return SET_IP; // back to config menu
+		}
+	}
+
+	frm++;
+	return CONFIG_WARNING; // stay in menu
+}
+
+/* configuration menu page - disabled for now
+static display_page_t config(unsigned btns)
+{
+	static unsigned frm = 0;
+	static unsigned n_lines=4, x=128, y=32;
+	static uint8_t led = 0;
+	static unsigned isBtn;
+	int dx = 0, dy = 0;
+	static int16_t cursor_y_goal = 23;
+	static int16_t text_cursor = 20;
+	static int16_t selection_id = 0;
+	static uint8_t blink = 0;
+
+	fill(0);
+
+	if (btns & (1 << 0)) {  // left
+		selection_id--;
+	} else if (btns & (1 << 1)) {  // right
+		selection_id++;
+	}
+	
+	cursor_y_goal = 23-(20*selection_id);
+
+	if(text_cursor == (text_cursor+cursor_y_goal)/2) {
+		text_cursor = cursor_y_goal;
+		if(selection_id >= 6) // bounce back at the end
+			selection_id = 5;
+		if(selection_id <= -1) // bounce back at the end
+			selection_id = 0;
+		cursor_y_goal = 23-(20*selection_id);
+	}
+	else {
+		text_cursor=(text_cursor+cursor_y_goal)/2;
+	}
+	// if(text_cursor < cursor_y_goal) {
+	// 	text_cursor=(text_cursor+cursor_y_goal)/2;
+	// } else if (text_cursor > cursor_y_goal) {
+	// 	text_cursor--;
+	// }
+
+  lv_init_label(&menu_item, 21, text_cursor, &lv_font_roboto_mono_17, "Main Menu", LV_LEFT, true);  // TODO: CLEAN THIS UP
+  lv_init_label(&menu_item, 21, text_cursor+20, &lv_font_roboto_mono_17, "Set IP Address", LV_LEFT, true);
+  lv_init_label(&menu_item, 21, text_cursor+40, &lv_font_roboto_mono_17, "Set MAC Address", LV_LEFT, true);
+  lv_init_label(&menu_item, 21, text_cursor+60, &lv_font_roboto_mono_17, "Other stuff", LV_LEFT, true);
+  lv_init_label(&menu_item, 21, text_cursor+80, &lv_font_roboto_mono_17, "More other stuff", LV_LEFT, true);
+  lv_init_label(&menu_item, 21, text_cursor+100, &lv_font_roboto_mono_17, "...", LV_LEFT, true);
+
+
+	// set_cursor(220, 4);
+	// print_dec(cursor_y_goal);
+	// set_cursor(220, 49);
+	// print_dec(text_cursor);
+
+	// if(text_cursor == cursor_y_goal && selection_id >=0 && selection_id <= 5){
+		// set_font(&lv_font_roboto_mono_17);
+		// set_cursor(224, 25);
+		// print_str(CHEVRON_DOWN);
+	if(text_cursor == cursor_y_goal && selection_id >=0 && selection_id <= 5) {
+		if (btns & (1 << 2))  // push
+			blink++;
+		if (blink > 0) {
+			if((blink>>1)%2)
+				invertRoundedRect(6, 22, 250, 42, 10);
+			else {
+				emptyRoundedRect(6, 22, 250, 42, 10, 1);
+			}
+			blink++;
+			if (blink > 6) {// selection made
+				blink = 0;
+				if(selection_id == 0)
+					return MENU;
+				else
+					return selection_id + CONFIG; // page id start at 1
+			}
+		} else {
+			invertRoundedRect(11, 22, 254, 42, 10);
+		}
+	}
+	else {
+			emptyRoundedRect(11, 22, 254, 42, 10, 1);
+	}
+
+	scrollbar((-(text_cursor - 23)*10)/10); // percentage
+	errorLight(frm);
+	frm++;
+	return CONFIG; // stay in menu
+}
+*/
+
+static display_page_t set_IP(unsigned btns)
+{
+	static unsigned frm = 0;
+	static unsigned isBtn;
+	int dx = 0, dy = 0;
+	static int16_t cursor_x1 = 0;
+	static int16_t cursor_x2 = 0;
+	static int16_t cursor_y1 = 0;
+	static int16_t cursor_y2 = 0;
+	static int16_t selection_id = 0;
+	static uint8_t ip_bytes[4] = {192, 168, 100, 101};
+	static bool ip_selected = 0;
+	static bool ip_success = 0;
+	const int rectangle_coordinates[][4] = {
+		{DISPLAY_WIDTH/2 - 98, 44, DISPLAY_WIDTH/2 - 22, 64},  // CANCEL
+		{88, 20, 121, 39}, // IP 1
+		{128, 20, 161, 39}, // IP 2
+		{168, 20, 201, 39}, // IP 3
+		{208, 20, 241, 39},  // IP 4
+		{DISPLAY_WIDTH/2 + 22, 44, DISPLAY_WIDTH/2 + 98, 64}  // SET IP
+	};
+
+	fill(0);
+
+	char buffer[100];
+	snprintf(buffer, sizeof(buffer), "Set IP: %03d.%03d.%03d.%03d", ip_bytes[0], ip_bytes[1], ip_bytes[2], ip_bytes[3]);
+  lv_init_label(&IP_item, 10, 21, &lv_font_roboto_mono_17, buffer, LV_LEFT, true);
+  lv_init_label(&IP_item, DISPLAY_WIDTH/2 - 80, 44, &lv_font_roboto_mono_17, "Exit", LV_LEFT, true);
+  lv_init_label(&IP_item, DISPLAY_WIDTH/2 + 30, 44, &lv_font_roboto_mono_17, "Set IP", LV_LEFT, true);
+	if(ip_success) {
+    lv_init_label(&IP_item, 75, 2, &lv_font_roboto_12, "IP set successfully!", LV_LEFT, true);
+		invertRoundedRect(65, 2, 190, 16, 7);
+		if (btns & 0x03) {  // left or right
+			ip_success = 0; // reset success message
+		}
+	}
+
+	if(ip_selected) {
+		// modify selected byte
+		if (btns & (1 << 0)) {  // left
+			if(ip_bytes[selection_id - 1] == 0)
+				ip_bytes[selection_id - 1] = 255;
+			else
+				ip_bytes[selection_id - 1]--;
+		} else if (btns & (1 << 1)) {  // right
+			if(ip_bytes[selection_id - 1] == 255)
+				ip_bytes[selection_id - 1] = 0;
+			else
+				ip_bytes[selection_id - 1]++;
+		}
+	} else {
+		// navigate menu
+		if (btns & (1 << 0)) {  // left
+			selection_id--;
+		} else if (btns & (1 << 1)) {  // right
+			selection_id++;
+		}
+		if(selection_id >= 6) // bounce back at the end
+			selection_id = 0;
+		if(selection_id <= -1) // bounce back at the end
+			selection_id = 5;
+	}
+
+	if(selection_id == 0) {
+		cursor_x1 = rectangle_coordinates[1][0];
+		cursor_y1 = rectangle_coordinates[1][1];
+		cursor_x2 = rectangle_coordinates[1][2];
+		cursor_y2 = rectangle_coordinates[1][3];
+		invertRoundedRect(rectangle_coordinates[0][0]-1, rectangle_coordinates[0][1]-1, rectangle_coordinates[0][2]+1, rectangle_coordinates[0][3]+1, 10);
+		emptyRoundedRect(rectangle_coordinates[5][0]-1, rectangle_coordinates[5][1]-1, rectangle_coordinates[5][2]+1, rectangle_coordinates[5][3]+1, 10, 1);
+		if (btns & (1 << 2)) { // push
+			ip_success = 0;
+			return MENU; // back to config menu
+		}
+	} else if (selection_id == 5) {
+		cursor_x1 = rectangle_coordinates[4][0];
+		cursor_y1 = rectangle_coordinates[4][1];
+		cursor_x2 = rectangle_coordinates[4][2];
+		cursor_y2 = rectangle_coordinates[4][3];
+		emptyRoundedRect(rectangle_coordinates[0][0]-1, rectangle_coordinates[0][1]-1, rectangle_coordinates[0][2]+1, rectangle_coordinates[0][3]+1, 10, 1);
+		invertRoundedRect(rectangle_coordinates[5][0]-1, rectangle_coordinates[5][1]-1, rectangle_coordinates[5][2]+1, rectangle_coordinates[5][3]+1, 10);
+		if (btns & (1 << 2)) { // push
+			ip_success = 1;
+		}
+	} else { // IP byte selected
+		cursor_x1 = ((rectangle_coordinates[selection_id][0]+cursor_x1)>>1 == cursor_x1) ? rectangle_coordinates[selection_id][0] : (rectangle_coordinates[selection_id][0]+cursor_x1)>>1;
+		cursor_y1 = ((rectangle_coordinates[selection_id][1]+cursor_y1)>>1 == cursor_y1) ? rectangle_coordinates[selection_id][1] : (rectangle_coordinates[selection_id][1]+cursor_y1)>>1;
+		cursor_x2 = ((rectangle_coordinates[selection_id][2]+cursor_x2)>>1 == cursor_x2) ? rectangle_coordinates[selection_id][2] : (rectangle_coordinates[selection_id][2]+cursor_x2)>>1;
+		cursor_y2 = ((rectangle_coordinates[selection_id][3]+cursor_y2)>>1 == cursor_y2) ? rectangle_coordinates[selection_id][3] : (rectangle_coordinates[selection_id][3]+cursor_y2)>>1;
+		if(ip_selected) {
+			invertRoundedRect(cursor_x1, cursor_y1, cursor_x2, cursor_y2, 5);
+		} else {
+			emptyRoundedRect(cursor_x1, cursor_y1, cursor_x2, cursor_y2, 5, 1);
+		}
+		// print cancel and set ip buttons
+		emptyRoundedRect(rectangle_coordinates[0][0]-1, rectangle_coordinates[0][1]-1, rectangle_coordinates[0][2]+1, rectangle_coordinates[0][3]+1, 10, 1);
+		emptyRoundedRect(rectangle_coordinates[5][0]-1, rectangle_coordinates[5][1]-1, rectangle_coordinates[5][2]+1, rectangle_coordinates[5][3]+1, 10, 1);
+		if (btns & (1 << 2)) { // push
+			ip_selected = !ip_selected; // select ip byte
+		}
+	}
+
+	frm++;
+	return SET_IP; // stay in menu
+}
+
+
+
+
+
+
+
+/* REMOVE 
 void display_update(void) {
   static uint32_t last_update = 0;
   static Board_Status_t status = BOARD_STATUS_GOOD;
@@ -287,6 +719,7 @@ void display_update(void) {
   return;
 }
 
+
 static void update_page(int refresh) {
   if (refresh) {
     fill(0);
@@ -314,6 +747,8 @@ static void update_page(int refresh) {
   }
   return;
 }
+*/
+
 
 static void update_display_error(int refresh) {
   if (refresh) {
@@ -341,52 +776,162 @@ static void update_display_error(int refresh) {
   return;
 }
 
-static int update_page_state(int refresh) {
-  static uint8_t pip[4] = {0, 0, 0, 0};
-  static uint8_t pmac[6] = {0, 0, 0, 0, 0, 0};
+static display_page_t page_status(unsigned btns) {
+  static unsigned frm = 0;
+  static int16_t title_y_goal = 0;
+  static int16_t title_y = 23;
+//static int update_page_state(int refresh) {
+  // static uint8_t pip[4] = {0, 0, 0, 0};
+  // static uint8_t pmac[6] = {0, 0, 0, 0, 0, 0};
   static FPGAWD_State_t fpga_state = STATE_GOLDEN;
-  int rval = 0;
-  // block scope to avoid unnecessarily filling the stack
-  { // Marble label
+  fill(0);
+
+  if(btns & 4) { // push button to go back to menu
+    title_y_goal = 23;
+  }
+
+
+	if(title_y == (title_y+title_y_goal)/2) {
+		title_y = title_y_goal;
+	}
+	else {
+		title_y=(title_y+title_y_goal)/2;
+	}
+
+
+  if(title_y == 0) {
+    // Marble label
     FPGAWD_State_t current_state = FPGAWD_GetState();
-    int rev = 0;
-    if (refresh || (current_state != fpga_state)) {
-      if (marble_get_pcb_rev() == Marble_v1_4) {
-        rev = 4;
-      } else {
-        rev = 3;
-      }
-      char label[LABEL_MARBLE_SIZE];
-      snprintf(label, LABEL_MARBLE_SIZE, "Marble v1.%d %s Image", rev, current_state == STATE_GOLDEN ? "Golden" : "User");
-      lv_update_label(&label_marble, label);
-      fpga_state = current_state;
-      rval = 1;
-    }
+    char label[LABEL_MARBLE_SIZE];
+    snprintf(label, LABEL_MARBLE_SIZE, "%s Image", current_state == STATE_GOLDEN ? "Golden" : "User");
+    lv_update_label(&label_marble, label);
+    lv_init_label(&label_marble, (LINE_SPACING_17-2)/2, LINE_SPACING_17 + 0*LINE_SPACING_12, &lv_font_roboto_12, label, LV_LEFT, true);
+    fpga_state = current_state;
+    // uptime
+    char label1[40];
+    snprintf(label1, 40, "Uptime: %s", print_uptime());
+    lv_init_label(&label_uptime, (LINE_SPACING_17-2)/2, LINE_SPACING_17 + 1*LINE_SPACING_12, &lv_font_roboto_12, label1, LV_LEFT, true);
+    // error counter
+    char label2[40];
+    snprintf(label2, 40,"%d errors have occurred-FIX", 0); // TODO: marble_get_error_count()
+    lv_init_label(&label_uptime, (LINE_SPACING_17-2)/2, LINE_SPACING_17 + 2*LINE_SPACING_12, &lv_font_roboto_12, label2, LV_LEFT, true);
   }
-  { // IP addr
-    if (array_updated_uint8_t(pip, get_last_ip(), 4) || refresh) {
-      char ip_string[LABEL_IP_SIZE + 1];
-      format_ip_addr(pip, ip_string, LABEL_IP_SIZE);
-      ip_string[LABEL_IP_SIZE] = '\0'; // null-terminate
-      lv_update_label(&label_ip, ip_string);
-      if (!refresh) {
-        rval = 1;
+  // window title, error light
+  fillRect(0, DISPLAY_WIDTH, title_y, title_y+LINE_SPACING_17-1, 0x00); // erase background for title
+  lv_init_label(&label_title, DISPLAY_WIDTH/2, title_y, &lv_font_roboto_mono_17, "Status", LV_CENTER, true);
+  errorLight(frm);
+  invertRoundedRect(0, title_y, DISPLAY_WIDTH, title_y + LINE_SPACING_17-2, (LINE_SPACING_17-3)/2); // white background for title
+  frm++;
+  if(title_y == 23) {
+    title_y_goal = 0;
+    return MENU; // go back to menu
+  }
+  return STATUS;
+}
+
+
+static display_page_t page_info(unsigned btns) {
+  static unsigned frm = 0;
+  static FPGAWD_State_t fpga_state = STATE_GOLDEN;
+	static int16_t cursor_y_goal = 0;
+  static int16_t title_y_goal = 0;
+  static int16_t title_y = 23;
+	static int16_t text_cursor = -2*DISPLAY_HEIGHT;
+	static int16_t selection_id = 0;
+
+	fill(0);
+
+	if (btns & (1 << 0)) {  // left
+		selection_id--;
+	} else if (btns & (1 << 1)) {  // right
+		selection_id++;
+	} else if(btns & 4) { // push button to go back to menu - init values
+    cursor_y_goal = 0;
+    text_cursor = -2*DISPLAY_HEIGHT;
+    selection_id = 0;
+    title_y_goal = 23;
+  }
+
+	if(title_y == (title_y+title_y_goal)/2) {
+		title_y = title_y_goal;
+	}
+	else {
+		title_y=(title_y+title_y_goal)/2;
+	}
+
+  if(title_y == 0) {
+
+    cursor_y_goal = LINE_SPACING_17-(LINE_SPACING_12*selection_id);
+    if(text_cursor == (text_cursor+cursor_y_goal)/2) {
+      text_cursor = cursor_y_goal;
+      if(selection_id >= PAGE_INFO_ITEMS-3+1) // bounce back at the end
+        selection_id = PAGE_INFO_ITEMS-3;
+      if(selection_id <= 0) // bounce back at the end
+        selection_id = 0;
+      cursor_y_goal = LINE_SPACING_17-(LINE_SPACING_12*selection_id);
+    }
+    else {
+      text_cursor=(text_cursor+cursor_y_goal)/2;
+    }
+    
+    // block scope to avoid unnecessarily filling the stack
+    { // Marble label
+      FPGAWD_State_t current_state = FPGAWD_GetState();
+      int rev = 0;
+      // if ((current_state != fpga_state)) 
+      {
+        if (marble_get_pcb_rev() == Marble_v1_4) {
+          rev = 4;
+        } else {
+          rev = 3;
+        }
+        char label[LABEL_MARBLE_SIZE];
+        snprintf(label, LABEL_MARBLE_SIZE, "Marble v1.%d - %s Image", rev, current_state == STATE_GOLDEN ? "Golden" : "User");
+        lv_update_label(&label_marble, label);
+        lv_init_label(&label_marble, (LINE_SPACING_17-2)/2, text_cursor + 0*LINE_SPACING_12, &lv_font_roboto_12, label, LV_LEFT, true);
+        fpga_state = current_state;
       }
     }
-  }
-  { // MAC addr
-    if (array_updated_uint8_t(pmac, get_last_mac(), 6) || refresh) {
-      char mac_string[LABEL_MAC_SIZE + 1];
-      format_mac_addr(pmac, mac_string, LABEL_MAC_SIZE);
-      mac_string[LABEL_MAC_SIZE] = '\0'; // null-terminate
-      lv_update_label(&label_mac, mac_string);
-      if (!refresh) {
-        rval = 1;
+    { // IP addr
+      // if (array_updated_uint8_t(pip, get_last_ip(), 4)) 
+      {
+        uint8_t *pip = get_last_ip();
+        char ip_string[LABEL_IP_SIZE + 1];
+        format_ip_addr(pip, ip_string, LABEL_IP_SIZE);
+        ip_string[LABEL_IP_SIZE] = '\0'; // null-terminate
+        lv_init_label(&label_ip, (LINE_SPACING_17-2)/2, text_cursor + 1*LINE_SPACING_12, &lv_font_roboto_12, ip_string, LV_LEFT, true);
       }
     }
+    { // MAC addr
+      // if (array_updated_uint8_t(pmac, get_last_mac(), 6)) 
+      {
+        uint8_t *pmac = get_last_mac();
+        char mac_string[LABEL_MAC_SIZE + 1];
+        format_mac_addr(pmac, mac_string, LABEL_MAC_SIZE);
+        mac_string[LABEL_MAC_SIZE] = '\0'; // null-terminate
+        lv_init_label(&label_mac, (LINE_SPACING_17-2)/2, text_cursor + 2*LINE_SPACING_12, &lv_font_roboto_12, mac_string, LV_LEFT, true);
+      }
+    }
+    { // uptime
+      {
+        uint8_t *uptime = print_uptime();
+        lv_init_label(&label_mac, (LINE_SPACING_17-2)/2, text_cursor + 3*LINE_SPACING_12, &lv_font_roboto_12, uptime, LV_LEFT, true);
+      }
+    }
+    window_scrollbar(text_cursor-LINE_SPACING_17, (PAGE_INFO_ITEMS)*LINE_SPACING_12);
+      // do nothing, we are going back to menu
   }
+  fillRect(0, DISPLAY_WIDTH, title_y, title_y+LINE_SPACING_17-1, 0x00); // erase background for title
+  lv_init_label(&label_title, DISPLAY_WIDTH/2, title_y, &lv_font_roboto_mono_17, "Info", LV_CENTER, true);
+  errorLight(frm);
+  invertRoundedRect(0, title_y, DISPLAY_WIDTH, title_y + LINE_SPACING_17-2, (LINE_SPACING_17-3)/2); // white background for title
+  frm++;
   //send_window_4((unsigned)label_ip.x0, (unsigned)label_ip.y0, (unsigned)label_ip.x1, (unsigned)label_ip.y1, uint8_t *data);
-  return rval; // TODO - return whether we need to update the screen (if a value has changed)
+  if(title_y == 23) {
+      title_y_goal = 0;
+      return MENU; // go back to menu
+  }
+  return INFO; // TODO - return whether we need to update the screen (if a value has changed)
 }
 
 static int update_page_power(int refresh) {
@@ -614,7 +1159,7 @@ void display_init(void) {
   init_page_fmc();
 #endif
   init_page_temperature();
-  update_page(1); // force refresh
+  // update_page(1); // force refresh
   send_fb();
   last_touch = BSP_GET_SYSTICK();
   return;
@@ -736,12 +1281,12 @@ static int compare_systick(uint32_t old, uint32_t new, uint32_t threshold) {
 }
 
 static void format_ip_addr(uint8_t *ip, char *ps, int maxlen) {
-  snprintf(ps, (size_t)maxlen, "IP: %d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
+  snprintf(ps, (size_t)maxlen, "IP: %03d.%03d.%03d.%03d", ip[0], ip[1], ip[2], ip[3]);
   return;
 }
 
 static void format_mac_addr(uint8_t *mac, char *ps, int maxlen) {
-  snprintf(ps, (size_t)maxlen, "MAC: %x:%x:%x:%x:%x:%x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+  snprintf(ps, (size_t)maxlen, "MAC: %02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
   return;
 }
 
@@ -780,6 +1325,43 @@ static int array_updated_int(volatile int *old, const int *new, int len) {
   }
   return diff;
 }
+
+
+static void scrollbar(int16_t percentage) {
+  invertRoundedRect(2, 2 + (percentage*47)/100, 6, 14 + (percentage*47)/100, 2); // FIXME: take percentage
+  emptyRoundedRect(1, 1, 7, DISPLAY_HEIGHT - 2, 3, 1);
+}
+
+static void window_scrollbar(int16_t pos, int16_t total){
+  // total += LINE_SPACING_17;
+  uint16_t windowCapacity = 3*LINE_SPACING_12; // number of pixels that can be displayed in window
+  uint16_t barSize = DISPLAY_HEIGHT - 4 - LINE_SPACING_17; // total size of scrollbar area
+  uint16_t blockLength = (windowCapacity*barSize)/total; // size of block in scrollbar
+  if (blockLength > barSize) blockLength = barSize;
+  int16_t blockTop = 2 + LINE_SPACING_17 - (pos * (barSize-blockLength)) / (total - 3*LINE_SPACING_12);
+  int16_t blockBottom = blockTop + blockLength;
+  if(blockTop < 2 + LINE_SPACING_17) {
+    blockTop = 2 + LINE_SPACING_17;
+    if(blockBottom < blockTop) blockBottom = blockTop;
+  }
+  if(blockBottom > DISPLAY_HEIGHT - 2) {
+    blockBottom = DISPLAY_HEIGHT - 2;
+    if(blockTop > blockBottom) blockTop = blockBottom;
+  }
+  invertRoundedRect(DISPLAY_WIDTH - 6, blockTop, DISPLAY_WIDTH - 2, blockBottom, 2); 
+  emptyRoundedRect(DISPLAY_WIDTH - 7, 1 + LINE_SPACING_17, DISPLAY_WIDTH - 1, DISPLAY_HEIGHT - 2, 3, 1);
+}
+
+
+static void errorLight(unsigned frm) {
+  // lv_init_label(&error_light, 198, 1, &lv_font_roboto_mono_17, "ERROR", LV_LEFT, true);
+	// if((frm>>2)%2)
+	// 	invertRoundedRect(191, 1, 254, 17, 8);
+  lv_init_label(&error_light, 225, 3, &lv_font_roboto_12, "ERROR", LV_CENTER, true);
+	if((frm>>2)%2)
+		invertRoundedRect(196, 1, 254, 17, 8);
+}
+
 
 #define ERROR_LED_TIME_ON_MS     (500)
 #define ERROR_LED_TIME_OFF_MS   (1000)
