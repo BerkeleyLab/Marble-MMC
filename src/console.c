@@ -632,16 +632,19 @@ static uint8_t parse_boolean(const char *rx_msg, int len) {
 #ifdef APP_MARBLE
 static int handle_msg_MGTMUX(char *rx_msg, int len) {
   int query = sscanfQuery((const char *)rx_msg, len);
-  if (query) {
-    printf("E.g. Set all MUXn pin states: h 1=1 2=0 3=0\r\n");
-    printf("E.g. Set just MUX2 pin high (ignore others): h 2=1\r\n");
-    printf("E.g. Read MGTMUX state: h ?\r\n");
-    return 1;
-  }
+  // if (query) {
+  //   printf("E.g. Set all MUXn pin states: h 1=1 2=0 3=0\r\n");
+  //   printf("E.g. Set just MUX2 pin high (ignore others): h 2=1\r\n");
+  //   printf("E.g. Read MGTMUX state: h ?\r\n");
+  //   return 1;
+  // }
   int rval = sscanfMGTMUX(rx_msg, len);
   uint8_t rbyte = 0;
   if (rval == -1) {
-    printf("Could not interpret assignments. Use 'h' for usage.\r\n");
+    printf("Could not interpret assignments. Usage:\r\n");
+    printf("E.g. Set all MUXn pin states: h 1=1 2=0 3=0\r\n");
+    printf("E.g. Set just MUX2 pin high (ignore others): h 2=1\r\n");
+    printf("E.g. Read MGTMUX state: h ?\r\n");
   } else if (rval == -2) {
     // Get and print current MGT MUX state
     rbyte = marble_MGTMUX_status();
@@ -1156,7 +1159,7 @@ static int sscanfMGTMUX(const char *s, int len) {
     c0 = s[n];
     c1 = s[n+1];
     c2 = s[n+2];
-    if (c0 == '?') {
+    if (c0 == '?' || c1 == '?') {
       return -2; // Requesting help
     }
     if (c1 == '=') {

@@ -154,6 +154,7 @@ typedef enum {
 } Board_Status_t;
 
 // Error codes for identifying source of errors
+
 typedef enum {
     ERROR_NONE = 0,
     ERROR_MARBLE_POWERDOWN,
@@ -231,10 +232,23 @@ typedef enum {
 
 #define ERROR_CODE_COUNT (ERROR_UNDEFINED + 1)
 
+typedef struct marble_error_info_t
+{
+  uint8_t error_index;
+  uint32_t error_count;
+  uint32_t last_occurrence_time_s;
+  uint8_t last_caller_id;
+  uint8_t nack;
+  uint8_t order_of_occurrence;
+} marble_error_info_t;
+
 // New Error_Handler signature taking an ErrorCode
 void marble_error_handler(MarbleErrorCode_t code, uint8_t caller_id);
 void reset_error_repeat(void);
 void marble_error_ack(uint8_t idx);
+uint8_t marble_get_error_order_max(void);
+uint32_t marble_last_error_tick(void);
+marble_error_info_t marble_get_error_info(uint8_t idx);
 
 /****
 * Top-level Application Functionality
@@ -273,6 +287,11 @@ int marble_pwr_good(void);
 Board_Status_t marble_get_status(void);
 
 uint32_t marble_get_tick(void);
+
+char* print_marble_SN(void);
+char* print_mmc_ID(void);
+char* print_PHY_ID(void);
+char*  print_boot_ID(void);
 
 // Only used in simulation
 void cleanup(void);
@@ -459,6 +478,7 @@ void marble_SLEEP_ms(uint32_t delay);
 void marble_SLEEP_us(uint32_t delay);
 
 char* print_uptime(void);
+uint32_t marble_uptime_seconds(void);
 
 /************
 * FPGA Watchdog Support
