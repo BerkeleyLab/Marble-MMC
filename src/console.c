@@ -84,6 +84,7 @@ const char *menu_str[] = {"\r\n",
 };
 #define MENU_LEN (sizeof(menu_str)/sizeof(*menu_str))
 
+// number of UART_MSG_TERMINATOR in UARTQUEUE
 static uint8_t _msgCount;
 static uint8_t _fpgaEnable;
 
@@ -719,9 +720,21 @@ void CONSOLE_USART_ISR(void) {
   return;
 }
 
+// call only from ISR
 void console_pend_msg(void) {
   _msgCount++;
   return;
+}
+
+static bool console_dequeue_msg(void) {
+  bool ret = false;
+  INTERRUPTS_DISABLE();
+  if(_msgCount) {
+    _msgCount--;
+    ret = true; // caller must console_shift_msg()
+  }
+  INTERRUPTS_ENABLE();
+  return ret;
 }
 
 /*
@@ -732,9 +745,8 @@ void console_pend_msg(void) {
 int console_service(void) {
   uint8_t msg[CONSOLE_MAX_MESSAGE_LENGTH];
   int len;
-  if (_msgCount) {
+  if (console_dequeue_msg()) {
     len = console_shift_msg(msg);
-    _msgCount--;
     if (len) {
       return console_handle_msg((char *)msg, len);
     }
@@ -767,8 +779,11 @@ static int console_shift_all(uint8_t *pData) {
  *  Returns the number of bytes shifted out.
  */
 static int console_shift_msg(uint8_t *pData) {
-  //UARTQUEUE_ShiftOut(pData, CONSOLE_MAX_MESSAGE_LENGTH);
-  return UARTQUEUE_ShiftUntil(pData, UART_MSG_TERMINATOR, CONSOLE_MAX_MESSAGE_LENGTH);
+  int ret;
+  INTERRUPTS_DISABLE();
+  ret = UARTQUEUE_ShiftUntil(pData, UART_MSG_TERMINATOR, CONSOLE_MAX_MESSAGE_LENGTH);
+  INTERRUPTS_ENABLE();
+  return ret;
 }
 
 static int xatoi(char c) {
