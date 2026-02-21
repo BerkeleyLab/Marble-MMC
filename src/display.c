@@ -21,7 +21,7 @@
 
 // ======================= Policy ===========================
 #define DISPLAY_TIMEOUT_MS      (10*60*1000)
-#define UPDATE_INTERVAL_MS            (10)
+#define UPDATE_INTERVAL_MS            (20)
 #define USE_FONT_17
 // TODO - Warning! The lv_font_roboto_12 font is not monospace, so ensuring any
 //        future value fits inside the initial bounding box is somewhat tedious.
@@ -59,7 +59,7 @@ static const char *MenuItems[NUMBER_OF_PAGES] = { // triggers compile warning if
 	"Power",
 	"Temperature",
 	"Error logs",
-  "Clear Errors",
+  "Clear Error Light",
 	"Set IP Address",
 };
 /*
@@ -74,7 +74,7 @@ static display_page_t set_IP(unsigned btns);
 static void scrollbar(int16_t percentage);
 static void window_scrollbar(int16_t pos, int16_t total);
 static void errorLight(unsigned frm);
-static int16_t smooth_title_slide(int16_t title_y, int16_t title_y_goal);  // smooth title movement
+static int16_t smooth_slide(int16_t title_y, int16_t title_y_goal);  // smooth title movement
 
 
 // These will remain correct even if the page order changes in the enum above
@@ -452,15 +452,15 @@ static display_page_t config_warning(unsigned btns)
 
 	const int rectangle_coordinates[][4] = {
 		{DISPLAY_WIDTH/4 - 38, 44, DISPLAY_WIDTH/4 + 38, 64},  // CANCEL
-		{DISPLAY_WIDTH/4 - 43, 44, (3*DISPLAY_WIDTH)/4 + 43, 64}  // Proceed
+		{(3*DISPLAY_WIDTH)/4 - 43, 44, (3*DISPLAY_WIDTH)/4 + 43, 64}  // Proceed
 	};
 
 	fill(0);
 
   lv_init_label(&label_warning_1, DISPLAY_WIDTH/2, 2, &lv_font_roboto_mono_17, "WARNING", LV_CENTER, true);
   lv_init_label(&label_warning_2, DISPLAY_WIDTH/2, 21, &lv_font_roboto_12, "You are about to change critical device settings", LV_CENTER, true);
-  lv_init_label(&label_warning_cancel, DISPLAY_WIDTH/2 - 90, 44, &lv_font_roboto_mono_17, "Cancel", LV_LEFT, true);
-  lv_init_label(&label_warning_proceed, DISPLAY_WIDTH/2 + 30, 44, &lv_font_roboto_mono_17, "Proceed", LV_LEFT, true);
+  lv_init_label(&label_warning_cancel, (DISPLAY_WIDTH)/4, 44, &lv_font_roboto_mono_17, "Cancel", LV_CENTER, true);
+  lv_init_label(&label_warning_proceed, (3*DISPLAY_WIDTH)/4, 44, &lv_font_roboto_mono_17, "Proceed", LV_CENTER, true);
 		// navigate menu
 		if (btns & (1 << 0)) {  // left
 			selection_id--;
@@ -617,7 +617,7 @@ static display_page_t set_IP(unsigned btns)
 
 	fill(0);
 
-  title_y = smooth_title_slide(title_y, title_y_goal);
+  title_y = smooth_slide(title_y, title_y_goal);
 
   if(title_y == 0) {
     char buffer[100];
@@ -754,6 +754,8 @@ static display_page_t page_status(unsigned btns) {
   static FPGAWD_State_t fpga_state = STATE_GOLDEN;
   static int16_t text_cursor = -DISPLAY_HEIGHT;
   static int16_t cursor_y_goal = LINE_SPACING_17;
+  static int lm75_0_temp=0;
+  static int max6639_ch1[2] = {0, 0};
   fill(0);
 
   if(btns & 4) { // push button to go back to menu
@@ -761,33 +763,71 @@ static display_page_t page_status(unsigned btns) {
     text_cursor = -DISPLAY_HEIGHT;
   }
 
-  title_y = smooth_title_slide(title_y, title_y_goal);
+  title_y = smooth_slide(title_y, title_y_goal);
 
   // update only when title in position
   if(title_y == 0) {
     // roll out text
-    if(text_cursor == (text_cursor+cursor_y_goal)/2) {
-      text_cursor = cursor_y_goal;
-    }
-    else {
-      text_cursor=(text_cursor+cursor_y_goal)/2;
-    }
-    
+    text_cursor = smooth_slide(text_cursor, cursor_y_goal);
+
     // Marble label
     FPGAWD_State_t current_state = FPGAWD_GetState();
     char label[LABEL_IMAGE_SIZE];
-    snprintf(label, LABEL_IMAGE_SIZE, "%s Image", current_state == STATE_GOLDEN ? "Golden" : "User");
-    lv_init_label(&label_image, (LINE_SPACING_17-2)/2, text_cursor + 0*LINE_SPACING_12, &lv_font_roboto_12, label, LV_LEFT, true);
+    snprintf(label, LABEL_IMAGE_SIZE, "Bitfile");
+    lv_init_label(&label_image, (0*DISPLAY_WIDTH)/5 + (DISPLAY_WIDTH)/10, text_cursor + 0*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
+    snprintf(label, LABEL_IMAGE_SIZE, "%s", current_state == STATE_GOLDEN ? "Golden" : "User");
+    lv_init_label(&label_image, (0*DISPLAY_WIDTH)/5 + (DISPLAY_WIDTH)/10, text_cursor + 1*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
+    invertRoundedRect((0*DISPLAY_WIDTH)/5, text_cursor, (1*DISPLAY_WIDTH)/5-1, text_cursor + 12, 4); // white background for title
+    emptyRoundedRect((0*DISPLAY_WIDTH)/5, text_cursor, (1*DISPLAY_WIDTH)/5-1, text_cursor + LINE_SPACING_12 + 13, 4,1); // erase background for title
     fpga_state = current_state;
     // uptime
     char label1[40];
-    snprintf(label1, 40, "Uptime: %s", print_uptime());
-    lv_init_label(&label_uptime, (LINE_SPACING_17-2)/2, text_cursor + 1*LINE_SPACING_12, &lv_font_roboto_12, label1, LV_LEFT, true);
-    // error counter
-    char label2[40];
-    snprintf(label2, 40,"%d errors have occurred-FIX", 0); // TODO: marble_get_error_count()
-    lv_init_label(&label_uptime, (LINE_SPACING_17-2)/2, text_cursor + 2*LINE_SPACING_12, &lv_font_roboto_12, label2, LV_LEFT, true);
-  }
+    snprintf(label1, 40, "%s", print_uptime());
+    lv_init_label(&label_uptime, (3*DISPLAY_WIDTH)/4+10, text_cursor + 2*LINE_SPACING_12, &lv_font_roboto_12, label1, LV_CENTER, true);
+    // LM75_0
+    lm75_0_temp = LM75_get_cached_temperature(LM75_0); // does not trigger readout so OK to call frequently
+    snprintf(label, LABEL_TEMPERATURE_LM75_0_SIZE, LABEL_TEMPERATURE_LM75_0_FMT, ((float)lm75_0_temp)/2);
+    lv_init_label(&label_temperature_lm75_0, (1*DISPLAY_WIDTH)/5+DISPLAY_WIDTH/10, text_cursor + 1*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
+    // MAX6639 Ch 1
+    max6639_ch1[0] = max6639_get_cached_temp(MAX6639_TEMP_CH1);
+    max6639_ch1[1] = max6639_get_cached_temp(MAX6639_TEMP_EXT_CH1);
+    snprintf(label, LABEL_TEMPERATURE_MAX6639_1_SIZE, LABEL_TEMPERATURE_MAX6639_1_FMT, MAX6639_GET_TEMP_DOUBLE(max6639_ch1[0], max6639_ch1[1]));
+    lv_init_label(&label_temperature_max6639_1, (2*DISPLAY_WIDTH)/5+DISPLAY_WIDTH/10, text_cursor + 1*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
+    // IP address
+    uint8_t *pip = get_last_ip();
+    char ip_string[LABEL_IP_SIZE + 1];
+    format_ip_addr(pip, ip_string, LABEL_IP_SIZE);
+    // ip_string[LABEL_IP_SIZE] = '\0'; // null-terminate
+    lv_init_label(&label_ip, (1*DISPLAY_WIDTH)/4+8, text_cursor + 2*LINE_SPACING_12, &lv_font_roboto_12, ip_string, LV_CENTER, true);
+
+    // titles
+    lv_init_label(&label_temperature_max6639_2_label, (2*DISPLAY_WIDTH)/5+DISPLAY_WIDTH/10, text_cursor + 0*LINE_SPACING_12, &lv_font_roboto_12, "FPGA", LV_CENTER, true);
+    invertRoundedRect((2*DISPLAY_WIDTH)/5+1, text_cursor, (3*DISPLAY_WIDTH)/5-1, text_cursor + 12, 4); // white background for title
+    emptyRoundedRect((2*DISPLAY_WIDTH)/5+1, text_cursor, (3*DISPLAY_WIDTH)/5-1, text_cursor + LINE_SPACING_12 + 13, 4,1); // erase background for title
+    lv_init_label(&label_temperature_max6639_1_label, (1*DISPLAY_WIDTH)/5+DISPLAY_WIDTH/10, text_cursor + 0*LINE_SPACING_12, &lv_font_roboto_12, "PSU", LV_CENTER, true);
+    invertRoundedRect((1*DISPLAY_WIDTH)/5+1, text_cursor, (2*DISPLAY_WIDTH)/5-1, text_cursor + 12, 4); // white background for title
+    emptyRoundedRect((1*DISPLAY_WIDTH)/5+1, text_cursor, (2*DISPLAY_WIDTH)/5-1, text_cursor + LINE_SPACING_12 + 13, 4,1); // erase background for title
+    
+    lv_init_label(&label_temperature_max6639_1_label, 4, text_cursor + 2*LINE_SPACING_12, &lv_font_roboto_12, "IP", LV_LEFT, true);
+    invertRoundedRect(0, text_cursor + 2*LINE_SPACING_12, 17, text_cursor + DISPLAY_HEIGHT - LINE_SPACING_17, 4); // white background for title
+    emptyRoundedRect(0, text_cursor + 2*LINE_SPACING_12, (DISPLAY_WIDTH)/2-1, text_cursor + DISPLAY_HEIGHT - LINE_SPACING_17, 4,1); // erase background for title
+
+    lv_init_label(&label_temperature_max6639_1_label, (DISPLAY_WIDTH)/2+4, text_cursor + 2*LINE_SPACING_12, &lv_font_roboto_12, "Up", LV_LEFT, true);
+    invertRoundedRect((DISPLAY_WIDTH)/2+1, text_cursor + 2*LINE_SPACING_12, (DISPLAY_WIDTH)/2+1+20, text_cursor + DISPLAY_HEIGHT - LINE_SPACING_17, 4); // white background for title
+    emptyRoundedRect((DISPLAY_WIDTH)/2+1, text_cursor + 2*LINE_SPACING_12, (5*DISPLAY_WIDTH)/5, text_cursor + DISPLAY_HEIGHT - LINE_SPACING_17, 4,1); // erase background for title
+    // VIN
+    int newv = PM_GetTelem(VIN);
+    int newi = PM_GetTelem(IIN);
+    // snprintf(label, 40, LABEL_POWER_12V_FMT, (float)(newv/1000.0), (float)(newi/1000.0));
+    snprintf(label, 6, "%3.1fV", (float)(newv/1000.0));
+    lv_init_label(&label_3v3, (3*DISPLAY_WIDTH)/5+DISPLAY_WIDTH/10, text_cursor + 1*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
+    snprintf(label, 6, "%3.2fA", (float)(newi/1000.0));
+    lv_init_label(&label_3v3, (4*DISPLAY_WIDTH)/5+DISPLAY_WIDTH/10, text_cursor + 1*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
+
+    lv_init_label(&label_1v8, (4*DISPLAY_WIDTH)/5, text_cursor + 0*LINE_SPACING_12, &lv_font_roboto_12, "VIN", LV_CENTER, true);
+    invertRoundedRect((3*DISPLAY_WIDTH)/5+1, text_cursor, (5*DISPLAY_WIDTH)/5, text_cursor + 12, 4); // white background for title
+    emptyRoundedRect((3*DISPLAY_WIDTH)/5+1, text_cursor, (5*DISPLAY_WIDTH)/5, text_cursor + LINE_SPACING_12 + 13, 4,1); // erase background for title
+    }
   // window title, error light
   fillRect(0, DISPLAY_WIDTH, title_y, title_y+LINE_SPACING_17-1, 0x00); // erase background for title
   lv_init_label(&label_title, DISPLAY_WIDTH/2, title_y, &lv_font_roboto_mono_17, "Status", LV_CENTER, true);
@@ -824,7 +864,7 @@ static display_page_t page_info(unsigned btns) {
     title_y_goal = 23; // move title down
   }
 
-  title_y = smooth_title_slide(title_y, title_y_goal);
+  title_y = smooth_slide(title_y, title_y_goal);
 
 
   if(title_y == 0) { // when title in position
@@ -861,9 +901,10 @@ static display_page_t page_info(unsigned btns) {
     
     // IP addr
     uint8_t *pip = get_last_ip();
+    char label[16];
     char ip_string[LABEL_IP_SIZE + 1];
-    format_ip_addr(pip, ip_string, LABEL_IP_SIZE);
-    ip_string[LABEL_IP_SIZE] = '\0'; // null-terminate
+    format_ip_addr(pip, label, 16);
+    snprintf(ip_string, LABEL_IP_SIZE+1, "IP: %s", label);
     lv_init_label(&label_ip, (LINE_SPACING_17-2)/2, text_cursor + 2*LINE_SPACING_12, &lv_font_roboto_12, ip_string, LV_LEFT, true);
 
     // MAC addr
@@ -914,6 +955,8 @@ static display_page_t page_power(unsigned btns) {
   static unsigned frm = 0;
   static int16_t title_y_goal = 0;
   static int16_t title_y = 23;
+  static int16_t text_cursor = -DISPLAY_HEIGHT;
+  static int16_t cursor_y_goal = LINE_SPACING_17;
 
   static int vin=0, iin=0;
   static int v3V3=0, i3V3=0;
@@ -927,47 +970,48 @@ static display_page_t page_power(unsigned btns) {
     title_y_goal = 23;
   }
 
-  title_y = smooth_title_slide(title_y, title_y_goal);
+  title_y = smooth_slide(title_y, title_y_goal);
 
   // Display contents only when title in position
   if(title_y == 0) {
+    text_cursor = smooth_slide(text_cursor, cursor_y_goal);
     // VIN
     int newv = PM_GetTelem(VIN);
     int newi = PM_GetTelem(IIN);
     char label[LABEL_POWER_12V_SIZE];
     snprintf(label, LABEL_POWER_12V_SIZE, LABEL_POWER_12V_FMT, (float)(newv/1000.0), (float)(newi/1000.0));
     snprintf(label, 6, "%3.1fV", (float)(newv/1000.0));
-    lv_init_label(&label_3v3, (0*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14, LINE_SPACING_17 + 1*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
+    lv_init_label(&label_3v3, (0*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14, text_cursor + 1*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
     snprintf(label, 6, "%3.2fA", (float)(newi/1000.0));
-    lv_init_label(&label_3v3, (0*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14, LINE_SPACING_17 + 2*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
+    lv_init_label(&label_3v3, (0*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14, text_cursor + 2*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
     // 3V3
     newv = PM_GetTelem(VOUT_3V3);
     newi = PM_GetTelem(IOUT_3V3);
     snprintf(label, 6, "%3.2fV", (float)(newv/1000.0));
-    lv_init_label(&label_3v3, (1*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14+1, LINE_SPACING_17 + 1*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
+    lv_init_label(&label_3v3, (1*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14+1, text_cursor + 1*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
     snprintf(label, 6, "%3.2fA", (float)(newi/1000.0));
-    lv_init_label(&label_3v3, (1*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14+1, LINE_SPACING_17 + 2*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
+    lv_init_label(&label_3v3, (1*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14+1, text_cursor + 2*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
     // 2V5
     newv = PM_GetTelem(VOUT_2V5);
     newi = PM_GetTelem(IOUT_2V5);
     snprintf(label, 6, "%3.2fV", (float)(newv/1000.0));
-    lv_init_label(&label_3v3, (2*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14+1, LINE_SPACING_17 + 1*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
+    lv_init_label(&label_3v3, (2*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14+1, text_cursor + 1*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
     snprintf(label, 6, "%3.2fA", (float)(newi/1000.0));
-    lv_init_label(&label_3v3, (2*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14+1, LINE_SPACING_17 + 2*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
+    lv_init_label(&label_3v3, (2*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14+1, text_cursor + 2*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
     // 1V8
     newv = PM_GetTelem(VOUT_1V8);
     newi = PM_GetTelem(IOUT_1V8);
     snprintf(label, 6, "%3.2fV", (float)(newv/1000.0));
-    lv_init_label(&label_3v3, (3*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14+1, LINE_SPACING_17 + 1*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
+    lv_init_label(&label_3v3, (3*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14+1, text_cursor + 1*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
     snprintf(label, 6, "%3.2fA", (float)(newi/1000.0));
-    lv_init_label(&label_3v3, (3*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14+1, LINE_SPACING_17 + 2*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
+    lv_init_label(&label_3v3, (3*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14+1, text_cursor + 2*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
     // 1V0
     newv = PM_GetTelem(VOUT_1V0);
     newi = PM_GetTelem(IOUT_1V0);
     snprintf(label, 6, "%3.2fV", (float)(newv/1000.0));
-    lv_init_label(&label_3v3, (4*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14+1, LINE_SPACING_17 + 1*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
+    lv_init_label(&label_3v3, (4*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14+1, text_cursor + 1*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
     snprintf(label, 6, "%3.2fA", (float)(newi/1000.0));
-    lv_init_label(&label_3v3, (4*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14+1, LINE_SPACING_17 + 2*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
+    lv_init_label(&label_3v3, (4*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14+1, text_cursor + 2*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
     // FMC1
     uint16_t new_fmc_current=0;
     static float fmc1_current_amps=0.0;
@@ -976,57 +1020,57 @@ static display_page_t page_power(unsigned btns) {
     uint8_t new_fmc_status = marble_FMC_status();
     uint8_t mask = (1 << M_FMC_STATUS_FMC1_PWR);
     if (new_fmc_status & mask) {
-      lv_init_label(&label_3v3, (5*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14+1, LINE_SPACING_17 + 1*LINE_SPACING_12, &lv_font_roboto_12, "ON", LV_CENTER, true);
-      if (frm%1000 == 0) { // update every 100 frames
+      lv_init_label(&label_3v3, (5*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14+1, text_cursor + 1*LINE_SPACING_12, &lv_font_roboto_12, "ON", LV_CENTER, true);
+      if (frm%100 == 0) { // update every 100 frames
         new_fmc_current = ina219_getShuntVoltage(INA219_FMC1);
         fmc1_current_amps = INA219_SHUNT_VOLTAGE_TO_CURRENT(new_fmc_current);
       }
       snprintf(label, 6, "%3.2fA", fmc1_current_amps);
-      lv_init_label(&label_3v3, (5*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14+1, LINE_SPACING_17 + 2*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
+      lv_init_label(&label_3v3, (5*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14+1, text_cursor + 2*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
     }
     else {
-      lv_init_label(&label_3v3, (5*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14+1, LINE_SPACING_17 + 1*LINE_SPACING_12, &lv_font_roboto_12, "OFF", LV_CENTER, true);
-      lv_init_label(&label_3v3, (5*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14+1, LINE_SPACING_17 + 2*LINE_SPACING_12, &lv_font_roboto_12, "-", LV_CENTER, true);
+      lv_init_label(&label_3v3, (5*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14+1, text_cursor + 1*LINE_SPACING_12, &lv_font_roboto_12, "OFF", LV_CENTER, true);
+      lv_init_label(&label_3v3, (5*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14+1, text_cursor + 2*LINE_SPACING_12, &lv_font_roboto_12, "-", LV_CENTER, true);
     }
     // FMC2
     mask = (1 << M_FMC_STATUS_FMC2_PWR);
     if (new_fmc_status & mask) {
-      lv_init_label(&label_3v3, (6*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14+1, LINE_SPACING_17 + 1*LINE_SPACING_12, &lv_font_roboto_12, "ON", LV_CENTER, true);
-      if ((frm+500)%1000 == 0) { // update every 10 frames
+      lv_init_label(&label_3v3, (6*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14+1, text_cursor + 1*LINE_SPACING_12, &lv_font_roboto_12, "ON", LV_CENTER, true);
+      if ((frm+500)%100 == 0) { // update every 100 frames
         new_fmc_current = ina219_getShuntVoltage(INA219_FMC2);
         fmc2_current_amps = INA219_SHUNT_VOLTAGE_TO_CURRENT(new_fmc_current);
       }
       snprintf(label, 6, "%3.2fA", fmc2_current_amps);
-      lv_init_label(&label_3v3, (6*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14+1, LINE_SPACING_17 + 2*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
+      lv_init_label(&label_3v3, (6*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14+1, text_cursor + 2*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
     }
     else {
-      lv_init_label(&label_3v3, (6*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14+1, LINE_SPACING_17 + 1*LINE_SPACING_12, &lv_font_roboto_12, "OFF", LV_CENTER, true);
-      lv_init_label(&label_3v3, (6*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14+1, LINE_SPACING_17 + 2*LINE_SPACING_12, &lv_font_roboto_12, "-", LV_CENTER, true);
+      lv_init_label(&label_3v3, (6*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14+1, text_cursor + 1*LINE_SPACING_12, &lv_font_roboto_12, "OFF", LV_CENTER, true);
+      lv_init_label(&label_3v3, (6*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14+1, text_cursor + 2*LINE_SPACING_12, &lv_font_roboto_12, "-", LV_CENTER, true);
     }
 
-    lv_init_label(&label_1v0, (6*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14, LINE_SPACING_17 + 0*LINE_SPACING_12, &lv_font_roboto_12, "FMC2", LV_CENTER, true);
-    invertRoundedRect((6*DISPLAY_WIDTH)/7+1, LINE_SPACING_17, (7*DISPLAY_WIDTH)/7, LINE_SPACING_17+12, 4); // white background for title
+    lv_init_label(&label_1v0, (6*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14, text_cursor + 0*LINE_SPACING_12, &lv_font_roboto_12, "FMC2", LV_CENTER, true);
+    invertRoundedRect((6*DISPLAY_WIDTH)/7+1, text_cursor, (7*DISPLAY_WIDTH)/7, text_cursor+12, 4); // white background for title
     // emptyRoundedRect((6*DISPLAY_WIDTH)/7+1, LINE_SPACING_17, (7*DISPLAY_WIDTH)/7, DISPLAY_HEIGHT, 4,1); // erase background for title
-    lv_init_label(&label_1v8, (5*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14, LINE_SPACING_17 + 0*LINE_SPACING_12, &lv_font_roboto_12, "FMC1", LV_CENTER, true);
-    invertRoundedRect((5*DISPLAY_WIDTH)/7+1, LINE_SPACING_17, (6*DISPLAY_WIDTH)/7-1, LINE_SPACING_17+12, 4); // white background for title
+    lv_init_label(&label_1v8, (5*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14, text_cursor + 0*LINE_SPACING_12, &lv_font_roboto_12, "FMC1", LV_CENTER, true);
+    invertRoundedRect((5*DISPLAY_WIDTH)/7+1, text_cursor, (6*DISPLAY_WIDTH)/7-1, text_cursor+12, 4); // white background for title
     // emptyRoundedRect((5*DISPLAY_WIDTH)/7+1, LINE_SPACING_17, (6*DISPLAY_WIDTH)/7-1, DISPLAY_HEIGHT, 4,1); // erase background for title
-    lv_init_label(&label_1v8, (4*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14, LINE_SPACING_17 + 0*LINE_SPACING_12, &lv_font_roboto_12, "1V0", LV_CENTER, true);
-    invertRoundedRect((4*DISPLAY_WIDTH)/7+1, LINE_SPACING_17, (5*DISPLAY_WIDTH)/7-1, LINE_SPACING_17+12, 4); // white background for title
+    lv_init_label(&label_1v8, (4*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14, text_cursor + 0*LINE_SPACING_12, &lv_font_roboto_12, "1V0", LV_CENTER, true);
+    invertRoundedRect((4*DISPLAY_WIDTH)/7+1, text_cursor, (5*DISPLAY_WIDTH)/7-1, text_cursor+12, 4); // white background for title
     // emptyRoundedRect((4*DISPLAY_WIDTH)/7+1, LINE_SPACING_17, (5*DISPLAY_WIDTH)/7-1, DISPLAY_HEIGHT, 4,1); // erase background for title
-    lv_init_label(&label_1v8, (3*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14, LINE_SPACING_17 + 0*LINE_SPACING_12, &lv_font_roboto_12, "1V8", LV_CENTER, true);
-    invertRoundedRect((3*DISPLAY_WIDTH)/7+1, LINE_SPACING_17, (4*DISPLAY_WIDTH)/7-1, LINE_SPACING_17+12, 4); // white background for title
+    lv_init_label(&label_1v8, (3*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14, text_cursor + 0*LINE_SPACING_12, &lv_font_roboto_12, "1V8", LV_CENTER, true);
+    invertRoundedRect((3*DISPLAY_WIDTH)/7+1, text_cursor, (4*DISPLAY_WIDTH)/7-1, text_cursor+12, 4); // white background for title
     // emptyRoundedRect((3*DISPLAY_WIDTH)/7+1, LINE_SPACING_17, (4*DISPLAY_WIDTH)/7-1, DISPLAY_HEIGHT, 4,1); // erase background for title
-    lv_init_label(&label_1v8, (2*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14, LINE_SPACING_17 + 0*LINE_SPACING_12, &lv_font_roboto_12, "2V5", LV_CENTER, true);
-    invertRoundedRect((2*DISPLAY_WIDTH)/7+1, LINE_SPACING_17, (3*DISPLAY_WIDTH)/7-1, LINE_SPACING_17+12, 4); // white background for title
+    lv_init_label(&label_1v8, (2*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14, text_cursor + 0*LINE_SPACING_12, &lv_font_roboto_12, "2V5", LV_CENTER, true);
+    invertRoundedRect((2*DISPLAY_WIDTH)/7+1, text_cursor, (3*DISPLAY_WIDTH)/7-1, text_cursor+12, 4); // white background for title
     // invertRoundedRect((2*DISPLAY_WIDTH)/7+1, LINE_SPACING_17, (3*DISPLAY_WIDTH)/7-1, DISPLAY_HEIGHT, 4); // white background for title
     // emptyRoundedRect((2*DISPLAY_WIDTH)/7+1, LINE_SPACING_17, (3*DISPLAY_WIDTH)/7-1, LINE_SPACING_17+12, 4,1); // erase background for title
     // emptyRoundedRect((2*DISPLAY_WIDTH)/7+1, LINE_SPACING_17, (3*DISPLAY_WIDTH)/7-1, DISPLAY_HEIGHT, 4,1); // erase background for title
-    lv_init_label(&label_1v8, (1*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14, LINE_SPACING_17 + 0*LINE_SPACING_12, &lv_font_roboto_12, "3V3", LV_CENTER, true);
-    invertRoundedRect((1*DISPLAY_WIDTH)/7+1, LINE_SPACING_17, (2*DISPLAY_WIDTH)/7-1, LINE_SPACING_17+12, 4); // white background for title
+    lv_init_label(&label_1v8, (1*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14, text_cursor + 0*LINE_SPACING_12, &lv_font_roboto_12, "3V3", LV_CENTER, true);
+    invertRoundedRect((1*DISPLAY_WIDTH)/7+1, text_cursor, (2*DISPLAY_WIDTH)/7-1, text_cursor+12, 4); // white background for title
     // emptyRoundedRect((1*DISPLAY_WIDTH)/7+1, LINE_SPACING_17, (2*DISPLAY_WIDTH)/7-1, LINE_SPACING_17+12, 4,1); // erase background for title
     // emptyRoundedRect((1*DISPLAY_WIDTH)/7+1, LINE_SPACING_17, (2*DISPLAY_WIDTH)/7-1, DISPLAY_HEIGHT, 4,1); // erase background for title
-    lv_init_label(&label_1v8, (0*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14, LINE_SPACING_17 + 0*LINE_SPACING_12, &lv_font_roboto_12, "VIN", LV_CENTER, true);
-    invertRoundedRect((0*DISPLAY_WIDTH)/7, LINE_SPACING_17, (1*DISPLAY_WIDTH)/7-1, LINE_SPACING_17+12, 4); // white background for title
+    lv_init_label(&label_1v8, (0*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14, text_cursor + 0*LINE_SPACING_12, &lv_font_roboto_12, "VIN", LV_CENTER, true);
+    invertRoundedRect((0*DISPLAY_WIDTH)/7, text_cursor, (1*DISPLAY_WIDTH)/7-1, text_cursor+12, 4); // white background for title
     // invertRoundedRect((0*DISPLAY_WIDTH)/7, LINE_SPACING_17, (1*DISPLAY_WIDTH)/7-1, DISPLAY_HEIGHT, 4); // white background for title
     // emptyRoundedRect((0*DISPLAY_WIDTH)/7, LINE_SPACING_17, (1*DISPLAY_WIDTH)/7-1, LINE_SPACING_17+12, 4,1); // erase background for title
     // emptyRoundedRect((0*DISPLAY_WIDTH)/7, LINE_SPACING_17, (1*DISPLAY_WIDTH)/7-1, DISPLAY_HEIGHT, 4,1); // erase background for title
@@ -1041,6 +1085,7 @@ static display_page_t page_power(unsigned btns) {
   frm++;
   if(title_y == 23) {
     title_y_goal = 0;
+    text_cursor = -DISPLAY_HEIGHT;
     return MENU; // go back to menu
   }
   return POWER;
@@ -1052,7 +1097,8 @@ static display_page_t page_temperature(unsigned btns) {
   static int16_t title_y_goal = 0;
   static int16_t title_y = 23;
   static uint8_t fan_speed;
-
+  static int16_t text_cursor = -DISPLAY_HEIGHT;
+  static int16_t cursor_y_goal = LINE_SPACING_17;
 
   static int lm75_0_temp=0, lm75_1_temp=0;
   static int max6639_ch1[2] = {0, 0};
@@ -1065,42 +1111,44 @@ static display_page_t page_temperature(unsigned btns) {
     title_y_goal = 23;
   }
 
-  title_y = smooth_title_slide(title_y, title_y_goal);
+  title_y = smooth_slide(title_y, title_y_goal);
 
   // Display contents only when title in position
   if(title_y == 0) {
+    text_cursor = smooth_slide(text_cursor, cursor_y_goal);
+
     // LM75_0
     lm75_0_temp = LM75_get_cached_temperature(LM75_0); // does not trigger readout so OK to call frequently
     snprintf(label, LABEL_TEMPERATURE_LM75_0_SIZE, LABEL_TEMPERATURE_LM75_0_FMT, ((float)lm75_0_temp)/2);
-    lv_init_label(&label_temperature_lm75_0, (0*DISPLAY_WIDTH)/4+DISPLAY_WIDTH/8, LINE_SPACING_17 + 1*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
+    lv_init_label(&label_temperature_lm75_0, (0*DISPLAY_WIDTH)/4+DISPLAY_WIDTH/8, text_cursor + 1*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
     // LM75_1
     lm75_1_temp = LM75_get_cached_temperature(LM75_1);
     snprintf(label, LABEL_TEMPERATURE_LM75_1_SIZE, LABEL_TEMPERATURE_LM75_1_FMT, ((float)lm75_1_temp)/2);
-    lv_init_label(&label_temperature_lm75_1, (1*DISPLAY_WIDTH)/4+DISPLAY_WIDTH/8, LINE_SPACING_17 + 1*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
+    lv_init_label(&label_temperature_lm75_1, (1*DISPLAY_WIDTH)/4+DISPLAY_WIDTH/8, text_cursor + 1*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
     // MAX6639 Ch 1
     max6639_ch1[0] = max6639_get_cached_temp(MAX6639_TEMP_CH1);
     max6639_ch1[1] = max6639_get_cached_temp(MAX6639_TEMP_EXT_CH1);
     snprintf(label, LABEL_TEMPERATURE_MAX6639_1_SIZE, LABEL_TEMPERATURE_MAX6639_1_FMT, MAX6639_GET_TEMP_DOUBLE(max6639_ch1[0], max6639_ch1[1]));
-    lv_init_label(&label_temperature_max6639_1, (2*DISPLAY_WIDTH)/4+DISPLAY_WIDTH/8, LINE_SPACING_17 + 1*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
+    lv_init_label(&label_temperature_max6639_1, (2*DISPLAY_WIDTH)/4+DISPLAY_WIDTH/8, text_cursor + 1*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
     eeprom_read_fan_speed(&fan_speed, 1);
-    snprintf(label, 9, "Fan: %d%%", fan_speed);
-    lv_init_label(&label_fan_max6639_1, (2*DISPLAY_WIDTH)/4, LINE_SPACING_17 + 2*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
+    snprintf(label, 9, "Fan: %d", fan_speed);
+    lv_init_label(&label_fan_max6639_1, (2*DISPLAY_WIDTH)/4+DISPLAY_WIDTH/8, text_cursor + 2*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
     // MAX6639 Ch 2
     max6639_ch2[0] = max6639_get_cached_temp(MAX6639_TEMP_CH2);
     max6639_ch2[1] = max6639_get_cached_temp(MAX6639_TEMP_EXT_CH2);
     snprintf(label, LABEL_TEMPERATURE_MAX6639_2_SIZE, LABEL_TEMPERATURE_MAX6639_2_FMT, MAX6639_GET_TEMP_DOUBLE(max6639_ch2[0], max6639_ch2[1]));
-    lv_init_label(&label_temperature_max6639_2, (3*DISPLAY_WIDTH)/4+DISPLAY_WIDTH/8, LINE_SPACING_17 + 1*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
-    snprintf(label, 9, "Fan: %d%%", fan_speed);
-    lv_init_label(&label_fan_max6639_2, (3*DISPLAY_WIDTH)/4, LINE_SPACING_17 + 2*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
+    lv_init_label(&label_temperature_max6639_2, (3*DISPLAY_WIDTH)/4+DISPLAY_WIDTH/8, text_cursor + 1*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
+    snprintf(label, 9, "Fan: %d", fan_speed);
+    lv_init_label(&label_fan_max6639_2, (3*DISPLAY_WIDTH)/4+DISPLAY_WIDTH/8, text_cursor + 2*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
     // titles
-    lv_init_label(&label_temperature_max6639_2_label, (3*DISPLAY_WIDTH)/4+DISPLAY_WIDTH/8, LINE_SPACING_17 + 0*LINE_SPACING_12, &lv_font_roboto_12, "PSU2", LV_CENTER, true);
-    invertRoundedRect((3*DISPLAY_WIDTH)/4+1, LINE_SPACING_17, (4*DISPLAY_WIDTH)/4-1, LINE_SPACING_17+12, 4); // white background for title
-    lv_init_label(&label_temperature_max6639_1_label, (2*DISPLAY_WIDTH)/4+DISPLAY_WIDTH/8, LINE_SPACING_17 + 0*LINE_SPACING_12, &lv_font_roboto_12, "FPGA", LV_CENTER, true);
-    invertRoundedRect((2*DISPLAY_WIDTH)/4+1, LINE_SPACING_17, (3*DISPLAY_WIDTH)/4-1, LINE_SPACING_17+12, 4); // white background for title
-    lv_init_label(&label_temperature_lm75_1_label, (1*DISPLAY_WIDTH)/4+DISPLAY_WIDTH/8, LINE_SPACING_17 + 0*LINE_SPACING_12, &lv_font_roboto_12, "MMC", LV_CENTER, true);
-    invertRoundedRect((1*DISPLAY_WIDTH)/4+1, LINE_SPACING_17, (2*DISPLAY_WIDTH)/4-1, LINE_SPACING_17+12, 4); // white background for title
-    lv_init_label(&label_temperature_lm75_0_label, (0*DISPLAY_WIDTH)/4+DISPLAY_WIDTH/8, LINE_SPACING_17 + 0*LINE_SPACING_12, &lv_font_roboto_12, "PSU", LV_CENTER, true);
-    invertRoundedRect((0*DISPLAY_WIDTH)/4, LINE_SPACING_17, (1*DISPLAY_WIDTH)/4-1, LINE_SPACING_17+12, 4); // white background for title
+    lv_init_label(&label_temperature_max6639_2_label, (3*DISPLAY_WIDTH)/4+DISPLAY_WIDTH/8, text_cursor + 0*LINE_SPACING_12, &lv_font_roboto_12, "PSU2", LV_CENTER, true);
+    invertRoundedRect((3*DISPLAY_WIDTH)/4+1, text_cursor, (4*DISPLAY_WIDTH)/4-1, text_cursor+12, 4); // white background for title
+    lv_init_label(&label_temperature_max6639_1_label, (2*DISPLAY_WIDTH)/4+DISPLAY_WIDTH/8, text_cursor + 0*LINE_SPACING_12, &lv_font_roboto_12, "FPGA", LV_CENTER, true);
+    invertRoundedRect((2*DISPLAY_WIDTH)/4+1, text_cursor, (3*DISPLAY_WIDTH)/4-1, text_cursor+12, 4); // white background for title
+    lv_init_label(&label_temperature_lm75_1_label, (1*DISPLAY_WIDTH)/4+DISPLAY_WIDTH/8, text_cursor + 0*LINE_SPACING_12, &lv_font_roboto_12, "MMC", LV_CENTER, true);
+    invertRoundedRect((1*DISPLAY_WIDTH)/4+1, text_cursor, (2*DISPLAY_WIDTH)/4-1, text_cursor+12, 4); // white background for title
+    lv_init_label(&label_temperature_lm75_0_label, (0*DISPLAY_WIDTH)/4+DISPLAY_WIDTH/8, text_cursor + 0*LINE_SPACING_12, &lv_font_roboto_12, "PSU", LV_CENTER, true);
+    invertRoundedRect((0*DISPLAY_WIDTH)/4, text_cursor, (1*DISPLAY_WIDTH)/4-1, text_cursor+12, 4); // white background for title
     }
   // window title, error light
   fillRect(0, DISPLAY_WIDTH, title_y, title_y+LINE_SPACING_17-1, 0x00); // erase background for title
@@ -1110,6 +1158,7 @@ static display_page_t page_temperature(unsigned btns) {
   frm++;
   if(title_y == 23) {
     title_y_goal = 0;
+    text_cursor = -DISPLAY_HEIGHT;
     return MENU; // go back to menu
   }
   return TEMPERATURE;
@@ -1120,7 +1169,7 @@ static display_page_t page_errors(unsigned btns) {
   static unsigned frm = 0;
   static int16_t title_y_goal = 0;
   static int16_t title_y = 23;
-	static int16_t cursor_y_goal = 0;
+	static int16_t cursor_y_goal = LINE_SPACING_17;
 	static int16_t text_cursor = -2*DISPLAY_HEIGHT;
 	static int16_t selection_id = 0;
 
@@ -1132,24 +1181,25 @@ static display_page_t page_errors(unsigned btns) {
 	} else if (btns & (1 << 1)) {  // scroll right
 		selection_id++;
 	} else if(btns & 4) { // push button to go back to menu - init values
-    cursor_y_goal = 0;
+    cursor_y_goal = LINE_SPACING_17;
     text_cursor = -DISPLAY_HEIGHT;
     selection_id = 0;
     title_y_goal = 23; // move title down
   }
   
-  title_y = smooth_title_slide(title_y, title_y_goal);
+  title_y = smooth_slide(title_y, title_y_goal);
 
   // Display contents only when title in position
   if(title_y == 0) {
     uint8_t error_lines = marble_get_error_order_max();
 
     if(error_lines == 0) {
-      lv_init_label(&label_error, DISPLAY_WIDTH/2, LINE_SPACING_17 + 2*LINE_SPACING_12, &lv_font_roboto_12, "No errors have occurred", LV_CENTER, true);
+      text_cursor = smooth_slide(text_cursor, cursor_y_goal);
+      lv_init_label(&label_error, DISPLAY_WIDTH/2, text_cursor + 1*LINE_SPACING_12, &lv_font_roboto_12, "No errors have occurred", LV_CENTER, true);
     }
     else { // display errors
 
-      if (error_lines <= 3) { // no scrolling needed
+      if (error_lines <= 2) { // no scrolling needed
         selection_id = 0; 
         text_cursor = LINE_SPACING_17;
       } 
@@ -1166,20 +1216,23 @@ static display_page_t page_errors(unsigned btns) {
         else {
           text_cursor=(text_cursor+cursor_y_goal)/2;
         }
+        window_scrollbar(text_cursor-LINE_SPACING_17, (error_lines+1)*LINE_SPACING_12);
       }
       // draw error lines
       marble_error_info_t error_info;
       uint32_t uptime = marble_uptime_seconds();
       uint32_t error_time_ago;
       char error[33];
-      for(uint8_t i=0; i<3 && i<error_lines; i++) {
-          error_info = marble_get_error_info(i);
+      // printf("Displaying %d error lines\n", error_lines);
+      for(uint8_t i=0; i<error_lines; i++) {
+          error_info = marble_get_error_info(error_lines-i);
+          // printf("Error %d: index %d, count %d, last time %d\n", i, error_info.error_index, error_info.error_count, error_info.last_occurrence_time_s);
           // print error
           snprintf(error, 33, "%s", ErrorCodeShortStrings[error_info.error_index]);
-          lv_init_label(&label_error, (0*DISPLAY_WIDTH)/4+DISPLAY_WIDTH/8, text_cursor + (i+1)*LINE_SPACING_12, &lv_font_roboto_12, error, LV_LEFT, true);
+          lv_init_label(&label_error, (0*DISPLAY_WIDTH)/4+4, text_cursor + (i+1)*LINE_SPACING_12, &lv_font_roboto_12, error, LV_LEFT, true);
           // print count
           snprintf(error, 33, "%d", error_info.error_count);
-          lv_init_label(&label_error, (2*DISPLAY_WIDTH)/4+DISPLAY_WIDTH/8, text_cursor + (i+1)*LINE_SPACING_12, &lv_font_roboto_12, error, LV_CENTER, true);
+          lv_init_label(&label_error, (2*DISPLAY_WIDTH)/4+DISPLAY_WIDTH/8+7, text_cursor + (i+1)*LINE_SPACING_12, &lv_font_roboto_12, error, LV_CENTER, true);
           // print last time
           error_time_ago = uptime - error_info.last_occurrence_time_s;
           if(error_time_ago/86400) { // days
@@ -1198,18 +1251,16 @@ static display_page_t page_errors(unsigned btns) {
           // highlight if needed
           if(error_info.last_occurrence_time_s > error_reset_time) { // if error occurred after last error clear, highlight it
             if((frm>>2)%2)
-              invertRoundedRect(1, text_cursor, (4*DISPLAY_WIDTH)/4-1, text_cursor+12, 6); // white background for title
+              invertRoundedRect(1, text_cursor + (i+1)*LINE_SPACING_12, (2*DISPLAY_WIDTH)/4-1+14, text_cursor + (i+1)*LINE_SPACING_12 + 12, 4); // white background for title
           }
       }
       // titles
-      lv_init_label(&label_error, (3*DISPLAY_WIDTH)/4+DISPLAY_WIDTH/8-4, text_cursor, &lv_font_roboto_12, "Time since", LV_CENTER, true);
-      invertRoundedRect((3*DISPLAY_WIDTH)/4+1, text_cursor, (4*DISPLAY_WIDTH)/4-8, text_cursor+12, 4); // white background for title
-      lv_init_label(&label_error, (2*DISPLAY_WIDTH)/4+DISPLAY_WIDTH/8, text_cursor, &lv_font_roboto_12, "Count", LV_CENTER, true);
-      invertRoundedRect((2*DISPLAY_WIDTH)/4+1, text_cursor, (3*DISPLAY_WIDTH)/4-1, text_cursor+12, 4); // white background for title
-      lv_init_label(&label_error, DISPLAY_WIDTH/4, text_cursor, &lv_font_roboto_12, "Error", LV_CENTER, true);
-      invertRoundedRect((0*DISPLAY_WIDTH)/4, text_cursor, (2*DISPLAY_WIDTH)/4-1, text_cursor+12, 4); // white background for title
-
-      window_scrollbar(text_cursor-LINE_SPACING_17, (error_lines+1)*LINE_SPACING_12);
+      lv_init_label(&label_error, (3*DISPLAY_WIDTH)/4+DISPLAY_WIDTH/8-5, text_cursor, &lv_font_roboto_12, "Since", LV_CENTER, true);
+      invertRoundedRect((3*DISPLAY_WIDTH)/4+1, text_cursor, (4*DISPLAY_WIDTH)/4-10, text_cursor+12, 4); // white background for title
+      lv_init_label(&label_error, (2*DISPLAY_WIDTH)/4+DISPLAY_WIDTH/8+7, text_cursor, &lv_font_roboto_12, "Count", LV_CENTER, true);
+      invertRoundedRect((2*DISPLAY_WIDTH)/4+1+14, text_cursor, (3*DISPLAY_WIDTH)/4-1, text_cursor+12, 4); // white background for title
+      lv_init_label(&label_error, DISPLAY_WIDTH/4+7, text_cursor, &lv_font_roboto_12, "Error", LV_CENTER, true);
+      invertRoundedRect((0*DISPLAY_WIDTH)/4, text_cursor, (2*DISPLAY_WIDTH)/4-1+14, text_cursor+12, 4); // white background for title
     }  
   }
   // window title, error light
@@ -1233,12 +1284,12 @@ static display_page_t page_clear_errors(unsigned btns)
 
 	const int rectangle_coordinates[][4] = {
 		{DISPLAY_WIDTH/4 - 38, 44, DISPLAY_WIDTH/4 + 38, 64},  // CANCEL
-		{DISPLAY_WIDTH/4 - 38, 44, (3*DISPLAY_WIDTH)/4 + 38, 64}  // Proceed
+		{(3*DISPLAY_WIDTH)/4 - 38, 44, (3*DISPLAY_WIDTH)/4 + 38, 64}  // Proceed
 	};
 
 	fill(0);
 
-  lv_init_label(&label_warning_1, DISPLAY_WIDTH/2, 2, &lv_font_roboto_mono_17, "Reset error warning", LV_CENTER, true);
+  lv_init_label(&label_warning_1, DISPLAY_WIDTH/2, 2, &lv_font_roboto_mono_17, "Clear error light", LV_CENTER, true);
   lv_init_label(&label_warning_2, DISPLAY_WIDTH/2, 21, &lv_font_roboto_12, "This action will not clear error logs", LV_CENTER, true);
   lv_init_label(&label_warning_cancel, DISPLAY_WIDTH/4, 44, &lv_font_roboto_mono_17, "Cancel", LV_CENTER, true);
   lv_init_label(&label_warning_proceed, (3*DISPLAY_WIDTH)/4, 44, &lv_font_roboto_mono_17, "Reset", LV_CENTER, true);
@@ -1623,7 +1674,7 @@ static int compare_systick(uint32_t old, uint32_t new, uint32_t threshold) {
 }
 
 static void format_ip_addr(uint8_t *ip, char *ps, int maxlen) {
-  snprintf(ps, (size_t)maxlen, "IP: %03d.%03d.%03d.%03d", ip[0], ip[1], ip[2], ip[3]);
+  snprintf(ps, (size_t)maxlen, "%03d.%03d.%03d.%03d", ip[0], ip[1], ip[2], ip[3]);
   return;
 }
 
@@ -1704,7 +1755,7 @@ static void errorLight(unsigned frm) {
 }
 
 
-static int16_t smooth_title_slide(int16_t title_y, int16_t title_y_goal){  // smooth title movement
+static int16_t smooth_slide(int16_t title_y, int16_t title_y_goal){  // smooth title movement
 	if(title_y == (title_y+title_y_goal)/2) {
 		title_y = title_y_goal;
 	}

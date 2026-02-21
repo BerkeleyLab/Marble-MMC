@@ -234,8 +234,8 @@ void marble_error_handler(MarbleErrorCode_t code, uint8_t caller_id) {
     error_last_caller_id[idx] = caller_id;
     error_nack[idx] = 1;
     last_error_tick = total_seconds;
-    uint8_t previous_occurrence = error_order_of_occurrence[idx];     
-    if(error_order_of_occurrence[idx] < error_order_max){
+    uint8_t previous_occurrence = error_order_of_occurrence[idx];
+    if(error_order_of_occurrence[idx] < error_order_max || error_order_max == 0){
       error_order_of_occurrence[idx] = error_order_max + 1;
       if(previous_occurrence > 0){
         for(int i = 0; i < ERROR_CODE_COUNT; i++){
@@ -244,8 +244,8 @@ void marble_error_handler(MarbleErrorCode_t code, uint8_t caller_id) {
           }
         }
       }
-      error_order_max = error_order_of_occurrence[idx];
     }
+    error_order_max = error_order_of_occurrence[idx];
     if((error_last_tick[idx] - error_previous_tick > 2) || idx != previous_error){
       printf("\r\033[31m*** MMC ERROR: %s [%d]***\033[0m\r\n", ErrorCodeStrings[idx], caller_id);
       repeating_error = 0xff;
