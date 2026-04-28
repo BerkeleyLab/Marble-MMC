@@ -149,8 +149,9 @@ void system_init(void) {
  */
 void system_off_chip_init(void) {
   // Read and apply any non-volatile parameters destined for off-chip components
-  system_apply_external_params();
+    marble_SLEEP_ms(10000); // Wait for external components to settle after applying params
 
+  system_apply_external_params();
   // Pmod subsystem (UI Board, LEDs, GPIOs, etc)
   pmod_subsystem_init();
 

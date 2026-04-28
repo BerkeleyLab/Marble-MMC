@@ -29,6 +29,14 @@ extern "C" {
 
 #define MAC_LENGTH    (6)
 #define IP_LENGTH     (4)
+#define SN_LENGTH     (2)
+
+typedef enum {
+  IP = 0,
+  MAC,
+  SN,
+  NONE
+} command_m_type_t;
 
 typedef struct {
   uint8_t ip[IP_LENGTH];
@@ -39,6 +47,7 @@ int console_init(void);
 int console_service(void);
 void console_pend_msg(void);
 int console_push_fpga_mac_ip(void);
+// int console_push_fpga_sn(void);
 void console_print_mac_ip(void);
 void console_pend_FPGA_enable(void);
 

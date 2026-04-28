@@ -65,7 +65,7 @@ const char *menu_str[] = {
   "    j               Read SPI mailbox\r\n",
   "    k               Readout PCA9555 (I2C GPIO expanders U34 and U39)\r\n",
   "    l               Config PCA9555\r\n",
-  "    m d.d.d.d       Set IP Address\r\n",
+  "    m d.d.d.d       Set IP Address\r\n",  // TODO - SUPPORT m IP d.d.d.d, m MAC d:d:d:d:d:d, m SN xxxxxxxx for consistency with other set commands
   "    n d:d:d:d:d:d   Set MAC Address\r\n",
 #ifdef APP_MARBLE
   "    o               SI570 (Frequency synthesizer) status\r\n",
@@ -101,7 +101,7 @@ static void handle_gpio(const char *msg, int len);
 static int toggle_gpio(char c);
 static uint8_t parse_boolean(const char *rx_msg, int len);
 static int handle_mdio_phy_print(const char *rx_msg, int len);
-static int handle_msg_IP(const char *rx_msg, int len);
+static int handle_msg_IP_MAC_SN(const char *rx_msg, int len);
 static int handle_msg_MAC(const char *rx_msg, int len);
 static int handle_msg_fan_speed(const char *rx_msg, int len);
 static int handle_msg_overtemp(const char *rx_msg, int len);
@@ -113,9 +113,13 @@ static int handle_pmod_mode(const char *rx_msg, int len);
 //static void print_mac_ip(mac_ip_data_t *pmac_ip_data);
 static void print_mac(uint8_t *pdata);
 static void print_ip(uint8_t *pdata);
+static void print_sn(uint8_t *pdata);
 static void print_this_ip(void);
+static void print_this_sn(void);
 static void print_this_mac(void);
+static command_m_type_t sscanfm(const char *s, int len);
 static int sscanfIP(const char *s, volatile uint8_t *data, int len);
+static int sscanfSN(const char *s, volatile uint8_t *data, int len);
 static int sscanfMAC(const char *s, volatile uint8_t *data, int len);
 static int sscanfFanSpeed(const char *s, int len);
 static int sscanfUnsignedDecimal(const char *s, int len);
@@ -312,7 +316,7 @@ static int console_handle_msg(char *rx_msg, int len)
           }
            break;
         case 'm':
-           handle_msg_IP(rx_msg, len);
+           handle_msg_IP_MAC_SN(rx_msg, len);
            break;
         case 'n':
            handle_msg_MAC(rx_msg, len);
@@ -398,26 +402,75 @@ static int handle_mdio_phy_print(const char *rx_msg, int len) {
   return 0;
 }
 
-static int handle_msg_IP(const char *rx_msg, int len) {
+static int handle_msg_IP_MAC_SN(const char *rx_msg, int len) {
   int query = sscanfQuery(rx_msg, len);
-  if (query) {
-    print_this_ip();
-    return 0;
+  command_m_type_t command = sscanfm(rx_msg, len);
+  if (command == IP) {
+    if (query) {
+      print_this_ip();
+      return 0;
+    }
+    else {
+      int rval;
+      uint8_t ip[IP_LENGTH];
+      rval = sscanfIP(rx_msg, ip, len);
+      if (rval) {
+        printf("Malformed IP address. Fail.\r\n");
+        return rval;
+      }
+      print_ip(ip);
+      eeprom_store_ip_addr(ip, IP_LENGTH);
+    #ifdef AUTOPUSH
+      console_push_fpga_mac_ip();
+    #endif
+      return 0;
+    }
   }
-  int rval;
-  uint8_t ip[IP_LENGTH];
-  // NOTE: It seems like sscanf doesn't work so well in newlib-nano
-  rval = sscanfIP(rx_msg, ip, len);
-  if (rval) {
-    printf("Malformed IP address. Fail.\r\n");
-    return rval;
+  else if (command == MAC) {
+    if (query) {
+      print_this_mac();
+      return 0;
+    }
+    else {
+      uint8_t mac[MAC_LENGTH];
+      int rval = sscanfMAC(rx_msg, mac, len);
+      if (rval) {
+        printf("Malformed MAC address. Fail.\r\n");
+        return rval;
+      }
+      print_mac(mac);
+      eeprom_store_mac_addr(mac, MAC_LENGTH);
+    #ifdef AUTOPUSH
+      console_push_fpga_mac_ip();
+    #endif
+      return 0;
+    }
   }
-  print_ip(ip);
-  eeprom_store_ip_addr(ip, IP_LENGTH);
-#ifdef AUTOPUSH
-  console_push_fpga_mac_ip();
-#endif
-  return 0;
+  else if (command == SN) {
+    if (query) {
+      print_this_sn();
+      return 0;
+    }
+    else {
+      uint8_t sn[SN_LENGTH];
+      int rval = sscanfSN(rx_msg, sn, len);
+      if (rval) {
+        printf("Malformed serial number. Fail.\r\n");
+        return rval;
+      }
+      print_sn(sn);
+      eeprom_store_sn(sn, SN_LENGTH);
+    #ifdef AUTOPUSH
+      // console_push_fpga_sn(); // TODO - implement this
+    #endif
+      return 0;
+    }
+  }
+  else {
+    // explain command options
+    printf(unk_str);
+    return 1;
+  }
 }
 
 static int handle_msg_MAC(const char *rx_msg, int len) {
@@ -765,14 +818,22 @@ static void ina219_test(void)
 
 static void print_mac(uint8_t *pdata) {
   printf("MAC: ");
-  PRINT_MULTIBYTE_HEX(pdata, 6, ':');
+  PRINT_MULTIBYTE_HEX(pdata, MAC_LENGTH, ':');
   return;
 }
 
-//static void print_ip(mac_ip_data_t *pmac_ip_data) {
+static void print_sn(uint8_t *pdata) {
+  uint32_t sn_dec = 0;
+  for(int n = 0; n < SN_LENGTH; n++) {
+    sn_dec = (sn_dec << 8) | pdata[n];
+  }
+  printf("SN: %lu\r\n", sn_dec);
+  return;
+}
+
 static void print_ip(uint8_t *pdata) {
   printf("IP: ");
-  PRINT_MULTIBYTE_DEC(pdata, 4, '.');
+  PRINT_MULTIBYTE_DEC(pdata, IP_LENGTH, '.');
   return;
 }
 
@@ -784,6 +845,17 @@ static void print_this_mac(void) {
     return;
   }
   print_mac(mac);
+  return;
+}
+
+static void print_this_sn(void) {
+  uint8_t sn[SN_LENGTH];
+  int rval = eeprom_read_sn(sn, SN_LENGTH);
+  if (rval) {
+    printf("Could not find Serial Number\r\n");
+    return;
+  }
+  print_sn(sn);
   return;
 }
 
@@ -878,6 +950,49 @@ static int htoi(char c) {
 }
 
 /*
+ * interprets the "m" command.
+ * Expects the command to be in the form of "m <type>" where <type> is one of:
+ *  IP - for IP address
+ *  MAC - for MAC address
+ *  SN - for serial number
+ */
+static command_m_type_t sscanfm(const char *s, int len)
+{
+  if (!s || len <= 0) return NONE;
+
+  int i = 0;
+
+  /* skip leading whitespace */
+  while (i < len && s[i] != '\0' && (s[i] == ' ')) i++;
+
+  /* expect 'm' */
+  if (i >= len || s[i] == '\0' || s[i] != 'm') return NONE;
+  i++;
+
+  /* require at least one whitespace after 'm' */
+  if (i >= len || s[i] == '\0' || !(s[i] == ' '))  return NONE;
+
+  /* skip whitespace before the type token */
+  while (i < len && s[i] != '\0' && (s[i] == ' '))  i++;
+
+  /* read the type token (IP / MAC / SN) */
+  char tok[4] = {0}; /* longest is "MAC" (3) */
+  int n = 0;
+  while (i < len && s[i] != '\0' && !(s[i] == ' '))  {
+    if (n >= 3) return NONE;              /* token too long */
+    tok[n++] = ((unsigned char)s[i]);
+    i++;
+  }
+  tok[n] = '\0';
+
+  if (strcmp(tok, "IP") == 0)  return IP;
+  if (strcmp(tok, "MAC") == 0) return MAC;
+  if (strcmp(tok, "SN") == 0)  return SN;
+
+  return NONE;
+}
+
+/*
  * static int sscanfIP(const char *s, volatile uint8_t *data, int len);
  *    This hackery is needed because it seems newlib-nano's version of sscanf is
  *    not fully functional.  This function skips any non-numeric characters (0-9
@@ -890,7 +1005,7 @@ static int sscanfIP(const char *s, volatile uint8_t *data, int len) {
   int r;
   int sum = 0;
   // Start scan on char 1
-  for (int n = 1; n < len; n++) {
+  for (int n = 4; n < len; n++) {
     c = s[n];
     if (c == '.') {
       data[ndig++] = (uint8_t)(sum & 0xff);
@@ -909,6 +1024,33 @@ static int sscanfIP(const char *s, volatile uint8_t *data, int len) {
   }
   // Error - too many or not all digits decoded
   return -1;
+}
+
+
+/*
+ * static int sscanfSN(const char *s, volatile uint8_t *data, int len);
+ *    This hackery is needed because it seems newlib-nano's version of sscanf is
+ *    not fully functional.  
+ */
+static int sscanfSN(const char *s, volatile uint8_t *data, int len) {
+  int ndig = 0;
+  char c;
+  int r;
+  uint32_t sum = 0;
+  // Start scan on char 1
+  for (int n = 4; n < len; n++) {
+    c = s[n];
+    r = xatoi(c);
+    if (r >= 0) {
+      sum = (sum * 10) + r;
+    }
+  }
+  // The last digit won't be transferred in the loop (no '.' to follow)
+  for (int n = SN_LENGTH - 1; n >= 0; n--) {
+    data[n] = (uint8_t)(sum & 0xFF);
+    sum = sum >> 8;
+  }
+  return 0;
 }
 
 /*

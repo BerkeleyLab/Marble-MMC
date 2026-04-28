@@ -54,22 +54,23 @@ typedef struct {
  *   ip4 - 4 dot separated decimal digits
  */
 
-// TODO - consolidate IP_LENGTH and MAC_LENGTH from console.h here
+// TODO - consolidate IP_LENGTH and MAC_LENGTH and SN_LENGTH from console.h here
 #define FOR_ALL_EETAGS() \
   X(1, boot_mode, raw, 1, {0}) \
   X(2, mac_addr,  mac, 6, {18, 85, 85, 0, 1, 46}) \
   X(3, ip_addr,   ip4, 4, {192, 168, 19, 31}) \
-  X(4, fan_speed, raw, 1, {102}) \
-  X(5, overtemp,  raw, 1, {85}) \
-  X(6, mgt_mux,   raw, 1, {0}) \
-  X(7, fsynth,    raw, 6, {0, 0, 0, 0, 0, 0}) \
-  X(8, wd_period, raw, 1, {0}) \
-  X(9, wd_key_0,  raw, 6, {'s','u','p','e','r',' '}) \
-  X(10,wd_key_1,  raw, 6, {'s','e','c','r','e','t'}) \
-  X(11,wd_key_2,  raw, 4, {' ','k','e','y'}) \
-  X(12,mbox_en,   raw, 1, {1}) \
-  X(13,tach_en,   raw, 1, {1}) \
-  X(14,pmod_mode, raw, 1, {0})
+  X(4, sn, raw, 2, {0, 0}) \
+  X(5, fan_speed, raw, 1, {102}) \
+  X(6, overtemp,  raw, 1, {85}) \
+  X(7, mgt_mux,   raw, 1, {0}) \
+  X(8, fsynth,    raw, 6, {0, 0, 0, 0, 0, 0}) \
+  X(9, wd_period, raw, 1, {0}) \
+  X(10, wd_key_0,  raw, 6, {'s','u','p','e','r',' '}) \
+  X(11,wd_key_1,  raw, 6, {'s','e','c','r','e','t'}) \
+  X(12,wd_key_2,  raw, 4, {' ','k','e','y'}) \
+  X(13,mbox_en,   raw, 1, {1}) \
+  X(14,tach_en,   raw, 1, {1}) \
+  X(15,pmod_mode, raw, 1, {0})
 
 typedef enum {
   ee_RESERVED,

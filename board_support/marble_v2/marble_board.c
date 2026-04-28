@@ -141,7 +141,8 @@ uint8_t previous_error = 0xff;
 uint8_t repeating_error = 0xff;
 static uint8_t tick_overflow_count = 0;
 
-static uint32_t marble_SN[3] = {0};
+static uint32_t MMC_SN[3] = {0};
+static uint16_t Marble_SN = 0;
 
 #ifdef  USE_FULL_ASSERT
 void assert_failed(uint8_t *file, uint32_t line) {}
@@ -210,8 +211,10 @@ static int i2c_hook(I2C_BUS I2C_bus, uint8_t addr, uint8_t rnw,
                     int cmd, const uint8_t *data, int len);
 static void show_mmc_ID(void);
 static void show_PHY_ID(void);
-static void marble_get_SN(void);
-static void show_marble_SN(void);
+static void get_MMC_SN(void);
+static void show_MMC_SN(void);
+static void get_Marble_SN(void);
+static void show_Marble_SN(void);
 static void print_time(uint32_t total_seconds);
 static void print_uptime(void);
 static void print_clock_info(void);
@@ -1243,7 +1246,8 @@ uint32_t marble_init(void)
   MX_GPIO_Init();
   marble_GPIOint_init();
   marble_read_pcb_rev();
-  marble_get_SN();
+  get_MMC_SN();
+  get_Marble_SN();
   marble_PSU_pwr(true);
   printf("        PSU and clocks initialized (%ld)\r\n", marble_get_tick());
   MX_ETH_MDIO_Init();
@@ -1300,7 +1304,14 @@ void marble_print_ID_status(int len) {
         break;
     }
   #endif
-    show_marble_SN();
+  // fflush(stdout);
+  //   printf("Done");
+  // show_Marble_SN();
+  // fflush(stdout);
+    printf("Done");
+    show_MMC_SN();
+      fflush(stdout);
+    printf("Done");
     show_mmc_ID();
     show_PHY_ID();
     printf("Firmware revision: " GIT_REV " [Git]\r\n");// placeholder for GIT_REV
@@ -1363,12 +1374,20 @@ static void marble_read_pcb_rev(void) {
 }
 
 // Read unique 32-bit ID (from 96-bit identifier)
-static void marble_get_SN(void) {
-  HAL_GetUID(marble_SN);
+static void get_MMC_SN(void) {
+  HAL_GetUID(MMC_SN);
 }
 
-static void show_marble_SN(void) {
-   printf("Marble Serial Number: 0x%08lX%08lX%08lX\r\n", marble_SN[2], marble_SN[1], marble_SN[0]);
+static void show_MMC_SN(void) {
+   printf("MMC Serial Number: 0x%08lX%08lX%08lX\r\n", MMC_SN[2], MMC_SN[1], MMC_SN[0]);
+}
+
+static void get_Marble_SN(void) {
+  Marble_SN = 0;
+}
+
+static void show_Marble_SN(void) {
+   printf("Marble Serial Number: %u\r\n", (unsigned)Marble_SN);
 }
 
 static void SystemClock_Config(void)

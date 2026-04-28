@@ -49,10 +49,14 @@ int main(void) {
 
    // Boot the power supply controller if needed
    pwr_autoboot();
+   marble_SLEEP_ms(2000); // settle and print
 
    // Initialize off-chip components
    board_init();
+   marble_SLEEP_ms(2000); // settle and print
+
    printf("++++++++++++++++++++++++ | Initialization Complete | ++++++++++++++++++++++++\r\n");
+   marble_SLEEP_ms(2000); // settle and print
 
    marble_print_ID_status(2);
    marble_SLEEP_ms(200); // settle and print
