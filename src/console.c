@@ -1045,7 +1045,7 @@ static int sscanfSN(const char *s, volatile uint8_t *data, int len) {
       sum = (sum * 10) + r;
     }
   }
-  // The last digit won't be transferred in the loop (no '.' to follow)
+  
   for (int n = SN_LENGTH - 1; n >= 0; n--) {
     data[n] = (uint8_t)(sum & 0xFF);
     sum = sum >> 8;
