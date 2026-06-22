@@ -1304,14 +1304,8 @@ void marble_print_ID_status(int len) {
         break;
     }
   #endif
-  // fflush(stdout);
-  //   printf("Done");
-  // show_Marble_SN();
-  // fflush(stdout);
-    printf("Done");
+    console_print_SN();
     show_MMC_SN();
-      fflush(stdout);
-    printf("Done");
     show_mmc_ID();
     show_PHY_ID();
     printf("Firmware revision: " GIT_REV " [Git]\r\n");// placeholder for GIT_REV

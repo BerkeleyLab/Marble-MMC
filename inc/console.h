@@ -30,6 +30,7 @@ extern "C" {
 #define MAC_LENGTH    (6)
 #define IP_LENGTH     (4)
 #define SN_LENGTH     (2)
+#define SETTINGS_UNLOCK_TIMEOUT (120000) // 120 seconds
 
 typedef enum {
   IP = 0,
@@ -49,6 +50,7 @@ void console_pend_msg(void);
 int console_push_fpga_mac_ip(void);
 // int console_push_fpga_sn(void);
 void console_print_mac_ip(void);
+void console_print_SN(void);
 void console_pend_FPGA_enable(void);
 
 void set_last_ip(const uint8_t *ip);
