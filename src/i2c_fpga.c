@@ -84,20 +84,54 @@ void ina219_debug(uint8_t addr)
 {
    uint16_t value = 0;
    bool rc;
-   printf("Readout INA219 at address %2.2xh ", (unsigned) addr);
+
+   printf("INA219 at address %2.2xh ", (unsigned) addr);
+
    if (addr == INA219_0) {
-     printf("(Main nominal +12V input)\r\n");
+      printf("(Main nominal +12V input)\r\n");
    } else if (addr == INA219_FMC1) {
-     printf("(Nominal +12V supply to FMC1)\r\n");
+      printf("(Nominal +12V supply to FMC1)\r\n");
    } else if (addr == INA219_FMC2) {
-     printf("(Nominal +12V supply to FMC2)\r\n");
+      printf("(Nominal +12V supply to FMC2)\r\n");
    }
+
    rc = wireReadRegister(addr, INA_REG_CONFIG, &value);
-   printf("Register %d value 0x%4.4x (%d)\r\n", INA_REG_CONFIG, value, rc);
+   if (rc == 1)
+      printf("        [%2.2d] Configuration   0x%4.4x\r\n",
+               INA_REG_CONFIG, value);
+   else
+      printf("Configuration readout failed!");
+
+   // --- Shunt voltage: signed, 2's complement, LSB = 10 uV = 0.01 mV ---
    rc = wireReadRegister(addr, INA_REG_SHUNTVOLTAGE, &value);
-   printf("Register %d value 0x%4.4x (%d)\r\n", INA_REG_SHUNTVOLTAGE, value, rc);
+   if (rc == 1) {
+      int16_t shunt_raw = (int16_t)value;   // signed decode required by datasheet
+      // Convert to mV with 0.01 mV resolution using integer math:
+      // shunt_raw * 0.01 mV, so *100 => shunt_raw in units of 0.01 mV
+      int32_t shunt_mV_100 = (int32_t)shunt_raw;
+
+      int32_t shunt_mV = shunt_mV_100 / 100;
+      int32_t shunt_mV_frac = shunt_mV_100 % 100;
+      if (shunt_mV_frac < 0) shunt_mV_frac = -shunt_mV_frac;
+
+      printf("        [%2.2d] Shunt voltage   %ld.%02ld mV\r\n",
+               INA_REG_SHUNTVOLTAGE,
+               (long)shunt_mV, (long)shunt_mV_frac);
+   } else {
+      printf("Shunt voltage register readout failed!");
+   }
+
+   // --- Bus voltage: right shift by 3, then LSB = 4 mV ---
    rc = wireReadRegister(addr, INA_REG_BUSVOLTAGE, &value);
-   printf("Register %d value 0x%4.4x (%d)\r\n", INA_REG_BUSVOLTAGE, value, rc);
+   if (rc == 1) {
+      uint32_t bus_mV = (uint32_t)(value >> 3) * 4;   // integer mV
+      printf("        [%2.2d] Bus voltage     %lu.%03lu V\r\n",
+            (unsigned)INA_REG_BUSVOLTAGE,
+            (unsigned long)(bus_mV / 1000),
+            (unsigned long)(bus_mV % 1000));
+   } else {
+      printf("Bus voltage register readout failed!");
+   }
 }
 
 void setCalibration_16V_2A(void)
@@ -332,7 +366,8 @@ void adn4600_init(void)
       rc = marble_I2C_cmdsend(I2C_FPGA, ADN4600, disable, &config, 1);
       if (rc != HAL_OK)
          marble_error_handler(ERROR_I2C_FPGA_ADN4600, 96);
-      //printf("ADN4600 reg[0x%2.2x] <= 0x%2.2x (rc=%d)\r\n", disable, config, rc);
+      else
+         printf("        reg[0x%2.2x] <= 0x%2.2x (rc=%d)\r\n", disable, config, rc);
    }
    // printf("        ADN4600 XPT Conf - 0x%2.2x - 0x%2.2x - 0x%2.2x - 0x%2.2x\r\n",
    //       configs[0], configs[1], configs[2], configs[3]);
@@ -342,7 +377,8 @@ void adn4600_init(void)
       rc = marble_I2C_cmdsend(I2C_FPGA, ADN4600, ADN4600_XPT_Conf, &config, 1);
       if (rc != HAL_OK)
          marble_error_handler(ERROR_I2C_FPGA_ADN4600, 97);
-      // printf("ADN4600 XPT Conf <= 0x%2.2x (rc=%d)\r\n", config, rc);
+      else
+         printf("        XPT Conf <= 0x%2.2x (rc=%d)\r\n", config, rc);
    }
 
    // Table 9. Switch Core Temporary Registers
@@ -360,7 +396,7 @@ void adn4600_init(void)
 
    config = 1;
    rc = marble_I2C_cmdsend(I2C_FPGA, ADN4600, ADN4600_XPT_Update, &config, 1);
-   // printf("ADN4600 Update (rc=%d)\r\n", rc);
+   printf("        Update (rc=%d)\r\n", rc);
 }
 
 void adn4600_printStatus(void)

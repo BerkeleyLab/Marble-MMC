@@ -149,9 +149,8 @@ void system_init(void) {
  */
 void system_off_chip_init(void) {
   // Read and apply any non-volatile parameters destined for off-chip components
-    marble_SLEEP_ms(10000); // Wait for external components to settle after applying params
+  system_apply_external_params(); // CURRENT SOURCE OF CRASH
 
-  system_apply_external_params();
   // Pmod subsystem (UI Board, LEDs, GPIOs, etc)
   pmod_subsystem_init();
 
@@ -342,7 +341,7 @@ static void system_pmod_mode_ui_board(void) {
 #ifdef UI_BOARD_SUPPORTED
   display_init();
 #else
-  printf("*** UI board support disabled for this build!  Please update MMC image to use this feature ***\r\n");
+  printf("        UI board support disabled! Update MMC image to use this feature.\n");
 #endif
   system_pmod_timer_disable();
   return;

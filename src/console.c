@@ -32,6 +32,7 @@ const char unk_str[] = "Unknown option. Press '?' for help.\r\n";
 const char *menu_str[] = {
   // "Build based on git commit " GIT_REV "\r\n",
   "Commands:\r\n",
+  "    - ------------- ---------------------------------------------------------\r\n",
   "    0               Show board/chip identification and MMC status info\r\n"
   "    1 [-v]          Show MDIO/PHY Status (-v for verbose output)\r\n",
   "    2               I2C monitor\r\n",
@@ -83,8 +84,10 @@ const char *menu_str[] = {
   "    v key           Set a new 128-bit secret key (non-volatile, write only).\r\n",
   "    w bool          Set fan tachometer enable/disable (1/0, on/off)\r\n",
   "    x mode          Set MMC Pmod usage mode\r\n",
+  "    - ------------- ---------------------------------------------------------\r\n",
   "    z lock/unlock.  Temporarily unlock MMC settings\r\n",
   "    ?               Help\r\n",
+  "    - ------------- ---------------------------------------------------------\r\n",
 };
 #define MENU_LEN (sizeof(menu_str)/sizeof(*menu_str))
 
@@ -244,7 +247,7 @@ static int console_handle_msg(char *rx_msg, int len)
 #endif
         case 'c':
           if(len == 2){
-           printf("Readout INA219\r\n");
+          //  printf("Readout INA219\r\n");
            ina219_test();
           } else {
             printf(unk_str);
@@ -498,6 +501,10 @@ static int handle_msg_IP_MAC_SN(const char *rx_msg, int len) {
       uint8_t eeprom_sn[SN_LENGTH];
       uint32_t sn_sum = 0;
       int sn_read_val = eeprom_read_sn(eeprom_sn, SN_LENGTH);
+      if (sn_read_val) {
+        printf("Could not find Serial Number\r\n");
+        return sn_read_val;
+      }
       int rval = sscanfSN(rx_msg, sn, len);
       // printf("EEPROM SN read returned %d\r\n", eeprom_sn);
       if (rval) { // SN parsing failure
@@ -531,6 +538,7 @@ static int handle_msg_IP_MAC_SN(const char *rx_msg, int len) {
     printf(unk_str);
     return 1;
   }
+  return 0;
 }
 
 static int handle_msg_fan_speed(const char *rx_msg, int len) {

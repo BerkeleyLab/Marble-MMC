@@ -214,7 +214,6 @@ static void show_PHY_ID(void);
 static void get_MMC_SN(void);
 static void show_MMC_SN(void);
 static void get_Marble_SN(void);
-static void show_Marble_SN(void);
 static void print_time(uint32_t total_seconds);
 static void print_uptime(void);
 static void print_clock_info(void);
@@ -1378,10 +1377,6 @@ static void show_MMC_SN(void) {
 
 static void get_Marble_SN(void) {
   Marble_SN = 0;
-}
-
-static void show_Marble_SN(void) {
-   printf("Marble Serial Number: %u\r\n", (unsigned)Marble_SN);
 }
 
 static void SystemClock_Config(void)
