@@ -137,6 +137,7 @@ static const char *ErrorCodeStrings[ERROR_CODE_COUNT] = { // triggers compile wa
 static uint32_t error_counters[ERROR_CODE_COUNT] = {0};
 static uint32_t error_last_tick[ERROR_CODE_COUNT] = {0};
 static uint8_t error_last_caller_id[ERROR_CODE_COUNT] = {0};
+static bool errors_muted = false;
 uint8_t previous_error = 0xff;
 uint8_t repeating_error = 0xff;
 static uint8_t tick_overflow_count = 0;
@@ -290,21 +291,43 @@ void marble_error_handler(MarbleErrorCode_t code, uint8_t caller_id) {
     error_counters[idx]++;
     error_last_tick[idx] = total_seconds;
     error_last_caller_id[idx] = caller_id;
-    if((error_last_tick[idx] - error_previous_tick > 2) || idx != previous_error){
-      printf("\r\033[31m*** MMC ERROR: %s [%d]***\033[0m\r\n", ErrorCodeStrings[idx], caller_id);
-      repeating_error = 0xff;
-    } else {
-      if (idx != repeating_error){
-        printf("\r\033[31m*** MMC ERROR: repeating ***\033[0m\r\n> ");
-        repeating_error = idx;
+    if(!errors_muted) {
+      if((error_last_tick[idx] - error_previous_tick > 2) || idx != previous_error){
+        printf("\r\033[31m*** MMC ERROR: %s [%d]***\033[0m\r\n", ErrorCodeStrings[idx], caller_id);
+        repeating_error = 0xff;
       } else {
-        if (error_last_tick[idx] - error_previous_tick == 2){ 
-          printf(".");
-          fflush(stdout);
+        if (idx != repeating_error){
+          printf("\r\033[31m*** MMC ERROR: repeating ***\033[0m\r\n> ");
+          repeating_error = idx;
+        } else {
+          if (error_last_tick[idx] - error_previous_tick == 2){ 
+            printf(".");
+            fflush(stdout);
+          }
         }
       }
     }
     previous_error = idx;
+}
+
+void marble_check_bringup(void) {
+    uint8_t sn[SN_LENGTH];
+    int rval = eeprom_read_sn(sn, SN_LENGTH);
+    if (rval) {
+        printf("Could not find Serial Number\r\n");
+        return;
+    }
+    bool all_zero = true;
+    for (size_t i = 0; i < SN_LENGTH; i++) {
+        if (sn[i] != 0) {
+            all_zero = false;
+            break;
+        }
+    }
+    if (all_zero) {
+        errors_muted = true;
+        printf("Please initialize this board. Error messages are muted.\r\n");
+    }
 }
 
 void reset_error_repeat(void){

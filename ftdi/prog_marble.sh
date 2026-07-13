@@ -13,9 +13,20 @@ if [ $# -lt 1 ]; then
   exit 1
 fi
 
-#printf -v snum "%06d" $1
-snum=$(printf "%06d" "$1")
-#echo $snum
+# SERIALNUM is expected as 4 hex digits (XXXX), e.g. 0123 or 4AB2
+sn_hex="$1"
+case "$sn_hex" in
+  [0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f]) : ;;
+  *)
+    echo "Error: FTDI SERIALNUM must be 4 hex digits (XXXX). Got: '$sn_hex'" >&2
+    exit 1
+    ;;
+esac
+
+# Convert hex to decimal, then pad to 6 digits
+sn_dec=$((0x$sn_hex))
+snum=$(printf "%06d" "$sn_dec")
+echo $snum
 
 # Redirect group
 {

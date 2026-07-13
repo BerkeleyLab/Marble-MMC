@@ -417,6 +417,7 @@ static void handle_menu_print(int len) {
     for (unsigned kx=0; kx<MENU_LEN; kx++) {
         printf("%s", menu_str[kx]);
     }
+    marble_check_bringup();
   } else {
     printf(unk_str);
   }

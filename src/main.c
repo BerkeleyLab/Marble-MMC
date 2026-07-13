@@ -49,7 +49,6 @@ int main(void) {
 
    // Boot the power supply controller if needed
    pwr_autoboot();
-   marble_SLEEP_ms(2000); // settle and print
 
    // Initialize off-chip components
    board_init();
@@ -74,12 +73,15 @@ int main(void) {
       system_service();
    }
 
+
    printf("++++++++++++++++++++++++++++ | Starting Console | +++++++++++++++++++++++++++\r\n");
    fflush(stdout);
 
    marble_SLEEP_ms(10);
    UARTQUEUE_Init(); // Flush the bus before console starts
-
+   // Check if the board has been brought up before
+   marble_check_bringup();
+   
    printf("Enter command or '?' for help\r\n> ");
    fflush(stdout);
 

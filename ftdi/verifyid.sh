@@ -48,9 +48,18 @@ case "$OSTYPE" in
     ;;
 esac
 
-  # remove the leading zeros from the input
-  snum=$(echo "$1" |  sed 's/^0*//')
-  snum=$(printf "%06d" "$snum")
+# Expect input as 4 hex digits (XXXX), convert to decimal and pad to 6 digits
+sn_hex="$1"
+case "$sn_hex" in
+  [0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f]) : ;;
+  *)
+    echo "Error: FTDI SERIALNUM must be exactly 4 hex digits (XXXX). Got: '$sn_hex'" >&2
+    exit 1
+    ;;
+esac
+
+sn_dec=$((16#$sn_hex))          # hex -> decimal
+snum=$(printf "%06d" "$sn_dec")  # zero-pad to 6 digits for FTDI
 
 # Ensure it's called "Marble"
 case "$marble" in
