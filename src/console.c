@@ -354,11 +354,7 @@ static int console_handle_msg(char *rx_msg, int len)
            handle_msg_overtemp(rx_msg, len);
            break;
         case 'r':
-            if(check_settings_lock()) {
-              printf("Settings are locked. Unlock to configure mailbox.\r\n");
-            } else {
-              handle_mailbox_enable(rx_msg, len);
-            }
+           handle_mailbox_enable(rx_msg, len);
            break;
 #ifdef APP_MARBLE
         case 's':
@@ -385,11 +381,7 @@ static int console_handle_msg(char *rx_msg, int len)
             }
            break;
         case 'w':
-            if(check_settings_lock()) {
-              printf("Settings are locked. Unlock to configure fan tachometer.\r\n");
-            } else {
             handle_tach_enable(rx_msg, len);
-            }
            break;
         case 'x':
            handle_pmod_mode(rx_msg, len);
@@ -618,6 +610,9 @@ static int handle_tach_enable(const char *rx_msg, int len) {
       printf("Fan tachometer (PWM pulse stretching) disabled\r\n");
     }
     return 0;
+  } else if(check_settings_lock()) {
+    printf("Settings are locked. Unlock to configure fan tachometer.\r\n");
+    return 1;
   } else if (rval == 0x02) {
     // Disable
     printf("Disabling fan tachometer (PWM pulse stretching)\r\n");
@@ -647,14 +642,17 @@ static int handle_mailbox_enable(const char *rx_msg, int len) {
     } else {
       printf("Mailbox disabled\r\n");
     }
+  } else if(check_settings_lock()) {
+      printf("Settings are locked. Unlock to configure mailbox.\r\n");
+      return 1;
   } else if (rval == 0x02) {
-    // Disable
-    printf("Disabling mailbox update\r\n");
-    mbox_disable();
+      // Disable
+      printf("Disabling mailbox update\r\n");
+      mbox_disable();
   } else if (rval == 0x03) {
-    // Enable
-    printf("Enabling mailbox update\r\n");
-    mbox_enable();
+      // Enable
+      printf("Enabling mailbox update\r\n");
+      mbox_enable();
   } else {
     // Bad parsing
     printf("Failed to parse\r\n");
@@ -1670,19 +1668,6 @@ static int handle_pmod_mode(const char *rx_msg, int len) {
 }
 
 
-static uint8_t check_settings_lock(void) {
-    if (_settings_lock) {
-        return 1;   /* locked */
-    }
-    /* If we are here, settings are currently unlocked.  Check if the
-     * timeout has expired. */
-    if (marble_get_tick() - _settings_lock_tick > SETTINGS_UNLOCK_TIMEOUT) {
-        _settings_lock = 1;   /* re-lock */
-        printf("Settings lock re-enabled - timeout.\r\n");
-        return 1;           /* locked */
-    }
-    return 0;               /* still unlocked */
-}
 /*********************************************************************
  *  Settings–lock commands
  *
@@ -1700,7 +1685,7 @@ static uint8_t check_settings_lock(void) {
   * ----------------------------------------------------------------- */
 static int exec_locked(void) {
     _settings_lock = 1;
-    printf("Settings lock enabled\r\n");
+    printf("Settings locked\r\n");
     return 0;
 }
 
@@ -1711,6 +1696,19 @@ static int exec_unlocked(void) {
     return 0;
 }
 
+static uint8_t check_settings_lock(void) {
+    if (_settings_lock) {
+        return 1;   /* locked */
+    }
+    /* If we are here, settings are currently unlocked.  Check if the
+     * timeout has expired. */
+    if (marble_get_tick() - _settings_lock_tick > SETTINGS_UNLOCK_TIMEOUT) {
+        exec_locked(); /* re-lock */
+        // printf("Settings lock re-enabled - timeout.\r\n");
+        return 1;           /* locked */
+    }
+    return 0;               /* still unlocked */
+}
 /* -----------------------------------------------------------------
  *  Command description table – one entry per supported command.
  *  The `cmd` field contains the exact text to compare after the
@@ -1735,6 +1733,16 @@ static const cmd_t cmd_table[] = {
  * ----------------------------------------------------------------- */
 static int handle_settings_lock(const char *rx_msg, int len)
 {
+    if (sscanfQuery(rx_msg, len)) {
+      check_settings_lock();
+      if (_settings_lock) {
+        printf("Settings are locked\n");
+      }
+      else {
+        printf("Settings are unlocked\n");
+      }
+      return 0;
+    }
     /* Fast sanity: first char must be 'z' and there must be a space. */
     if (len < 4 || rx_msg[0] != 'z' || rx_msg[1] != ' ')
         goto error;

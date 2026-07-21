@@ -118,7 +118,7 @@ for oct in "$1" "$2" "$3" "$4"; do
       exit 1
       ;;
   esac
-  n=$((10#$oct))   # force base-10, works with leading zeros
+  n=$(printf '%d' "$oct")   # force base-10, works with leading zeros
   if [ "$n" -lt 0 ] || [ "$n" -gt 255 ]; then
     echo "ERROR: IP octet out of range (0..255). Got: '$IP'" >&2
     exit 1

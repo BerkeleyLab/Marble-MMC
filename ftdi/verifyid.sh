@@ -58,7 +58,7 @@ case "$sn_hex" in
     ;;
 esac
 
-sn_dec=$((16#$sn_hex))          # hex -> decimal
+sn_dec=$(printf '%d' "0x$sn_hex")         # hex -> decimal
 snum=$(printf "%06d" "$sn_dec")  # zero-pad to 6 digits for FTDI
 
 # Ensure it's called "Marble"
