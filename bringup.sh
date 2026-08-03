@@ -288,7 +288,8 @@ case "$OSTYPE" in
     ;;
 esac
 echo $connected
-if [[ -z "$connected" ]]; then
+
+if [ -z "${connected:-}" ]; then
   echo "No wired route to $IP?"
   exit 1
 fi
@@ -400,7 +401,7 @@ echo "##################################"
 echo "Ping test"
 check_ping() {
   out="$1"
-  printf '%s' "$out" | grep -q '4 packets transmitted, 4 packets received, 0.0% packet loss' || return 1
+  printf '%s' "$out" | grep -q '4 packets transmitted, 4 packets received' || return 1
   return 0
 }
 out=$(ping -c4 $IP)

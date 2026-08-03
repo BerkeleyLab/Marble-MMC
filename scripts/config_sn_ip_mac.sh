@@ -79,8 +79,8 @@ b1="$(printf "%s" "$sn_hex" | cut -c1-2 | tr '[:lower:]' '[:upper:]')" # e.g. "0
 b2="$(printf "%s" "$sn_hex" | cut -c3-4 | tr '[:lower:]' '[:upper:]')" # e.g. "23"
 
 # Normalize for comparison with readback (readback seems to use %x so it may drop leading zeros)
-b1_norm="$(printf '%x' "$((16#$b1))")"
-b2_norm="$(printf '%x' "$((16#$b2))")"
+b1_norm="${b1#0}"; [ -n "$b1_norm" ] || b1_norm=0
+b2_norm="${b2#0}"; [ -n "$b2_norm" ] || b2_norm=0
 mac_expected_norm="12:55:55:0:${b1_norm}:${b2_norm}"
 
 # Also print the “full” two-digit form for clarity
