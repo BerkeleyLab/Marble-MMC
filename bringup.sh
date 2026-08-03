@@ -401,10 +401,12 @@ echo "##################################"
 echo "Ping test"
 check_ping() {
   out="$1"
-  printf '%s' "$out" | grep -q '4 packets transmitted, 4 packets received' || return 1
-  return 0
+  printf '%s' "$out" |
+    tr -d '\r' |
+    grep -qiE '4 packets transmitted, 4 (packets )?received, 0(\.0)?% packet loss,'
 }
-out=$(ping -c4 $IP)
+#out=$(ping -c4 $IP)
+out="$(ping -c4 "$IP" 2>&1)"
 echo "$out"
 if check_ping "$out"; then
   echo "Ping test PASSED"

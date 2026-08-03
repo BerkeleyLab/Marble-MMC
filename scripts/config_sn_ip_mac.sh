@@ -97,11 +97,15 @@ python3 "$SCRIPT_DIR/load.py" -d "$dev" \
   "m SN $sn_hex_uc" \
   "m IP $ip" \
   "m MAC $mac_expected_full"
+sleep 4
 
-READBACK="$(python3 "$SCRIPT_DIR/load.py" -d "$dev" "0" 2>&1)"
+READBACK="$(python3 "$SCRIPT_DIR/load.py" -d "$dev" 0 2>&1)"
+echo "LOAD READBACK (bytes=${#READBACK})" >&2
+printf '%s\n' "$READBACK" >&2
 
 # Compare in lowercase to avoid case issues
-READBACK_LC="$(printf "%s" "$READBACK" | tr '[:upper:]' '[:lower:]')"
+READBACK_LC="$(printf "%s" "$READBACK" | tr -d '\r' | tr '[:upper:]' '[:lower:]')"
+
 sn_lc="$(printf "%s" "$sn_hex_uc" | tr '[:upper:]' '[:lower:]')"
 ip_lc="$(printf "%s" "$ip" | tr '[:upper:]' '[:lower:]')"
 mac_lc="$(printf "%s" "$mac_expected_norm" | tr '[:upper:]' '[:lower:]')"
