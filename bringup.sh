@@ -50,9 +50,25 @@
 # ==  /dev/ttyUSB2 -> UART to/from FPGA                               ==
 # ==  /dev/ttyUSB3 -> UART to/from MMC                                ==
 # ======================================================================
-SERIAL_NUM=$1
-IP=$2
+SERIAL_NUM="${1:-}"
+IP="${2:-}"
+TEST="${3:-}"
 
+# Default test mode
+TEST="BASIC"
+
+# Optional 3rd arg: test=BASIC or test=FULL
+if [ $# -ge 3 ] && [ -n "$3" ]; then
+  case "$3" in
+    test=FULL|test=full|FULL|full)   TEST="FULL" ;;
+    test=BASIC|test=basic|BASIC|basic) TEST="BASIC" ;;
+    *)
+      echo "ERROR: Invalid test argument '$3' (expected test=BASIC or test=FULL)" >&2
+      echo "Usage: $0 <SN> <IP> [test=BASIC|test=FULL]" >&2
+      exit 1
+      ;;
+  esac
+fi
 
 ts="$(date '+%Y%m%d_%H%M%S')"
 log="bringup_logfile_${SERIAL_NUM}_${ts}.log"
@@ -79,7 +95,7 @@ set -e
 # SERIAL_NUM must be exactly 4 hex digits (XXXX)
 if [ -z "$SERIAL_NUM" ]; then
   echo "ERROR: SERIAL_NUM is empty" >&2
-  echo "Usage: $0 <SN> <IP>" >&2
+  echo "Usage: $0 <SN> <IP> [test=BASIC|test=FULL]" >&2
   exit 1
 fi
 
@@ -97,7 +113,7 @@ SERIAL_NUM="$(printf "%s" "$SERIAL_NUM" | tr '[:lower:]' '[:upper:]')"
 # IP must be valid IPv4 dotted-quad A.B.C.D (each 0..255)
 if [ -z "$IP" ]; then
   echo "ERROR: IP is empty" >&2
-  echo "Usage: $0 <SN> <IP>" >&2
+  echo "Usage: $0 <SN> <IP> [test=BASIC|test=FULL]" >&2
   exit 1
 fi
 
@@ -417,30 +433,32 @@ fi
 echo "\033[1;32mSuccess(Task 11 of 12) – Ping test\033[0m"
 
 # 12. FMC I/O test
-# echo "##################################"
-# echo "FMC I/O test"
-# echo "Connect IAM FMC modules and press Enter to proceed..."
-# read -r _
-# cd "$BEDROCK_PATH/projects/test_marble_family"
-# check_FMC_IO() {
-#   out="$1"
-#   printf '%s' "$out" | grep -q 'P1L ........................................................................' || return 1
-#   printf '%s' "$out" | grep -q 'P2L ........................................................................' || return 1
-#   printf '%s' "$out" | grep -q 'P2H ................................................' || return 1
-#   printf '%s' "$out" | grep -q 'PASS' || return 1
-#   return 0
-# }
-# out="$(python3 -m fmc_test_iam -a "$IP" --plugged=12 2>&1 || true)"
-# echo "$out"
-# if check_FMC_IO "$out"; then
-#   echo "FMC I/O test PASSED"
-# else
-#   echo "FMC I/O test FAILED"
-#   exit 1
-# fi
-# echo "\033[1;32mSuccess(Task 12 of 12) – FMC I/O test\033[0m"
+if [ "$TEST" = "FULL" ]; then
+echo "##################################"
+echo "FMC I/O test"
+echo "Connect IAM FMC modules and press Enter to proceed..."
+read -r _
+cd "$BEDROCK_PATH/projects/test_marble_family"
+check_FMC_IO() {
+  out="$1"
+  printf '%s' "$out" | grep -q 'P1L ........................................................................' || return 1
+  printf '%s' "$out" | grep -q 'P2L ........................................................................' || return 1
+  printf '%s' "$out" | grep -q 'P2H ................................................' || return 1
+  printf '%s' "$out" | grep -q 'PASS' || return 1
+  return 0
+}
+out="$(python3 -m fmc_test_iam -a "$IP" --plugged=12 2>&1 || true)"
+echo "$out"
+if check_FMC_IO "$out"; then
+  echo "FMC I/O test PASSED"
+else
+  echo "FMC I/O test FAILED"
+  exit 1
+fi
+ echo "\033[1;32mSuccess(Task 12 of 12) – FMC I/O test\033[0m"
+else
 echo "\033[1;33mSkipped(Task 12 of 12) – FMC I/O test\033[0m"
-
+fi
 
 # end of bringup
 echo "\033[1;32mMarble bringup successful! Log saved to bringup_logfile_${SERIAL_NUM}_${ts}.log\033[0m"

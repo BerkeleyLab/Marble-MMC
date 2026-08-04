@@ -68,7 +68,10 @@ void board_init(void) {
    // TODO - Any board-specific initialization
    return;
 }
-
+void marble_check_bringup(void) {
+   // TODO - marble v2 feature
+   return;
+}
 /* int board_service(void);
  *  Call in main loop. Handles routines scheduled from interrupts.
  *  Must always return 0 (otherwise execution will terminate).
