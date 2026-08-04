@@ -432,12 +432,19 @@ else
 fi
 echo "\033[1;32mSuccess(Task 11 of 12) – Ping test\033[0m"
 
-# 12. FMC I/O test
+
 if [ "$TEST" = "FULL" ]; then
+echo "1. Turn off the board"
+echo "2. Connect IAM FMC modules"
+# echo "3. Connect QSFP Loopback modules"
+# echo "4. Connect JTAG programmer to J11"
+echo "3. Turn on the board and wait for FPGA_DONE LED"
+echo "Press Enter to proceed..."
+read -r _
+# 12. FMC I/O test
 echo "##################################"
 echo "FMC I/O test"
-echo "Connect IAM FMC modules and press Enter to proceed..."
-read -r _
+echo "##################################"
 cd "$BEDROCK_PATH/projects/test_marble_family"
 check_FMC_IO() {
   out="$1"
@@ -456,9 +463,30 @@ else
   exit 1
 fi
  echo "\033[1;32mSuccess(Task 12 of 12) – FMC I/O test\033[0m"
+
+# 13. QSFP Loopback test
+# echo "##################################"
+# echo "QSFP Loopack test"
+# echo "##################################"
+
+# cd "$TCL_PATH"
+# vivado -mode tcl -source marble_ibert.tcl -notrace -log qsfp_fmc_logfile_"$SN"
+
+# 14. DDR3 test
+# echo "##################################"
+# echo "DDR3 test"
+# echo "##################################"
+# echo "1. Power off, remove FMC modules, Unplug J11 JTAG connector"
+# echo "2. Open FPGA UART in new terminal window:"
+# echo "   python3 -m serial.tools.miniterm /dev/ttyUSB2 115200"
+# cd $BEDROCK_PATH/projects/test_marble_family/
+# BITFILE=berkeleylab_marble.bit ./mutil usb
+
 else
 echo "\033[1;33mSkipped(Task 12 of 12) – FMC I/O test\033[0m"
 fi
+echo "\033[1;33mSkipped(Task 13 of 12) – QSFP Loopback test[Not Implemented]\033[0m"
+echo "\033[1;33mSkipped(Task 14 of 12) – DDR3 test [Not Implemented]\033[0m"
 
 # end of bringup
 echo "\033[1;32mMarble bringup successful! Log saved to bringup_logfile_${SERIAL_NUM}_${ts}.log\033[0m"
