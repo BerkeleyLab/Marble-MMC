@@ -82,6 +82,11 @@ void board_init(void) {
   return;
 }
 
+
+void marble_check_bringup(void) {
+   return;
+}
+
 void marble_print_status(void) {
   printf("Board Status: Simulation\r\n");
   return;

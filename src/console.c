@@ -75,7 +75,7 @@ const char *menu_str[] = {
   "    q otemp         Set overtemperature threshold (degC)\r\n",
   "    r bool          Set mailbox enable/disable (1/0, on/off)\r\n",
 #ifdef APP_MARBLE
-  "    s addr f cfg    Set Si570: addr[hex], f[Hz}, cfg[hex]\r\n",
+  "    s addr f cfg    Set Si570: addr[hex], f[Hz], cfg[hex]\r\n",
 #endif
 #ifdef APP_MARBLE
   "    t pmbus_msg     Forward PMBus transaction to LTM4673\r\n",
