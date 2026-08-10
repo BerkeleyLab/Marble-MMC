@@ -88,13 +88,13 @@ fi
 echo "##################################"
 
 # Sleep for a few seconds to give the MMC time to boot
-echo "Sleeping for 6 seconds to give the MMC time to boot..."
-sleep 6
+echo "Sleeping for 7 seconds to give the MMC time to boot..."
+sleep 7
 
 # 2. Program LTM4673 power management chip
 echo "Unlocking settings..."
 python3 "$SCRIPTS_PATH"/load.py -d "$TTY_MMC" "z unlock"
-sleep 1
+sleep 2
 echo "Programming LTM4673 power management chip...."
 if ! python3 "$SCRIPTS_PATH"/ltm4673.py -d "$TTY_MMC" write_read -f "$LTM_SCRIPT"; then
   echo "Could not program LTM4673."
