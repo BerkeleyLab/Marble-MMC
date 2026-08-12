@@ -447,7 +447,7 @@ static int handle_msg_IP_MAC_SN(const char *rx_msg, int len) {
     } else {
       int rval;
       uint8_t ip[IP_LENGTH];
-      rval = sscanfIP(rx_msg, ip, len);
+      rval = sscanfIP(rx_msg+3, ip, len);
       if (rval) {
         printf("Malformed IP address. Fail.\r\n");
         return rval;
@@ -469,7 +469,7 @@ static int handle_msg_IP_MAC_SN(const char *rx_msg, int len) {
       printf("Settings are locked. Unlock to configure MAC.\r\n");
     } else {
       uint8_t mac[MAC_LENGTH];
-      int rval = sscanfMAC(rx_msg, mac, len);
+      int rval = sscanfMAC(rx_msg+4, mac, len);
       if (rval) {
         printf("Malformed MAC address. Fail.\r\n");
         return rval;
@@ -498,7 +498,7 @@ static int handle_msg_IP_MAC_SN(const char *rx_msg, int len) {
         printf("Could not find Serial Number\r\n");
         return sn_read_val;
       }
-      int rval = sscanfSN(rx_msg, sn, len);
+      int rval = sscanfSN(rx_msg+3, sn, len);
       // printf("EEPROM SN read returned %d\r\n", eeprom_sn);
       if (rval) { // SN parsing failure
         printf("Malformed serial number. Fail.\r\n");
@@ -1084,7 +1084,7 @@ static int sscanfIP(const char *s, volatile uint8_t *data, int len) {
   int r;
   int sum = 0;
   // Start scan on char 1
-  for (int n = 4; n < len; n++) {
+  for (int n = 1; n < len; n++) {
     c = s[n];
     if (c == '.') {
       data[ndig++] = (uint8_t)(sum & 0xff);
