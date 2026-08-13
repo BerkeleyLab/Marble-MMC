@@ -105,7 +105,7 @@ void mbox_read_page(uint8_t page_no, uint8_t page_sz, uint8_t *page) {
 
 void mbox_update(bool verbose)
 {
-  if (!mbox_is_enabled || FPGAWD_GetState()==STATE_BOOT) {
+  if (!mbox_is_enabled || FPGAWD_GetState()==STATE_BOOT || FPGAWD_GetState()==STATE_RESET) {
     return;
   }
   PM_UpdateTelem();
