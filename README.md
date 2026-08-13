@@ -216,6 +216,7 @@ Additional documentation of features:
 
   * [Mailbox](doc/mailbox.md)
   * [Watchdog](watchdog.md)
+  * [Error Handler](error_handler.md)
   * [Pmod Modes](pmod.md)
 
 ## Credits
