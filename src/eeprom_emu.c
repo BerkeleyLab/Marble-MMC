@@ -302,7 +302,7 @@ int fmc_ee_read(ee_tags_t tag, ee_val_t val)
     const ee_frame* f = ee_find(bank, tag);
     printd("ee_find(eeprom0_base, %u) = %p\r\n", tag, (void *)f);
     if(f) {
-        memcpy(val, f->val, sizeof(f->val)/sizeof(uint8_t));
+        memcpy(val, f->val, sizeof(f->val)/(sizeof(uint8_t)));
         return 0;
     } else {
         return -ENOENT;
@@ -317,7 +317,7 @@ int ee_is_full(const ee_frame* bank)
 {
     uint32_t found[1u+sizeof(ee_tag_t)*8u/32u];
 
-    memset(found, 0, sizeof(found)/sizeof(uint8_t));
+    memset(found, 0, sizeof(found)/(sizeof(uint8_t)));
 
     for(size_t n=1u; n<EEPROM_COUNT; n++) {
         const ee_frame* f = &bank[n];

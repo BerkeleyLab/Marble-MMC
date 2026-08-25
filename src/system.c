@@ -1,8 +1,10 @@
 /* File: system.c
  * Desc: Non-board-specific routines that are not part of a particular subsystem
+ * marble_error_handler caller_id reserved: 128-143
  */
 
 #include "marble_api.h"
+#include "uart_fifo.h"
 #include "console.h"
 #include "eeprom.h"
 #include "i2c_pm.h"
@@ -120,6 +122,8 @@ void system_init(void) {
   system_apply_internal_params();
   //system_apply_params();
 
+  printf("+ Init irq handlers...\r\n");
+  fflush(stdout);
   // Register GPIO interrupt handlers
   marble_GPIOint_handlers(fpga_done_handler);
 
@@ -145,7 +149,7 @@ void system_init(void) {
  */
 void system_off_chip_init(void) {
   // Read and apply any non-volatile parameters destined for off-chip components
-  system_apply_external_params();
+  system_apply_external_params(); // CURRENT SOURCE OF CRASH
 
   // Pmod subsystem (UI Board, LEDs, GPIOs, etc)
   pmod_subsystem_init();
@@ -158,7 +162,7 @@ void system_off_chip_init(void) {
 void system_service(void) {
   // Run all system update/monitoring tasks and only then handle console
   // Handle Mailbox Updates
-  if (spi_update) {
+  if (spi_update && !_LTM_console_active()) { // do not read/write to LTM while its settings are being changed.
      mbox_update(false);
      spi_update = false; // Clear flag
   }
@@ -166,7 +170,6 @@ void system_service(void) {
   if ((fpga_net_prog_pend) && (BSP_GET_SYSTICK() > fpga_done_tickval + FPGA_PUSH_DELAY_MS)) {
     console_print_mac_ip();
     console_push_fpga_mac_ip();
-    printf("DONE\r\n");
     fpga_net_prog_pend=0;
   }
   // Handle re-enabling FPGA after scheduled reset
@@ -235,28 +238,34 @@ void system_apply_params(void) {
 }
 
 static void system_apply_internal_params(void) {
+  printf("+ Applying eeprom params...\r\n");
+  fflush(stdout);
   uint8_t val;
   // MGT MUX
   if (eeprom_read_mgt_mux(&val, 1)) {
     printf("Could not read MGT MUX config.\r\n");
+    fflush(stdout);
   } else {
     marble_MGTMUX_set_all(val);
   }
   // Watchdog period
   if (eeprom_read_wd_period(&val, 1)) {
     printf("Could not read watchdog period.\r\n");
+    fflush(stdout);
   } else {
     FPGAWD_SetPeriod((int)val);
   }
   // Mailbox enable
   if (eeprom_read_mbox_en(&val, 1)) {
     printf("Could not read mailbox enable setting.\r\n");
+    fflush(stdout);
   } else {
     mbox_set_enable(val);
   }
   // Pmod mode
   if (eeprom_read_pmod_mode(&val, 1)) {
     printf("Could not read Pmod mode setting.\r\n");
+    fflush(stdout);
   } else {
     //system_set_pmod_mode((pmod_mode_t)val);
     pmod_mode = (pmod_mode_t)val;
@@ -267,14 +276,16 @@ static void system_apply_internal_params(void) {
 static void system_apply_external_params(void) {
   uint8_t val;
   // Fan speed
+  printf("+ Applying external parameters...\r\n");
+  fflush(stdout);
   if (eeprom_read_fan_speed(&val, 1)) {
-    printf("Could not read current fan speed.\r\n");
+    marble_error_handler(ERROR_EEPROM_FAN, 128);
   } else {
     max6639_set_fans((int)val);
   }
   // Over-temperature threshold
   if (eeprom_read_overtemp(&val, 1)) {
-    printf("Could not read over-temperature threshold.\r\n");
+    marble_error_handler(ERROR_EEPROM_OVERTEMP, 129);
   } else {
     max6639_set_overtemp(val);
     LM75_set_overtemp((int)val);
@@ -290,7 +301,8 @@ void reset_fpga_with_callback(void (*cb)(void)) {
   return;
 }
 
-void print_status_counters(void) {
+void print_status_counters(int len) {
+  if(len == 2) {
   marble_print_status();
   printf("Live counter: %u\r\n", live_cnt);
   printf("FPGA prog counter: %u\r\n", fpga_prog_cnt);
@@ -301,6 +313,9 @@ void print_status_counters(void) {
   printf("MGT CLK Mux: %x\r\n", marble_MGTMUX_status());
 #endif
   return;
+} else {
+  printf("%s",unk_str);
+}
 }
 
 int system_set_pmod_mode(pmod_mode_t mode) {
@@ -326,7 +341,7 @@ static void system_pmod_mode_ui_board(void) {
 #ifdef UI_BOARD_SUPPORTED
   display_init();
 #else
-  printf("*** UI board support disabled for this build!  Please update MMC image to use this feature ***\r\n");
+  printf("        UI board support disabled! Update MMC image to use this feature.\n");
 #endif
   system_pmod_timer_disable();
   return;
@@ -349,6 +364,8 @@ static void system_pmod_mode_led(void) {
 }
 
 static void pmod_subsystem_init(void) {
+  printf("+ Init Pmod...\r\n");
+  fflush(stdout);
   switch (pmod_mode) {
     case PMOD_MODE_DISABLED:
       // Nothing to do

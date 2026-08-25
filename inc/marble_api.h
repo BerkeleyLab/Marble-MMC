@@ -17,6 +17,8 @@ extern "C" {
 #include "common.h"
 #include "system.h"
 
+extern const char unk_str[];
+
 #ifdef SIMULATION
   #include <stddef.h>
   #include <errno.h>
@@ -151,6 +153,81 @@ typedef enum {
   BOARD_STATUS_POWERDOWN,
 } Board_Status_t;
 
+// Error codes for identifying source of errors
+typedef enum {
+    ERROR_NONE = 0,
+    ERROR_MARBLE_POWERDOWN,
+    ERROR_MARBLE_OVERTEMP,
+    ERROR_MARBLE_PMOD,
+    // EEPROM errors
+    ERROR_EEPROM_FAN,
+    ERROR_EEPROM_OVERTEMP,
+    ERROR_EEPROM_UPDATE,
+    ERROR_EEPROM_STORE,
+    ERROR_EEPROM_READ,
+    // Clock config errors
+    ERROR_RCC_OSC_CONFIG,
+    ERROR_RCC_CLOCK_CONFIG,
+    // Ethernet MDIO errors
+    ERROR_ETH_MDIO_INIT,
+    ERROR_ETH_MDIO_ID,
+    // I2C errors
+    ERROR_I2C1_INIT,
+    ERROR_I2C3_INIT,
+    ERROR_I2C1_DEINIT,
+    ERROR_I2C3_DEINIT,
+    // SPI errors
+    ERROR_SPI1_INIT,
+    // UART errors
+    ERROR_UART_CONSOLE_INIT,
+    // I2C FPGA errors
+    ERROR_I2C_FPGA_NONE,
+    ERROR_I2C_FPGA_BERR,
+    ERROR_I2C_FPGA_ARLO,
+    ERROR_I2C_FPGA_AF,
+    ERROR_I2C_FPGA_OVR,
+    ERROR_I2C_FPGA_DMA,
+    ERROR_I2C_FPGA_TIMEOUT,
+    ERROR_I2C_FPGA_BUSY,
+    ERROR_I2C_FPGA_HW_BUSY,
+    ERROR_I2C_FPGA_LOCKUP,
+    ERROR_I2C_FPGA_ADN4600,
+    ERROR_I2C_FPGA_UNDEFINED,
+    // I2C PM errors
+    ERROR_I2C_PM_NONE,
+    ERROR_I2C_PM_BERR,
+    ERROR_I2C_PM_ARLO,
+    ERROR_I2C_PM_AF,
+    ERROR_I2C_PM_OVR,
+    ERROR_I2C_PM_DMA,
+    ERROR_I2C_PM_TIMEOUT,
+    ERROR_I2C_PM_BUSY,
+    ERROR_I2C_PM_HW_BUSY,
+    ERROR_I2C_PM_LOCKUP,
+    ERROR_I2C_PM_UNDEFINED,
+    // LTM errors
+    ERROR_LTM_VOUT,
+    ERROR_LTM_IOUT,
+    ERROR_LTM_VIN,
+    ERROR_LTM_MFR,
+    ERROR_LTM_POWERNGD,
+    ERROR_LTM_BUSY,
+    ERROR_LTM_NOPOWER,
+    ERROR_LTM_VOUTOVER,
+    ERROR_LTM_IOUTOVER,
+    ERROR_LTM_VINUNDER,
+    ERROR_LTM_OVERTEMP,
+    ERROR_LTM_COMM,
+    ERROR_UNDEFINED
+} MarbleErrorCode_t;
+
+#define ERROR_CODE_COUNT (ERROR_UNDEFINED + 1)
+
+// New Error_Handler signature taking an ErrorCode
+void marble_error_handler(MarbleErrorCode_t code, uint8_t caller_id);
+void reset_error_repeat(void);
+void marble_check_bringup(void);
+
 /****
 * Top-level Application Functionality
 ****/
@@ -176,7 +253,7 @@ int mgtclk_xpoint_en(void);
  */
 Marble_PCB_Rev_t marble_get_pcb_rev(void);
 
-void marble_print_pcb_rev(void);
+void marble_print_ID_status(int len);
 
 // The Board ID is (PCB revision) | (BOARD_TYPE_...)
 uint8_t marble_get_board_id(void);
@@ -319,7 +396,8 @@ void marble_MGTMUX_set_all(uint8_t mgt_cfg);
 #ifdef MARBLE_LPC1776
 typedef int I2C_BUS;
 #elif defined MARBLE_STM32F207
-typedef void *I2C_BUS;
+//typedef void *I2C_BUS;
+typedef I2C_HandleTypeDef* I2C_BUS;
 #else
 #ifdef SIMULATION
 typedef int I2C_BUS;

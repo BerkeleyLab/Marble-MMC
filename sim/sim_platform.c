@@ -82,6 +82,11 @@ void board_init(void) {
   return;
 }
 
+
+void marble_check_bringup(void) {
+   return;
+}
+
 void marble_print_status(void) {
   printf("Board Status: Simulation\r\n");
   return;
@@ -184,7 +189,7 @@ Marble_PCB_Rev_t marble_get_pcb_rev(void) {
   return Marble_Simulator;
 }
 
-void marble_print_pcb_rev(void) {
+void marble_print_ID_status(int len) {
   printf("PCB Rev: Marble Simulator\r\n");
   return;
 }
@@ -390,5 +395,13 @@ void marble_pmod_timer_disable(void) {
 }
 
 void marble_pmod_timer_config(void) {
+  return;
+}
+
+void marble_error_handler(MarbleErrorCode_t code, uint8_t caller_id){
+  return;
+}
+
+void reset_error_repeat(void) {
   return;
 }

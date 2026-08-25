@@ -29,7 +29,7 @@ void system_service(void);
 void system_apply_params(void);
 
 /* Print various status fields */
-void print_status_counters(void);
+void print_status_counters(int len);
 
 /* Reset FPGA and schedule callback function 'cb' to execute after reset */
 void reset_fpga_with_callback(void (*cb)(void));
@@ -53,6 +53,24 @@ void system_handle_pmod_led(int val, int pin);
 
 /* (Re-)Initialize the Pmod subsystem selected by pmod_mode */
 //void pmod_subsystem_init(void);
+
+#ifdef MARBLE_V2
+/// @brief  Possible STM32 system reset causes
+typedef enum reset_cause_e
+{
+    RESET_CAUSE_UNKNOWN = 0,
+    RESET_CAUSE_LOW_POWER_RESET,
+    RESET_CAUSE_WINDOW_WATCHDOG_RESET,
+    RESET_CAUSE_INDEPENDENT_WATCHDOG_RESET,
+    RESET_CAUSE_SOFTWARE_RESET,
+    RESET_CAUSE_POWER_ON_POWER_DOWN_RESET,
+    RESET_CAUSE_EXTERNAL_RESET_PIN_RESET,
+    RESET_CAUSE_BROWNOUT_RESET,
+} reset_cause_t;
+
+/// @brief      print the name of a reset cause
+void print_reset_cause(void);
+#endif
 
 #ifdef __cplusplus
 }

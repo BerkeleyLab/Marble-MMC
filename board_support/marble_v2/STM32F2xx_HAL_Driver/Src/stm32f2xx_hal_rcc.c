@@ -363,6 +363,7 @@ HAL_StatusTypeDef HAL_RCC_OscConfig(RCC_OscInitTypeDef  *RCC_OscInitStruct)
   /* Check Null pointer */
   if(RCC_OscInitStruct == NULL)
   {
+    printf("RCC_OscInitStruct is NULL\r\n"); // DEBUG
     return HAL_ERROR;
   }
 
@@ -379,6 +380,7 @@ HAL_StatusTypeDef HAL_RCC_OscConfig(RCC_OscInitTypeDef  *RCC_OscInitStruct)
     {
       if((__HAL_RCC_GET_FLAG(RCC_FLAG_HSERDY) != RESET) && (RCC_OscInitStruct->HSEState == RCC_HSE_OFF))
       {
+        printf("HSE used as system clock or PLL source, cannot disable\r\n"); // DEBUG
         return HAL_ERROR;
       }
     }
@@ -398,6 +400,7 @@ HAL_StatusTypeDef HAL_RCC_OscConfig(RCC_OscInitTypeDef  *RCC_OscInitStruct)
         {
           if((HAL_GetTick() - tickstart ) > HSE_TIMEOUT_VALUE)
           {
+            printf("HSE failed to start or stabilize\r\n"); // DEBUG
             return HAL_TIMEOUT;
           }
         }
@@ -412,6 +415,7 @@ HAL_StatusTypeDef HAL_RCC_OscConfig(RCC_OscInitTypeDef  *RCC_OscInitStruct)
         {
           if((HAL_GetTick() - tickstart ) > HSE_TIMEOUT_VALUE)
           {
+            printf("HSE failed to bypass or disable\r\n"); // DEBUG
             return HAL_TIMEOUT;
           }
         }
@@ -432,6 +436,7 @@ HAL_StatusTypeDef HAL_RCC_OscConfig(RCC_OscInitTypeDef  *RCC_OscInitStruct)
       /* When HSI is used as system clock it will not disabled */
       if((__HAL_RCC_GET_FLAG(RCC_FLAG_HSIRDY) != RESET) && (RCC_OscInitStruct->HSIState != RCC_HSI_ON))
       {
+        printf("HSI used as system clock or PLL source, cannot disable\r\n"); // DEBUG
         return HAL_ERROR;
       }
       /* Otherwise, just the calibration is allowed */
@@ -457,6 +462,7 @@ HAL_StatusTypeDef HAL_RCC_OscConfig(RCC_OscInitTypeDef  *RCC_OscInitStruct)
         {
           if((HAL_GetTick() - tickstart ) > HSI_TIMEOUT_VALUE)
           {
+            printf("HSI failed to start or stabilize\r\n"); // DEBUG
             return HAL_TIMEOUT;
           }
         }
@@ -477,6 +483,7 @@ HAL_StatusTypeDef HAL_RCC_OscConfig(RCC_OscInitTypeDef  *RCC_OscInitStruct)
         {
           if((HAL_GetTick() - tickstart ) > HSI_TIMEOUT_VALUE)
           {
+            printf("HSI failed to start or stabilize\r\n"); // DEBUG
             return HAL_TIMEOUT;
           }
         }
@@ -503,6 +510,7 @@ HAL_StatusTypeDef HAL_RCC_OscConfig(RCC_OscInitTypeDef  *RCC_OscInitStruct)
       {
         if((HAL_GetTick() - tickstart ) > LSI_TIMEOUT_VALUE)
         {
+          printf("LSI failed to start or stabilize\r\n"); // DEBUG
           return HAL_TIMEOUT;
         }
       }
@@ -520,6 +528,7 @@ HAL_StatusTypeDef HAL_RCC_OscConfig(RCC_OscInitTypeDef  *RCC_OscInitStruct)
       {
         if((HAL_GetTick() - tickstart ) > LSI_TIMEOUT_VALUE)
         {
+          printf("LSI failed to stop\r\n"); // DEBUG
           return HAL_TIMEOUT;
         }
       }
@@ -544,6 +553,7 @@ HAL_StatusTypeDef HAL_RCC_OscConfig(RCC_OscInitTypeDef  *RCC_OscInitStruct)
     {
       if((HAL_GetTick() - tickstart ) > RCC_DBP_TIMEOUT_VALUE)
       {
+        printf("Backup domain Write protection enable failed\r\n"); // DEBUG
         return HAL_TIMEOUT;
       }
     }
@@ -561,6 +571,7 @@ HAL_StatusTypeDef HAL_RCC_OscConfig(RCC_OscInitTypeDef  *RCC_OscInitStruct)
       {
         if((HAL_GetTick() - tickstart ) > RCC_LSE_TIMEOUT_VALUE)
         {
+          printf("LSE failed to start or stabilize\r\n"); // DEBUG
           return HAL_TIMEOUT;
         }
       }
@@ -575,6 +586,7 @@ HAL_StatusTypeDef HAL_RCC_OscConfig(RCC_OscInitTypeDef  *RCC_OscInitStruct)
       {
         if((HAL_GetTick() - tickstart ) > RCC_LSE_TIMEOUT_VALUE)
         {
+          printf("LSE failed to stop\r\n"); // DEBUG
           return HAL_TIMEOUT;
         }
       }
@@ -608,6 +620,7 @@ HAL_StatusTypeDef HAL_RCC_OscConfig(RCC_OscInitTypeDef  *RCC_OscInitStruct)
         {
           if((HAL_GetTick() - tickstart ) > PLL_TIMEOUT_VALUE)
           {
+            printf("PLL failed to start or stabilize\r\n"); // DEBUG
             return HAL_TIMEOUT;
           }
         }
@@ -629,6 +642,7 @@ HAL_StatusTypeDef HAL_RCC_OscConfig(RCC_OscInitTypeDef  *RCC_OscInitStruct)
         {
           if((HAL_GetTick() - tickstart ) > PLL_TIMEOUT_VALUE)
           {
+            printf("PLL failed to start or stabilize\r\n"); // DEBUG
             return HAL_TIMEOUT;
           }
         }
@@ -646,6 +660,7 @@ HAL_StatusTypeDef HAL_RCC_OscConfig(RCC_OscInitTypeDef  *RCC_OscInitStruct)
         {
           if((HAL_GetTick() - tickstart ) > PLL_TIMEOUT_VALUE)
           {
+            printf("PLL failed to stop\r\n"); // DEBUG
             return HAL_TIMEOUT;
           }
         }
@@ -653,6 +668,7 @@ HAL_StatusTypeDef HAL_RCC_OscConfig(RCC_OscInitTypeDef  *RCC_OscInitStruct)
     }
     else
     {
+      printf("PLL used as system clock, cannot disable or reconfigure\r\n"); // DEBUG
       return HAL_ERROR;
     }
   }
