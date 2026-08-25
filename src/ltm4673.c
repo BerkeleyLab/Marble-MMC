@@ -1,11 +1,13 @@
 /* All the LTM4673-related stuff in one place
  * LTM4673 is new power management chip used on Marble >= 1.4
+ * marble_error_handler caller_id reserved: 80-95
  */
 
 #include <stdio.h>
 #include "ltm4673.h"
 #include "pmbus.h"
 #include "marble_api.h"
+#include "uart_fifo.h"
 
 #define LTM4673_DEV_ADDR_8BIT         (0xc0)
 
@@ -381,6 +383,8 @@ static int ltm4673_vet_status_word(uint16_t stat);
  *  Read page from LTM4673 to synchronize internal page tracking
  */
 void ltm4673_init(void) {
+  printf("+ Init LTM4673...\r\n");
+  fflush(stdout);
   uint8_t page;
   if (marble_I2C_cmdrecv(I2C_PM, LTM4673_DEV_ADDR_8BIT, LTM4673_PAGE, &page, 1) == HAL_OK) {
     ltm4673_page = page;
@@ -457,9 +461,10 @@ int ltm4673_ch_status(uint8_t dev)
     printf("LTM4673 not present; bypassed.\n");
     return 0;
   }
+  marble_SLEEP_ms(500);
   uint8_t i2c_dat[4];
   for (unsigned jx = 0; jx < 4; jx++) {
-    marble_SLEEP_ms(200);
+    // marble_SLEEP_ms(200);
     // start selecting channel/page 0 until you finish reading
     // data for all 4 channels
     uint8_t page = 0x00 + jx;
@@ -467,8 +472,9 @@ int ltm4673_ch_status(uint8_t dev)
     // marble_I2C_cmd_recv should return 0, if everything is good, see page 100
     int rc = marble_I2C_cmdrecv(I2C_PM, dev, LTM4673_STATUS_WORD, i2c_dat, 2);
     if (rc == HAL_OK) {
+      // printf("LTM4673 Page 0x%02x: ", page);
       uint16_t status_word = ((unsigned int) i2c_dat[1] << 8) | i2c_dat[0];
-      return ltm4673_vet_status_word(status_word);
+      ltm4673_vet_status_word(status_word); // Print all errors/warnings
     }
   }
   return 1;
@@ -478,20 +484,20 @@ static int ltm4673_vet_status_word(uint16_t stat) {
   // These strings are straight out of LTM4673 Datasheet Rev. A. Section "PMBus COMMAND DESCRIPTION"
   // Subsection "STATUS_WORD" (pg 100)
   if (stat) {
-    printf("LTM4673 Status 0x%04x:\r\n", stat);
+    printf("Status 0x%04x:\r\n", stat);
   }
-  if (stat & (1 << 15)) printf("  * An output voltage fault or warning has occurred\r\n");
-  if (stat & (1 << 14)) printf("  * An output current fault or warning has occurred.\r\n");
-  if (stat & (1 << 13)) printf("  * An input voltage fault or warning has occurred.\r\n");
-  if (stat & (1 << 12)) printf("  * A manufacturer specific fault has occurred.\r\n");
-  if (stat & (1 << 11)) printf("  * The PWRGD pin, if enabled, is negated. Power is not good.\r\n");
-  if (stat & (1 << 7)) printf("  * Device busy when PMBus command received.\r\n");
-  if (stat & (1 << 6)) printf("  * The unit is not providing power to the output.\r\n");
-  if (stat & (1 << 5)) printf("  * An output overvoltage fault has occurred.\r\n");
-  if (stat & (1 << 4)) printf("  * An output overcurrent fault has occurred.\r\n");
-  if (stat & (1 << 3)) printf("  * A VIN undervoltage fault has occurred.\r\n");
-  if (stat & (1 << 2)) printf("  * A temperature fault or warning has occurred.\r\n");
-  if (stat & (1 << 1)) printf("  * A communication, memory or logic fault has occurred.\r\n");
+  if (stat & (1 << 15)) marble_error_handler(ERROR_LTM_VOUT, 80);
+  if (stat & (1 << 14)) marble_error_handler(ERROR_LTM_IOUT, 81);
+  if (stat & (1 << 13)) marble_error_handler(ERROR_LTM_VIN, 82);
+  if (stat & (1 << 12)) marble_error_handler(ERROR_LTM_MFR, 83);
+  if (stat & (1 << 11)) marble_error_handler(ERROR_LTM_POWERNGD, 84);
+  if (stat & (1 << 7)) marble_error_handler(ERROR_LTM_BUSY, 85);
+  if (stat & (1 << 6)) marble_error_handler(ERROR_LTM_NOPOWER, 86);
+  if (stat & (1 << 5)) marble_error_handler(ERROR_LTM_VOUTOVER, 87);
+  if (stat & (1 << 4)) marble_error_handler(ERROR_LTM_IOUTOVER, 88);
+  if (stat & (1 << 3)) marble_error_handler(ERROR_LTM_VINUNDER, 89);
+  if (stat & (1 << 2)) marble_error_handler(ERROR_LTM_OVERTEMP, 90);
+  if (stat & (1 << 1)) marble_error_handler(ERROR_LTM_COMM, 91);
   return (int)(stat == 0);
 }
 
@@ -527,7 +533,7 @@ void ltm4673_read_telem(uint8_t dev) {
       // telemetry data for all 4 channels
       uint8_t page = 0x00 + jx;
       marble_I2C_cmdsend(I2C_PM, dev, 0x00, &page, 1);
-      printf("> Read page/channel: %x\n", page);
+      printf("Read page/channel: %x\n", page);
       const unsigned tlen = sizeof(r_table)/sizeof(r_table[0]);
       for (unsigned ix=0; ix<tlen; ix++) {
           uint8_t i2c_dat[4];

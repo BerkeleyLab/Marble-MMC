@@ -3,6 +3,7 @@
 # LTM4673 PMBus protocol definitions
 
 import re
+import load
 
 # SMBus
 # Legend:
@@ -1011,19 +1012,28 @@ ltm4673_limits = {
 }
 
 
-def translate_program(program, rnw=True):
+def translate_program(program, mode ="read"):
     """Program derived from LTC PMBus Project Text File Version:1.1"""
+    """
+    mode: "read" or "write" or "write_read
+    """
     xacts = []
     for page, prog in program:
         # Select the page
         xacts.append(write(PAGE, page))
         for reg, val in prog:
-            if rnw:
+            if mode == "read":
                 # Read each register
                 xacts.append(read(reg))
-            else:
+            elif mode == "write":
                 # Write each register
                 xacts.append(write(reg, val))
+            elif mode == "write_read":
+                # Write and then read each register
+                xacts.append(write(reg, val))
+                xacts.append(read(reg))
+            else:
+                raise ValueError("Unknown mode '{}'".format(mode))
     lines = translate_mmc(xacts)
     return lines
 
@@ -1322,20 +1332,30 @@ def parse_readback(lines, compare_prog=None, do_print=False):
     _readback = []
     _prog = []
     newpage = None
+    oldpage = None
     for line in lines:
-        rval = match_readback(line)
-        if rval is not None:
+        rval = match_readback(line) #extract command and value from each line (if data was returned, otherwise it is a comment)
+        if rval is not None: #if data
             command, val = rval
             _prog.append((command, val))
-        else:
-            rval = match_page(line)
+        else: #if no data in line
+            rval = match_page(line) # --> check if this is a page number description ("# LTM4673_PAGE X")
             if rval is not None:
                 if newpage is not None:
-                    _readback.append((newpage, _prog))
+                    if oldpage != newpage:
+                        _readback.append((newpage, _prog)) #_readback is a list of tuples in format [(page, _prog[[command,val],[command,val]),(...) ,(page, _prog[...])]
+                        _prog = []
+                    oldpage = newpage
                 newpage = rval
-                _prog = []
+                #print(_prog)
+                #_prog = []
     if newpage is not None:
         _readback.append((newpage, _prog))
+    for page, prog in _readback:
+        print(f"Page {page}:")
+        for command, value in prog:
+            print(f"  {command} = {value}")
+        print()  # blank line between pages
     compare_pass = True
     if compare_prog is not None:
         compare_pass = compare_progs(_program, _readback)
@@ -1344,7 +1364,27 @@ def parse_readback(lines, compare_prog=None, do_print=False):
     return (_readback, compare_pass)
 
 
-def match_readback(line):
+def chunk_readback(readback_log, chunk, do_print=False):
+    readback = []
+    if readback_log and readback_log[-1].startswith('(0x'):  # make sure the last line contains readback data
+        readback = re.findall(r'0x([0-9a-fA-F]+)', readback_log[-1]) #extract address and data
+    written_command = re.findall(r'0x([0-9a-fA-F]+)', chunk[-2]) #extract address and data
+    if do_print: print("Readback: ", readback)
+    if do_print: print("Written:  ", written_command)
+    if len(readback) == len(written_command) and len(readback) > 0:
+        if do_print: print("Chunk Readback Length Comparison PASS (%d bytes)" % len(readback))
+        compare_pass = readback == written_command #compare address and data values
+        if not compare_pass and len(readback) > 2 and readback[0:2] == ['c0', 'e0']:
+            compare_pass = True
+        if compare_pass and do_print:
+            print("Chunk Readback Exact Match PASS")
+    else:
+        if do_print: print("Chunk Readback Length Comparison FAIL")
+        compare_pass = False
+    return compare_pass
+
+
+def match_readback(line): #returns command and value from format 't 0xc0 0x00 0xff'
     res = r"\((0x[0-9a-fA-F]+)\)\s+(0x[0-9a-fA-F]+):\s+(0x[0-9a-fA-F]+)\s*(0x[0-9a-fA-F]+)?"
     _match = re.match(res, line)
     if _match:
@@ -1359,7 +1399,7 @@ def match_readback(line):
     return None
 
 
-def match_page(line):
+def match_page(line): #returns page number from format "# LTM4673_PAGE X"
     res = r"#\s+LTM4673_PAGE\s+([0-9a-fA-Fx]+)"
     _match = re.match(res, line)
     if _match:
@@ -1497,7 +1537,7 @@ class ParserSyntaxError(Exception):
 def get_program_from_file(filename):
     prog = []
     #0x60,-1,WB,0x10,0x00,WRITE_PROTECT
-    res = "^([0-9a-fA-Fx]+)\s*,([0-9a-fA-Fx\-]+)\s*,(WB|WW|RB|RW),([0-9a-fA-Fx]+)\s*,([0-9a-fA-Fx]+)\s*,(\w+)"
+    res = r"^([0-9a-fA-Fx]+)\s*,([0-9a-fA-Fx\-]+)\s*,(WB|WW|RB|RW),([0-9a-fA-Fx]+)\s*,([0-9a-fA-Fx]+)\s*,(\w+)"
     with open(filename, 'r') as fd:
         line = True
         _page = None
@@ -1520,11 +1560,11 @@ def get_program_from_file(filename):
                 val = _int(val)
                 if _page is None:
                     _page = page
-                elif _page != page:
+                else:#elif _page != page:
                     prog.append((_page, pagelist))
                     pagelist = []
                     _page = page
-                else:
+                #else:
                     pagelist.append((reg, val))
             else:
                 raise ParserSyntaxError("Syntax error on line {}: {}".format(nline, line) + \
@@ -1566,9 +1606,8 @@ def handle_write(args):
     else:
         print("Writing default program")
         program = _program
-    lines = translate_program(program, rnw=False)
+    lines = translate_program(program, mode ="write")
     if args.dev is not None:
-        import load
         runtime = _count_ops(program)*load.INTERCOMMAND_SLEEP
         print("Estimated {:.1f}s to complete.".format(runtime))
         load_rval = load.loadCommands(args.dev, args.baud, lines, do_print=args.verbose, do_log=False)
@@ -1580,7 +1619,7 @@ def handle_write(args):
             print("PMBridge MMC Console Encoding:")
             for line in lines:
                 print(line)
-    return load_rval
+    return not load_rval
 
 
 def handle_read(args):
@@ -1594,13 +1633,16 @@ def handle_read(args):
     else:
         print("Reading default program")
         program = _program
-    lines = translate_program(program, rnw=True)
+    lines = translate_program(program, mode ="read")
+    print("this is what I'll try to read:")
+    print(lines)
     if args.dev is not None:
-        import load
         runtime = _count_ops(program)*load.INTERCOMMAND_SLEEP
         print("Estimated {:.1f}s to complete.".format(runtime))
         load_rval = load.loadCommands(args.dev, args.baud, lines, do_print=args.verbose, do_log=True)
         readback_log = load.get_log()
+        print("here's the readback_log:")
+        print(readback_log)
         if args.check:
             readback, compare_pass = parse_readback(readback_log, compare_prog=program, do_print=args.print)
         else:
@@ -1615,7 +1657,65 @@ def handle_read(args):
                 print(line)
     # Convert pass = True to pass = 0
     compare_rval = int(not compare_pass)
-    return load_rval | compare_rval
+    return not load_rval | compare_rval
+
+
+def handle_write_read(args):
+    load_rval = 1
+    if args.test:
+        print("Reading test program")
+        program = _test_program
+    elif args.file is not None:
+        print("Reading program from file {}.".format(args.file))
+        program = get_program_from_file(args.file)
+    else:
+        print("Reading default program")
+        program = _program
+    try:
+        sdev = load.openConnection(args.dev, args.baud)
+    except FileNotFoundError:
+        print(f"Error: Device '{args.dev}' not found.")
+        return 1
+    except Exception as e:
+        print(f"Error opening connection: {e}")
+        return 1
+    if sdev is not None:
+        lines = translate_program(program, mode ="write_read")
+        # split program into chunks ending with read commands
+        chunks = []
+        chunk = []
+        for line in lines:
+            chunk.append(line)
+            if re.search(r'\?\s*$', line):
+                chunks.append(chunk)
+                chunk = []
+        # print("these are the chunks:")
+        # for chunk in chunks:
+        #     print(chunk)
+        for idx, chunk in enumerate(chunks):
+            if (idx + 1) % (len(chunks)//20) == 0:
+                print(".", end="", flush=True)
+            is_last_chunk = (idx == len(chunks) - 1)
+            attempts = 0
+            compare_pass = False
+            if args.dev is not None:
+                    while not compare_pass and attempts < args.MAX_WRITE_ATTEMPTS:
+                        load_rval = load.readbackCommands(sdev, chunk, close_conn = is_last_chunk, do_print=args.verbose, do_log=True)
+                        readback_log = load.get_log()
+                        # print("here's the readback_log:")
+                        # print(readback_log)
+                        compare_pass = chunk_readback(readback_log, chunk, do_print=args.verbose)
+                        attempts += 1
+                    if not compare_pass and attempts == args.MAX_WRITE_ATTEMPTS:
+                        print(">   ### ERROR - Max write attempts reached without successful readback")
+                        print("Here's the latest readback_log:")
+                        print(readback_log)
+                        return not compare_pass
+    else:
+        print(">   ### ERROR - Could not open connection to device")
+        return 1
+    print("All LTM4673 registers readback comparison PASS")
+    return not compare_pass
 
 
 def test_to_si(argv):
@@ -1683,7 +1783,6 @@ def handle_limits(args):
         limits = get_limits_from_file(args.file)
     else:
         limits = ltm4673_limits
-    import load
     factors = (0.1, -0.1)
     passed = False
     for n in range(len(factors)):
@@ -1725,7 +1824,6 @@ def _handle_store_restore(args, restore=False):
     if args.dev is None:
         print("No valid device")
         return False
-    import load
     # Need to sleep 0.5s after issuing the STORE_USER_ALL command.
     load.INTERCOMMAND_SLEEP = 0.5
     # Get the lines in PMBridge syntax to store to EEPROM
@@ -1751,7 +1849,6 @@ def handle_telem(args):
         print("No valid device handed to handle_telem")
         return False
     print("Reading telemetry data")
-    import load
     # Might be able to shorten this more. But uart is slow, ain't it?
     load.INTERCOMMAND_SLEEP = 0.01
     # Get the lines in PMBridge syntax to read telemetry registers
@@ -1778,7 +1875,6 @@ def handle_status(args):
         return False
     # TODO - Use args.clear_faults
     print("Reading status registers")
-    import load
     load.INTERCOMMAND_SLEEP = 0.01
     # Get the lines in PMBridge syntax to read telemetry registers
     lines = read_status()
@@ -1803,9 +1899,8 @@ def handle_status(args):
 
 
 def main(argv):
-    import load
     # 100ms between commands for conservative program timing constraints
-    load.INTERCOMMAND_SLEEP = 0.1
+    load.INTERCOMMAND_SLEEP = 0.001
     # NOTE! This intercommand timing works for all except MFR_EE_ERASE which needs 0.4s sleep
     parser = load.ArgParser()
     parser.add_argument('--print', default=False, action="store_true", help='Print values to write or read')
@@ -1813,8 +1908,8 @@ def main(argv):
     subparsers = parser.add_subparsers(title="Actions", dest="subcmd", required=True)
 
     parser_write = subparsers.add_parser("write", help="Write a program")
+    parser_write.add_argument("--check", default=False, action="store_true", help="Compare written value with readback")
     write_group = parser_write.add_mutually_exclusive_group()
-    write_group.add_argument("--test", default=False, action="store_true", help='Test; write just a few registers')
     write_group.add_argument("-f", "--file", help="File to use for program values to write")
     parser_write.set_defaults(handler=handle_write)
 
@@ -1824,6 +1919,13 @@ def main(argv):
     read_group.add_argument("--test", default=False, action="store_true", help="Test; read just a few registers")
     read_group.add_argument("-f", "--file", default=None, help="Read values of registers parsed from FILE")
     parser_read.set_defaults(handler=handle_read)
+
+    parser_write_read = subparsers.add_parser("write_read", help="Write, read, and check current value of registers in program")
+    write_read_group = parser_write_read.add_mutually_exclusive_group()
+    write_read_group.add_argument("--MAX_WRITE_ATTEMPTS", default=3, action="store_true", help="Define maximum write attempts for each chunk")
+    write_read_group.add_argument("--test", default=False, action="store_true", help="Test; write and read just a few registers")
+    write_read_group.add_argument("-f", "--file", default=None, help="Read values of registers parsed from FILE")
+    parser_write_read.set_defaults(handler=handle_write_read)
 
     parser_limits = subparsers.add_parser("limits", help="Test hard-coded limits")
     parser_limits.add_argument("-f", "--file", default=None, help="Read limits from FILE")
@@ -1867,7 +1969,7 @@ t 0xc0 0x21 0xcc 0x54
 
 if __name__ == "__main__":
     import sys
-    main(sys.argv)
+    sys.exit(main(sys.argv))
     #testV_TO_L11(sys.argv)
     #print_commands_c()
     #_init_sim_mem()

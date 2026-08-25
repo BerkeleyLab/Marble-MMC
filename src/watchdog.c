@@ -60,11 +60,12 @@ int FPGAWD_SetPeriod(unsigned int period) {
   printd("period = %d\r\n", period);
   max_poll_counts = (unsigned)MAX((int)((period/MAILBOX_UPDATE_PERIOD_SECONDS)-1), 0);
   if (max_poll_counts == 0) {
-    printf("Disabling watchdog\r\n");
+    printf("        Disabling watchdog\r\n");
   } else {
-    printf("Setting watchdog timeout to %u seconds.\r\n", (max_poll_counts+1)*MAILBOX_UPDATE_PERIOD_SECONDS);
+    printf("        Setting watchdog timeout to %u seconds.\r\n", (max_poll_counts+1)*MAILBOX_UPDATE_PERIOD_SECONDS);
   }
   printd("Setting poll_counter to %d\r\n", max_poll_counts);
+  fflush(stdout);
   poll_counter = max_poll_counts;
   return period;
 }

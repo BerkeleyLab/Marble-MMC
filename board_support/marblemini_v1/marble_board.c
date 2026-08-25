@@ -68,7 +68,10 @@ void board_init(void) {
    // TODO - Any board-specific initialization
    return;
 }
-
+void marble_check_bringup(void) {
+   // TODO - marble v2 feature
+   return;
+}
 /* int board_service(void);
  *  Call in main loop. Handles routines scheduled from interrupts.
  *  Must always return 0 (otherwise execution will terminate).
@@ -690,9 +693,13 @@ Marble_PCB_Rev_t marble_get_pcb_rev(void) {
   return Marble_v1_2;
 }
 
-void marble_print_pcb_rev(void) {
+void marble_print_ID_status(int len) {
    // TODO
-   printf("PCB Rev: Marble-Mini\r\n");
+   if (len == 2) {
+      printf("PCB Rev: Marble-Mini\r\n");
+   } else{
+      printf("%s",unk_str);
+   }
    return;
 }
 

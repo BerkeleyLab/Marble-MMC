@@ -21,6 +21,8 @@ int main(void) {
    disable_all_IRQs();
 
    UARTQUEUE_Init();
+//   printf("\r\nInitializing:\r\n");
+   printf("+++++++++++++++++++++++++++ | Initializing MMC | ++++++++++++++++++++++++++++\r\n");
 #ifdef MARBLEM_V1
    uint32_t sysclk_freq = marble_init();
    // Initialize Marble(mini) board with IRC, so it works even when
@@ -30,7 +32,15 @@ int main(void) {
 #else
    marble_init();
 #endif
+   //~ marble_PSU_pwr(false);
+   //~ printf("Let's wait a second and turn on the psu");
+   marble_SLEEP_ms(300);
+   //~ marble_PSU_pwr(true);
+   printf("+++++++++++++++++++++ | Initializing System Functions | +++++++++++++++++++++\r\n");
+
+
    system_init();
+   printf("++++++++++++++++++++++++ | Initializing Peripherals | +++++++++++++++++++++++\r\n");
 
    /* Turn on LEDs */
    marble_LED_set(0, true);   // LD15
@@ -42,18 +52,41 @@ int main(void) {
 
    // Initialize off-chip components
    board_init();
+   marble_SLEEP_ms(2000); // settle and print
+
+   printf("++++++++++++++++++++++++ | Initialization Complete | ++++++++++++++++++++++++\r\n");
+   marble_SLEEP_ms(2000); // settle and print
+
+   marble_print_ID_status(2);
+   marble_SLEEP_ms(200); // settle and print
 
    // Power FMCs
    marble_FMC_pwr(true);
 
    if (1) {
-      printf("** Policy: reset FPGA on MMC reset.  Doing it now. **\r\n");
+      printf("+++++++++++++++++++++++++++++ | Resetting FPGA | ++++++++++++++++++++++++++++\r\n");
       FPGAWD_SelfReset();
-      printf("**\r\n");
+      fflush(stdout);
+      marble_SLEEP_ms(100);
+      system_service();
+      marble_SLEEP_ms(500);
+      system_service();
    }
 
+
+   printf("++++++++++++++++++++++++++++ | Starting Console | +++++++++++++++++++++++++++\r\n");
+   fflush(stdout);
+
+   marble_SLEEP_ms(10);
+   UARTQUEUE_Init(); // Flush the bus before console starts
+   // Check if the board has been brought up before
+   marble_check_bringup();
+   
+   printf("Enter command or '?' for help\r\n> ");
+   fflush(stdout);
+
    // Send demo string over UART at 115200 BAUD
-   marble_UART_send(DEMO_STRING, strlen(DEMO_STRING));
+   // marble_UART_send(DEMO_STRING, strlen(DEMO_STRING));
 
    while (1) {
       // Service system (application logic)
@@ -65,12 +98,4 @@ int main(void) {
       }
    }
    cleanup(); // Only used for simulation
-}
-
-// This probably belongs in some other file, but which one?
-int __io_putchar(int ch);
-int __io_putchar(int ch)
-{
-  marble_UART_send((const char *)&ch, 1);
-  return ch;
 }

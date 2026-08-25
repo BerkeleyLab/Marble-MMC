@@ -54,7 +54,7 @@ typedef struct {
  *   ip4 - 4 dot separated decimal digits
  */
 
-// TODO - consolidate IP_LENGTH and MAC_LENGTH from console.h here
+// TODO - consolidate IP_LENGTH and MAC_LENGTH and SN_LENGTH from console.h here
 #define FOR_ALL_EETAGS() \
   X(1, boot_mode, raw, 1, {0}) \
   X(2, mac_addr,  mac, 6, {18, 85, 85, 0, 1, 46}) \
@@ -69,7 +69,9 @@ typedef struct {
   X(11,wd_key_2,  raw, 4, {' ','k','e','y'}) \
   X(12,mbox_en,   raw, 1, {1}) \
   X(13,tach_en,   raw, 1, {1}) \
-  X(14,pmod_mode, raw, 1, {0})
+  X(14,pmod_mode, raw, 1, {0}) \
+  X(15,sn,        raw, 2, {0, 0}) \
+
 
 typedef enum {
   ee_RESERVED,

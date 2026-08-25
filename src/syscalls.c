@@ -53,7 +53,7 @@
 #include <sys/time.h>
 #include <sys/times.h>
 #include "fake_newlib.h"
-
+#include "uart_fifo.h"
 
 /* Variables */
 #undef errno
@@ -217,4 +217,10 @@ int _execve(const char *name, char * const argv[], char * const env[])
 	(void) name;  (void) argv;  (void) env;
 	errno = ENOMEM;
 	return -1;
+}
+
+int __io_putchar(int ch)
+{
+  marble_UART_send((const char *)&ch, 1);
+  return ch;
 }

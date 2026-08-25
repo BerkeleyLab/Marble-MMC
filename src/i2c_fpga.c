@@ -1,3 +1,5 @@
+// marble_error_handler caller_id reserved: 96-111
+
 #include "marble_api.h"
 #define HAL_OK (0U)
 #include <stdio.h>
@@ -9,7 +11,7 @@ extern I2C_BUS I2C_FPGA;
 
 void I2C_FPGA_scan(void)
 {
-   printf("Scanning I2C_FPGA bus:\r\n");
+   printf("Scanning I2C_FPGA bus:");
    for (unsigned j = 0; j < 8; j++)
    {
       printf("\r\nI2C switch port: %u\r\n", j);
@@ -19,9 +21,9 @@ void I2C_FPGA_scan(void)
       {
          // Using 8-bit I2C addresses
          if (marble_I2C_probe(I2C_FPGA, (uint8_t) (i<<1)) != HAL_OK) {
-            printf("."); // No ACK received at that address
+            //printf("."); // No ACK received at that address
          } else {
-            printf("0x%02X", i << 1); // Received an ACK at that address
+            printf("0x%02X ", i << 1); // Received an ACK at that address
          }
       }
    }
@@ -46,7 +48,7 @@ void switch_i2c_bus(uint8_t i)
    marble_I2C_send(I2C_FPGA, addr, &data, 1);
 }
 
-void ina219_init()
+void ina219_init(void)
 {
    setCalibration_16V_2A();
 }
@@ -82,20 +84,54 @@ void ina219_debug(uint8_t addr)
 {
    uint16_t value = 0;
    bool rc;
-   printf("> Readout INA219 at address %2.2xh ", (unsigned) addr);
+
+   printf("INA219 at address %2.2xh ", (unsigned) addr);
+
    if (addr == INA219_0) {
-     printf("(Main nominal +12V input)\r\n");
+      printf("(Main nominal +12V input)\r\n");
    } else if (addr == INA219_FMC1) {
-     printf("(Nominal +12V supply to FMC1)\r\n");
+      printf("(Nominal +12V supply to FMC1)\r\n");
    } else if (addr == INA219_FMC2) {
-     printf("(Nominal +12V supply to FMC2)\r\n");
+      printf("(Nominal +12V supply to FMC2)\r\n");
    }
+
    rc = wireReadRegister(addr, INA_REG_CONFIG, &value);
-   printf("Register %d value 0x%4.4x (%d)\r\n", INA_REG_CONFIG, value, rc);
+   if (rc == 1)
+      printf("        [%2.2d] Configuration   0x%4.4x\r\n",
+               INA_REG_CONFIG, value);
+   else
+      printf("Configuration readout failed!");
+
+   // --- Shunt voltage: signed, 2's complement, LSB = 10 uV = 0.01 mV ---
    rc = wireReadRegister(addr, INA_REG_SHUNTVOLTAGE, &value);
-   printf("Register %d value 0x%4.4x (%d)\r\n", INA_REG_SHUNTVOLTAGE, value, rc);
+   if (rc == 1) {
+      int16_t shunt_raw = (int16_t)value;   // signed decode required by datasheet
+      // Convert to mV with 0.01 mV resolution using integer math:
+      // shunt_raw * 0.01 mV, so *100 => shunt_raw in units of 0.01 mV
+      int32_t shunt_mV_100 = (int32_t)shunt_raw;
+
+      int32_t shunt_mV = shunt_mV_100 / 100;
+      int32_t shunt_mV_frac = shunt_mV_100 % 100;
+      if (shunt_mV_frac < 0) shunt_mV_frac = -shunt_mV_frac;
+
+      printf("        [%2.2d] Shunt voltage   %ld.%02ld mV\r\n",
+               INA_REG_SHUNTVOLTAGE,
+               (long)shunt_mV, (long)shunt_mV_frac);
+   } else {
+      printf("Shunt voltage register readout failed!");
+   }
+
+   // --- Bus voltage: right shift by 3, then LSB = 4 mV ---
    rc = wireReadRegister(addr, INA_REG_BUSVOLTAGE, &value);
-   printf("Register %d value 0x%4.4x (%d)\r\n", INA_REG_BUSVOLTAGE, value, rc);
+   if (rc == 1) {
+      uint32_t bus_mV = (uint32_t)(value >> 3) * 4;   // integer mV
+      printf("        [%2.2d] Bus voltage     %lu.%03lu V\r\n",
+            (unsigned)INA_REG_BUSVOLTAGE,
+            (unsigned long)(bus_mV / 1000),
+            (unsigned long)(bus_mV % 1000));
+   } else {
+      printf("Bus voltage register readout failed!");
+   }
 }
 
 void setCalibration_16V_2A(void)
@@ -172,7 +208,7 @@ void setCalibration_16V_2A(void)
                CONFIG_SADCRES_12BIT_1S_532US |
                CONFIG_MODE_SANDBVOLT_CONTINUOUS;
 
-   //printf("> INA219 config val  [%d]\r\n",  config);
+   //printf("INA219 config val  [%d]\r\n",  config);
    wireWriteRegister(INA219_0, INA_REG_CONFIG, config);
 
 }
@@ -209,7 +245,7 @@ static int16_t getCurrent_raw(uint8_t ina)
    for(uint8_t i = 0; i < 7; i++)
       {
          wireReadRegister(ina, i, &value);
-         printf("> INA219 reg: %x:  [%d]\r\n", i, value);
+         printf("INA219 reg: %x:  [%d]\r\n", i, value);
       }
 
    return (int16_t)value;
@@ -282,7 +318,7 @@ float getCurrentAmps(uint8_t ina)
 * ADN4600 interface
 ************/
 
-void adn4600_init()
+void adn4600_init(void)
 {
    uint8_t disables[] = {0xD0, 0xD8, 0xF0, 0xF};  // Channels 2, 3, 6, 7
    uint8_t configs[] = {
@@ -321,48 +357,62 @@ void adn4600_init()
    marble_SLEEP_ms(100);
 
    // Disable Tx channels (ones that have N/C on PCB)
+   // printf("        Disabling reg [0x%2.2x] - [0x%2.2x] - [0x%2.2x] - [0x%2.2x]\r\n", 
+   //       disables[0], disables[1], disables[2], disables[3]);
    const unsigned disable_len = sizeof disables / sizeof disables[0];
    for (unsigned ix=0; ix < disable_len; ix++) {
       uint8_t disable = disables[ix];
       config = 0;
       rc = marble_I2C_cmdsend(I2C_FPGA, ADN4600, disable, &config, 1);
-      printf("> ADN4600 reg[0x%2.2x] <= 0x%2.2x (rc=%d)\r\n", disable, config, rc);
+      if (rc != HAL_OK)
+         marble_error_handler(ERROR_I2C_FPGA_ADN4600, 96);
+      else
+         printf("        reg[0x%2.2x] <= 0x%2.2x (rc=%d)\r\n", disable, config, rc);
    }
-
+   // printf("        ADN4600 XPT Conf - 0x%2.2x - 0x%2.2x - 0x%2.2x - 0x%2.2x\r\n",
+   //       configs[0], configs[1], configs[2], configs[3]);
    const unsigned config_len = sizeof configs / sizeof configs[0];
    for (unsigned ix=0; ix < config_len; ix++) {
       config = configs[ix];
       rc = marble_I2C_cmdsend(I2C_FPGA, ADN4600, ADN4600_XPT_Conf, &config, 1);
-      printf("> ADN4600 XPT Conf <= 0x%2.2x (rc=%d)\r\n", config, rc);
+      if (rc != HAL_OK)
+         marble_error_handler(ERROR_I2C_FPGA_ADN4600, 97);
+      else
+         printf("        XPT Conf <= 0x%2.2x (rc=%d)\r\n", config, rc);
    }
 
    // Table 9. Switch Core Temporary Registers
    uint8_t status;
+   // printf("        ADN4600 XPT Conf");
    for (unsigned ix=0; ix<4; ix++) {
       uint8_t cmd = 0x58 + ix;
       rc = marble_I2C_cmdrecv(I2C_FPGA, ADN4600, cmd, &status, 1);
-      printf("> ADN4600 XPT Temp %u r[0x%x] = 0x%2.2x (rc=%d)\r\n", ix, cmd, status, rc);
+      if (rc != HAL_OK)
+         marble_error_handler(ERROR_I2C_FPGA_ADN4600, 98);
+      // printf(" - 0x%2.2x", status);
+      // printf("ADN4600 XPT Temp %u r[0x%x] = 0x%2.2x (rc=%d)\r\n", ix, cmd, status, rc);
    }
+   // printf("\r\n");
 
    config = 1;
    rc = marble_I2C_cmdsend(I2C_FPGA, ADN4600, ADN4600_XPT_Update, &config, 1);
-   printf("> ADN4600 Update (rc=%d)\r\n", rc);
+   printf("        Update (rc=%d)\r\n", rc);
 }
 
-void adn4600_printStatus()
+void adn4600_printStatus(void)
 {
    uint8_t status;
 
    for (unsigned ix = 0; ix < 8; ix++) {
       uint8_t cmd = ADN4600_XPT_Status0 + ix;
       marble_I2C_cmdrecv(I2C_FPGA, ADN4600, cmd, &status, 1);
-      printf("> ADN4600 reg: %x: Output number: %u, Connected input: [%d]\r\n", cmd, ix, status);
+      printf("ADN4600 reg: %x: Output number: %u, Connected input: [%d]\r\n", cmd, ix, status);
    }
 }
 
 
 // Try read the values at all the registers 0x42 and 0x44
-void pca9555_status()
+void pca9555_status(void)
 {
    uint8_t val;
    switch_i2c_bus(6);
@@ -371,13 +421,13 @@ void pca9555_status()
        for (unsigned ix = 0; ix < 8; ix++) {
            uint8_t reg = 0x00 + ix;
            marble_I2C_cmdrecv(I2C_FPGA, jx, reg, &val, 1);
-           printf("> Reg: %x: Value: %x\r\n", reg, val);
+           printf("Reg: %x: Value: %x\r\n", reg, val);
        }
    }
 }
 
 
-void pca9555_config()
+void pca9555_config(void)
 {
    switch_i2c_bus(6);
    uint8_t si570_config = fsynthGetConfig();
@@ -413,28 +463,28 @@ void pca9555_config()
    data[1] = si570_polarity; // Write zero/one to P0_0, thereby enabling SI570
    data[2] = 0x80; // Write one to P1_7 and zero to P1_3 (LED 13 should be ON)
    marble_I2C_send(I2C_FPGA, PCA9555_1, data, 3);
-   printf("> reg: %x: value: %x\r\n", data[0], data[1]);
-   printf("> reg: %x: value: %x\r\n", data[0]+1U, data[2]);
+   printf("reg: %x: value: %x\r\n", data[0], data[1]);
+   printf("reg: %x: value: %x\r\n", data[0]+1U, data[2]);
 
    printf("Configuring PCA9555 at address 0x%02x\r\n", (unsigned) PCA9555_0);
    data[0] = 0x6; // Config regs 6(port 0) and 7(port 1)
    data[1] = 0x37; // Configure P0_7, P0_6 and P0_3 as outputs (set those bits to 0)
    data[2] = 0x37; // Configure P1_7, P1_6 and P0_3 as outputs (set those bits to 0)
    marble_I2C_send(I2C_FPGA, PCA9555_0, data, 3);
-   printf("> reg: %x: value: %x\r\n", data[0], data[1]);
-   printf("> reg: %x: value: %x\r\n", data[0]+1U, data[2]);
+   printf("reg: %x: value: %x\r\n", data[0], data[1]);
+   printf("reg: %x: value: %x\r\n", data[0]+1U, data[2]);
    marble_SLEEP_ms(100);
 
    data[0] = 0x2; // P1 and P2
    data[1] = 0x48; // Write ones to P0_7 and P0_3
    data[2] = 0x48; // Write ones to P1_7 and P1_3
    marble_I2C_send(I2C_FPGA, PCA9555_0, data, 3);
-   printf("> reg: %x: value: %x\r\n", data[0], data[1]);
-   printf("> reg: %x: value: %x\r\n", data[0]+1U, data[2]);
+   printf("reg: %x: value: %x\r\n", data[0], data[1]);
+   printf("reg: %x: value: %x\r\n", data[0]+1U, data[2]);
 }
 
 // Compute the current SI570 Frequency
-void si570_status()
+void si570_status(void)
 {
    uint8_t i2c_addr = fsynthGetAddr();
    uint8_t config = fsynthGetConfig();
@@ -458,7 +508,7 @@ void si570_status()
    for (unsigned ix = 0; ix < 6; ix++) {
       uint8_t reg = start_addr + ix;
       marble_I2C_cmdrecv(I2C_FPGA, i2c_addr, reg, &val[ix], 1);
-      printf("> Reg: %x: Value: %2.2x\r\n", reg, val[ix]);
+      printf("Reg: %x: Value: %2.2x\r\n", reg, val[ix]);
    }
 
    uint8_t hs_div = (val[0] >> 5) + 4;
@@ -471,9 +521,9 @@ void si570_status()
    float fxtal = 114.285e6;
    float fout = (fxtal * rfreq)/(hs_div*n1);
 
-   printf("> HS_DIV: %x\r\n", hs_div);
-   printf("> N1: %x\r\n", n1);
-   printf("> RFREQ: %lf\r\n", rfreq);
-   printf("> assume fxtal: %f MHz\r\n", fxtal*0.000001);
-   printf("> guess SI570 output: %f MHz\r\n", fout*0.000001);
+   printf("HS_DIV: %x\r\n", hs_div);
+   printf("N1: %x\r\n", n1);
+   printf("RFREQ: %lf\r\n", rfreq);
+   printf("assume fxtal: %f MHz\r\n", fxtal*0.000001);
+   printf("guess SI570 output: %f MHz\r\n", fout*0.000001);
 }

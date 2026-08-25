@@ -43,7 +43,21 @@ fi
 
 # Optional Environment Variables Check.
 if [ -z "$TTY_MMC" ]; then
-  TTY_MMC=/dev/ttyUSB3
+	case "$OSTYPE" in
+		darwin*)
+			# macOS: find device starting with 'usbserial' and ending with '3'
+			TTY_MMC=$(ls /dev/cu.usbserial*3 2>/dev/null | head -n 1)
+			if [[ -z "$TTY_MMC" ]]; then
+				echo "Error: No matching USB serial device found."
+				exit 1
+		  fi
+      ;;
+    *)
+		  # Linux
+		  TTY_MMC=$(ls /dev/ttyUSB* | sort -V | tail -n 1) # Usually "/dev/ttyUSB3"
+      ;;
+	esac
+	echo "Using TTY: $TTY_MMC"  #TTY_MMC=/dev/ttyUSB3
 fi
 
 # Handy Params
@@ -69,29 +83,32 @@ if ! make marble_download; then
   echo "Could not program marble_mmc. Is Segger J-Link attached? Is board powered?"
   exit 1
 else
-  echo "Successfully programmed MMC!"
+  echo "Successfully programmed MMC! - Proceeding..."
 fi
 echo "##################################"
 
 # Sleep for a few seconds to give the MMC time to boot
-echo "napping for 5 seconds.."
-sleep 5
+echo "Sleeping for 7 seconds to give the MMC time to boot..."
+sleep 7
 
 # 2. Program LTM4673 power management chip
+echo "Unlocking settings..."
+python3 "$SCRIPTS_PATH"/load.py -d "$TTY_MMC" "z unlock"
+sleep 2
 echo "Programming LTM4673 power management chip...."
-if ! python3 "$SCRIPTS_PATH"/ltm4673.py -d "$TTY_MMC" write -f "$LTM_SCRIPT"; then
+if ! python3 "$SCRIPTS_PATH"/ltm4673.py -d "$TTY_MMC" write_read -f "$LTM_SCRIPT"; then
   echo "Could not program LTM4673."
   exit 1
 else
   echo "##################################"
   python3 "$SCRIPTS_PATH"/ltm4673.py -d "$TTY_MMC" store
-  echo "napping for 5 seconds.."
-  sleep 5
+  echo "Processing for 1 second before powering down..."
+  sleep 1
+  echo "Power off for 2 seconds, then power back on..."
   python3 "$SCRIPTS_PATH"/load.py -d "$TTY_MMC" "4b"
-  echo "napping for 5 seconds.."
-  sleep 5
+  sleep 2
   python3 "$SCRIPTS_PATH"/load.py -d "$TTY_MMC" "4B"
-  echo "Successfully programmed LTM4673!"
+  echo "LTM4673 has been programmed successfully!"
 fi
 
 echo "bringup_mmc DONE"

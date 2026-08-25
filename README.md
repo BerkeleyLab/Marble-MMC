@@ -159,53 +159,71 @@ ls -l ftdi_eeprom/ftdi_eeprom
 
 The core USB UART command menu (implemented in `src/console.c`) is
 ```
-0 - Show board/chip identification
-1 [-v] - Show MDIO/PHY Status (-v for verbose output)
-2 - I2C monitor
-3 - Status & counters
-4 gpio - GPIO control
-5 - Reset FPGA
-6 - Push IP&MAC
-7 - Readout MAX6639 (Thermometer and fan controller).
-8 - Readout LM75_0 (Thermometer, U29)
-9 - Readout LM75_1 (Thermometer, U28)
-a - I2C scan all ports
-b - Config ADN4600 (Clock mux)
-c - Readout INA219 (Current monitors)
-d - MGT MUX - switch to QSFP 2
-e - I2C_PM bus display
-f - Flash XRP7724 (Power supply, Marble v1.1-1.3)
-g - Enable XRP7724
-h - FMC MGT MUX set
-i - Timer check/cal
-j - Read SPI mailbox
-k - Readout PCA9555 (I2C GPIO expanders U34 and U39)
-l - Config PCA9555
-m d.d.d.d - Set IP Address
-n d:d:d:d:d:d - Set MAC Address
-o - SI570 (Frequency synthesizer) status
-p speed[%] - Set fan speed (0-120 or 0%-100%)
-q otemp - Set overtemperature threshold (degC)
-r enable - Set mailbox enable/disable (1/0, on/off)
-s addr_hex freq_hz config_hex - Set Si570 configuration
-t pmbus_msg - Forward PMBus transaction to LTM4673
-u period - Set/get watchdog timeout period (in seconds)
-v key - Set a new 128-bit secret key (non-volatile, write only).
-w enable - Set fan tachometer enable/disable (1/0, on/off)
-x mode - Set MMC Pmod usage mode
+    - ------------- ---------------------------------------------------------
+    0               Show board/chip identification and MMC status info
+    1 [-v]          Show MDIO/PHY Status (-v for verbose output)
+    2               I2C monitor
+    3               Status & counters
+    4 gpio          GPIO control
+    5               Reset FPGA
+    6               Push IP&MAC
+    7               Readout MAX6639 (Thermometer and fan controller).
+    8               Readout LM75_0 (Thermometer, U29)
+    9               Readout LM75_1 (Thermometer, U28)
+    a               I2C scan all ports
+    b               Config ADN4600 (Clock mux)
+    c               Readout INA219 (Current monitors)
+    d               MGT MUX - switch to QSFP 2
+    e               I2C_PM bus display
+    g               Enable XRP7724
+    h               FMC MGT MUX set
+    i               Timer check/cal
+    j               Read SPI mailbox
+    k               Readout PCA9555 (I2C GPIO expanders U34 and U39)
+    l               Config PCA9555
+    m [IP/MAC/SN]   Set/Query: IP d.d.d.d -- MAC xx:xx:xx:xx:xx:xx -- SN xxxx
+    o               SI570 (Frequency synthesizer) status
+    p speed[%]      Set fan speed (0-120 or 0%-100%)
+    q otemp         Set overtemperature threshold (degC)
+    r bool          Set mailbox enable/disable (1/0, on/off)
+    s addr f cfg    Set Si570: addr[hex], f[Hz], cfg[hex]
+    t pmbus_msg     Forward PMBus transaction to LTM4673
+    u period        Set/get watchdog timeout period (in seconds)
+    v key           Set a new 128-bit secret key (non-volatile, write only).
+    w bool          Set fan tachometer enable/disable (1/0, on/off)
+    x mode          Set MMC Pmod usage mode
+    - ------------- ---------------------------------------------------------
+    z lock/unlock.  Temporarily unlock MMC settings
+    ?               Help
+    - ------------- ---------------------------------------------------------
 ```
+
+By default, settings are locked and can only be read (not written). In order to change settings, make sure to enter the `z unlock` command, which will unlock settings for 120 seconds (`SETTINGS_UNLOCK_TIMEOUT`). 
+
+The Marble serial number is a 4-digit hexadecimal string that is supposed to be set only once. If a serial number needs correction, it should first be reset as follows: `m SN 0000`. 
+
+Serial numbers should follow the format below:
+
+	  Untracked/Open = 0b000X XXXX XXXX XXXX [duplicates possible]
+	            LBNL = 0b11XX XXXX XXXX XXXX
+	            SLAC = 0b01XX XXXX XXXX XXXX
+	        RESERVED = 0b10XX XXXX XXXX XXXX
+	        RESERVED = 0b001X XXXX XXXX XXXX
+
+Please contact the developers to request an assigned serial number range.
 
 Additional documentation of features:
 
   * [Mailbox](doc/mailbox.md)
   * [Watchdog](watchdog.md)
+  * [Error Handler](error_handler.md)
   * [Pmod Modes](pmod.md)
 
 ## Credits
 
 This code base was initially developed as a collaboration between Michal Gaska (WUT) and
 Larry Doolittle (LBNL), with important contributions from Sergio Paiagua, Vamsi Vytla,
-Keith Penney, Shreeharshini Murthy, and Michael Betz (LBNL).
+Keith Penney, Shreeharshini Murthy, Stijn Wielandt, and Michael Betz (LBNL).
 
 ## Copyright
 

@@ -1,3 +1,5 @@
+// marble_error_handler caller_id reserved: 144-159
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -18,6 +20,8 @@ static int eeprom_populate_val(ee_tags_t tag, const uint8_t *paddr, int len);
 static int eeprom_restore_all(void);
 
 int eeprom_init(void) {
+  printf("+ Init eeprom...\r\n");
+  fflush(stdout);
   eeprom_system_init();
   // Write default values of all missing tags
   eeprom_restore_all();
@@ -35,6 +39,9 @@ static int eeprom_read_val(ee_tags_t tag, volatile uint8_t *paddr, int len) {
       paddr[n] = eeval[n];
     }
   } else {
+#ifdef APP_MARBLE
+    marble_error_handler(ERROR_EEPROM_READ, 144);
+#endif
 #ifdef DEBUG_ENABLE_ERRNO_DECODE
     const char *errname = decode_errno(-rval);
     printf("eeprom_read_val: rval = %d (%s)\r\n", rval, errname);
@@ -55,6 +62,9 @@ static int eeprom_store_val(ee_tags_t tag, const uint8_t *paddr, int len) {
   if (!rval) {
     printf("Success\r\n");
   } else {
+#ifdef APP_MARBLE
+    marble_error_handler(ERROR_EEPROM_STORE,145);
+#endif
 #ifdef DEBUG_ENABLE_ERRNO_DECODE
     const char *errname = decode_errno(-rval);
     printf("eeprom_store_val: rval = %d (%s)\r\n", rval, errname);
@@ -89,7 +99,9 @@ static int eeprom_populate_val(ee_tags_t tag, const uint8_t *paddr, int len) {
       printf("Default stored\r\n");
       return 1;
     } else {
-      printf("Failed to store default\r\n");
+#ifdef APP_MARBLE
+      marble_error_handler(ERROR_EEPROM_UPDATE,146);
+#endif
       return rval;
     }
   } else {
