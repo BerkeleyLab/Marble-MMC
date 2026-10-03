@@ -53,9 +53,11 @@
 SERIAL_NUM="${1:-}"
 IP="${2:-}"
 TEST="${3:-}"
+GPS="${4:-}"
 
 # Default test mode
 TEST="BASIC"
+GPS="False"
 
 # Optional 3rd arg: test=BASIC or test=FULL
 if [ $# -ge 3 ] && [ -n "$3" ]; then
@@ -64,7 +66,19 @@ if [ $# -ge 3 ] && [ -n "$3" ]; then
     test=BASIC|test=basic|BASIC|basic) TEST="BASIC" ;;
     *)
       echo "ERROR: Invalid test argument '$3' (expected test=BASIC or test=FULL)" >&2
-      echo "Usage: $0 <SN> <IP> [test=BASIC|test=FULL]" >&2
+      echo "Usage: $0 <SN> <IP> [test=BASIC|test=FULL] [GPS=true|GPS=false]" >&2
+      exit 1
+      ;;
+  esac
+fi
+
+if [ $# -ge 4 ] && [ -n "$4" ]; then
+  case "$4" in
+    GPS=TRUE|GPS=true|TRUE|true)   GPS="TRUE" ;;
+    GPS=FALSE|GPS=false|FALSE|false) GPS="FALSE" ;;
+    *)
+      echo "ERROR: Invalid GPS argument '$4' (expected GPS=true or GPS=false)" >&2
+      echo "Usage: $0 <SN> <IP> [test=BASIC|test=FULL] [GPS=true|GPS=false]" >&2
       exit 1
       ;;
   esac
@@ -213,7 +227,7 @@ if ! "$MMC_PATH/bringup_mmc.sh"; then
   echo "Could not bring up MMC. Aborting."
   exit 1
 fi
-echo "\033[1;32mSuccess(Task 1 of 12) – MMC Bringup\033[0m"
+echo "\033[1;32mSuccess(Task 1 of 15) – MMC Bringup\033[0m"
 echo "##################################"
 
 # 1. Program FTDI serial number if needed
@@ -226,7 +240,7 @@ if ! "$FTDI_PATH/verifyid.sh" "$SERIAL_NUM"; then
     exit 1
   fi
 fi
-echo "\033[1;32mSuccess(Task 2 of 12) – FTDI Configuration\033[0m"
+echo "\033[1;32mSuccess(Task 2 of 15) – FTDI Configuration\033[0m"
 echo "##################################"
 
 if [ -z "$TTY_MMC" ]; then
@@ -269,12 +283,12 @@ if ! "$SCRIPTS_PATH/config_sn_ip_mac.sh" -d "$TTY_MMC" "$SERIAL_NUM" "$IP"; then
   echo "ERROR: SN/IP/MAC configuration failed (Task 3 of 12)" >&2
   exit 1
 fi
-echo "\033[1;32mSuccess(Task 3 of 12) – SN/IP/MAC Configuration\033[0m"
+echo "\033[1;32mSuccess(Task 3 of 15) – SN/IP/MAC Configuration\033[0m"
 echo "##################################"
 # 4. Write Si570 parameters to marble_mmc based on PCB version
 echo "Write Si570 parameters to marble_mmc based on PCB version"
 "$SCRIPTS_PATH/config_si57x.sh" -d "$TTY_MMC"
-echo "\033[1;32mSuccess(Task 4 of 12) – Si570 Configuration\033[0m"
+echo "\033[1;32mSuccess(Task 4 of 15) – Si570 Configuration\033[0m"
 echo "##################################"
 # 4. Load bitfile to FPGA
 echo "Load bitfile to FPGA..."
@@ -309,7 +323,7 @@ if [ -z "${connected:-}" ]; then
   echo "No wired route to $IP?"
   exit 1
 fi
-echo "\033[1;32mSuccess(Task 5 of 12) – FPGA Bitfile Load\033[0m"
+echo "\033[1;32mSuccess(Task 5 of 15) – FPGA Bitfile Load\033[0m"
 echo "##################################"
 # 5. Ping IP 3 times
 if ! ping -c3 "$IP"; then
@@ -318,7 +332,7 @@ if ! ping -c3 "$IP"; then
 else
   echo "Successfully pinged from IP $IP"
 fi
-echo "\033[1;32mSuccess(Task 6 of 12) – Ping Test\033[0m"
+echo "\033[1;32mSuccess(Task 6 of 15) – Ping Test\033[0m"
 echo "##################################"
 # 6. UDP Stress test
 cd "$BEDROCK_PATH/badger/tests"
@@ -334,7 +348,7 @@ if ! $UDPRTX "$IP" 1000000 8; then
   echo "UDP test failed"
   exit 1
 fi
-echo "\033[1;32mSuccess(Task 7 of 12) – UDP Stress Test\033[0m"
+echo "\033[1;32mSuccess(Task 7 of 15) – UDP Stress Test\033[0m"
 
 # 8. Record various device readouts and save it to a file
 # three INA219 Voltage + current, SI570 output frequency
@@ -353,7 +367,7 @@ rm "$tt"
 echo "Success (Task 7 of 7) – Peripheral Device Readouts"
 
 
-echo "\033[1;32mSuccess(Task 8 of 12) – Peripheral Device Readouts\033[0m"
+echo "\033[1;32mSuccess(Task 8 of 15) – Peripheral Device Readouts\033[0m"
 
 # 9. Set FPGA boot flash OTP bits
 echo "##################################"
@@ -387,7 +401,7 @@ else
     exit 1
   fi
 fi
-echo "\033[1;32mSuccess(Task 9 of 12) – OTP bits set\033[0m"
+echo "\033[1;32mSuccess(Task 9 of 15) – OTP bits set\033[0m"
 
 # 10. Burn bit file
 echo "##################################"
@@ -409,7 +423,7 @@ else
   exit 1
 fi
 
-echo "\033[1;32mSuccess(Task 10 of 12) – Bit file burning\033[0m"
+echo "\033[1;32mSuccess(Task 10 of 15) – Bit file burning\033[0m"
 
 
 # 11. Ping test
@@ -430,14 +444,14 @@ else
   echo "Ping test FAILED"
   exit 1
 fi
-echo "\033[1;32mSuccess(Task 11 of 12) – Ping test\033[0m"
+echo "\033[1;32mSuccess(Task 11 of 15) – Ping test\033[0m"
 
 
 if [ "$TEST" = "FULL" ]; then
 echo "1. Turn off the board"
 echo "2. Connect IAM FMC modules"
-# echo "3. Connect QSFP Loopback modules"
-# echo "4. Connect JTAG programmer to J11"
+echo "3. Connect QSFP Loopback modules"
+echo "4. Connect JTAG programmer to J11"
 echo "3. Turn on the board and wait for FPGA_DONE LED"
 echo "Press Enter to proceed..."
 read -r _
@@ -462,31 +476,86 @@ else
   echo "FMC I/O test FAILED"
   exit 1
 fi
- echo "\033[1;32mSuccess(Task 12 of 12) – FMC I/O test\033[0m"
+echo "\033[1;32mSuccess(Task 12 of 15) – FMC I/O test\033[0m"
 
 # 13. QSFP Loopback test
-# echo "##################################"
-# echo "QSFP Loopack test"
-# echo "##################################"
+echo "##################################"
+echo "QSFP Loopack test"
+echo "##################################"
+# echo "1. Power cycle the board and wait for FPGA_DONE_LED"
+# echo "2. Connect QSFP Loopback modules"
+# echo "3. Connect JTAG programmer to J11"
+# echo "4. Turn on the board and wait for FPGA_DONE LED"
+# echo "Press Enter to proceed..."
+# read -r _
 
-# cd "$TCL_PATH"
-# vivado -mode tcl -source marble_ibert.tcl -notrace -log qsfp_fmc_logfile_"$SN"
+cd "$MMC_PATH/../tcl_scripts"
+vivado -mode tcl -source marble_ibert.tcl -notrace -log qsfp_fmc_logfile_"$SN"
+
+echo "\033[1;32m EVALUATE! (Task 13 of 15) – QSFP Loopback test\033[0m"
 
 # 14. DDR3 test
-# echo "##################################"
-# echo "DDR3 test"
-# echo "##################################"
-# echo "1. Power off, remove FMC modules, Unplug J11 JTAG connector"
-# echo "2. Open FPGA UART in new terminal window:"
-# echo "   python3 -m serial.tools.miniterm /dev/ttyUSB2 115200"
-# cd $BEDROCK_PATH/projects/test_marble_family/
-# BITFILE=berkeleylab_marble.bit ./mutil usb
+echo "##################################"
+echo "DDR3 test"
+echo "##################################"
+echo "1. Power off, remove FMC modules, Unplug J11 JTAG connector"
+echo "2. Plug in DDR3 memory module"
+echo "3. Open FPGA UART in new terminal window:"
+echo "   python3 -m serial.tools.miniterm /dev/ttyUSB2 115200"
+echo "Press Enter to proceed..."
+read -r _
+
+cd $BEDROCK_PATH/projects/test_marble_family/
+BITFILE=berkeleylab_marble.bit ./mutil usb
+# echo "Paste FPGA UART outputs (only memtest result and read/write speed lines)"
+echo "2.0 MiB memtest result? (OK/FAIL)"
+read -r PASTED_OUTPUT
+
+if [ "$PASTED_OUTPUT" = "OK" ]; then
+    echo "2.0 MiB memtest PASSED"
+else
+    echo "2.0 MiB memtest FAILED" >&2
+    exit 1
+fi
+
+
+echo "run the following command in the FPGA UART terminal:"
+echo "mem_test 0x40000000 0x40000000"
+# echo "Paste FPGA UART outputs (only memtest result and read/write speed lines)"
+echo "1.0 GiB memtest result? (OK/FAIL)"
+read -r PASTED OUTPUT
+echo "Make sure to save memtest outputs in a separate file"
+
+if [ "$PASTED_OUTPUT" = "OK" ]; then
+    echo "1.0 GiB memtest PASSED"
+    echo "\033[1;32mSuccess(Task 14 of 15) – memtest\033[0m"
+else
+    echo "1.0 GiB memtest FAILED" >&2
+    exit 1
+fi
+
+
+if [ "$GPS" = "TRUE" ]; then
+# 15. GPS test
+echo "##################################"
+echo "125 MHz Calibration using GPS"
+echo "##################################"
+echo "1. Remove Memory and power cycle board. Keep Ethernet Connected"
+echo "2. Connect the Pmod GPS module to J13 first (top) row pins"
+echo "3. wait for the module to lock to the GPS (until the LED stops blinking)"
+echo "Press Enter to proceed..."
+read -r _
+cd "$BEDROCK_PATH/projects/test_marble_family"
+python3 -m test_vcxo -a $IP --signed
+echo "\033[1;32mCompleted (Task 15 of 15) – 125 MHz Calibration\033[0m"
+fi
 
 else
-echo "\033[1;33mSkipped(Task 12 of 12) – FMC I/O test\033[0m"
+echo "\033[1;33mSkipped(Task 12 of 15) – FMC I/O test\033[0m"
+echo "\033[1;33mSkipped(Task 13 of 15) – QSFP Loopback test\033[0m"
+echo "\033[1;33mSkipped(Task 14 of 15) – DDR3 test\033[0m"
+echo "\033[1;33mSkipped(Task 15 of 15) – 125MHz calibration using GPS\033[0m"
 fi
-echo "\033[1;33mSkipped(Task 13 of 12) – QSFP Loopback test[Not Implemented]\033[0m"
-echo "\033[1;33mSkipped(Task 14 of 12) – DDR3 test [Not Implemented]\033[0m"
 
 # end of bringup
 echo "\033[1;32mMarble bringup successful! Log saved to bringup_logfile_${SERIAL_NUM}_${ts}.log\033[0m"
