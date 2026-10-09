@@ -159,6 +159,8 @@ I2C_HandleTypeDef hi2c3;
 SPI_HandleTypeDef hspi1;
 SPI_HandleTypeDef hspi2;
 
+DMA_HandleTypeDef hdma_spi2_tx;
+
 UART_HandleTypeDef huart_console;
 UART_HandleTypeDef huart2;
 UART_HandleTypeDef huart3;  // Used for nucleo

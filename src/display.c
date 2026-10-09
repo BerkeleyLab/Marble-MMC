@@ -6,6 +6,7 @@
 #include "display.h"
 #include "lv_font.h"
 #include "ui_board.h"
+#include "ui_board_spi.h"
 #include "frame_buffer.h"
 #include "ssd1322.h"
 #include "gui.h"
@@ -241,9 +242,14 @@ void display_update(void) {
   // Check encoder knob
   int refresh = 0;
   if (new_status == BOARD_STATUS_GOOD) {
-    uint8_t buttons = uiBoardPoll();
+
+    bool ready_for_new_frame = ui_board_poll();
+    if (!ready_for_new_frame)
+      return;
+
+    unsigned events = get_event_flags();
     // Only checking encoder (button/knob) when power good
-    if (buttons & 1) {
+    if (events & EV_ROT_CCW) {
       // Turn left; decrease page number
       if (current_page == PAGE_FIRST) {
         current_page = PAGE_LAST;
@@ -252,7 +258,7 @@ void display_update(void) {
       }
       display_enable();
       refresh = 1;
-    } else if (buttons & 2) {
+    } else if (events & EV_ROT_CW) {
       // Turn right; increase page number
       if (current_page == PAGE_LAST) {
         current_page = PAGE_FIRST;
@@ -261,7 +267,7 @@ void display_update(void) {
       }
       display_enable();
       refresh = 1;
-    } else if (buttons & 4) {
+    } else if (events & EV_ENC_S) {
       // Push button, toggle ON/OFF
       display_toggle();
     }
@@ -309,9 +315,6 @@ static void update_page(int refresh) {
     default:
       break;
   }
-  if (refresh) {
-    send_fb();
-  }
   return;
 }
 
@@ -333,9 +336,6 @@ static void update_display_error(int refresh) {
       lv_update_label(&label_error_state, label_error_state_pd);
     }
     refresh = 1;
-  }
-  if (refresh) {
-    send_fb();
   }
   last_status = status;
   return;
@@ -592,10 +592,11 @@ static int update_page_temperature(int refresh) {
   return rval;
 }
 
-void display_init(void) {
+void display_init(bool is_ui_board_1u) {
   // For lack of a better place, let's put this here for now
-  printf("Initializing UI board\r\n");
-  uiBoardInit();
+  printf("Initializing UI_BOARD%s\r\n", is_ui_board_1u ? "_1U" : "");
+  ui_board_spi_init();
+  ui_init(is_ui_board_1u ? UI_BOARD_1U : UI_BOARD);
   set_inverted(0);
 
   fill(0);
@@ -615,7 +616,6 @@ void display_init(void) {
 #endif
   init_page_temperature();
   update_page(1); // force refresh
-  send_fb();
   last_touch = BSP_GET_SYSTICK();
   return;
 }
@@ -788,13 +788,13 @@ static void update_led(void) {
   uint32_t now = BSP_GET_SYSTICK();
   Board_Status_t status = marble_get_status();
   if (status == BOARD_STATUS_GOOD) {
-    setLed(0); // off
+    set_ledb(0); // off
     return;
   }
   if ((now-blink_time) < ERROR_LED_TIME_ON_MS) {
-    setLed(1); // red
+    set_ledb(1); // red
   } else if ((now-blink_time) < ERROR_LED_TIME_OFF_MS) {
-    setLed(0); // off
+    set_ledb(0); // off
   } else {
     blink_time = now;
   }

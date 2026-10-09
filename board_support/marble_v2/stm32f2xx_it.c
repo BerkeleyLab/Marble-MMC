@@ -247,6 +247,25 @@ void USART3_IRQHandler(void)
   /* USER CODE END USART3_IRQn 1 */
 }
 
+
+extern SPI_HandleTypeDef hspi2;
+extern DMA_HandleTypeDef hdma_spi2_tx;
+
+/**
+  * @brief This function handles DMA1 Stream 4 interrupt (SPI2_TX).
+  */
+void DMA1_Stream4_IRQHandler(void) {
+  HAL_DMA_IRQHandler(&hdma_spi2_tx);
+}
+
+/**
+  * @brief This function handles SPI2 global interrupt.
+  */
+void SPI2_IRQHandler(void) {
+  HAL_SPI_IRQHandler(&hspi2);
+}
+
+
 /* USER CODE BEGIN 1 */
 
 /* USER CODE END 1 */

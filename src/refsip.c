@@ -13,6 +13,9 @@
 #endif
 // Using PRIx32/PRIx64 for cross-platform compatibility (sim vs target)
 #include <inttypes.h>
+#ifndef PRIx64
+#define PRIx64 "llx"
+#endif
 
 #include "refsip.h"
 

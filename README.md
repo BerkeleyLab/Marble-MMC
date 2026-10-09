@@ -1,3 +1,10 @@
+# ui_board_1u branch
+  * support for ui_board and ui_board_1u
+  * support for new oled library with cleaned up interface definition
+  * support for partial framebuffer writes
+  * support for row-wise updates (fast polling)
+  * support for DMA for framebuffer updates
+
 # Marble Module Management Controller (Marble MMC)
 This repo contains the default firmware image for the microcontroller (MMC) on
 Marble and Marble-Mini FPGA FMC carrier boards.  The MMC handles board management

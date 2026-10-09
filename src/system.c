@@ -14,12 +14,10 @@
 #include "ltm4673.h"
 #include "watchdog.h"
 
-#undef UI_BOARD_SUPPORTED
-
 #ifdef MARBLE_V2
 // NOTE - Support for the oled UI board will be re-introduced once licensing has been ironed out
 // NOTE - Currently only supported on Marble (not Marble-mini)
-// #define UI_BOARD_SUPPORTED
+#define UI_BOARD_SUPPORTED
 #include "display.h"
 #endif
 
@@ -101,7 +99,7 @@ static void timer_int_handler(void);
 static void system_apply_internal_params(void);
 static void system_apply_external_params(void);
 static void system_pmod_mode_disabled(void);
-static void system_pmod_mode_ui_board(void);
+static void system_pmod_mode_ui_board(bool is_ui_board_1u);
 static void system_pmod_mode_led(void);
 static void system_pmod_led_init(void);
 static void system_pmod_timer_disable(void);
@@ -337,11 +335,11 @@ static void system_pmod_mode_disabled(void) {
   return;
 }
 
-static void system_pmod_mode_ui_board(void) {
+static void system_pmod_mode_ui_board(bool is_ui_board_1u) {
 #ifdef UI_BOARD_SUPPORTED
-  display_init();
+  display_init(is_ui_board_1u);
 #else
-  printf("        UI board support disabled! Update MMC image to use this feature.\n");
+  printf("*** UI board support disabled for this build!  Please update MMC image to use this feature ***\r\n");
 #endif
   system_pmod_timer_disable();
   return;
@@ -364,15 +362,16 @@ static void system_pmod_mode_led(void) {
 }
 
 static void pmod_subsystem_init(void) {
-  printf("+ Init Pmod...\r\n");
-  fflush(stdout);
   switch (pmod_mode) {
     case PMOD_MODE_DISABLED:
       // Nothing to do
       system_pmod_mode_disabled();
       break;
+    case PMOD_MODE_UI_BOARD_1U:
+      system_pmod_mode_ui_board(true);
+      break;
     case PMOD_MODE_UI_BOARD:
-      system_pmod_mode_ui_board();
+      system_pmod_mode_ui_board(false);
       break;
     case PMOD_MODE_LED:
       system_pmod_mode_led();
@@ -576,11 +575,12 @@ static void pmod_subsystem_service(void) {
     case PMOD_MODE_DISABLED:
       // Nothing to do
       break;
-    case PMOD_MODE_UI_BOARD:
 #ifdef UI_BOARD_SUPPORTED
+    case PMOD_MODE_UI_BOARD:
+    case PMOD_MODE_UI_BOARD_1U:
       display_update();
-#endif
       break;
+#endif
     case PMOD_MODE_LED:
       // Unimplemented
       break;

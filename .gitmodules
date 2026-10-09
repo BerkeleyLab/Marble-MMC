@@ -1,0 +1,4 @@
+[submodule "submodules/oled"]
+	path = submodules/oled
+	url = git@github.com:betz-engineering/oled.git
+	branch = dev

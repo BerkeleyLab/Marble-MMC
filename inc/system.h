@@ -13,6 +13,7 @@ typedef enum {
   PMOD_MODE_UI_BOARD,     // Requires OLED ui_board (see submodules/oled)
   PMOD_MODE_LED,          // (UNIMPLEMENTED) Blinking/steady LED control via mailbox
   PMOD_MODE_GPIO,         // (UNIMPLEMENTED) Slow GPIO control via mailbox
+  PMOD_MODE_UI_BOARD_1U,  // Requires OLED ui_board_1u (see submodules/oled)
   /* KEEP AS LAST ENTRY */ PMOD_MODE_SIZE
 } pmod_mode_t;
 

@@ -6,7 +6,7 @@ extern "C" {
 #endif
 
 void display_update(void);
-void display_init(void);
+void display_init(bool is_ui_board_1u);
 
 #ifdef __cplusplus
 }
