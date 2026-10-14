@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include "stm32f2xx_hal.h"
 #include "marble_api.h"
+#include "marble_errors.h"
 #include "string.h"
 #include "uart_fifo.h"
 #include "console.h"
@@ -76,71 +77,17 @@
    if (on) {s[0] = 'n'; s[1] = '\0';} \
    printf(subs " Power O%s\r\n", s); } while (0)
 
-static const char *ErrorCodeStrings[ERROR_CODE_COUNT] = { // triggers compile warning if not all enum values are covered
-    "ERROR_NONE",
-    "ERROR_MARBLE_POWERDOWN: Power failure detected",
-    "ERROR_MARBLE_OVERTEMP: Over-temperature detected",
-    "ERROR_MARBLE_PMOD: PMOD configuration error",
-    "ERROR_EEPROM_FAN: fan speed",
-    "ERROR_EEPROM_OVERTEMP: over-temperature threshold",
-    "ERROR_EEPROM_UPDATE: failed to store page",
-    "ERROR_EEPROM_STORE",
-    "ERROR_EEPROM_READ",
-    "ERROR_RCC_OSC_CONFIG",
-    "ERROR_RCC_CLOCK_CONFIG",
-    "ERROR_ETH_MDIO_INIT",
-    "ERROR_ETH_MDIO_ID - PHY ID mismatch",
-    "ERROR_I2C1_INIT - I2C_FPGA bus init failed",
-    "ERROR_I2C3_INIT - I2C_PM bus init failed",
-    "ERROR_I2C1_DEINIT - I2C_FPGA bus de-init failed",
-    "ERROR_I2C3_DEINIT - I2C_PM bus de-init failed",
-    "ERROR_SPI1_INIT",
-    "ERROR_UART_CONSOLE_INIT",
-    "ERROR_I2C_FPGA_NONE - No error",
-    "ERROR_I2C_FPGA_BERR - Bus error",
-    "ERROR_I2C_FPGA_ARLO - Arbitration lost",
-    "ERROR_I2C_FPGA_AF - No ACK received",
-    "ERROR_I2C_FPGA_OVR - Overrun error",
-    "ERROR_I2C_FPGA_DMA - DMA transfer error",
-    "ERROR_I2C_FPGA_TIMEOUT - Timeout error",
-    "ERROR_I2C_FPGA_BUSY - Bus busy",
-    "ERROR_I2C_FPGA_HW_BUSY",
-    "ERROR_I2C_FPGA_LOCKUP",
-    "ERROR_I2C_FPGA_ADN4600",
-    "ERROR_I2C_FPGA_UNDEFINED - Undefined I2C FPGA error",
-    "ERROR_I2C_PM_NONE - No error",
-    "ERROR_I2C_PM_BERR - Bus error",
-    "ERROR_I2C_PM_ARLO - Arbitration lost",
-    "ERROR_I2C_PM_AF - No ACK received",
-    "ERROR_I2C_PM_OVR - Overrun error",
-    "ERROR_I2C_PM_DMA - DMA transfer error",
-    "ERROR_I2C_PM_TIMEOUT - Timeout error",
-    "ERROR_I2C_PM_BUSY - Warning: Bus busy",
-    "ERROR_I2C_PM_HW_BUSY",
-    "ERROR_I2C_PM_LOCKUP",
-    "ERROR_I2C_PM_UNDEFINED - Undefined I2C PM error",
-    "ERROR_LTM_VOUT - An output voltage fault or warning has occurred",
-    "ERROR_LTM_IOUT - An output current fault or warning has occurred",
-    "ERROR_LTM_VIN - An input voltage fault or warning has occurred",
-    "ERROR_LTM_MFR - A manufacturer specific fault has occurred",
-    "ERROR_LTM_POWERNGD - The PWRGD pin, if enabled, is negated. Power is not good",
-    "ERROR_LTM_BUSY - Device busy when PMBus command received",
-    "ERROR_LTM_NOPOWER - The unit is not providing power to the output",
-    "ERROR_LTM_VOUTOVER - An output overvoltage fault has occurred",
-    "ERROR_LTM_IOUTOVER - An output overcurrent fault has occurred",
-    "ERROR_LTM_VINUNDER - A VIN undervoltage fault has occurred",
-    "ERROR_LTM_OVERTEMP - A temperature fault or warning has occurred",
-    "ERROR_LTM_COMM - A communication, memory or logic fault has occurred",
-    "ERROR_UNDEFINED - Good luck figuring this one out!"
-};
-
 static uint32_t error_counters[ERROR_CODE_COUNT] = {0};
 static uint32_t error_last_tick[ERROR_CODE_COUNT] = {0};
 static uint8_t error_last_caller_id[ERROR_CODE_COUNT] = {0};
+static uint8_t error_nack[ERROR_CODE_COUNT] = {0};
+static uint8_t error_order_of_occurrence[ERROR_CODE_COUNT] = {0};
+static uint8_t error_order_max = 0;
 static bool errors_muted = false;
 uint8_t previous_error = 0xff;
 uint8_t repeating_error = 0xff;
 static uint8_t tick_overflow_count = 0;
+static uint32_t last_error_tick = 0;
 
 static uint32_t MMC_SN[3] = {0};
 static uint16_t Marble_SN = 0;
@@ -212,13 +159,12 @@ static int marble_MGTMUX_store(void);
 static void I2C_PM_smba_handler(void);
 static int i2c_hook(I2C_BUS I2C_bus, uint8_t addr, uint8_t rnw,
                     int cmd, const uint8_t *data, int len);
-static void show_mmc_ID(void);
-static void show_PHY_ID(void);
+// static void show_mmc_ID(void);
+// static void show_PHY_ID(void);
 static void get_MMC_SN(void);
 static void show_MMC_SN(void);
 static void get_Marble_SN(void);
-static void print_time(uint32_t total_seconds);
-static void print_uptime(void);
+static char* print_time(uint32_t total_seconds);
 static void print_clock_info(void);
 static void pmod_timer_interrupt_enable(void);
 static void pmod_timer_interrupt_disable(void);
@@ -284,6 +230,7 @@ void board_init(void) {
 /* Error handling functions: prints errors and logs time and count
  * Only V2 has error handler (todo - implement for Marble Mini)
  */
+
 void marble_error_handler(MarbleErrorCode_t code, uint8_t caller_id) {
     uint8_t idx = (code < ERROR_CODE_COUNT) ? code : ERROR_UNDEFINED;
     uint32_t error_previous_tick = error_last_tick[idx];
@@ -293,23 +240,68 @@ void marble_error_handler(MarbleErrorCode_t code, uint8_t caller_id) {
     error_counters[idx]++;
     error_last_tick[idx] = total_seconds;
     error_last_caller_id[idx] = caller_id;
-    if(!errors_muted) {
-      if((error_last_tick[idx] - error_previous_tick > 2) || idx != previous_error){
-        printf("\r\033[31m*** MMC ERROR: %s [%d]***\033[0m\r\n", ErrorCodeStrings[idx], caller_id);
-        repeating_error = 0xff;
-      } else {
-        if (idx != repeating_error){
-          printf("\r\033[31m*** MMC ERROR: repeating ***\033[0m\r\n> ");
-          repeating_error = idx;
-        } else {
-          if (error_last_tick[idx] - error_previous_tick == 2){ 
-            printf(".");
-            fflush(stdout);
+    error_nack[idx] = 1;
+    last_error_tick = total_seconds;
+    uint8_t previous_occurrence = error_order_of_occurrence[idx];
+    if(error_order_of_occurrence[idx] < error_order_max || error_order_max == 0){
+      error_order_of_occurrence[idx] = error_order_max + 1;
+      if(previous_occurrence > 0){
+        for(int i = 0; i < ERROR_CODE_COUNT; i++){
+          if((error_order_of_occurrence[i] > previous_occurrence)){
+            error_order_of_occurrence[i]--;
           }
         }
       }
     }
+    error_order_max = error_order_of_occurrence[idx];
+    if((error_last_tick[idx] - error_previous_tick > 2) || idx != previous_error){
+      printf("\r\033[31m*** MMC ERROR: %s [%d]***\033[0m\r\n", ErrorCodeStrings[idx], caller_id);
+      repeating_error = 0xff;
+    } else {
+      if (idx != repeating_error){
+        printf("\r\033[31m*** MMC ERROR: repeating ***\033[0m\r\n> ");
+        repeating_error = idx;
+      } else {
+        if (error_last_tick[idx] - error_previous_tick == 2){ 
+          printf(".");
+          fflush(stdout);
+        }
+      }
+    }
     previous_error = idx;
+}
+
+uint8_t marble_get_error_order_max(void){
+  return error_order_max;
+}
+
+uint32_t marble_last_error_tick(void){
+  return last_error_tick;
+}
+
+marble_error_info_t marble_get_error_info(uint8_t idx){
+  marble_error_info_t info;
+  for(int i = 0; i < ERROR_CODE_COUNT; i++){
+    if(error_order_of_occurrence[i] == idx){
+      idx = i;
+    }
+  }
+  if(idx < ERROR_CODE_COUNT){
+    info.error_index = idx;
+    info.error_count = error_counters[idx];
+    info.last_occurrence_time_s = error_last_tick[idx];
+    info.last_caller_id = error_last_caller_id[idx];
+    info.nack = error_nack[idx];
+    info.order_of_occurrence = error_order_of_occurrence[idx];
+  } else {
+    info.error_index = ERROR_UNDEFINED;
+    info.error_count = 0;
+    info.last_occurrence_time_s = 0;
+    info.last_caller_id = 0;
+    info.nack = 0;
+    info.order_of_occurrence = 0;
+  }
+  return info;
 }
 
 void marble_check_bringup(void) {
@@ -1330,8 +1322,10 @@ void marble_print_ID_status(int len) {
   #endif
     console_print_SN();
     show_MMC_SN();
-    show_mmc_ID();
-    show_PHY_ID();
+    // show_mmc_ID();
+    // show_PHY_ID();
+    printf("MMC CHIP ID: %s\r\n", print_mmc_ID());
+    printf("PHY ID: %s\r\n", print_PHY_ID());
     printf("Firmware revision: " GIT_REV " [Git]\r\n");// placeholder for GIT_REV
     printf("MMC Boot ID: 0x%08lX\n", boot_id);
     console_print_mac_ip();
@@ -1351,6 +1345,24 @@ Marble_PCB_Rev_t marble_get_pcb_rev(void) {
 
 uint8_t marble_get_board_id(void) {
   return ((uint8_t)(marble_pcb_rev & 0x0F) | BOARD_TYPE_MARBLE);
+}
+
+char* print_marble_SN(void) {
+    static char out[SN_LENGTH*2 + 3];  // "0x" + 4 hex chars + null
+    uint8_t sn[SN_LENGTH];
+    int rval = eeprom_read_sn(sn, SN_LENGTH);
+    if (rval) {
+        printf("Could not find Serial Number\r\n");
+        return out;
+    }
+    snprintf(out, sizeof(out), "0x%02X%02X", sn[1], sn[0]);
+    return out;
+}
+
+char*  print_boot_ID(void) {
+    static char buffer[11];
+    snprintf(buffer, sizeof(buffer), "0x%08lX", boot_id);
+    return buffer;
 }
 
 // This macro yields a number in the range 0-15 inclusive where the original
@@ -1992,17 +2004,19 @@ int mgtclk_xpoint_en(void)
    return rval;
 }
 
-static void show_mmc_ID(void) {
-   printf("MMC CHIP ID: DEVID 0x%04X REVID 0x%04X\r\n", (uint16_t)(HAL_GetDEVID() & 0xffff), (uint16_t)(HAL_GetREVID() & 0xffff));
-   return;
+char* print_mmc_ID(void) {
+    static char buffer[30];
+    snprintf(buffer, sizeof(buffer), "DEVID: 0x%04X - REVID: 0x%04X", (uint16_t)(HAL_GetDEVID() & 0xffff), (uint16_t)(HAL_GetREVID() & 0xffff));
+    return buffer;
 }
-
-static void show_PHY_ID(void) {
+ 
+char* print_PHY_ID(void) {
+    static char buffer[15];
     uint32_t id1, id2;
     HAL_ETH_ReadPHYRegister(&heth, MDIO_PHY_REG_PHY_ID_1, &id1);
     HAL_ETH_ReadPHYRegister(&heth, MDIO_PHY_REG_PHY_ID_2, &id2);
-   printf("PHY ID: 0x%04lX 0x%04lX\r\n", id1, id2);
-   return;
+    snprintf(buffer, sizeof(buffer), "0x%04lX 0x%04lX", id1, id2);
+    return buffer;
 }
 
 void marble_pmod_config_outputs(void) {
@@ -2280,14 +2294,15 @@ void print_reset_cause(void)
     return;
 }
 
-
-static void print_time(uint32_t total_seconds){
+static char* print_time(uint32_t total_seconds){
+    static char buffer[30];
     uint32_t days    = total_seconds / 86400;
     uint32_t hours   = (total_seconds % 86400) / 3600;
     uint32_t minutes = (total_seconds % 3600) / 60;
     uint32_t seconds = total_seconds % 60;
     // uint32_t ms_remainder  = total_ms % 1000;
-    printf(
+    snprintf(
+        buffer, sizeof(buffer),
         "%lu days, %02lu:%02lu:%02lu",
         (unsigned long) days,
         (unsigned long) hours,
@@ -2295,15 +2310,22 @@ static void print_time(uint32_t total_seconds){
         (unsigned long) seconds
         // (unsigned long) ms_remainder
     );
+    return buffer;
 }
 
-static void print_uptime(void) //wraps around at ~136 years
+char* print_uptime(void) //wraps around at ~136 years
 {
     uint32_t uptime_ms = marble_get_tick();  // current tick in ms (uint32_t)
     uint64_t total_ms = (uint64_t)tick_overflow_count * (uint64_t)UINT32_MAX
                       + (uint64_t)uptime_ms;
     uint32_t total_seconds = total_ms / 1000;
-    printf("Uptime: ");
-    print_time(total_seconds);
-    printf("\r\n");
+    return print_time(total_seconds);
+}
+
+uint32_t marble_uptime_seconds(void) //wraps around at ~136 years
+{
+  uint32_t tick_milliseconds = marble_get_tick();
+  uint64_t total_ms = (uint64_t)tick_overflow_count * (uint64_t)UINT32_MAX + (uint64_t)tick_milliseconds;
+  uint32_t total_seconds = total_ms/1000;
+  return total_seconds;
 }
