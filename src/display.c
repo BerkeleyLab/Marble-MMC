@@ -587,6 +587,18 @@ static display_page_t page_status(unsigned events) {
 
   // update only when title in position
   if(title_y == 0) {
+
+    if (frm%64 == 0) { // update every 64 frames
+      LM75_get_temperature(LM75_0);
+      LM75_get_temperature(LM75_1);
+      return_max6639_reg(MAX6639_TEMP_CH1);
+      return_max6639_reg(MAX6639_TEMP_EXT_CH1);
+      return_max6639_reg(MAX6639_TEMP_CH2);
+      return_max6639_reg(MAX6639_TEMP_EXT_CH2);
+    }
+    if (frm%16 == 0) { // update every 16 frames
+      PM_UpdateTelem();
+    }
     // roll out text
     text_cursor = smooth_slide(text_cursor, cursor_y_goal);
 
@@ -778,6 +790,10 @@ static display_page_t page_power(unsigned events) {
   static int16_t text_cursor = -DISPLAY_HEIGHT;
   static int16_t cursor_y_goal = LINE_SPACING_17;
 
+
+  if (frm%16 == 0) { // update every 16 frames
+    PM_UpdateTelem();
+  }
   // static int vin=0, iin=0;
   // static int v3V3=0, i3V3=0;
   // static int v2V5=0, i2V5=0;
@@ -841,9 +857,11 @@ static display_page_t page_power(unsigned events) {
     uint8_t mask = (1 << M_FMC_STATUS_FMC1_PWR);
     if (new_fmc_status & mask) {
       lv_init_label(&label_3v3, (5*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14+1, text_cursor + 1*LINE_SPACING_12, &lv_font_roboto_12, "ON", LV_CENTER, true);
-      if (frm%100 == 0) { // update every 100 frames
+      if ((frm+5)%64 == 0) { // update every 64 frames
+        switch_i2c_bus(6);
         new_fmc_current = ina219_getShuntVoltage(INA219_FMC1);
         fmc1_current_amps = INA219_SHUNT_VOLTAGE_TO_CURRENT(new_fmc_current);
+        switch_i2c_bus(2);
       }
       snprintf(label, 6, "%3.2fA", fmc1_current_amps);
       lv_init_label(&label_3v3, (5*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14+1, text_cursor + 2*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
@@ -856,9 +874,11 @@ static display_page_t page_power(unsigned events) {
     mask = (1 << M_FMC_STATUS_FMC2_PWR);
     if (new_fmc_status & mask) {
       lv_init_label(&label_3v3, (6*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14+1, text_cursor + 1*LINE_SPACING_12, &lv_font_roboto_12, "ON", LV_CENTER, true);
-      if ((frm+500)%100 == 0) { // update every 100 frames
+      if ((frm+10)%64 == 0) { // update every 64 frames
+        switch_i2c_bus(6);
         new_fmc_current = ina219_getShuntVoltage(INA219_FMC2);
         fmc2_current_amps = INA219_SHUNT_VOLTAGE_TO_CURRENT(new_fmc_current);
+        switch_i2c_bus(2);
       }
       snprintf(label, 6, "%3.2fA", fmc2_current_amps);
       lv_init_label(&label_3v3, (6*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14+1, text_cursor + 2*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
@@ -874,6 +894,9 @@ static display_page_t page_power(unsigned events) {
     lv_init_label(&label_1v8, (5*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14, text_cursor + 0*LINE_SPACING_12, &lv_font_roboto_12, "FMC1", LV_CENTER, true);
     invertRoundedRect((5*DISPLAY_WIDTH)/7+1, text_cursor, (6*DISPLAY_WIDTH)/7-1, text_cursor+12, 4); // white background for title
     // emptyRoundedRect((5*DISPLAY_WIDTH)/7+1, LINE_SPACING_17, (6*DISPLAY_WIDTH)/7-1, DISPLAY_HEIGHT, 4,1); // erase background for title
+
+
+
     lv_init_label(&label_1v8, (4*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14, text_cursor + 0*LINE_SPACING_12, &lv_font_roboto_12, "1V0", LV_CENTER, true);
     invertRoundedRect((4*DISPLAY_WIDTH)/7+1, text_cursor, (5*DISPLAY_WIDTH)/7-1, text_cursor+12, 4); // white background for title
     // emptyRoundedRect((4*DISPLAY_WIDTH)/7+1, LINE_SPACING_17, (5*DISPLAY_WIDTH)/7-1, DISPLAY_HEIGHT, 4,1); // erase background for title
@@ -925,6 +948,15 @@ static display_page_t page_temperature(unsigned events) {
   static int max6639_ch2[2] = {0, 0};
   char label[9];
 
+  if (frm%64 == 0) { // update every 100 frames
+    LM75_get_temperature(LM75_0);
+    LM75_get_temperature(LM75_1);
+    return_max6639_reg(MAX6639_TEMP_CH1);
+    return_max6639_reg(MAX6639_TEMP_EXT_CH1);
+    return_max6639_reg(MAX6639_TEMP_CH2);
+    return_max6639_reg(MAX6639_TEMP_EXT_CH2);
+  }
+
   fill(0);
 
   if(events & EV_ENC_S) { // push button to go back to menu
@@ -938,7 +970,7 @@ static display_page_t page_temperature(unsigned events) {
     text_cursor = smooth_slide(text_cursor, cursor_y_goal);
 
     // LM75_0
-    lm75_0_temp = LM75_get_cached_temperature(LM75_0); // does not trigger readout so OK to call frequently
+    lm75_0_temp = LM75_get_temperature(LM75_0); // does not trigger readout so OK to call frequently
     snprintf(label, LABEL_TEMPERATURE_LM75_0_SIZE, LABEL_TEMPERATURE_LM75_0_FMT, ((float)lm75_0_temp)/2);
     lv_init_label(&label_temperature_lm75_0, (0*DISPLAY_WIDTH)/4+DISPLAY_WIDTH/8, text_cursor + 1*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
     // LM75_1
@@ -951,24 +983,36 @@ static display_page_t page_temperature(unsigned events) {
     snprintf(label, LABEL_TEMPERATURE_MAX6639_1_SIZE, LABEL_TEMPERATURE_MAX6639_1_FMT, MAX6639_GET_TEMP_DOUBLE(max6639_ch1[0], max6639_ch1[1]));
     lv_init_label(&label_temperature_max6639_1, (2*DISPLAY_WIDTH)/4+DISPLAY_WIDTH/8, text_cursor + 1*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
     eeprom_read_fan_speed(&fan_speed, 1);
-    snprintf(label, 9, "Fan: %d", fan_speed);
-    lv_init_label(&label_fan_max6639_1, (2*DISPLAY_WIDTH)/4+DISPLAY_WIDTH/8, text_cursor + 2*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
+    snprintf(label, 9, "%d %%", (uint16_t)fan_speed * 5 / 6);
+    lv_init_label(&label_fan_max6639_1, 85, text_cursor + 2*LINE_SPACING_12+1, &lv_font_roboto_12, label, LV_LEFT, true);
     // MAX6639 Ch 2
     max6639_ch2[0] = max6639_get_cached_temp(MAX6639_TEMP_CH2);
     max6639_ch2[1] = max6639_get_cached_temp(MAX6639_TEMP_EXT_CH2);
     snprintf(label, LABEL_TEMPERATURE_MAX6639_2_SIZE, LABEL_TEMPERATURE_MAX6639_2_FMT, MAX6639_GET_TEMP_DOUBLE(max6639_ch2[0], max6639_ch2[1]));
-    lv_init_label(&label_temperature_max6639_2, (3*DISPLAY_WIDTH)/4+DISPLAY_WIDTH/8, text_cursor + 1*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
-    snprintf(label, 9, "Fan: %d", fan_speed);
-    lv_init_label(&label_fan_max6639_2, (3*DISPLAY_WIDTH)/4+DISPLAY_WIDTH/8, text_cursor + 2*LINE_SPACING_12, &lv_font_roboto_12, label, LV_CENTER, true);
+    lv_init_label(&label_temperature_max6639_2, (3*DISPLAY_WIDTH)/4+DISPLAY_WIDTH/8, text_cursor + 1*LINE_SPACING_12+1, &lv_font_roboto_12, label, LV_CENTER, true);
+    snprintf(label, 9, "%d %%", (uint16_t)fan_speed * 5 / 6);
+    lv_init_label(&label_fan_max6639_2, (DISPLAY_WIDTH)/2+85, text_cursor + 2*LINE_SPACING_12+1, &lv_font_roboto_12, label, LV_LEFT, true);
+    lv_init_label(&label_temperature_max6639_1_label, 4, text_cursor + 2*LINE_SPACING_12+1, &lv_font_roboto_12, "Left Fan: ", LV_LEFT, true);
+    invertRoundedRect(0, text_cursor + 2*LINE_SPACING_12, 60, text_cursor + DISPLAY_HEIGHT - LINE_SPACING_17, 4); // white background for title
+    emptyRoundedRect(0, text_cursor + 2*LINE_SPACING_12, (DISPLAY_WIDTH)/2-1, text_cursor + DISPLAY_HEIGHT - LINE_SPACING_17, 4,1); // erase background for title
+
+    lv_init_label(&label_temperature_max6639_1_label, (DISPLAY_WIDTH)/2+4, text_cursor + 2*LINE_SPACING_12, &lv_font_roboto_12, "Right Fan: ", LV_LEFT, true);
+    invertRoundedRect((DISPLAY_WIDTH)/2+1, text_cursor + 2*LINE_SPACING_12, (DISPLAY_WIDTH)/2+1+60, text_cursor + DISPLAY_HEIGHT - LINE_SPACING_17, 4); // white background for title
+    emptyRoundedRect((DISPLAY_WIDTH)/2+1, text_cursor + 2*LINE_SPACING_12, (5*DISPLAY_WIDTH)/5, text_cursor + DISPLAY_HEIGHT - LINE_SPACING_17, 4,1); // erase background for title
+    // VIN
     // titles
     lv_init_label(&label_temperature_max6639_2_label, (3*DISPLAY_WIDTH)/4+DISPLAY_WIDTH/8, text_cursor + 0*LINE_SPACING_12, &lv_font_roboto_12, "PSU2", LV_CENTER, true);
     invertRoundedRect((3*DISPLAY_WIDTH)/4+1, text_cursor, (4*DISPLAY_WIDTH)/4-1, text_cursor+12, 4); // white background for title
+    emptyRoundedRect((3*DISPLAY_WIDTH)/4+1, text_cursor, (4*DISPLAY_WIDTH)/4-1, text_cursor + LINE_SPACING_12 + 13, 4,1); // erase background for title
     lv_init_label(&label_temperature_max6639_1_label, (2*DISPLAY_WIDTH)/4+DISPLAY_WIDTH/8, text_cursor + 0*LINE_SPACING_12, &lv_font_roboto_12, "FPGA", LV_CENTER, true);
     invertRoundedRect((2*DISPLAY_WIDTH)/4+1, text_cursor, (3*DISPLAY_WIDTH)/4-1, text_cursor+12, 4); // white background for title
+    emptyRoundedRect((2*DISPLAY_WIDTH)/4+1, text_cursor, (3*DISPLAY_WIDTH)/4-1, text_cursor + LINE_SPACING_12 + 13, 4,1); // erase background for title
     lv_init_label(&label_temperature_lm75_1_label, (1*DISPLAY_WIDTH)/4+DISPLAY_WIDTH/8, text_cursor + 0*LINE_SPACING_12, &lv_font_roboto_12, "MMC", LV_CENTER, true);
     invertRoundedRect((1*DISPLAY_WIDTH)/4+1, text_cursor, (2*DISPLAY_WIDTH)/4-1, text_cursor+12, 4); // white background for title
+    emptyRoundedRect((1*DISPLAY_WIDTH)/4+1, text_cursor, (2*DISPLAY_WIDTH)/4-1, text_cursor + LINE_SPACING_12 + 13, 4,1); // erase background for title
     lv_init_label(&label_temperature_lm75_0_label, (0*DISPLAY_WIDTH)/4+DISPLAY_WIDTH/8, text_cursor + 0*LINE_SPACING_12, &lv_font_roboto_12, "PSU", LV_CENTER, true);
     invertRoundedRect((0*DISPLAY_WIDTH)/4, text_cursor, (1*DISPLAY_WIDTH)/4-1, text_cursor+12, 4); // white background for title
+    emptyRoundedRect((0*DISPLAY_WIDTH)/4, text_cursor, (1*DISPLAY_WIDTH)/4-1, text_cursor + LINE_SPACING_12 + 13, 4,1); // erase background for title
     }
   // window title, error light
   fillRect(0, DISPLAY_WIDTH, title_y, title_y+LINE_SPACING_17-1, 0x00); // erase background for title
@@ -1832,14 +1876,22 @@ static void window_scrollbar(int16_t pos, int16_t total){
 }
 
 static void errorLight(unsigned frm) {
-  // if(marble_last_error_tick() > error_reset_time){  // if error occurred after last error clear, highlight it
+  if(marble_last_error_tick() > error_reset_time){  // if error occurred after last error clear, highlight it
     lv_init_label(&error_light, 227, 3, &lv_font_roboto_12, "ERROR", LV_CENTER, true);
     if((frm>>2)%2){
       invertRoundedRect(200, 1, 254, 17, 7); // white background for title
       set_ledb(1); // red
     } else 
       set_ledb(0); // none
-  // }
+  }
+  else {
+    if(frm%32 == 0) {
+      set_ledb(2); // green
+    } else {
+      set_ledb(0); // none
+    }
+  }
+  return;
 }
 
 static int16_t smooth_slide(int16_t title_y, int16_t title_y_goal){  // smooth title movement

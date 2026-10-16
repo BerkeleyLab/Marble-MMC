@@ -104,7 +104,7 @@ typedef enum CONFIG_SADCRES {
 #define INA_REG_CALIBRATION  (0x05)
 
 // Using the nominal value of the shunt resistors 0.082 Ohms (regval is in units of 10uV)
-#define INA219_SHUNT_VOLTAGE_TO_CURRENT(regval)       ((float)(((int16_t)regval)/82000))
+#define INA219_SHUNT_VOLTAGE_TO_CURRENT(regval)  ((float)(int16_t)(regval) / 82000.0f)
 
 typedef enum {
    ADN4600 = 0x90

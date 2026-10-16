@@ -224,6 +224,7 @@ static int16_t getBusVoltage_raw(uint8_t ina)
 
 uint16_t ina219_getShuntVoltage(uint8_t ina) {
   uint16_t shunt_voltage;
+  wireReadRegister(ina, INA_REG_CONFIG, &shunt_voltage);
   if (wireReadRegister(ina, INA_REG_SHUNTVOLTAGE, &shunt_voltage)) {
     return shunt_voltage;
   }
