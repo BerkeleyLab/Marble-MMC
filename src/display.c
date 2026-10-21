@@ -1804,7 +1804,7 @@ static int compare_systick(uint32_t old, uint32_t new, uint32_t threshold) {
 }
 
 static void format_ip_addr(uint8_t *ip, char *ps, int maxlen) {
-  snprintf(ps, (size_t)maxlen, "IP: %d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
+  snprintf(ps, (size_t)maxlen, "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
   return;
 }
 
