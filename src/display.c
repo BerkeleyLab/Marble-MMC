@@ -40,17 +40,6 @@ extern const font_header_t f_roboto, f_roboto_mono, f_font_awesome_5_free;
 #define lv_font_roboto_mono_17 f_roboto_mono
 #define lv_font_fa f_font_awesome_5_free;
 
-// typedef enum {
-//   MENU=0,
-//   PAGE_STATE,
-//   PAGE_POWER,
-// #if ENABLE_FMC_CURRENT_CHECK
-//   PAGE_FMC,
-// #endif
-//   PAGE_TEMPERATURE,
-//   NUMBER_OF_PAGES, // Keep me at the end
-// } display_page_t;
-
 typedef enum {
   MENU=0,
   STATUS,
@@ -63,11 +52,6 @@ typedef enum {
   SET_IP,
   NUMBER_OF_PAGES, // Keep me at the end
 } display_page_t;
-/*
-  CONFIG,
-  SET_MAC,
-// CONFIG pages:
-*/
 
 static const char *MenuItems[NUMBER_OF_PAGES] = { // triggers compile warning if not all enum values are covered
   "Main Menu",
@@ -79,21 +63,6 @@ static const char *MenuItems[NUMBER_OF_PAGES] = { // triggers compile warning if
   "Clear Error Light",
 	"Set IP Address",
 };
-/*
-	"Configuration", // new menu page
-	"Set MAC Address"
-*/
-// static const char *MenuItems[NUMBER_OF_PAGES] = { // triggers compile warning if not all enum values are covered
-//   "Main Menu",
-// 	"Status",
-//   "Info",
-// 	"Power",
-// 	// "Temperature",
-// 	// "Error logs",
-//   // "Clear Error Light",
-// 	// "Set IP Address",
-// };
-
 
 static display_page_t menu(unsigned events);
 static display_page_t page_status(unsigned events);
@@ -150,11 +119,6 @@ static t_label IP_item;
 static t_label error_light;
 static t_label label_title;
 
-/*
-static t_label label_test_12;
-static t_label label_test_17;
-*/
-
 // =================== ERROR Overlay ========================
 // NOTE! The error overlay only works if the UI board is supplied with an alternate
 // source of 3.3V, as the +3V3 net it connects to via the Pmod is disabled when the
@@ -173,13 +137,9 @@ static const char label_error_state_pd[] = "Power Lost";
 // ===================== Page STATE =========================
 // Marble v1.4
 static t_label label_image;
-
 static t_label label_uptime;
-
 static t_label label_marble_rev;
-// IP: 192.168.100.101
 static t_label label_ip;
-// MAC: aa:bb:cc:dd:ee:ff
 static t_label label_mac;
 static t_label label_firmware;
 static t_label label_SN;
@@ -187,9 +147,6 @@ static t_label label_MMC_chip_id;
 static t_label label_PHY_id;
 static t_label label_boot_id;
 
-//Over-Temperature
-//Powerdown
-//                                      "Marble v1.4 Golden Image"
 static const char label_marble_init[] = "Marble v1.X.X";
 #define LABEL_MARBLE_REV_SIZE     (sizeof(label_marble_init)/sizeof(char))
 // static const char label_image_init[] = "xxxxxx image";
@@ -206,68 +163,28 @@ static const char label_mac_init[] = "MAC: xx:xx:xx:xx:xx:xx";
 
 // ===================== Page POWER =========================
 
-// static t_label label_12v;
 static t_label label_3v3;
-// static t_label label_2v5;
 static t_label label_1v8;
 static t_label label_1v0;
 
 
-// static t_label label_power_12V;
 #define LABEL_POWER_12V_FMT                "Input (12V): %4.2fV @ %3.2fA"
 static const char label_power_12V_init[] = "Input (12V): 12.00V @ 3.00A";
 #define LABEL_POWER_12V_SIZE     (sizeof(label_power_12V_init)/sizeof(char))
 
-// static t_label label_power_3V3;
 #define LABEL_POWER_3V3_FMT                "3V3: %3.2fV @ %3.2fA"
-// static const char label_power_3V3_init[] = "3V3: 3.30V @ 1.00A";
 #define LABEL_POWER_3V3_SIZE     (sizeof(label_power_3V3_init)/sizeof(char))
 
-// static t_label label_power_2V5;
 #define LABEL_POWER_2V5_FMT                "2V5: %3.2fV @ %3.2fA"
-// static const char label_power_2V5_init[] = "2V5: 2.50V @ 1.00A";
 #define LABEL_POWER_2V5_SIZE     (sizeof(label_power_2V5_init)/sizeof(char))
 
-// static t_label label_power_1V8;
 #define LABEL_POWER_1V8_FMT                "1V8: %3.2fV @ %3.2fA"
-// static const char label_power_1V8_init[] = "1V8: 1.80V @ 1.00A";
 #define LABEL_POWER_1V8_SIZE     (sizeof(label_power_1V8_init)/sizeof(char))
 
-// static t_label label_power_1V0;
 #define LABEL_POWER_1V0_FMT                "1V0: %3.2fV @ %3.2fA"
-// static const char label_power_1V0_init[] = "1V0: 1.00V @ 1.00A";
 #define LABEL_POWER_1V0_SIZE     (sizeof(label_power_1V0_init)/sizeof(char))
 
 // ==========================================================
-
-
-// ======================= Page FMC =========================
-// If !ENABLE_FMC_CURRENT_CHECK, FMC state is displayed on the "POWER" page
-// static t_label label_fmc_1;
-// static t_label label_fmc_2;
-
-// #if ENABLE_FMC_CURRENT_CHECK
-// static const char label_fmc_1_init[] = "FMC1: Disabled (0.00A)";
-// static const char label_fmc_2_init[] = "FMC2: Disabled (0.00A)";
-// #else
-// static const char label_fmc_1_disabled[] = "FMC1: Disabled";
-// static const char label_fmc_2_disabled[] = "FMC2: Disabled";
-// static const char label_fmc_1_enabled[] = "FMC1: Enabled";
-// static const char label_fmc_2_enabled[] = "FMC2: Enabled";
-// static const char *label_fmc_1_init = label_fmc_1_disabled;
-// static const char *label_fmc_2_init = label_fmc_2_disabled;
-// #endif
-
-// #define LABEL_FMC_2_SIZE     (sizeof(label_fmc_2_init)/sizeof(char))
-// #define LABEL_FMC_1_SIZE     (sizeof(label_fmc_1_init)/sizeof(char))
-
-// ==========================================================
-
-// =================== Page TEMPERATURE =====================
-/*
-   |LM75_0 Temp: 25.3 C        LM75_1 Temp: 25.3 C            |
-   |MAX6639 Ch1 Temp: 25.3 C   MAX6639 Ch2 Temp: 25.3 C       |
- */
 //Note: The 'degree' symbol in lv_font_roboto_12 uses encoding (U+B0)
 //      which is the result after UTF decoding.  The expected UTF-8 multi-byte
 //      encoding for this value is \xC2\xB0.
@@ -278,14 +195,12 @@ static const char label_power_12V_init[] = "Input (12V): 12.00V @ 3.00A";
 //      value in the numeric portion.
 
 static t_label label_temperature_lm75_0_label;
-// static const char label_temperature_lm75_0_label_init[] = "LM75 (U29):";
 static t_label label_temperature_lm75_0;
 #define LABEL_TEMPERATURE_LM75_0_FMT                "%4.1f \302\260C"
 static const char label_temperature_lm75_0_init[] = "25.3 @@C";
 #define LABEL_TEMPERATURE_LM75_0_SIZE (sizeof(label_temperature_lm75_0_init)/sizeof(char))
 
 static t_label label_temperature_lm75_1_label;
-// static const char label_temperature_lm75_1_label_init[] = "LM75 (U28):";
 static t_label label_temperature_lm75_1;
 #define LABEL_TEMPERATURE_LM75_1_FMT                "%4.1f \302\260C"
 static const char label_temperature_lm75_1_init[] = "25.3 @@C";
@@ -295,14 +210,12 @@ static t_label label_fan_max6639_1;
 static t_label label_fan_max6639_2;
 
 static t_label label_temperature_max6639_1_label;
-// static const char label_temperature_max6639_1_label_init[] = "FPGA (U1):";
 static t_label label_temperature_max6639_1;
 #define LABEL_TEMPERATURE_MAX6639_1_FMT                "%4.1f \302\260C"
 static const char label_temperature_max6639_1_init[] = "25.3 @@C";
 #define LABEL_TEMPERATURE_MAX6639_1_SIZE (sizeof(label_temperature_max6639_1_init)/sizeof(char))
 
 static t_label label_temperature_max6639_2_label;
-// static const char label_temperature_max6639_2_label_init[] = "Fan Ctrlr (U27):";
 static t_label label_temperature_max6639_2;
 #define LABEL_TEMPERATURE_MAX6639_2_FMT                "%4.1f \302\260C"
 static const char label_temperature_max6639_2_init[] = "25.3 @@C";
@@ -310,31 +223,20 @@ static const char label_temperature_max6639_2_init[] = "25.3 @@C";
 
 // ==========================================================
 
-// static void update_page(int refresh);
 static void init_display_error(void);
-// static void init_page_menu(void);
-// static void init_page_state(void);
-// static void init_page_power(void);
-// static void init_page_temperature(void);
 static void update_display_error(int refresh);
-// static int update_page_menu(int refresh);
-// static int update_page_state(int refresh);
 #if ENABLE_FMC_CURRENT_CHECK
 static void init_page_fmc(void);
 static int update_page_fmc(int refresh);
 #endif
-// static int update_page_temperature(int refresh);
 static void display_enable(void);
 static void display_disable(void);
-// static void display_toggle(void);
 static void display_timeout(void);
 static int compare_systick(uint32_t old, uint32_t new, uint32_t threshold);
 static int do_update(uint32_t last_update);
 static int do_update_buffer(uint32_t last_buffer_update);
 static void format_ip_addr(uint8_t *ip, char *ps, int maxlen);
 static void format_mac_addr(uint8_t *mac, char *ps, int maxlen);
-// static int array_updated_uint8_t(volatile uint8_t *old, const uint8_t *new, int len);
-// static int array_updated_int(volatile int *old, const int *new, int len);
 static void update_led(void);
 
 void display_update(void) {
@@ -409,92 +311,6 @@ void display_update(void) {
   return;
 }
 
-
-// void display_update(void) {
-//   if (new_status == BOARD_STATUS_GOOD) {
-
-//     // Check encoder knob
-//     ui_board_poll(false);
-
-//     unsigned events = get_event_flags();
-//     // Only checking encoder (button/knob) when power good
-//     if (events & EV_ROT_CCW) {
-//       // Turn left; decrease page number
-//       if (current_page == PAGE_FIRST) {
-//         current_page = PAGE_LAST;
-//       } else {
-//         --current_page;
-//       }
-//       display_enable();
-//       refresh = 1;
-//     } else if (events & EV_ROT_CW) {
-//       // Turn right; increase page number
-//       if (current_page == PAGE_LAST) {
-//         current_page = PAGE_FIRST;
-//       } else {
-//         ++current_page;
-//       }
-//       display_enable();
-//       refresh = 1;
-//     } else if (events & EV_ENC_S) {
-//       // Push button, toggle ON/OFF
-//       display_toggle();
-//     }
-//   }
-
-
-//   if (do_update(last_update) || refresh) {
-//     if (new_status == BOARD_STATUS_GOOD) {
-//       if (display_enabled) {
-//         update_page(refresh);
-//       }
-
-
-//     } else {
-//       display_enable();
-//       if (status != new_status) {
-//         update_display_error(1);
-//       }
-//     }
-//     last_update = BSP_GET_SYSTICK();
-//     status = new_status;
-//     ui_board_poll(true);  // start a new framebuffer transmission. One row per call.
-//   }
-//   if (display_enabled) {
-//     display_timeout();
-//     update_led();
-//   }
-//   return;
-// }
-
-// static void update_page(int refresh) {
-//   if (refresh) {
-//     fill(0);
-//   }
-//   switch (current_page) {
-//     case MENU:
-//       refresh |= update_page_menu(refresh);
-//       break;
-//     case PAGE_STATE:
-//       refresh |= update_page_state(refresh);
-//       break;
-//     case PAGE_POWER:
-//       refresh |= update_page_power(refresh);
-//       break;
-// #if ENABLE_FMC_CURRENT_CHECK
-//     case PAGE_FMC:
-//       refresh |= update_page_fmc(refresh);
-//       break;
-// #endif
-//     case PAGE_TEMPERATURE:
-//       refresh |= update_page_temperature(refresh);
-//       break;
-//     default:
-//       break;
-//   }
-//   return;
-// }
-
 static void update_display_error(int refresh) {
   if (refresh) {
     fill(0);
@@ -517,7 +333,6 @@ static void update_display_error(int refresh) {
   last_status = status;
   return;
 }
-
 
 static display_page_t menu(unsigned events){//int refresh
 	static unsigned frm = 0;
@@ -772,7 +587,6 @@ static display_page_t page_info(unsigned events) {
   errorLight(frm);
   invertRoundedRect(0, title_y, DISPLAY_WIDTH, title_y + LINE_SPACING_17-2, (LINE_SPACING_17-3)/2); // white background for title
   frm++;
-  //send_window_4((unsigned)label_ip.x0, (unsigned)label_ip.y0, (unsigned)label_ip.x1, (unsigned)label_ip.y1, uint8_t *data);
   if(title_y == 23) {
       title_y_goal = 0;
       return MENU; // go back to menu
@@ -794,11 +608,6 @@ static display_page_t page_power(unsigned events) {
   if (frm%16 == 0) { // update every 16 frames
     PM_UpdateTelem();
   }
-  // static int vin=0, iin=0;
-  // static int v3V3=0, i3V3=0;
-  // static int v2V5=0, i2V5=0;
-  // static int v1V8=0, i1V8=0;
-  // static int v1V0=0, i1V0=0;
 
   fill(0);
 
@@ -890,35 +699,18 @@ static display_page_t page_power(unsigned events) {
 
     lv_init_label(&label_1v0, (6*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14, text_cursor + 0*LINE_SPACING_12, &lv_font_roboto_12, "FMC2", LV_CENTER, true);
     invertRoundedRect((6*DISPLAY_WIDTH)/7+1, text_cursor, (7*DISPLAY_WIDTH)/7, text_cursor+12, 4); // white background for title
-    // emptyRoundedRect((6*DISPLAY_WIDTH)/7+1, LINE_SPACING_17, (7*DISPLAY_WIDTH)/7, DISPLAY_HEIGHT, 4,1); // erase background for title
     lv_init_label(&label_1v8, (5*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14, text_cursor + 0*LINE_SPACING_12, &lv_font_roboto_12, "FMC1", LV_CENTER, true);
     invertRoundedRect((5*DISPLAY_WIDTH)/7+1, text_cursor, (6*DISPLAY_WIDTH)/7-1, text_cursor+12, 4); // white background for title
-    // emptyRoundedRect((5*DISPLAY_WIDTH)/7+1, LINE_SPACING_17, (6*DISPLAY_WIDTH)/7-1, DISPLAY_HEIGHT, 4,1); // erase background for title
-
-
-
     lv_init_label(&label_1v8, (4*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14, text_cursor + 0*LINE_SPACING_12, &lv_font_roboto_12, "1V0", LV_CENTER, true);
     invertRoundedRect((4*DISPLAY_WIDTH)/7+1, text_cursor, (5*DISPLAY_WIDTH)/7-1, text_cursor+12, 4); // white background for title
-    // emptyRoundedRect((4*DISPLAY_WIDTH)/7+1, LINE_SPACING_17, (5*DISPLAY_WIDTH)/7-1, DISPLAY_HEIGHT, 4,1); // erase background for title
     lv_init_label(&label_1v8, (3*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14, text_cursor + 0*LINE_SPACING_12, &lv_font_roboto_12, "1V8", LV_CENTER, true);
     invertRoundedRect((3*DISPLAY_WIDTH)/7+1, text_cursor, (4*DISPLAY_WIDTH)/7-1, text_cursor+12, 4); // white background for title
-    // emptyRoundedRect((3*DISPLAY_WIDTH)/7+1, LINE_SPACING_17, (4*DISPLAY_WIDTH)/7-1, DISPLAY_HEIGHT, 4,1); // erase background for title
     lv_init_label(&label_1v8, (2*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14, text_cursor + 0*LINE_SPACING_12, &lv_font_roboto_12, "2V5", LV_CENTER, true);
     invertRoundedRect((2*DISPLAY_WIDTH)/7+1, text_cursor, (3*DISPLAY_WIDTH)/7-1, text_cursor+12, 4); // white background for title
-    // invertRoundedRect((2*DISPLAY_WIDTH)/7+1, LINE_SPACING_17, (3*DISPLAY_WIDTH)/7-1, DISPLAY_HEIGHT, 4); // white background for title
-    // emptyRoundedRect((2*DISPLAY_WIDTH)/7+1, LINE_SPACING_17, (3*DISPLAY_WIDTH)/7-1, LINE_SPACING_17+12, 4,1); // erase background for title
-    // emptyRoundedRect((2*DISPLAY_WIDTH)/7+1, LINE_SPACING_17, (3*DISPLAY_WIDTH)/7-1, DISPLAY_HEIGHT, 4,1); // erase background for title
     lv_init_label(&label_1v8, (1*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14, text_cursor + 0*LINE_SPACING_12, &lv_font_roboto_12, "3V3", LV_CENTER, true);
     invertRoundedRect((1*DISPLAY_WIDTH)/7+1, text_cursor, (2*DISPLAY_WIDTH)/7-1, text_cursor+12, 4); // white background for title
-    // emptyRoundedRect((1*DISPLAY_WIDTH)/7+1, LINE_SPACING_17, (2*DISPLAY_WIDTH)/7-1, LINE_SPACING_17+12, 4,1); // erase background for title
-    // emptyRoundedRect((1*DISPLAY_WIDTH)/7+1, LINE_SPACING_17, (2*DISPLAY_WIDTH)/7-1, DISPLAY_HEIGHT, 4,1); // erase background for title
     lv_init_label(&label_1v8, (0*DISPLAY_WIDTH)/7+DISPLAY_WIDTH/14, text_cursor + 0*LINE_SPACING_12, &lv_font_roboto_12, "VIN", LV_CENTER, true);
     invertRoundedRect((0*DISPLAY_WIDTH)/7, text_cursor, (1*DISPLAY_WIDTH)/7-1, text_cursor+12, 4); // white background for title
-    // invertRoundedRect((0*DISPLAY_WIDTH)/7, LINE_SPACING_17, (1*DISPLAY_WIDTH)/7-1, DISPLAY_HEIGHT, 4); // white background for title
-    // emptyRoundedRect((0*DISPLAY_WIDTH)/7, LINE_SPACING_17, (1*DISPLAY_WIDTH)/7-1, LINE_SPACING_17+12, 4,1); // erase background for title
-    // emptyRoundedRect((0*DISPLAY_WIDTH)/7, LINE_SPACING_17, (1*DISPLAY_WIDTH)/7-1, DISPLAY_HEIGHT, 4,1); // erase background for title
-    // fillRect((0*DISPLAY_WIDTH)/7, (1*DISPLAY_WIDTH)/7-1, LINE_SPACING_17+12, DISPLAY_HEIGHT, 0x01); // erase background for title
-
   }
   // window title, error light
   fillRect(0, DISPLAY_WIDTH, title_y, title_y+LINE_SPACING_17-1, 0x00); // erase background for title
@@ -1027,8 +819,6 @@ static display_page_t page_temperature(unsigned events) {
   }
   return TEMPERATURE;
 }
-
-
 
 static display_page_t page_errors(unsigned events) {
   static unsigned frm = 0;
@@ -1238,15 +1028,11 @@ static display_page_t config_warning(unsigned events)
 	return CONFIG_WARNING; // stay in menu
 }
 
-
-
 static display_page_t set_IP(unsigned events)
 {
 	static unsigned frm = 0;
   static int16_t title_y_goal = 0;
   static int16_t title_y = 0;
-	// static unsigned isBtn;
-	// int dx = 0, dy = 0;
 	static int16_t cursor_x1 = 0;
 	static int16_t cursor_x2 = 0;
 	static int16_t cursor_y1 = 0;
@@ -1376,276 +1162,6 @@ static display_page_t set_IP(unsigned events)
 	return SET_IP; // stay in menu
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// static int update_page_state(int refresh) {
-//   static uint8_t pip[4] = {0, 0, 0, 0};
-//   static uint8_t pmac[6] = {0, 0, 0, 0, 0, 0};
-//   static FPGAWD_State_t fpga_state = STATE_GOLDEN;
-//   int rval = 0;
-//   // block scope to avoid unnecessarily filling the stack
-//   { // Marble label
-//     FPGAWD_State_t current_state = FPGAWD_GetState();
-//     int rev = 0;
-//     if (refresh || (current_state != fpga_state)) {
-//       if (marble_get_pcb_rev() == Marble_v1_4) {
-//         rev = 4;
-//       } else {
-//         rev = 3;
-//       }
-//       // char label[LABEL_MARBLE_SIZE];
-//       // snprintf(label, LABEL_MARBLE_SIZE, "Marble v1.%d %s Image", rev, current_state == STATE_GOLDEN ? "Golden" : "User");
-//       // lv_update_label(&label_marble, label);
-//       fpga_state = current_state;
-//       rval = 1;
-//     }
-//   }
-//   draw_rectangle_r(0, LINE_SPACING_17+2, DISPLAY_WIDTH, 2*LINE_SPACING_17+1, (LINE_SPACING_17-2)/2, 0xFF); // white background for title
-// // void draw_rectangle_r(int x0, int y0, int x1, int y1, int r, uint8_t value) {
-
-//   { // IP addr
-//     if (array_updated_uint8_t(pip, get_last_ip(), 4) || refresh) {
-//       char ip_string[LABEL_IP_SIZE + 1];
-//       format_ip_addr(pip, ip_string, LABEL_IP_SIZE);
-//       ip_string[LABEL_IP_SIZE] = '\0'; // null-terminate
-//       lv_update_label(&label_ip, ip_string);
-//       if (!refresh) {
-//         rval = 1;
-//       }
-//     }
-//   }
-//   { // MAC addr
-//     if (array_updated_uint8_t(pmac, get_last_mac(), 6) || refresh) {
-//       char mac_string[LABEL_MAC_SIZE + 1];
-//       format_mac_addr(pmac, mac_string, LABEL_MAC_SIZE);
-//       mac_string[LABEL_MAC_SIZE] = '\0'; // null-terminate
-//       lv_update_label(&label_mac, mac_string);
-//       if (!refresh) {
-//         rval = 1;
-//       }
-//     }
-//   }
-  //send_window_4((unsigned)label_ip.x0, (unsigned)label_ip.y0, (unsigned)label_ip.x1, (unsigned)label_ip.y1, uint8_t *data);
-//   return rval; // TODO - return whether we need to update the screen (if a value has changed)
-// }
-
-// static int update_page_power(int refresh) {
-//   int rval = 0;
-//   static int vin=0, iin=0;
-//   static int v3V3=0, i3V3=0;
-//   static int v2V5=0, i2V5=0;
-//   static int v1V8=0, i1V8=0;
-//   static int v1V0=0, i1V0=0;
-//   // 12V
-//   int newv = PM_GetTelem(VIN);
-//   int newi = PM_GetTelem(IIN);
-//   if (refresh || (newv != vin) || (newi != iin)) {
-//     vin = newv;
-//     iin = newi;
-//     char label[LABEL_POWER_12V_SIZE];
-//     snprintf(label, LABEL_POWER_12V_SIZE, LABEL_POWER_12V_FMT, (float)(newv/1000.0), (float)(newi/1000.0));
-//     lv_update_label(&label_power_12V, label);
-//     rval = 1;
-//   }
-//   // 3V3
-//   newv = PM_GetTelem(VOUT_3V3);
-//   newi = PM_GetTelem(IOUT_3V3);
-//   if (refresh || (newv != v3V3) || (newi != i3V3)) {
-//     v3V3 = newv;
-//     i3V3 = newi;
-//     char label[LABEL_POWER_3V3_SIZE];
-//     snprintf(label, LABEL_POWER_3V3_SIZE, LABEL_POWER_3V3_FMT, (float)(newv/1000.0), (float)(newi/1000.0));
-//     lv_update_label(&label_power_3V3, label);
-//     rval = 1;
-//   }
-//   // 2V5
-//   newv = PM_GetTelem(VOUT_2V5);
-//   newi = PM_GetTelem(IOUT_2V5);
-//   if (refresh || (newv != v2V5) || (newi != i2V5)) {
-//     v2V5 = newv;
-//     i2V5 = newi;
-//     char label[LABEL_POWER_2V5_SIZE];
-//     snprintf(label, LABEL_POWER_2V5_SIZE, LABEL_POWER_2V5_FMT, (float)(newv/1000.0), (float)(newi/1000.0));
-//     lv_update_label(&label_power_2V5, label);
-//     rval = 1;
-//   }
-//   // 1V8
-//   newv = PM_GetTelem(VOUT_1V8);
-//   newi = PM_GetTelem(IOUT_1V8);
-//   if (refresh || (newv != v1V8) || (newi != i1V8)) {
-//     v1V8 = newv;
-//     i1V8 = newi;
-//     char label[LABEL_POWER_1V8_SIZE];
-//     snprintf(label, LABEL_POWER_1V8_SIZE, LABEL_POWER_1V8_FMT, (float)(newv/1000.0), (float)(newi/1000.0));
-//     lv_update_label(&label_power_1V8, label);
-//     rval = 1;
-//   }
-//   // 1V0
-//   newv = PM_GetTelem(VOUT_1V0);
-//   newi = PM_GetTelem(IOUT_1V0);
-//   if (refresh || (newv != v1V0) || (newi != i1V0)) {
-//     v1V0 = newv;
-//     i1V0 = newi;
-//     char label[LABEL_POWER_1V0_SIZE];
-//     snprintf(label, LABEL_POWER_1V0_SIZE, LABEL_POWER_1V0_FMT, (float)(newv/1000.0), (float)(newi/1000.0));
-//     lv_update_label(&label_power_1V0, label);
-//     rval = 1;
-//   }
-// #if ENABLE_FMC_CURRENT_CHECK == 0
-//   // FMC
-//   static uint8_t fmc_status = 0;
-//   uint8_t new_fmc_status = marble_FMC_status();
-//   // FMC1
-//   uint8_t mask = (1 << M_FMC_STATUS_FMC1_PWR);
-//   uint8_t new_fmc = (new_fmc_status & mask) ^ (fmc_status & mask);
-//   if (new_fmc_status & mask) {
-//     if (refresh || new_fmc) {
-//       lv_update_label(&label_fmc_1, label_fmc_1_enabled);
-//       rval = 1;
-//     }
-//   } else {
-//     if (new_fmc_status != fmc_status) {
-//       lv_update_label(&label_fmc_1, label_fmc_1_disabled);
-//       rval = 1;
-//     }
-//   }
-//   // FMC2
-//   mask = (1 << M_FMC_STATUS_FMC2_PWR);
-//   new_fmc = (new_fmc_status & mask) ^ (fmc_status & mask);
-//   if (new_fmc_status & mask) {
-//     if (refresh || new_fmc) {
-//       lv_update_label(&label_fmc_2, label_fmc_2_enabled);
-//       rval = 1;
-//     }
-//   } else {
-//     if (new_fmc_status != fmc_status) {
-//       lv_update_label(&label_fmc_2, label_fmc_2_disabled);
-//       rval = 1;
-//     }
-//   }
-//   fmc_status = new_fmc_status;
-// #endif
-//   return rval;
-// }
-
-// #if ENABLE_FMC_CURRENT_CHECK
-// static int update_page_fmc(int refresh) {
-//   int rval = 0;
-//   // TODO - Use external load on FMC1/2 to check calibration of INA219_SHUNT_VOLTAGE_TO_CURRENT()
-//   static uint8_t fmc_status = 0;
-//   static uint16_t fmc1_current = 0;
-//   static uint16_t fmc2_current = 0;
-//   uint8_t new_fmc_status = marble_FMC_status();
-//   // FMC1
-//   uint8_t mask = (1 << M_FMC_STATUS_FMC1_PWR);
-//   uint8_t new_fmc = (new_fmc_status & mask) ^ (fmc_status & mask);
-//   uint16_t new_fmc_current=0;
-//   new_fmc_current = ina219_getShuntVoltage(INA219_FMC1);
-//   if (new_fmc_status & mask) {
-//     if (refresh || new_fmc || (new_fmc_current != fmc1_current)) {
-//       float fmc1_current_amps = INA219_SHUNT_VOLTAGE_TO_CURRENT(new_fmc_current);
-//       char label[LABEL_FMC_1_SIZE];
-//       snprintf(label, LABEL_FMC_1_SIZE, "FMC1: Enabled @ %4.2fA", fmc1_current_amps);
-//       lv_update_label(&label_fmc_1, label);
-//       fmc1_current = new_fmc_current;
-//       rval = 1;
-//     }
-//   } else {
-//     if (new_fmc_status != fmc_status) {
-//       lv_update_label(&label_fmc_1, "FMC1: Disabled");
-//       rval = 1;
-//     }
-//   }
-//   // FMC2
-//   mask = (1 << M_FMC_STATUS_FMC2_PWR);
-//   new_fmc = (new_fmc_status & mask) ^ (fmc_status & mask);
-//   new_fmc_current = ina219_getShuntVoltage(INA219_FMC2);
-//   if (new_fmc_status & mask) {
-//     if (refresh || new_fmc || (new_fmc_current != fmc2_current)) {
-//       float fmc2_current_amps = INA219_SHUNT_VOLTAGE_TO_CURRENT(new_fmc_current);
-//       char label[LABEL_FMC_2_SIZE];
-//       snprintf(label, LABEL_FMC_2_SIZE, "FMC2: Enabled @ %4.2fA", fmc2_current_amps);
-//       lv_update_label(&label_fmc_2, label);
-//       fmc2_current = new_fmc_current;
-//       rval = 1;
-//     }
-//   } else {
-//     if (new_fmc_status != fmc_status) {
-//       lv_update_label(&label_fmc_2, "FMC2: Disabled");
-//       rval = 1;
-//     }
-//   }
-//   fmc_status = new_fmc_status;
-//   return rval;
-// }
-// #endif
-
-// static int update_page_temperature(int refresh) {
-//   int rval = 0;
-//   static int lm75_0_temp=0, lm75_1_temp=0;
-//   static int max6639_ch1[2] = {0, 0};
-//   static int max6639_ch2[2] = {0, 0};
-//   if (refresh) {
-//     lv_update_label(&label_temperature_lm75_0_label, label_temperature_lm75_0_label_init);
-//     lv_update_label(&label_temperature_lm75_1_label, label_temperature_lm75_1_label_init);
-//     lv_update_label(&label_temperature_max6639_1_label, label_temperature_max6639_1_label_init);
-//     lv_update_label(&label_temperature_max6639_2_label, label_temperature_max6639_2_label_init);
-//     rval = 1;
-//   }
-//   // LM75_0
-//   int new_lm75_temp = LM75_get_cached_temperature(LM75_0);
-//   if (refresh || (new_lm75_temp != lm75_0_temp)) {
-//     char label[LABEL_TEMPERATURE_LM75_0_SIZE];
-//     snprintf(label, LABEL_TEMPERATURE_LM75_0_SIZE, LABEL_TEMPERATURE_LM75_0_FMT, ((float)new_lm75_temp)/2);
-//     lv_update_label(&label_temperature_lm75_0, label);
-//     lm75_0_temp = new_lm75_temp;
-//     rval = 1;
-//   }
-//   // LM75_1
-//   new_lm75_temp = LM75_get_cached_temperature(LM75_1);
-//   if (refresh || (new_lm75_temp != lm75_1_temp)) {
-//     char label[LABEL_TEMPERATURE_LM75_1_SIZE];
-//     snprintf(label, LABEL_TEMPERATURE_LM75_1_SIZE, LABEL_TEMPERATURE_LM75_1_FMT, ((float)new_lm75_temp)/2);
-//     lv_update_label(&label_temperature_lm75_1, label);
-//     lm75_1_temp = new_lm75_temp;
-//     rval = 1;
-//   }
-//   // MAX6639 Ch 1
-//   int new_max6639[2];
-//   new_max6639[0] = max6639_get_cached_temp(MAX6639_TEMP_CH1);
-//   new_max6639[1] = max6639_get_cached_temp(MAX6639_TEMP_EXT_CH1);
-//   if (array_updated_int(max6639_ch1, new_max6639, 2) || refresh) {
-//     char label[LABEL_TEMPERATURE_MAX6639_1_SIZE];
-//     snprintf(label, LABEL_TEMPERATURE_MAX6639_1_SIZE, LABEL_TEMPERATURE_MAX6639_1_FMT, MAX6639_GET_TEMP_DOUBLE(new_max6639[0], new_max6639[1]));
-//     lv_update_label(&label_temperature_max6639_1, label);
-//     rval = 1;
-//   }
-//   // MAX6639 Ch 2
-//   new_max6639[0] = max6639_get_cached_temp(MAX6639_TEMP_CH2);
-//   new_max6639[1] = max6639_get_cached_temp(MAX6639_TEMP_EXT_CH2);
-//   if (array_updated_int(max6639_ch2, new_max6639, 2) || refresh) {
-//     char label[LABEL_TEMPERATURE_MAX6639_2_SIZE];
-//     snprintf(label, LABEL_TEMPERATURE_MAX6639_2_SIZE, LABEL_TEMPERATURE_MAX6639_2_FMT, MAX6639_GET_TEMP_DOUBLE(new_max6639[0], new_max6639[1]));
-//     lv_update_label(&label_temperature_max6639_2, label);
-//     rval = 1;
-//   }
-//   return rval;
-// }
-
 void display_init(bool is_ui_board_1u) {
   // For lack of a better place, let's put this here for now
   printf("Initializing UI_BOARD%s\r\n", is_ui_board_1u ? "_1U" : "");
@@ -1654,95 +1170,6 @@ void display_init(bool is_ui_board_1u) {
   set_inverted(0);
 
   fill(0);
-  /*
-  // TEST!
-  lv_init_label(&label_test_12, 0, 0, &lv_font_roboto_12, "%", LV_LEFT, false);
-  lv_init_label(&label_test_17, 0, 0, &lv_font_roboto_mono_17, "@", LV_LEFT, false);
-  printf("12pt: dx = %d; dy = %d\r\n", label_test_12.x1-label_test_12.x0, label_test_12.y1-label_test_12.y0);
-  printf("17pt: dx = %d; dy = %d\r\n", label_test_17.x1-label_test_17.x0, label_test_17.y1-label_test_17.y0);
-  */
-
-  // init_display_error();
-  // init_page_menu();
-  // init_page_state();
-  // init_page_power();
-#if ENABLE_FMC_CURRENT_CHECK
-  // init_page_fmc();
-#endif
-  // init_page_temperature();
-  // update_page(1); // force refresh
-  last_touch = BSP_GET_SYSTICK();
-  return;
-}
-
-// static void init_display_error(void) {
-//   lv_init_label(&label_error,       DISPLAY_WIDTH/2, LINE_SPACING_17/2, &lv_font_roboto_mono_17, label_error_init, LV_CENTER, false);
-//   if (LABEL_ERROR_STATE_OT_SIZE > LABEL_ERROR_STATE_PD_SIZE) {
-//     lv_init_label(&label_error_state, DISPLAY_WIDTH/2, 1*LINE_SPACING_17 + LINE_SPACING_17/2, &lv_font_roboto_mono_17, label_error_state_ot, LV_CENTER, false);
-//   } else {
-//     lv_init_label(&label_error_state, DISPLAY_WIDTH/2, 1*LINE_SPACING_17 + LINE_SPACING_17/2, &lv_font_roboto_mono_17, label_error_state_pd, LV_CENTER, false);
-//   }
-//   return;
-// }
-
-// static void init_page_menu(void) {
-//   // PAGE_STATE
-//   lv_init_label(&label_marble, 0, 0*LINE_SPACING, &DEFAULT_FONT, label_marble_init, LV_LEFT, false);
-//   lv_init_label(&label_ip,     0, 1*LINE_SPACING, &DEFAULT_FONT, label_ip_init,     LV_LEFT, false);
-//   lv_init_label(&label_mac,    0, 2*LINE_SPACING, &DEFAULT_FONT, label_mac_init,    LV_LEFT, false);
-//   return;
-// }
-
-// static void init_page_state(void) {
-//   // PAGE_STATE
-//   lv_init_label(&label_marble_rev, 0, 0*LINE_SPACING, &DEFAULT_FONT, label_marble_init, LV_LEFT, false);
-//   lv_init_label(&label_ip,     0, 1*LINE_SPACING, &DEFAULT_FONT, label_ip_init,     LV_LEFT, false);
-//   lv_init_label(&label_mac,    0, 2*LINE_SPACING, &DEFAULT_FONT, label_mac_init,    LV_LEFT, false);
-//   return;
-// }
-
-// static void init_page_power(void) {
-//   // PAGE_POWER
-//   lv_init_label(&label_power_12V,            0, 0*LINE_SPACING_12, &lv_font_roboto_12, label_power_12V_init, LV_LEFT, false);
-//   lv_init_label(&label_power_3V3,            0, 1*LINE_SPACING_12, &lv_font_roboto_12, label_power_3V3_init, LV_LEFT, false);
-//   lv_init_label(&label_power_1V8,            0, 2*LINE_SPACING_12, &lv_font_roboto_12, label_power_1V8_init, LV_LEFT, false);
-// #if ENABLE_FMC_CURRENT_CHECK == 0
-//   lv_init_label(&label_fmc_1,                0, 3*LINE_SPACING_12, &lv_font_roboto_12, label_fmc_1_init, LV_LEFT, false);
-//   int max_width = MAX(MAX(label_power_3V3.bb.right, label_power_1V8.bb.right), label_fmc_1.bb.right);
-// #else
-//   int max_width = MAX(label_power_3V3.bb.right, label_power_1V8.bb.right);
-// #endif
-//   lv_init_label(&label_power_2V5, max_width+12, 1*LINE_SPACING_12, &lv_font_roboto_12, label_power_2V5_init, LV_LEFT, false);
-//   lv_init_label(&label_power_1V0, max_width+12, 2*LINE_SPACING_12, &lv_font_roboto_12, label_power_1V0_init, LV_LEFT, false);
-// #if ENABLE_FMC_CURRENT_CHECK == 0
-//   lv_init_label(&label_fmc_2,     max_width+12, 3*LINE_SPACING_12, &lv_font_roboto_12, label_fmc_2_init, LV_LEFT, false);
-// #endif
-//   return;
-// }
-
-// #if ENABLE_FMC_CURRENT_CHECK
-// static void init_page_fmc(void) {
-//   // PAGE_FMC
-//   lv_init_label(&label_fmc_1, 0, 0*LINE_SPACING, &DEFAULT_FONT, label_fmc_1_init, LV_LEFT, false);
-//   lv_init_label(&label_fmc_2, 0, 1*LINE_SPACING, &DEFAULT_FONT, label_fmc_2_init, LV_LEFT, false);
-//   return;
-// }
-// #endif
-
-// static void init_page_temperature(void) {
-//   // PAGE_TEMPERATURE
-//   lv_init_label(&label_temperature_lm75_0_label,    0, 0*LINE_SPACING_12, &lv_font_roboto_12, label_temperature_lm75_0_label_init,    LV_LEFT, false);
-//   lv_init_label(&label_temperature_lm75_1_label,    0, 1*LINE_SPACING_12, &lv_font_roboto_12, label_temperature_lm75_1_label_init,    LV_LEFT, false);
-//   lv_init_label(&label_temperature_max6639_1_label, 0, 2*LINE_SPACING_12, &lv_font_roboto_12, label_temperature_max6639_1_label_init, LV_LEFT, false);
-//   lv_init_label(&label_temperature_max6639_2_label, 0, 3*LINE_SPACING_12, &lv_font_roboto_12, label_temperature_max6639_2_label_init, LV_LEFT, false);
-//   int xmax = MAX(MAX(label_temperature_lm75_0_label.bb.right, label_temperature_lm75_1_label.bb.right),
-//                  MAX(label_temperature_max6639_1_label.bb.right, label_temperature_max6639_2_label.bb.right));
-//   lv_init_label(&label_temperature_lm75_0,     xmax+4, 0*LINE_SPACING_12, &lv_font_roboto_12, label_temperature_lm75_0_init,    LV_LEFT, false);
-//   lv_init_label(&label_temperature_lm75_1,     xmax+4, 1*LINE_SPACING_12, &lv_font_roboto_12, label_temperature_lm75_1_init,    LV_LEFT, false);
-//   lv_init_label(&label_temperature_max6639_1,  xmax+4, 2*LINE_SPACING_12, &lv_font_roboto_12, label_temperature_max6639_1_init, LV_LEFT, false);
-//   lv_init_label(&label_temperature_max6639_2,  xmax+4, 3*LINE_SPACING_12, &lv_font_roboto_12, label_temperature_max6639_2_init, LV_LEFT, false);
-//   return;
-// }
 
 static void display_enable(void) {
   // Set the display to the same brightness value used in the ui_board.c driver
@@ -1813,50 +1240,7 @@ static void format_mac_addr(uint8_t *mac, char *ps, int maxlen) {
   return;
 }
 
-// static int array_updated_uint8_t(volatile uint8_t *old, const uint8_t *new, int len) {
-//   //printf("array_updated?\r\n");
-//   int diff = 0;
-//   for (int n=0; n<len; n++) {
-//     if (*(old+n) != *(new+n)) {
-//       //printf("  Diff! %x != %x\r\n", *(old+n), *(new+n));
-//       diff = 1;
-//       break;
-//     }
-//   }
-//   if (diff) {
-//     memcpy((void *)old, (void *)new, (size_t)(len/sizeof(uint8_t)));
-//     //printf("  after memcpy: ");
-//     //PRINT_MULTIBYTE_DEC(old, 4, '.');
-//   } else {
-//     //printf("  Identical\r\n");
-//   }
-//   return diff;
-// }
-
-// static int array_updated_int(volatile int *old, const int *new, int len) {
-//   int diff = 0;
-//   for (int n=0; n<len; n++) {
-//     if (*(old+n) != *(new+n)) {
-//       diff = 1;
-//       break;
-//     }
-//   }
-//   if (diff) {
-//     memcpy((void *)old, (void *)new, (size_t)(len/sizeof(uint8_t)));
-//   } else {
-//     //printf("  Identical\r\n");
-//   }
-//   return diff;
-// }
-
-
-// static void scrollbar(int16_t percentage) {
-//   emptyRoundedRect(1, 1, 7, DISPLAY_HEIGHT - 2, 3, 1);
-//   invertRoundedRect(2, 2 + (percentage*47)/100, 6, 14 + (percentage*47)/100, 2); // FIXME: take percentage
-// }
-
 static void window_scrollbar(int16_t pos, int16_t total){
-  // total += LINE_SPACING_17;
   uint16_t windowCapacity = 3*LINE_SPACING_12; // number of pixels that can be displayed in window
   uint16_t barSize = DISPLAY_HEIGHT - 4 - LINE_SPACING_17; // total size of scrollbar area
   uint16_t blockLength = (windowCapacity*barSize)/total; // size of block in scrollbar
