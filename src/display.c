@@ -1170,6 +1170,7 @@ void display_init(bool is_ui_board_1u) {
   set_inverted(0);
 
   fill(0);
+}
 
 static void display_enable(void) {
   // Set the display to the same brightness value used in the ui_board.c driver
