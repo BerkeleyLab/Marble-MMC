@@ -4,7 +4,7 @@ stages:
   - build
 
 variables:
-  GIT_SUBMODULE_STRATEGY: normal
+  GIT_SUBMODULE_STRATEGY: recursive
   CI_REGISTRY: mohs.dhcp.lbl.gov
   CONTAINER_IMAGE: $CI_REGISTRY/arm_build_image
   DOCKER_HOST: tcp://docker:2375/
