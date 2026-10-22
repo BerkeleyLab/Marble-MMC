@@ -2,3 +2,8 @@
 	path = submodules/oled
 	url = https://github.com/betz-engineering/oled.git
 	branch = font_lib
+
+[submodule "submodules/oled/font_lib"]
+    path = submodules/oled/font_lib
+    url = https://github.com/michael-betz/font_lib.git
+    branch = main
